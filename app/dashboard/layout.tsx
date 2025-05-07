@@ -19,7 +19,6 @@ import {
 import { useAuth } from "@/lib/auth/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthApi } from "@/lib/api/use-auth-api";
-import { CardTitle } from "@/components/ui/card";
 
 interface Schedule {
   _id: string;
