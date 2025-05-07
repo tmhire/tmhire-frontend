@@ -393,7 +393,7 @@ export default function CreateSchedulePage() {
                       <Button
                         onClick={handleGenerateClick}
                         disabled={
-                          selectedTMs.length < (requiredTMCount || 0)
+                          selectedTMs.length < (0)
                         }
                       >
                         {generateScheduleMutation.isPending
