@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { scheduleApi } from '@/lib/api/api';
@@ -11,20 +11,16 @@ import {
   CardContent, 
   CardDescription, 
   CardHeader, 
-  CardTitle, 
-  CardFooter 
+  CardTitle
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
   CalendarIcon, 
   ClockIcon, 
   ArrowLeftIcon, 
-  CheckCircleIcon,
   AlertCircleIcon,
   FileTextIcon,
   TruckIcon,
-  ArrowRightIcon,
-  Pencil,
   Trash2,
   DownloadIcon
 } from 'lucide-react';
@@ -183,7 +179,7 @@ export default function ScheduleDetailPage() {
       <div className="flex flex-col items-center justify-center min-h-screen">
         <AlertCircleIcon className="h-12 w-12 text-red-500 mb-4" />
         <h2 className="text-xl font-bold mb-2">Schedule Not Found</h2>
-        <p className="text-muted-foreground mb-4">The schedule you're looking for doesn't exist or you don't have access.</p>
+        <p className="text-muted-foreground mb-4">The schedule you&apos;re looking for doesn&apos;t exist or you don&apos;t have access.</p>
         <Button asChild>
           <Link href="/dashboard/schedules">
             <ArrowLeftIcon className="h-4 w-4 mr-2" />
@@ -388,7 +384,7 @@ export default function ScheduleDetailPage() {
           <CardContent className="flex flex-col items-center justify-center py-8">
             <AlertCircleIcon className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-center text-muted-foreground mb-4">
-              This schedule doesn't have any trips generated. It may be in draft status.
+              This schedule doesn&apos;t have any trips generated. It may be in draft status.
             </p>
           </CardContent>
         </Card>

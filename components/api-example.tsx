@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/lib/auth/auth-context';
 import { useAuthApi } from '@/lib/api/use-auth-api';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -32,11 +32,11 @@ export function ApiExample() {
   };
 
   // Optional: Fetch data when component mounts if authenticated
-  useEffect(() => {
-    if (api.isAuthenticated) {
-      fetchData();
-    }
-  }, [api.isAuthenticated]);
+  // useEffect(() => {
+  //   if (api.isAuthenticated) {
+  //     fetchData();
+  //   }
+  // }, [api.isAuthenticated]);
 
   return (
     <Card>
