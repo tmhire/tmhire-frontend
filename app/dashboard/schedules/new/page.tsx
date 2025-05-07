@@ -216,7 +216,7 @@ export default function CreateSchedulePage() {
               <CardHeader>
                 <CardTitle>Input Parameters</CardTitle>
                 <CardDescription>
-                  Enter the details for your concrete supply schedule
+                  Enter the details for your Transit Mixer Calculator by TMHire schedule
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -393,7 +393,6 @@ export default function CreateSchedulePage() {
                       <Button
                         onClick={handleGenerateClick}
                         disabled={
-                          generateScheduleMutation.isPending ||
                           selectedTMs.length < (requiredTMCount || 0)
                         }
                       >

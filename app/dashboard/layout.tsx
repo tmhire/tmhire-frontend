@@ -19,6 +19,7 @@ import {
 import { useAuth } from "@/lib/auth/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthApi } from "@/lib/api/use-auth-api";
+import { CardTitle } from "@/components/ui/card";
 
 interface Schedule {
   _id: string;
@@ -93,9 +94,13 @@ export default function DashboardLayout({
 
   const SidebarContent = () => (
     <div className="h-full flex flex-col space-y-2 py-4">
-      <div className="px-3 py-2 mb-4">
-        <h2 className="text-xl font-bold">Concrete Supply</h2>
-        <p className="text-sm text-muted-foreground">Scheduling System</p>
+      <div className="px-6 py-2 mb-4">
+        <div className="flex flex-col items-start gap-2">
+          <span className="text-3xl font-bold leading-none">
+            Transit Mixer Calculator
+          </span>
+          <span className="text-base text-gray-500">by TMHire</span>
+        </div>
       </div>
       <div className="space-y-1 px-3 flex-grow overflow-y-auto">
         {routes.map(route => (
@@ -132,7 +137,7 @@ export default function DashboardLayout({
                         onClick={() => isSidebarOpen && setIsSidebarOpen(false)}
                       >
                         <ChevronRightIcon className="h-3 w-3 mr-2 text-muted-foreground/70" />
-                        {schedule.client_name || `Schedule ${schedule._id.substring(0,6)}...`}
+                        {schedule.client_name || `Schedule ${schedule._id.substring(0, 6)}...`}
                       </Button>
                     </Link>
                   ))

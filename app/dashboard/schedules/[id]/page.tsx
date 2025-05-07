@@ -213,7 +213,7 @@ export default function ScheduleDetailPage() {
               Export CSV
             </Button>
           )}
-          <Button variant="destructive" size="sm" onClick={handleDelete}>
+          <Button variant="destructive" size="sm" onClick={handleDelete} disabled={schedule.status === 'draft'}>
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
           </Button>

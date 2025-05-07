@@ -20,16 +20,11 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { signInWithGoogle, isAuthenticated, isLoading } = useAuth();
-
-  useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      router.push("/dashboard");
-    }
-  }, [isAuthenticated, isLoading, router]);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("Email/password login not implemented. Please use Google Sign-in.");
+    setError(
+      "Email/password login not implemented. Please use Google Sign-in."
+    );
   };
 
   const handleGoogleLogin = async () => {
@@ -45,7 +40,14 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center p-4 bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold">Concrete Supply</CardTitle>
+          <CardTitle className="pb-4">
+            <div className="flex flex-col items-center">
+              <span className="text-base text-gray-500">TMHire</span>
+              <span className="text-3xl font-bold">
+                Transit Mixer Calculator
+              </span>
+            </div>
+          </CardTitle>
           <CardDescription>Sign in to your account</CardDescription>
         </CardHeader>
 
@@ -75,15 +77,9 @@ export default function LoginPage() {
               />
             </div>
 
-            {error && (
-              <div className="text-sm text-red-500 mt-2">{error}</div>
-            )}
+            {error && <div className="text-sm text-red-500 mt-2">{error}</div>}
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>

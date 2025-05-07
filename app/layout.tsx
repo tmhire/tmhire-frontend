@@ -7,8 +7,8 @@ import { Toaster } from "@/components/ui/sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Concrete Supply Scheduling",
-  description: "A system for managing concrete supply scheduling",
+  title: "Transit Mixer Calculator by TMHire Scheduling",
+  description: "A system for managing Transit Mixer Calculator by TMHire scheduling",
 };
 
 export default function RootLayout({

@@ -88,7 +88,7 @@ export default function SchedulesPage() {
         <CardHeader>
           <CardTitle>All Schedules</CardTitle>
           <CardDescription>
-            Manage your concrete supply schedules
+            Manage your schedules
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -99,7 +99,7 @@ export default function SchedulesPage() {
               <CalendarIcon className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">No schedules yet</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Create your first concrete supply schedule
+                Create your first Transit Mixer Calculator by TMHire schedule
               </p>
               <Button asChild className="mt-4">
                 <Link href="/dashboard/schedules/new">
