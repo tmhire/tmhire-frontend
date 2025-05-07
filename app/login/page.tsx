@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 
 export default function LoginPage() {
