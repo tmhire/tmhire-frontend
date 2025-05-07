@@ -19,7 +19,7 @@ export function ScheduleHistory({ onSelectSchedule }: ScheduleHistoryProps) {
     queryKey: ['schedules'],
     queryFn: async () => {
       const response = await scheduleApi.getSchedules();
-      return response.data;
+      return response;
     }
   });
 
@@ -55,29 +55,29 @@ export function ScheduleHistory({ onSelectSchedule }: ScheduleHistoryProps) {
           </div>
         ) : (
           <div className="space-y-4">
-            {schedules.map((schedule) => (
+            {schedules.map((schedule: Schedule) => (
               <div 
-                key={schedule.id} 
+                key={schedule._id} 
                 className="border p-3 rounded-md hover:bg-accent cursor-pointer transition-colors"
                 onClick={() => onSelectSchedule(schedule)}
               >
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-medium">
-                      {schedule.client_name || `Schedule ${schedule.id.slice(0, 8)}`}
+                      {schedule.client_name || `Schedule ${schedule._id.slice(0, 8)}`}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {formatDistanceToNow(new Date(schedule.created_at), { addSuffix: true })}
                     </div>
                     <div className="mt-1 text-sm">
-                      <span className="text-muted-foreground">Quantity:</span> {schedule.quantity} m³
+                      <span className="text-muted-foreground">Quantity:</span> {schedule.input_params.quantity} m³
                     </div>
                   </div>
                   <div className="flex">
                     <Button 
                       variant="ghost" 
                       size="icon"
-                      onClick={(e) => handleDelete(e, schedule.id)}
+                      onClick={(e) => handleDelete(e, schedule._id)}
                       disabled={deleteMutation.isPending}
                     >
                       <TrashIcon className="h-4 w-4" />
