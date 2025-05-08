@@ -5,6 +5,7 @@ import { useAuthApi } from '@/lib/api/use-auth-api';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Spinner } from './Spinner';
 
 export function ApiExample() {
   const { user } = useAuth();
@@ -65,7 +66,7 @@ export function ApiExample() {
               onClick={fetchData} 
               disabled={loading || !api.isAuthenticated}
             >
-              {loading ? 'Loading...' : 'Test API Call'}
+              {loading ? <Spinner size="small" left={true} /> : 'Test API Call'}
             </Button>
 
             {!api.isAuthenticated && (

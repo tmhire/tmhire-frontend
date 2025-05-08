@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { scheduleApi } from '@/lib/api/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,16 @@ import { PlusIcon, TrashIcon, CalendarIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useRouter } from 'next/navigation';
+import { Spinner } from '@/components/Spinner';
+import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Schedule {
   _id: string;
@@ -34,21 +44,24 @@ export default function SchedulesPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
+  const [scheduleToDelete, setScheduleToDelete] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push('/login');
     }
   }, [isAuthenticated, authLoading, router]);
-  
+
   // Fetch schedules
   const { data, isLoading } = useQuery({
     queryKey: ['schedules'],
     queryFn: async () => {
       const response = await scheduleApi.getSchedules();
-      return response; // API now returns direct array, not wrapped in data property
+      console.log('Fetched schedules:', response);
+      return response;
     },
-    enabled: isAuthenticated, // Only run query if authenticated
+    enabled: isAuthenticated,
   });
 
   // Directly use the data as our schedules array
@@ -59,17 +72,35 @@ export default function SchedulesPage() {
     mutationFn: (id: string) => scheduleApi.deleteSchedule(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      toast.success('Schedule deleted successfully');
+      setDeleteDialogOpen(false);
+      setScheduleToDelete(null);
+    },
+    onError: error => {
+      toast.error('Failed to delete schedule');
+      console.error('Delete error:', error);
+      setDeleteDialogOpen(false);
     }
   });
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this schedule?')) {
-      deleteMutation.mutate(id);
+  const handleDeleteClick = (id: string) => {
+    setScheduleToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (scheduleToDelete) {
+      deleteMutation.mutate(scheduleToDelete);
     }
   };
 
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setScheduleToDelete(null);
+  };
+
   if (authLoading) {
-    return <div className="flex items-center justify-center min-h-[calc(100vh-6rem)]">Loading...</div>;
+    return <div className="flex items-center justify-center min-h-[calc(100vh-6rem)]"><Spinner size="small" /></div>;
   }
 
   return (
@@ -84,6 +115,30 @@ export default function SchedulesPage() {
         </Button>
       </div>
 
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Schedule</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this schedule? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelDelete}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleConfirmDelete} 
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <CardTitle>All Schedules</CardTitle>
@@ -93,7 +148,7 @@ export default function SchedulesPage() {
         </CardHeader>
         <CardContent>
           {isLoading || authLoading ? (
-            <div>Loading...</div>
+            <div><Spinner size="small" /></div>
           ) : !schedules || schedules.length === 0 ? (
             <div className="text-center py-8">
               <CalendarIcon className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -110,8 +165,8 @@ export default function SchedulesPage() {
           ) : (
             <div className="space-y-4">
               {schedules.map((schedule) => (
-                <div 
-                  key={schedule._id} 
+                <div
+                  key={schedule._id}
                   className="flex items-center justify-between border-b pb-4 pt-4"
                 >
                   <div className="flex-1">
@@ -133,10 +188,10 @@ export default function SchedulesPage() {
                         View
                       </Link>
                     </Button>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="icon"
-                      onClick={() => handleDelete(schedule._id)}
+                      onClick={() => handleDeleteClick(schedule._id)}
                       disabled={deleteMutation.isPending}
                     >
                       <TrashIcon className="h-4 w-4" />

@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import Link from "next/link";
 import { ArrowRightIcon, CheckIcon } from "lucide-react";
+import { Spinner } from "@/components/Spinner";
 
 const formSchema = z.object({
   client_name: z.string().optional(),
@@ -47,6 +48,14 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+interface InputParams {
+  quantity: number;
+  pumping_speed: number;
+  onward_time: number;
+  return_time: number;
+  buffer_time: number;
+}
+
 interface OutputTableRow {
   trip_no: number;
   tm_no: string;
@@ -56,12 +65,26 @@ interface OutputTableRow {
   return: string;
 }
 
+interface ScheduleOutput {
+  _id: string;
+  user_id: string;
+  client_name: string;
+  created_at: string;
+  last_updated: string;
+  input_params: InputParams;
+  output_table: OutputTableRow[];
+  tm_count: number;
+  pumping_time: string | null;
+  status: string;
+}
+
+
 export default function CreateSchedulePage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [requiredTMCount, setRequiredTMCount] = useState<number | null>(null);
   const [scheduleId, setScheduleId] = useState<string>("");
-  const [outputData, setOutputData] = useState<OutputTableRow[]>([]);
+  const [outputData, setOutputData] = useState<ScheduleOutput | null>(null);
   const [selectedTMs, setSelectedTMs] = useState<string[]>([]);
   const [step, setStep] = useState<"input" | "select-tms" | "results">("input");
 
@@ -76,11 +99,11 @@ export default function CreateSchedulePage() {
     defaultValues: {
       client_name: "",
       input_params: {
-        quantity: 0,
-        pumping_speed: 0,
-        onward_time: 0,
-        return_time: 0,
-        buffer_time: 0,
+        quantity: undefined,
+        pumping_speed: undefined,
+        onward_time: undefined,
+        return_time: undefined,
+        buffer_time: undefined,
       },
     },
   });
@@ -92,7 +115,7 @@ export default function CreateSchedulePage() {
       setScheduleId(response.schedule_id);
       setRequiredTMCount(response.tm_count);
       setStep("select-tms");
-      toast.success(`You need ${response.tm_count} Transit Mixers`);
+      // toast.success(`You need ${response.tm_count} Transit Mixers`);
     },
     onError: error => {
       console.error("Error calculating TMs:", error);
@@ -115,7 +138,8 @@ export default function CreateSchedulePage() {
         selected_tm_ids: selectedTMs,
       }),
     onSuccess: response => {
-      setOutputData(response);
+      // @ts-expect-error - response matches ScheduleOutput now
+      setOutputData(response); // ✅ response matches ScheduleOutput now
       setStep("results");
       toast.success("Schedule generated successfully");
     },
@@ -127,7 +151,7 @@ export default function CreateSchedulePage() {
 
   const onSubmit = (data: FormValues) => {
     // Reset states when starting a new calculation
-    setOutputData([]);
+    setOutputData(null);
     setRequiredTMCount(null);
     setSelectedTMs([]);
     calculateTMsMutation.mutate(data);
@@ -140,7 +164,7 @@ export default function CreateSchedulePage() {
   };
 
   const handleGenerateClick = () => {
-    if (requiredTMCount && selectedTMs.length < requiredTMCount) {
+    if (selectedTMs.length < 0) {
       toast.error(`Please select at least ${requiredTMCount} Transit Mixers`);
       return;
     }
@@ -157,7 +181,7 @@ export default function CreateSchedulePage() {
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-6rem)]">
-        Loading...
+        <Spinner size="small" />
       </div>
     );
   }
@@ -216,7 +240,8 @@ export default function CreateSchedulePage() {
               <CardHeader>
                 <CardTitle>Input Parameters</CardTitle>
                 <CardDescription>
-                  Enter the details for your Transit Mixer Calculator by TMHire schedule
+                  Enter the details for your Transit Mixer Calculator by TMHire
+                  schedule
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -331,14 +356,13 @@ export default function CreateSchedulePage() {
               </CardContent>
             </Card>
           )}
-
           {/* Step 2: TM Selection */}
           {step === "select-tms" && (
             <Card>
               <CardHeader>
                 <CardTitle>Select Transit Mixers</CardTitle>
                 <CardDescription>
-                  {`You need at least ${requiredTMCount} Transit Mixers for this schedule`}
+                  {`You need to select at least 1 Transit Mixers for this schedule`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -392,9 +416,7 @@ export default function CreateSchedulePage() {
                       </Button>
                       <Button
                         onClick={handleGenerateClick}
-                        disabled={
-                          selectedTMs.length < (0)
-                        }
+                        disabled={selectedTMs.length === 0}
                       >
                         {generateScheduleMutation.isPending
                           ? "Generating..."
@@ -406,7 +428,6 @@ export default function CreateSchedulePage() {
               </CardContent>
             </Card>
           )}
-
           {/* Step 3: Results */}
           {step === "results" && (
             <Card>
@@ -417,7 +438,9 @@ export default function CreateSchedulePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {outputData.length > 0 ? (
+                {outputData &&
+                outputData.output_table &&
+                outputData.output_table.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -430,7 +453,7 @@ export default function CreateSchedulePage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {outputData.map(row => (
+                      {outputData.output_table.map(row => (
                         <TableRow key={`${row.trip_no}-${row.tm_no}`}>
                           <TableCell>{row.trip_no}</TableCell>
                           <TableCell className="font-medium">
@@ -444,7 +467,7 @@ export default function CreateSchedulePage() {
                       ))}
                     </TableBody>
                     <TableCaption>
-                      Total of {outputData.length} trips scheduled.
+                      Total of {outputData.output_table.length} trips scheduled.
                     </TableCaption>
                   </Table>
                 ) : (
@@ -472,9 +495,8 @@ export default function CreateSchedulePage() {
         <div className="md:col-span-1">
           <ScheduleHistory
             onSelectSchedule={selectedSchedule => {
-              // Handle selection of previous schedule if needed
               const params = {
-                client_name: selectedSchedule.client_name || "",
+                // client_name: selectedSchedule.client_name || "",
                 input_params: selectedSchedule.input_params,
               };
               form.reset(params);

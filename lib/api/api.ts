@@ -70,6 +70,27 @@ export interface OutputTableRow {
   return: string;
 }
 
+interface ScheduleOutput {
+  _id: string;
+  user_id: string;
+  client_name: string;
+  created_at: string;
+  last_updated: string;
+  input_params: InputParams;
+  output_table: OutputTableRow[];
+  tm_count: number;
+  pumping_time: string | null;
+  status: string;
+}
+
+
+interface InputParams {
+  quantity: number;
+  pumping_speed: number;
+  onward_time: number;
+  return_time: number;
+  buffer_time: number;
+}
 // Transit Mixer API
 export const tmApi = {
   getAllTMs: async () => {
@@ -143,7 +164,7 @@ export const scheduleApi = {
   }) => {
     // The API expects a direct array of strings as the body
     // Use our custom helper function that can handle array bodies
-    return postArrayBody<OutputTableRow[]>(
+    return postArrayBody<ScheduleOutput[]>(
       `/schedules/${scheduleId}/generate-schedule`,
       selected_tm_ids
     );

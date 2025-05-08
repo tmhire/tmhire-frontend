@@ -16,6 +16,7 @@ import { formatDistanceToNow } from "date-fns";
 import TMForm from "@/components/tms/tm-form";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useRouter } from "next/navigation";
+import { Spinner } from "@/components/Spinner";
 
 interface TransitMixer {
   _id: string;
@@ -100,7 +101,7 @@ export default function TransitMixerPage() {
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-6rem)]">
-        Loading...
+        <Spinner size="small" />
       </div>
     );
   }
@@ -147,7 +148,7 @@ export default function TransitMixerPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div>Loading...</div>
+              <div><Spinner size="small" /></div>
             ) : tms?.length === 0 ? (
               <div className="text-center py-4">
                 <p className="text-muted-foreground">No transit mixers found</p>

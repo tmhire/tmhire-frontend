@@ -65,6 +65,7 @@ class ApiClient {
       }
       
       const data = await response.json();
+      console.log("Response data:", data);
       console.log("Response data preview:", JSON.stringify(data).substring(0, 100) + "...");
       return data;
     } catch (error) {

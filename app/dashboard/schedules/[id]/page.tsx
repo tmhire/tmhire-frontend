@@ -1,42 +1,43 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { scheduleApi } from '@/lib/api/api';
-import { useAuth } from '@/lib/auth/auth-context';
-import { useAuthApi } from '@/lib/api/use-auth-api';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { 
-  CalendarIcon, 
-  ClockIcon, 
-  ArrowLeftIcon, 
+import { useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { scheduleApi } from "@/lib/api/api";
+import { useAuth } from "@/lib/auth/auth-context";
+import { useAuthApi } from "@/lib/api/use-auth-api";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  CalendarIcon,
+  ClockIcon,
+  ArrowLeftIcon,
   AlertCircleIcon,
   FileTextIcon,
   TruckIcon,
   Trash2,
-  DownloadIcon
-} from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { toast } from 'sonner';
-import { 
-  Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import Link from 'next/link';
+  DownloadIcon,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { toast } from "sonner";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import Link from "next/link";
+import { Spinner } from "@/components/Spinner";
 
 interface OutputTableRow {
   trip_no: number;
@@ -45,6 +46,7 @@ interface OutputTableRow {
   pump_start: string;
   unloading_time: string;
   return: string;
+  output_table?: OutputTableRow[];
 }
 
 interface Schedule {
@@ -76,13 +78,17 @@ export default function ScheduleDetailPage() {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [isAuthenticated, authLoading, router]);
 
   // Fetch schedule
-  const { data: schedule, isLoading, error } = useQuery<Schedule>({
-    queryKey: ['schedules', scheduleId],
+  const {
+    data: schedule,
+    isLoading,
+    error,
+  } = useQuery<Schedule>({
+    queryKey: ["schedules", scheduleId],
     queryFn: async () => {
       return api.get<Schedule>(`/schedules/${scheduleId}`);
     },
@@ -93,85 +99,112 @@ export default function ScheduleDetailPage() {
   const deleteMutation = useMutation({
     mutationFn: () => scheduleApi.deleteSchedule(scheduleId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
-      toast.success('Schedule deleted successfully');
-      router.push('/dashboard/schedules');
+      queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      toast.success("Schedule deleted successfully");
+      router.push("/dashboard/schedules");
     },
-    onError: (error) => {
-      toast.error('Failed to delete schedule');
-      console.error('Delete error:', error);
-    }
+    onError: error => {
+      toast.error("Failed to delete schedule");
+      console.error("Delete error:", error);
+    },
   });
 
   const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this schedule?')) {
+    if (confirm("Are you sure you want to delete this schedule?")) {
       deleteMutation.mutate();
     }
   };
 
   const exportToCsv = () => {
     if (!schedule) return;
-    
+
     const headers = [
-      'Trip No', 
-      'TM No', 
-      'Plant Start Time', 
-      'Pump Start Time', 
-      'Unloading Time', 
-      'Return Time'
+      "Trip No",
+      "TM No",
+      "Plant Start Time",
+      "Pump Start Time",
+      "Unloading Time",
+      "Return Time",
     ];
 
     const csvRows = [
-      headers.join(','),
-      ...schedule.output_table.map(row => 
+      headers.join(","),
+      ...schedule.output_table.map(row =>
         [
           row.trip_no,
           row.tm_no,
           row.plant_start,
           row.pump_start,
           row.unloading_time,
-          row.return
-        ].join(',')
-      )
+          row.return,
+        ].join(",")
+      ),
     ];
 
-    const csvContent = csvRows.join('\n');
-    
+    const csvContent = csvRows.join("\n");
+
     // Create blob and download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const fileName = `schedule_${schedule.client_name || schedule._id}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', fileName);
-    link.style.visibility = 'hidden';
+    const link = document.createElement("a");
+    const fileName = `schedule_${schedule.client_name || schedule._id}_${format(
+      new Date(),
+      "yyyy-MM-dd"
+    )}.csv`;
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const getStatusBadge = (status: string) => {
-    switch(status.toLowerCase()) {
-      case 'draft':
-        return <Badge variant="outline" className="ml-2">Draft</Badge>;
-      case 'generated':
-        return <Badge variant="secondary" className="ml-2">Generated</Badge>;
-      case 'confirmed':
-        return <Badge variant="success" className="ml-2 bg-green-100 text-green-800">Confirmed</Badge>;
-      case 'completed':
-        return <Badge variant="default" className="ml-2">Completed</Badge>;
+    switch (status.toLowerCase()) {
+      case "draft":
+        return (
+          <Badge variant="outline" className="ml-2">
+            Draft
+          </Badge>
+        );
+      case "generated":
+        return (
+          <Badge variant="secondary" className="ml-2">
+            Generated
+          </Badge>
+        );
+      case "confirmed":
+        return (
+          <Badge variant="success" className="ml-2 bg-green-100 text-green-800">
+            Confirmed
+          </Badge>
+        );
+      case "completed":
+        return (
+          <Badge variant="default" className="ml-2">
+            Completed
+          </Badge>
+        );
       default:
         return null;
     }
   };
 
   if (authLoading) {
-    return <div className="flex items-center justify-center min-h-[calc(100vh-6rem)]">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-6rem)]">
+        <Spinner size="small" />
+      </div>
+    );
   }
 
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading schedule data...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen gap-2">
+        <Spinner size="small" />Loading schedule data...
+      </div>
+    );
   }
 
   if (error || !schedule) {
@@ -179,7 +212,10 @@ export default function ScheduleDetailPage() {
       <div className="flex flex-col items-center justify-center min-h-screen">
         <AlertCircleIcon className="h-12 w-12 text-red-500 mb-4" />
         <h2 className="text-xl font-bold mb-2">Schedule Not Found</h2>
-        <p className="text-muted-foreground mb-4">The schedule you&apos;re looking for doesn&apos;t exist or you don&apos;t have access.</p>
+        <p className="text-muted-foreground mb-4">
+          The schedule you&apos;re looking for doesn&apos;t exist or you
+          don&apos;t have access.
+        </p>
         <Button asChild>
           <Link href="/dashboard/schedules">
             <ArrowLeftIcon className="h-4 w-4 mr-2" />
@@ -213,7 +249,12 @@ export default function ScheduleDetailPage() {
               Export CSV
             </Button>
           )}
-          <Button variant="destructive" size="sm" onClick={handleDelete} disabled={schedule.status === 'draft'}>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDelete}
+            disabled={schedule.status === "draft"}
+          >
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
           </Button>
@@ -233,23 +274,33 @@ export default function ScheduleDetailPage() {
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm text-muted-foreground">Concrete Quantity</p>
-              <p className="text-lg font-medium">{schedule.input_params.quantity} m³</p>
+              <p className="text-lg font-medium">
+                {schedule.input_params.quantity} m³
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Pumping Speed</p>
-              <p className="text-lg font-medium">{schedule.input_params.pumping_speed} m³/h</p>
+              <p className="text-lg font-medium">
+                {schedule.input_params.pumping_speed} m³/h
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Onward Time</p>
-              <p className="text-lg font-medium">{schedule.input_params.onward_time} min</p>
+              <p className="text-lg font-medium">
+                {schedule.input_params.onward_time} min
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Return Time</p>
-              <p className="text-lg font-medium">{schedule.input_params.return_time} min</p>
+              <p className="text-lg font-medium">
+                {schedule.input_params.return_time} min
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Buffer Time</p>
-              <p className="text-lg font-medium">{schedule.input_params.buffer_time} min</p>
+              <p className="text-lg font-medium">
+                {schedule.input_params.buffer_time} min
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -264,31 +315,44 @@ export default function ScheduleDetailPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <p className="text-sm text-muted-foreground">Transit Mixers Used</p>
-              <p className="text-lg font-medium">{schedule.tm_count || 'Not specified'}</p>
+              <p className="text-sm text-muted-foreground">
+                Transit Mixers Used
+              </p>
+              <p className="text-lg font-medium">
+                {schedule.tm_count || "Not specified"}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Trips</p>
-              <p className="text-lg font-medium">{schedule.output_table?.length || 0}</p>
+              <p className="text-lg font-medium">
+                {schedule.output_table?.length || 0}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Pumping Time</p>
               <p className="text-lg font-medium">
-                {schedule.pumping_time 
-                  ? `${schedule.pumping_time} hours` 
-                  : 'Not specified'}
+                {schedule.pumping_time
+                  ? `${schedule.pumping_time} hours`
+                  : "Not specified"}
               </p>
             </div>
             {schedule.output_table?.length > 0 && (
               <>
                 <div>
-                  <p className="text-sm text-muted-foreground">First Dispatch</p>
-                  <p className="text-lg font-medium">{schedule.output_table[0].plant_start}</p>
+                  <p className="text-sm text-muted-foreground">
+                    First Dispatch
+                  </p>
+                  <p className="text-lg font-medium">
+                    {schedule.output_table[0].plant_start}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Last Return</p>
                   <p className="text-lg font-medium">
-                    {schedule.output_table[schedule.output_table.length - 1].return}
+                    {
+                      schedule.output_table[schedule.output_table.length - 1]
+                        .return
+                    }
                   </p>
                 </div>
               </>
@@ -308,18 +372,20 @@ export default function ScheduleDetailPage() {
             <div>
               <p className="text-sm text-muted-foreground">Created At</p>
               <p className="text-lg font-medium">
-                {format(new Date(schedule.created_at), 'MMM dd, yyyy HH:mm')}
+                {format(new Date(schedule.created_at), "MMM dd, yyyy HH:mm")}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Last Updated</p>
               <p className="text-lg font-medium">
-                {format(new Date(schedule.last_updated), 'MMM dd, yyyy HH:mm')}
+                {format(new Date(schedule.last_updated), "MMM dd, yyyy HH:mm")}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Status</p>
-              <p className="text-lg font-medium capitalize">{schedule.status}</p>
+              <p className="text-lg font-medium capitalize">
+                {schedule.status}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Schedule ID</p>
@@ -356,7 +422,7 @@ export default function ScheduleDetailPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {schedule.output_table.map((trip) => (
+                {schedule.output_table.map(trip => (
                   <TableRow key={`${trip.trip_no}-${trip.tm_no}`}>
                     <TableCell>{trip.trip_no}</TableCell>
                     <TableCell className="font-medium">{trip.tm_no}</TableCell>
@@ -384,11 +450,12 @@ export default function ScheduleDetailPage() {
           <CardContent className="flex flex-col items-center justify-center py-8">
             <AlertCircleIcon className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-center text-muted-foreground mb-4">
-              This schedule doesn&apos;t have any trips generated. It may be in draft status.
+              This schedule doesn&apos;t have any trips generated. It may be in
+              draft status.
             </p>
           </CardContent>
         </Card>
       )}
     </div>
   );
-} 
+}
