@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { z } from "zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { scheduleApi } from "@/lib/api/api";
 import {
   Card,
@@ -82,6 +82,7 @@ interface ScheduleOutput {
 export default function CreateSchedulePage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const queryClient = useQueryClient();
   const [requiredTMCount, setRequiredTMCount] = useState<number | null>(null);
   const [scheduleId, setScheduleId] = useState<string>("");
   const [outputData, setOutputData] = useState<ScheduleOutput | null>(null);
@@ -142,6 +143,8 @@ export default function CreateSchedulePage() {
       setOutputData(response); // ✅ response matches ScheduleOutput now
       setStep("results");
       toast.success("Schedule generated successfully");
+      // Invalidate schedules query to update the sidebar list
+      queryClient.invalidateQueries({ queryKey: ["schedules"] });
     },
     onError: error => {
       console.error("Error generating schedule:", error);
