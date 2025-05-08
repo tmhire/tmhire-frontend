@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { scheduleApi } from "@/lib/api/api";
@@ -23,6 +23,7 @@ import {
   TruckIcon,
   Trash2,
   DownloadIcon,
+  PlayIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -38,6 +39,16 @@ import {
 } from "@/components/ui/table";
 import Link from "next/link";
 import { Spinner } from "@/components/Spinner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface OutputTableRow {
   trip_no: number;
@@ -46,6 +57,7 @@ interface OutputTableRow {
   pump_start: string;
   unloading_time: string;
   return: string;
+  completed_capacity?: number;
   output_table?: OutputTableRow[];
 }
 
@@ -75,6 +87,9 @@ export default function ScheduleDetailPage() {
   const api = useAuthApi();
   const queryClient = useQueryClient();
   const scheduleId = params.id as string;
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedTMs, setSelectedTMs] = useState<string[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -95,6 +110,13 @@ export default function ScheduleDetailPage() {
     enabled: isAuthenticated && Boolean(scheduleId),
   });
 
+  // Fetch available TMs
+  const { data: availableTMs = [], isLoading: tmsLoading } = useQuery({
+    queryKey: ["available-tms"],
+    queryFn: () => scheduleApi.getAvailableTMs(),
+    enabled: isAuthenticated && isGenerating,
+  });
+
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: () => scheduleApi.deleteSchedule(scheduleId),
@@ -109,10 +131,49 @@ export default function ScheduleDetailPage() {
     },
   });
 
-  const handleDelete = () => {
-    if (confirm("Are you sure you want to delete this schedule?")) {
-      deleteMutation.mutate();
+  // Add handler for TM selection
+  const handleTMSelect = (tmId: string) => {
+    setSelectedTMs(prev =>
+      prev.includes(tmId) ? prev.filter(id => id !== tmId) : [...prev, tmId]
+    );
+  };
+
+  // Generate schedule mutation
+  const generateScheduleMutation = useMutation({
+    mutationFn: () =>
+      scheduleApi.generateSchedule({
+        scheduleId,
+        selected_tm_ids: selectedTMs,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schedules", scheduleId] });
+      toast.success("Schedule generated successfully");
+      setIsGenerating(false);
+      setSelectedTMs([]);
+    },
+    onError: error => {
+      console.error("Error generating schedule:", error);
+      toast.error("Failed to generate schedule");
+    },
+  });
+
+  // Handler for generate button
+  const handleGenerateClick = () => {
+    if (selectedTMs.length === 0) {
+      toast.error("Please select at least one Transit Mixer");
+      return;
     }
+
+    generateScheduleMutation.mutate();
+  };
+
+  const handleDelete = () => {
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    deleteMutation.mutate();
+    setIsDeleteDialogOpen(false);
   };
 
   const exportToCsv = () => {
@@ -243,6 +304,16 @@ export default function ScheduleDetailPage() {
           </h1>
         </div>
         <div className="flex space-x-2">
+          {schedule.status === "draft" && !isGenerating && (
+            <Button 
+              variant="default" 
+              size="sm"
+              onClick={() => setIsGenerating(true)}
+            >
+              <PlayIcon className="h-4 w-4 mr-2" />
+              Generate Schedule
+            </Button>
+          )}
           {schedule.output_table?.length > 0 && (
             <Button variant="outline" size="sm" onClick={exportToCsv}>
               <DownloadIcon className="h-4 w-4 mr-2" />
@@ -253,13 +324,89 @@ export default function ScheduleDetailPage() {
             variant="destructive"
             size="sm"
             onClick={handleDelete}
-            disabled={schedule.status === "draft"}
+            // disabled={schedule?.status !== "draft"}
           >
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
           </Button>
         </div>
       </div>
+
+      {/* TM Selection UI when generating */}
+      {isGenerating && schedule.status === "draft" && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Select Transit Mixers</CardTitle>
+            <CardDescription>
+              Select the Transit Mixers to use for this schedule
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {tmsLoading ? (
+              <div className="py-8 text-center">
+                <Spinner size="small" /> Loading available Transit Mixers...
+              </div>
+            ) : availableTMs.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="text-muted-foreground mb-4">
+                  No Transit Mixers found
+                </p>
+                <Button asChild>
+                  <Link href="/dashboard/tms">Add Transit Mixers</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid gap-2 max-h-[400px] overflow-y-auto border rounded-md p-3">
+                  {availableTMs.map(tm => (
+                    <div
+                      key={tm._id}
+                      className="flex items-center justify-between border-b pb-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`tm-${tm._id}`}
+                          checked={selectedTMs.includes(tm._id)}
+                          onCheckedChange={() => handleTMSelect(tm._id)}
+                        />
+                        <Label
+                          htmlFor={`tm-${tm._id}`}
+                          className="font-medium"
+                        >
+                          {tm.identifier}
+                        </Label>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {tm.capacity} m³
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-between pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsGenerating(false);
+                      setSelectedTMs([]);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleGenerateClick}
+                    disabled={selectedTMs.length === 0 || generateScheduleMutation.isPending}
+                  >
+                    {generateScheduleMutation.isPending
+                      ? "Generating..."
+                      : "Generate Schedule"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Schedule Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -419,6 +566,7 @@ export default function ScheduleDetailPage() {
                   <TableHead>Pump Start</TableHead>
                   <TableHead>Unloading Time</TableHead>
                   <TableHead>Return</TableHead>
+                  <TableHead>Completed Capacity</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -430,6 +578,7 @@ export default function ScheduleDetailPage() {
                     <TableCell>{trip.pump_start}</TableCell>
                     <TableCell>{trip.unloading_time}</TableCell>
                     <TableCell>{trip.return}</TableCell>
+                    <TableCell>{trip.completed_capacity !== undefined ? `${trip.completed_capacity} m³` : "-"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -456,6 +605,26 @@ export default function ScheduleDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Schedule</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this schedule? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
