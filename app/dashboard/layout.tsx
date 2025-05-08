@@ -198,7 +198,7 @@ export default function DashboardLayout({
 
       {/* Topbar */}
       <div className="lg:pl-72">
-        <header className="h-16 border-b bg-white sticky top-0 z-30 flex items-center px-6 justify-between">
+        <header className="h-16 border-b bg-white/20 backdrop-blur-xl sticky top-0 z-30 flex items-center px-6 justify-between">
           <div className="lg:hidden">
             <Button
               variant="ghost"
