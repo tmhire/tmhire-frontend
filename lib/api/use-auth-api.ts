@@ -2,6 +2,8 @@
 
 import { useSession } from 'next-auth/react';
 import { useState, useCallback } from 'react';
+import { useAuth } from '@/lib/auth/auth-context';
+import { useRouter } from 'next/navigation';
 
 interface UseAuthApiOptions {
   baseUrl?: string;
@@ -9,6 +11,8 @@ interface UseAuthApiOptions {
 
 export function useAuthApi(options: UseAuthApiOptions = {}) {
   const { data: session } = useSession();
+  const { logout } = useAuth();
+  const router = useRouter();
   const [baseUrl] = useState(options.baseUrl || 'https://tmhire-backend.onrender.com');
 
   // Get the auth header from the session
@@ -65,6 +69,14 @@ export function useAuthApi(options: UseAuthApiOptions = {}) {
         if (!response.ok) {
           const errorText = await response.text();
           console.error(`[useAuthApi] API Error (${response.status}): ${errorText}`);
+          
+          // Handle 401 Unauthorized errors - logout and redirect
+          if (response.status === 401) {
+            console.log('Unauthorized access detected, logging out...');
+            await logout();
+            router.push('/login');
+          }
+          
           throw new Error(`API Error: ${response.status} ${response.statusText}`);
         }
 
@@ -77,7 +89,7 @@ export function useAuthApi(options: UseAuthApiOptions = {}) {
         throw error;
       }
     },
-    [createHeaders]
+    [createHeaders, logout, router]
   );
 
   // API methods

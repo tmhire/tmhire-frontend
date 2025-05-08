@@ -52,7 +52,7 @@ export default function DashboardLayout({
   const api = useAuthApi();
 
   useEffect(() => {
-    if (!authIsLoading && !isAuthenticated) {
+    if (!authIsLoading || !isAuthenticated) {
       router.push("/login");
     }
   }, [isAuthenticated, authIsLoading, router]);
