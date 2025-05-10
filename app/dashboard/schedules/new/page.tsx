@@ -78,6 +78,13 @@ interface ScheduleOutput {
   status: string;
 }
 
+const formatTo12Hour = (timestamp: string | number | Date) => {
+  if (!timestamp) return '-';
+  return new Date(timestamp).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
 
 export default function CreateSchedulePage() {
   const router = useRouter();
@@ -196,9 +203,8 @@ export default function CreateSchedulePage() {
         <h1 className="text-3xl font-bold">Create Schedule</h1>
         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
           <div
-            className={`flex items-center ${
-              step === "input" ? "text-primary font-medium" : ""
-            }`}
+            className={`flex items-center ${step === "input" ? "text-primary font-medium" : ""
+              }`}
           >
             <span className="inline-flex items-center justify-center rounded-full border w-6 h-6 mr-2 bg-background">
               1
@@ -209,9 +215,8 @@ export default function CreateSchedulePage() {
           <ArrowRightIcon className="h-4 w-4 mx-1" />
 
           <div
-            className={`flex items-center ${
-              step === "select-tms" ? "text-primary font-medium" : ""
-            }`}
+            className={`flex items-center ${step === "select-tms" ? "text-primary font-medium" : ""
+              }`}
           >
             <span className="inline-flex items-center justify-center rounded-full border w-6 h-6 mr-2 bg-background">
               2
@@ -222,9 +227,8 @@ export default function CreateSchedulePage() {
           <ArrowRightIcon className="h-4 w-4 mx-1" />
 
           <div
-            className={`flex items-center ${
-              step === "results" ? "text-primary font-medium" : ""
-            }`}
+            className={`flex items-center ${step === "results" ? "text-primary font-medium" : ""
+              }`}
           >
             <span className="inline-flex items-center justify-center rounded-full border w-6 h-6 mr-2 bg-background">
               3
@@ -442,8 +446,8 @@ export default function CreateSchedulePage() {
               </CardHeader>
               <CardContent>
                 {outputData &&
-                outputData.output_table &&
-                outputData.output_table.length > 0 ? (
+                  outputData.output_table &&
+                  outputData.output_table.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -462,10 +466,10 @@ export default function CreateSchedulePage() {
                           <TableCell className="font-medium">
                             {row.tm_no}
                           </TableCell>
-                          <TableCell>{row.plant_start}</TableCell>
-                          <TableCell>{row.pump_start}</TableCell>
-                          <TableCell>{row.unloading_time}</TableCell>
-                          <TableCell>{row.return}</TableCell>
+                          <TableCell>{formatTo12Hour(row.plant_start)}</TableCell>
+                          <TableCell>{formatTo12Hour(row.pump_start)}</TableCell>
+                          <TableCell>{formatTo12Hour(row.unloading_time)}</TableCell>
+                          <TableCell>{formatTo12Hour(row.return)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

@@ -80,6 +80,15 @@ interface Schedule {
   status: string;
 }
 
+const formatTo12Hour = (timestamp: string | number | Date) => {
+  if (!timestamp) return '-';
+  return new Date(timestamp).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+
 export default function ScheduleDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -305,8 +314,8 @@ export default function ScheduleDetailPage() {
         </div>
         <div className="flex space-x-2">
           {schedule.status === "draft" && !isGenerating && (
-            <Button 
-              variant="default" 
+            <Button
+              variant="default"
               size="sm"
               onClick={() => setIsGenerating(true)}
             >
@@ -324,7 +333,7 @@ export default function ScheduleDetailPage() {
             variant="destructive"
             size="sm"
             onClick={handleDelete}
-            // disabled={schedule?.status !== "draft"}
+          // disabled={schedule?.status !== "draft"}
           >
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
@@ -574,10 +583,10 @@ export default function ScheduleDetailPage() {
                   <TableRow key={`${trip.trip_no}-${trip.tm_no}`}>
                     <TableCell>{trip.trip_no}</TableCell>
                     <TableCell className="font-medium">{trip.tm_no}</TableCell>
-                    <TableCell>{trip.plant_start}</TableCell>
-                    <TableCell>{trip.pump_start}</TableCell>
-                    <TableCell>{trip.unloading_time}</TableCell>
-                    <TableCell>{trip.return}</TableCell>
+                    <TableCell>{formatTo12Hour(trip.plant_start)}</TableCell>
+                    <TableCell>{formatTo12Hour(trip.pump_start)}</TableCell>
+                    <TableCell>{formatTo12Hour(trip.unloading_time)}</TableCell>
+                    <TableCell>{formatTo12Hour(trip.return)}</TableCell>
                     <TableCell>{trip.completed_capacity !== undefined ? `${trip.completed_capacity} m³` : "-"}</TableCell>
                   </TableRow>
                 ))}
