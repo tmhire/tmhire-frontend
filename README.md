@@ -1,4 +1,21 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Transit Mixer Calculator
+
+A Next.js application for concrete transit mixer management, scheduling and optimization.
+
+## Features
+
+- **Plant Management**: Manage concrete plants and their details
+- **Client Management**: Track and manage your clients' information
+- **Transit Mixer Management**: Add, edit, and manage your fleet of transit mixers
+- **Schedule Calendar**: View a calendar of all scheduled concrete deliveries
+- **Optimized Scheduling**: Create optimized delivery schedules based on:
+  - Required concrete quantity
+  - Pumping speed
+  - Travel times
+  - Available transit mixers
+  - Scheduled date and pump start time
+- **Real-time Updates**: Get immediate feedback on schedule changes
+- **Schedule Viewing**: Detailed schedule timelines showing departure and arrival times
 
 ## Getting Started
 
@@ -14,11 +31,41 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser to use the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Technology Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Frontend**: Next.js 14 with App Router
+- **UI Components**: Shadcn UI (based on Radix UI)
+- **Styling**: Tailwind CSS
+- **Data Fetching**: TanStack React Query
+- **Form Handling**: React Hook Form with Zod validation
+- **Authentication**: NextAuth.js
+- **API Integration**: Custom API client for backend communication
+
+## Application Structure
+
+- `/app`: Next.js app router pages
+  - `/dashboard`: Main application dashboard
+  - `/dashboard/plants`: Plant management
+  - `/dashboard/clients`: Client management
+  - `/dashboard/tms`: Transit mixer management
+  - `/dashboard/calendar`: Schedule calendar view
+  - `/dashboard/schedules`: Schedule management and creation
+- `/components`: Reusable React components
+- `/lib`: Utility functions and API client
+
+## Backend Integration
+
+The application integrates with a dedicated backend service providing:
+- Authentication
+- CRUD operations for plants, clients, and transit mixers
+- Schedule calculation algorithms
+- Calendar and availability management
+
+## License
+
+This project is proprietary software of TMHire.
 
 ## Learn More
 

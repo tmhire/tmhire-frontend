@@ -15,6 +15,8 @@ import {
   LogOutIcon,
   UserIcon,
   ChevronRightIcon,
+  BuildingIcon,
+  UsersIcon,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useQuery } from "@tanstack/react-query";
@@ -24,7 +26,9 @@ import { Spinner } from "@/components/Spinner";
 interface Schedule {
   _id: string;
   user_id: string;
+  client_id: string;
   client_name: string;
+  site_location: string;
   created_at: string;
   last_updated: string;
   input_params: {
@@ -33,6 +37,8 @@ interface Schedule {
     onward_time: number;
     return_time: number;
     buffer_time: number;
+    pump_start: string;
+    schedule_date: string;
   };
   output_table: unknown[];
   tm_count: number | null;
@@ -52,20 +58,20 @@ export default function DashboardLayout({
   const api = useAuthApi();
 
   useEffect(() => {
-    if (!authIsLoading || !isAuthenticated) {
+    if (!authIsLoading && !isAuthenticated) {
       router.push("/login");
     }
   }, [isAuthenticated, authIsLoading, router]);
 
-  const { data: schedulesData, isLoading: schedulesIsLoading } = useQuery({
+  const { data: schedulesResponse, isLoading: schedulesIsLoading } = useQuery({
     queryKey: ["schedules"],
     queryFn: async () => {
-      return api.get<Schedule[]>("/schedules");
+      return api.get<{ success: boolean; message: string; data: Schedule[] }>("/schedules");
     },
     enabled: isAuthenticated && api.isAuthenticated,
   });
 
-  const schedules = schedulesData || [];
+  const schedules = schedulesResponse?.data || [];
 
   const routes = [
     {
@@ -75,10 +81,28 @@ export default function DashboardLayout({
       active: pathname === "/dashboard",
     },
     {
+      href: "/dashboard/plants",
+      label: "Plants",
+      icon: BuildingIcon,
+      active: pathname === "/dashboard/plants" || pathname.startsWith("/dashboard/plants/"),
+    },
+    {
+      href: "/dashboard/clients",
+      label: "Clients",
+      icon: UsersIcon,
+      active: pathname === "/dashboard/clients" || pathname.startsWith("/dashboard/clients/"),
+    },
+    {
       href: "/dashboard/tms",
       label: "Transit Mixers",
       icon: TruckIcon,
-      active: pathname === "/dashboard/tms",
+      active: pathname === "/dashboard/tms" || pathname.startsWith("/dashboard/tms/"),
+    },
+    {
+      href: "/dashboard/calendar",
+      label: "Calendar",
+      icon: CalendarIcon,
+      active: pathname === "/dashboard/calendar" || pathname.startsWith("/dashboard/calendar/"),
     },
     {
       href: "/dashboard/schedules",

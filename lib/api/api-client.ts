@@ -9,7 +9,7 @@ class ApiClient {
   private baseUrl: string;
 
   constructor(options: ApiClientOptions = {}) {
-    this.baseUrl = options.baseUrl || "https://tmhire-backend.onrender.com";
+    this.baseUrl = options.baseUrl || "http://127.0.0.1:8000";
     console.log("API Client initialized with base URL:", this.baseUrl);
   }
 

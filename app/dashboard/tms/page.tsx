@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { tmApi } from "@/lib/api/api";
+import { tmApi, plantApi, TransitMixer, Plant } from "@/lib/api/api";
 import {
   Card,
   CardContent,
@@ -17,18 +17,16 @@ import TMForm from "@/components/tms/tm-form";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/Spinner";
-
-interface TransitMixer {
-  _id: string;
-  user_id: string;
-  identifier: string;
-  capacity: number;
-  created_at: string;
-}
+import { toast } from "sonner";
 
 interface TMFormData {
   identifier: string;
   capacity: number;
+  plant_id?: string;
+}
+
+interface TransitMixerWithPlant extends TransitMixer {
+  plant?: Plant;
 }
 
 export default function TransitMixerPage() {
@@ -45,14 +43,37 @@ export default function TransitMixerPage() {
   }, [isAuthenticated, authLoading, router]);
 
   // Fetch transit mixers
-  const { data: tms, isLoading } = useQuery({
+  const { data: tms, isLoading: tmsLoading } = useQuery({
     queryKey: ["tms"],
     queryFn: async () => {
       const response = await tmApi.getAllTMs();
-      return response; // API now returns direct array, not wrapped in data property
+      return response;
     },
     enabled: isAuthenticated, // Only run query if authenticated
   });
+
+  // Fetch plants for joining with TMs
+  const { data: plants, isLoading: plantsLoading } = useQuery({
+    queryKey: ["plants"],
+    queryFn: async () => {
+      const response = await plantApi.getAllPlants();
+      return response;
+    },
+    enabled: isAuthenticated, // Only run query if authenticated
+  });
+
+  // Join TMs with plant data
+  const tmsWithPlants: TransitMixerWithPlant[] = useMemo(() => {
+    if (!tms || !plants) return [];
+    
+    return tms.map(tm => {
+      const plant = plants.find(p => p._id === tm.plant_id);
+      return {
+        ...tm,
+        plant
+      };
+    });
+  }, [tms, plants]);
 
   // Fetch average capacity
   const averageCapacity = useMemo(() => {
@@ -67,9 +88,13 @@ export default function TransitMixerPage() {
     mutationFn: (data: TMFormData) => tmApi.createTM(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tms"] });
-      queryClient.invalidateQueries({ queryKey: ["tms-average-capacity"] });
+      toast.success("Transit mixer created successfully");
       setIsAddOpen(false);
     },
+    onError: (error) => {
+      console.error("Error creating transit mixer:", error);
+      toast.error("Failed to create transit mixer");
+    }
   });
 
   // Update mutation
@@ -78,9 +103,13 @@ export default function TransitMixerPage() {
       tmApi.updateTM(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tms"] });
-      queryClient.invalidateQueries({ queryKey: ["tms-average-capacity"] });
+      toast.success("Transit mixer updated successfully");
       setEditingTm(null);
     },
+    onError: (error) => {
+      console.error("Error updating transit mixer:", error);
+      toast.error("Failed to update transit mixer");
+    }
   });
 
   // Delete mutation
@@ -88,8 +117,12 @@ export default function TransitMixerPage() {
     mutationFn: (id: string) => tmApi.deleteTM(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tms"] });
-      queryClient.invalidateQueries({ queryKey: ["tms-average-capacity"] });
+      toast.success("Transit mixer deleted successfully");
     },
+    onError: (error) => {
+      console.error("Error deleting transit mixer:", error);
+      toast.error("Failed to delete transit mixer");
+    }
   });
 
   const handleDelete = (id: string) => {
@@ -97,6 +130,8 @@ export default function TransitMixerPage() {
       deleteMutation.mutate(id);
     }
   };
+
+  const isLoading = tmsLoading || plantsLoading || authLoading;
 
   if (authLoading) {
     return (
@@ -149,7 +184,7 @@ export default function TransitMixerPage() {
           <CardContent>
             {isLoading ? (
               <div><Spinner size="small" /></div>
-            ) : tms?.length === 0 ? (
+            ) : tmsWithPlants?.length === 0 ? (
               <div className="text-center py-4">
                 <p className="text-muted-foreground">No transit mixers found</p>
                 <Button
@@ -169,15 +204,21 @@ export default function TransitMixerPage() {
                       <th className="py-3 text-left font-medium">
                         Capacity (m³)
                       </th>
+                      <th className="py-3 text-left font-medium">
+                        Plant
+                      </th>
                       <th className="py-3 text-left font-medium">Created</th>
                       <th className="py-3 text-left font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {tms?.map(tm => (
+                    {tmsWithPlants?.map(tm => (
                       <tr key={tm._id} className="border-b">
                         <td className="py-3">{tm.identifier}</td>
                         <td className="py-3">{tm.capacity}</td>
+                        <td className="py-3">
+                          {tm.plant ? tm.plant.name : <span className="text-muted-foreground italic">Not assigned</span>}
+                        </td>
                         <td className="py-3">
                           {formatDistanceToNow(new Date(tm.created_at), {
                             addSuffix: true,

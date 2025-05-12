@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
 // Configure backend API URL from environment or use default
-const BACKEND_URL = process.env.BACKEND_URL || "https://tmhire-backend.onrender.com";
+const BACKEND_URL = process.env.BACKEND_URL || "http://127.0.0.1:8000";
 
 /**
  * Safely sends the Google token to the backend and gets an access token

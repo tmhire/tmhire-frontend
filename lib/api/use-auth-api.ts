@@ -13,7 +13,7 @@ export function useAuthApi(options: UseAuthApiOptions = {}) {
   const { data: session } = useSession();
   const { logout } = useAuth();
   const router = useRouter();
-  const [baseUrl] = useState(options.baseUrl || 'https://tmhire-backend.onrender.com');
+  const [baseUrl] = useState(options.baseUrl || 'http://127.0.0.1:8000');
 
   // Get the auth header from the session
   const getAuthHeader = useCallback((): Record<string, string> => {

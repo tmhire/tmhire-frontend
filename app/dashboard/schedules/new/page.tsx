@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { scheduleApi } from "@/lib/api/api";
+import { scheduleApi, clientApi } from "@/lib/api/api";
 import {
   Card,
   CardContent,
@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
-import { ScheduleHistory } from "@/components/schedules/schedule-history";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,18 +30,53 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import Link from "next/link";
-import { ArrowRightIcon, CheckIcon } from "lucide-react";
+import { ArrowRightIcon, CheckIcon, CalendarIcon, ClockIcon } from "lucide-react";
 import { Spinner } from "@/components/Spinner";
+import { format, addHours } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
-  client_name: z.string().optional(),
+  client_id: z.string().optional(),
+  client_name: z.string().min(1, "Client name is required").optional()
+    .refine(val => val !== undefined, {
+      message: "Either client name or client ID must be provided",
+    }),
+  site_location: z.string().min(1, "Site location is required"),
   input_params: z.object({
     quantity: z.coerce.number().positive("Quantity must be positive"),
     pumping_speed: z.coerce.number().positive("Pumping speed must be positive"),
     onward_time: z.coerce.number().positive("Onward time must be positive"),
     return_time: z.coerce.number().positive("Return time must be positive"),
     buffer_time: z.coerce.number().positive("Buffer time must be positive"),
+    pump_start: z.date({
+      required_error: "Pump start time is required",
+    }),
+    schedule_date: z.date({
+      required_error: "Schedule date is required",
+    }),
   }),
 });
 
@@ -54,26 +88,33 @@ interface InputParams {
   onward_time: number;
   return_time: number;
   buffer_time: number;
+  pump_start: string;
+  schedule_date: string;
 }
 
 interface OutputTableRow {
   trip_no: number;
   tm_no: string;
+  tm_id: string;
   plant_start: string;
   pump_start: string;
   unloading_time: string;
   return: string;
+  completed_capacity: number;
 }
 
 interface ScheduleOutput {
   _id: string;
   user_id: string;
+  client_id: string;
   client_name: string;
+  site_location: string;
   created_at: string;
   last_updated: string;
   input_params: InputParams;
   output_table: OutputTableRow[];
   tm_count: number;
+  tm_identifiers?: string[];
   pumping_time: string | null;
   status: string;
 }
@@ -91,10 +132,12 @@ export default function CreateSchedulePage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const [requiredTMCount, setRequiredTMCount] = useState<number | null>(null);
+  const [scheduleTmIdentifiers, setScheduleTmIdentifiers] = useState<string[]>([]);
   const [scheduleId, setScheduleId] = useState<string>("");
   const [outputData, setOutputData] = useState<ScheduleOutput | null>(null);
   const [selectedTMs, setSelectedTMs] = useState<string[]>([]);
   const [step, setStep] = useState<"input" | "select-tms" | "results">("input");
+  const [useExistingClient, setUseExistingClient] = useState(true);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -102,28 +145,62 @@ export default function CreateSchedulePage() {
     }
   }, [isAuthenticated, authLoading, router]);
 
+  // Get today's date at 9:00 AM for default pump start time
+  const defaultPumpStart = new Date();
+  defaultPumpStart.setHours(9, 0, 0, 0);
+
+  // Get tomorrow's date
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      client_id: undefined,
       client_name: "",
+      site_location: "",
       input_params: {
         quantity: undefined,
         pumping_speed: undefined,
         onward_time: undefined,
         return_time: undefined,
         buffer_time: undefined,
+        pump_start: defaultPumpStart,
+        schedule_date: tomorrow,
       },
     },
   });
 
+  // Fetch clients
+  const { data: clients, isLoading: clientsLoading } = useQuery({
+    queryKey: ["clients"],
+    queryFn: async () => {
+      const response = await clientApi.getAllClients();
+      return response;
+    },
+    enabled: isAuthenticated,
+  });
+
   // Step 1: Calculate required TMs and create draft schedule
   const calculateTMsMutation = useMutation({
-    mutationFn: (data: FormValues) => scheduleApi.calculateTMs(data),
+    mutationFn: (data: FormValues) => {
+      // Convert dates to ISO strings
+      const formattedData = {
+        ...data,
+        input_params: {
+          ...data.input_params,
+          pump_start: data.input_params.pump_start.toISOString(),
+          schedule_date: format(data.input_params.schedule_date, 'yyyy-MM-dd'),
+        }
+      };
+      return scheduleApi.calculateTMs(formattedData);
+    },
     onSuccess: response => {
       setScheduleId(response.schedule_id);
       setRequiredTMCount(response.tm_count);
+      setScheduleTmIdentifiers(response.tm_identifiers || []);
       setStep("select-tms");
-      // toast.success(`You need ${response.tm_count} Transit Mixers`);
     },
     onError: error => {
       console.error("Error calculating TMs:", error);
@@ -131,10 +208,13 @@ export default function CreateSchedulePage() {
     },
   });
 
-  // Fetch available TMs
+  // Fetch available TMs for the selected date
   const { data: availableTMs = [], isLoading: tmsLoading } = useQuery({
-    queryKey: ["available-tms"],
-    queryFn: () => scheduleApi.getAvailableTMs(),
+    queryKey: ["available-tms", form.watch("input_params.schedule_date")],
+    queryFn: () => {
+      const date = format(form.watch("input_params.schedule_date"), "yyyy-MM-dd");
+      return scheduleApi.getAvailableTMs(date);
+    },
     enabled: isAuthenticated && step === "select-tms",
   });
 
@@ -143,15 +223,15 @@ export default function CreateSchedulePage() {
     mutationFn: () =>
       scheduleApi.generateSchedule({
         scheduleId,
-        selected_tm_ids: selectedTMs,
+        selected_tms: selectedTMs,
       }),
     onSuccess: response => {
-      // @ts-expect-error - response matches ScheduleOutput now
-      setOutputData(response); // ✅ response matches ScheduleOutput now
+      setOutputData(response);
       setStep("results");
       toast.success("Schedule generated successfully");
       // Invalidate schedules query to update the sidebar list
       queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar"] });
     },
     onError: error => {
       console.error("Error generating schedule:", error);
@@ -159,11 +239,24 @@ export default function CreateSchedulePage() {
     },
   });
 
+  // When client_id changes, update the client_name
+  useEffect(() => {
+    const clientId = form.watch("client_id");
+    if (clientId && clients) {
+      const selectedClient = clients.find(c => c._id === clientId);
+      if (selectedClient) {
+        form.setValue("client_name", selectedClient.name);
+      }
+    }
+  }, [form.watch("client_id"), clients, form]);
+
   const onSubmit = (data: FormValues) => {
     // Reset states when starting a new calculation
     setOutputData(null);
     setRequiredTMCount(null);
     setSelectedTMs([]);
+    setScheduleTmIdentifiers([]);
+    
     calculateTMsMutation.mutate(data);
   };
 
@@ -174,8 +267,8 @@ export default function CreateSchedulePage() {
   };
 
   const handleGenerateClick = () => {
-    if (selectedTMs.length < 0) {
-      toast.error(`Please select at least ${requiredTMCount} Transit Mixers`);
+    if (selectedTMs.length === 0) {
+      toast.error(`Please select at least one Transit Mixer`);
       return;
     }
 
@@ -188,6 +281,13 @@ export default function CreateSchedulePage() {
     }
   };
 
+  const toggleClientMode = () => {
+    setUseExistingClient(!useExistingClient);
+    // Reset client fields when toggling
+    form.setValue("client_id", undefined);
+    form.setValue("client_name", "");
+  };
+
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-6rem)]">
@@ -198,256 +298,489 @@ export default function CreateSchedulePage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Create Schedule</h1>
-        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-          <div
-            className={`flex items-center ${step === "input" ? "text-primary font-medium" : ""
-              }`}
-          >
-            <span className="inline-flex items-center justify-center rounded-full border w-6 h-6 mr-2 bg-background">
-              1
-            </span>
-            <span>Input Parameters</span>
-          </div>
-
-          <ArrowRightIcon className="h-4 w-4 mx-1" />
-
-          <div
-            className={`flex items-center ${step === "select-tms" ? "text-primary font-medium" : ""
-              }`}
-          >
-            <span className="inline-flex items-center justify-center rounded-full border w-6 h-6 mr-2 bg-background">
-              2
-            </span>
-            <span>Select TMs</span>
-          </div>
-
-          <ArrowRightIcon className="h-4 w-4 mx-1" />
-
-          <div
-            className={`flex items-center ${step === "results" ? "text-primary font-medium" : ""
-              }`}
-          >
-            <span className="inline-flex items-center justify-center rounded-full border w-6 h-6 mr-2 bg-background">
-              3
-            </span>
-            <span>Review Schedule</span>
-          </div>
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Create New Schedule</h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="md:col-span-2">
-          {/* Step 1: Input Parameters Form */}
-          {step === "input" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Input Parameters</CardTitle>
-                <CardDescription>
-                  Enter the details for your Transit Mixer Calculator by TMHire
-                  schedule
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-4"
-                >
-                  <div className="space-y-2">
-                    <Label htmlFor="client_name">Client Name</Label>
-                    <Input
-                      id="client_name"
-                      {...form.register("client_name")}
-                      placeholder="Optional client name"
+      {/* Step 1: Input Schedule Details */}
+      {step === "input" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Schedule Details</CardTitle>
+            <CardDescription>
+              Enter the details for your concrete delivery schedule
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
+                id="schedule-form"
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="use-existing-client" 
+                      checked={useExistingClient} 
+                      onCheckedChange={() => toggleClientMode()}
                     />
+                    <label
+                      htmlFor="use-existing-client"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Use existing client
+                    </label>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity">Concrete Quantity (m³)</Label>
-                    <Input
-                      id="quantity"
-                      type="number"
-                      step="0.1"
-                      {...form.register("input_params.quantity", {
-                        valueAsNumber: true,
-                      })}
-                    />
-                    {form.formState.errors.input_params?.quantity && (
-                      <p className="text-sm text-red-500">
-                        {form.formState.errors.input_params.quantity.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="pumping_speed">Pumping Speed (m³/h)</Label>
-                    <Input
-                      id="pumping_speed"
-                      type="number"
-                      step="0.1"
-                      {...form.register("input_params.pumping_speed", {
-                        valueAsNumber: true,
-                      })}
-                    />
-                    {form.formState.errors.input_params?.pumping_speed && (
-                      <p className="text-sm text-red-500">
-                        {
-                          form.formState.errors.input_params.pumping_speed
-                            .message
-                        }
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="onward_time">Onward Time (min)</Label>
-                    <Input
-                      id="onward_time"
-                      type="number"
-                      {...form.register("input_params.onward_time", {
-                        valueAsNumber: true,
-                      })}
-                    />
-                    {form.formState.errors.input_params?.onward_time && (
-                      <p className="text-sm text-red-500">
-                        {form.formState.errors.input_params.onward_time.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="return_time">Return Time (min)</Label>
-                    <Input
-                      id="return_time"
-                      type="number"
-                      {...form.register("input_params.return_time", {
-                        valueAsNumber: true,
-                      })}
-                    />
-                    {form.formState.errors.input_params?.return_time && (
-                      <p className="text-sm text-red-500">
-                        {form.formState.errors.input_params.return_time.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="buffer_time">Buffer Time (min)</Label>
-                    <Input
-                      id="buffer_time"
-                      type="number"
-                      {...form.register("input_params.buffer_time", {
-                        valueAsNumber: true,
-                      })}
-                    />
-                    {form.formState.errors.input_params?.buffer_time && (
-                      <p className="text-sm text-red-500">
-                        {form.formState.errors.input_params.buffer_time.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full mt-4"
-                    disabled={calculateTMsMutation.isPending}
-                  >
-                    {calculateTMsMutation.isPending
-                      ? "Calculating..."
-                      : "Calculate Required TMs"}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-          {/* Step 2: TM Selection */}
-          {step === "select-tms" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Select Transit Mixers</CardTitle>
-                <CardDescription>
-                  {`You need to select at least 1 Transit Mixers for this schedule`}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {tmsLoading ? (
-                  <div className="py-8 text-center">
-                    Loading available Transit Mixers...
-                  </div>
-                ) : availableTMs.length === 0 ? (
-                  <div className="py-8 text-center">
-                    <p className="text-muted-foreground mb-4">
-                      No Transit Mixers found
-                    </p>
-                    <Button asChild>
-                      <Link href="/dashboard/tms">Add Transit Mixers</Link>
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="grid gap-2 max-h-[400px] overflow-y-auto border rounded-md p-3">
-                      {availableTMs.map(tm => (
-                        <div
-                          key={tm._id}
-                          className="flex items-center justify-between border-b pb-2"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              id={`tm-${tm._id}`}
-                              checked={selectedTMs.includes(tm._id)}
-                              onCheckedChange={() => handleTMSelect(tm._id)}
-                            />
-                            <Label
-                              htmlFor={`tm-${tm._id}`}
-                              className="font-medium"
+                  {useExistingClient ? (
+                    <FormField
+                      control={form.control}
+                      name="client_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Client</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a client" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {clientsLoading ? (
+                                <div className="flex justify-center py-2">
+                                  <Spinner size="small" />
+                                </div>
+                              ) : clients && clients.length > 0 ? (
+                                clients.map((client) => (
+                                  <SelectItem key={client._id} value={client._id}>
+                                    {client.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="" disabled>
+                                  No clients available
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            <Button 
+                              variant="link" 
+                              className="p-0 h-auto"
+                              type="button"
+                              asChild
                             >
-                              {tm.identifier}
-                            </Label>
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {tm.capacity} m³
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                              <Link href="/dashboard/clients">Manage clients</Link>
+                            </Button>
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name="client_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Client Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Client Name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
-                    <div className="flex justify-between pt-4">
-                      <Button
-                        variant="outline"
-                        onClick={() => setStep("input")}
-                      >
-                        Back
-                      </Button>
-                      <Button
-                        onClick={handleGenerateClick}
-                        disabled={selectedTMs.length === 0}
-                      >
-                        {generateScheduleMutation.isPending
-                          ? "Generating..."
-                          : "Generate Schedule"}
-                      </Button>
-                    </div>
+                  <FormField
+                    control={form.control}
+                    name="site_location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Site Location</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Construction site address" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="input_params.quantity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Quantity (m³)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="100"
+                              {...field}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value === "" ? undefined : parseFloat(value));
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="input_params.pumping_speed"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Pumping Speed (m³/hr)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="30"
+                              {...field}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value === "" ? undefined : parseFloat(value));
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="input_params.schedule_date"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Schedule Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => date < new Date()}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-          {/* Step 3: Results */}
-          {step === "results" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Schedule Generated</CardTitle>
-                <CardDescription>
-                  Review your generated schedule below
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {outputData &&
-                  outputData.output_table &&
-                  outputData.output_table.length > 0 ? (
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="input_params.onward_time"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Onward Time (min)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="30"
+                              {...field}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value === "" ? undefined : parseFloat(value));
+                              }}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Plant to site travel time
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="input_params.return_time"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Return Time (min)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="30"
+                              {...field}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value === "" ? undefined : parseFloat(value));
+                              }}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Site to plant travel time
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="input_params.buffer_time"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Buffer Time (min)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="15"
+                              {...field}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value === "" ? undefined : parseFloat(value));
+                              }}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Extra time between trips
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="input_params.pump_start"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Pump Start Time</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "h:mm a")
+                                ) : (
+                                  <span>Pick a time</span>
+                                )}
+                                <ClockIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-4" align="start">
+                            <div className="grid gap-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                {[8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((hour) => {
+                                  const date = new Date();
+                                  date.setHours(hour, 0, 0, 0);
+                                  return (
+                                    <Button
+                                      key={hour}
+                                      variant="outline"
+                                      className={cn(
+                                        "text-center font-normal",
+                                        field.value && field.value.getHours() === hour && 
+                                        field.value.getMinutes() === 0 && "bg-primary text-primary-foreground"
+                                      )}
+                                      onClick={() => field.onChange(date)}
+                                      type="button"
+                                    >
+                                      {format(date, "h:mm a")}
+                                    </Button>
+                                  );
+                                })}
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                {[8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((hour) => {
+                                  const date = new Date();
+                                  date.setHours(hour, 30, 0, 0);
+                                  return (
+                                    <Button
+                                      key={hour + 0.5}
+                                      variant="outline"
+                                      className={cn(
+                                        "text-center font-normal",
+                                        field.value && field.value.getHours() === hour && 
+                                        field.value.getMinutes() === 30 && "bg-primary text-primary-foreground"
+                                      )}
+                                      onClick={() => field.onChange(date)}
+                                      type="button"
+                                    >
+                                      {format(date, "h:mm a")}
+                                    </Button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+          <CardFooter className="flex justify-end">
+            <Button
+              type="submit"
+              form="schedule-form"
+              disabled={calculateTMsMutation.isPending}
+            >
+              {calculateTMsMutation.isPending ? (
+                <Spinner size="small" />
+              ) : (
+                <>
+                  Next
+                  <ArrowRightIcon className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
+
+      {/* Step 2: Select Transit Mixers */}
+      {step === "select-tms" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Select Transit Mixers</CardTitle>
+            <CardDescription>
+              {requiredTMCount
+                ? `You need ${requiredTMCount} transit mixers for this schedule.`
+                : "Select transit mixers to use for this schedule."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {tmsLoading ? (
+              <div className="flex justify-center">
+                <Spinner size="small" />
+              </div>
+            ) : availableTMs.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-muted-foreground">
+                  No transit mixers are available for the selected date.
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="text-muted-foreground mb-4">
+                  Recommended: {scheduleTmIdentifiers.join(", ")}
+                </p>
+                <div className="space-y-2">
+                  {availableTMs.map((tm) => (
+                    <div
+                      key={tm._id}
+                      className="flex items-center justify-between border p-3 rounded-md"
+                    >
+                      <div>
+                        <p className="font-medium">{tm.identifier}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Capacity: {tm.capacity} m³
+                        </p>
+                      </div>
+                      <Checkbox
+                        checked={selectedTMs.includes(tm._id)}
+                        onCheckedChange={() => handleTMSelect(tm._id)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Button variant="outline" onClick={() => setStep("input")}>
+              Back
+            </Button>
+            <Button
+              onClick={handleGenerateClick}
+              disabled={generateScheduleMutation.isPending || selectedTMs.length === 0}
+            >
+              {generateScheduleMutation.isPending ? (
+                <Spinner size="small" />
+              ) : (
+                "Generate Schedule"
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
+
+      {/* Step 3: Results */}
+      {step === "results" && outputData && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Schedule Generated</CardTitle>
+            <CardDescription>
+              Schedule details for {outputData.client_name}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    Total Quantity
+                  </h3>
+                  <p className="text-lg font-medium">
+                    {outputData.input_params.quantity} m³
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    Transit Mixers Used
+                  </h3>
+                  <p className="text-lg font-medium">{outputData.tm_count}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    Pumping Time
+                  </h3>
+                  <p className="text-lg font-medium">
+                    {outputData.pumping_time
+                      ? `${outputData.pumping_time} minutes`
+                      : "Not calculated"}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-base font-medium mb-2">Schedule Timeline</h3>
+                <div className="border rounded-md overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -455,63 +788,44 @@ export default function CreateSchedulePage() {
                         <TableHead>TM</TableHead>
                         <TableHead>Plant Start</TableHead>
                         <TableHead>Pump Start</TableHead>
-                        <TableHead>Unloading</TableHead>
-                        <TableHead>Return</TableHead>
+                        <TableHead>Unloading Done</TableHead>
+                        <TableHead>Return to Plant</TableHead>
+                        <TableHead>Completed Capacity</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {outputData.output_table.map(row => (
+                      {outputData.output_table.map((row) => (
                         <TableRow key={`${row.trip_no}-${row.tm_no}`}>
                           <TableCell>{row.trip_no}</TableCell>
-                          <TableCell className="font-medium">
-                            {row.tm_no}
-                          </TableCell>
+                          <TableCell>{row.tm_no}</TableCell>
                           <TableCell>{formatTo12Hour(row.plant_start)}</TableCell>
                           <TableCell>{formatTo12Hour(row.pump_start)}</TableCell>
-                          <TableCell>{formatTo12Hour(row.unloading_time)}</TableCell>
+                          <TableCell>
+                            {formatTo12Hour(row.unloading_time)}
+                          </TableCell>
                           <TableCell>{formatTo12Hour(row.return)}</TableCell>
+                          <TableCell>{row.completed_capacity} m³</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
-                    <TableCaption>
-                      Total of {outputData.output_table.length} trips scheduled.
-                    </TableCaption>
                   </Table>
-                ) : (
-                  <div className="py-8 text-center">
-                    <p className="text-muted-foreground">
-                      No schedule data available
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="flex justify-between border-t pt-4">
-                <Button variant="outline" onClick={() => setStep("select-tms")}>
-                  Back to TM Selection
-                </Button>
-                <Button onClick={handleViewSchedule}>
-                  <CheckIcon className="h-4 w-4 mr-2" />
-                  View Complete Schedule
-                </Button>
-              </CardFooter>
-            </Card>
-          )}
-        </div>
-
-        {/* Schedule History - always visible */}
-        <div className="md:col-span-1">
-          <ScheduleHistory
-            onSelectSchedule={selectedSchedule => {
-              const params = {
-                // client_name: selectedSchedule.client_name || "",
-                input_params: selectedSchedule.input_params,
-              };
-              form.reset(params);
-              setStep("input");
-            }}
-          />
-        </div>
-      </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Button variant="outline" onClick={() => setStep("input")}>
+              Create Another Schedule
+            </Button>
+            <Button onClick={handleViewSchedule}>View Schedule</Button>
+          </CardFooter>
+        </Card>
+      )}
     </div>
   );
+}
+
+// Helper function to combine class names conditionally
+function cn(...classes: string[]) {
+  return classes.filter(Boolean).join(" ");
 }
