@@ -24,7 +24,9 @@ import {
 interface Schedule {
   _id: string;
   user_id: string;
+  client_id: string;
   client_name: string;
+  site_location: string;
   created_at: string;
   last_updated: string;
   input_params: {
@@ -33,10 +35,13 @@ interface Schedule {
     onward_time: number;
     return_time: number;
     buffer_time: number;
+    pump_start: string;
+    schedule_date: string;
   };
   output_table: unknown[];
   tm_count: number | null;
-  pumping_time: number;
+  tm_identifiers?: string[];
+  pumping_time: number | null;
   status: string;
 }
 
@@ -164,7 +169,7 @@ export default function SchedulesPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {schedules.map((schedule) => (
+              {schedules?.map((schedule) => (
                 <div
                   key={schedule._id}
                   className="flex items-center justify-between border-b pb-4 pt-4"

@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, PencilIcon, TrashIcon } from "lucide-react";
+import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import TMForm from "@/components/tms/tm-form";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -226,6 +226,14 @@ export default function TransitMixerPage() {
                         </td>
                         <td className="py-3">
                           <div className="flex space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => router.push(`/dashboard/tms/${tm._id}`)}
+                            >
+                              <EyeIcon className="h-4 w-4" />
+                              <span className="sr-only">View</span>
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"

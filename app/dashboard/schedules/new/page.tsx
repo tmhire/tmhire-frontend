@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useForm } from "react-hook-form";
@@ -24,7 +23,6 @@ import { toast } from "sonner";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -53,9 +51,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import Link from "next/link";
-import { ArrowRightIcon, CheckIcon, CalendarIcon, ClockIcon } from "lucide-react";
+import { ArrowRightIcon, CalendarIcon, ClockIcon } from "lucide-react";
 import { Spinner } from "@/components/Spinner";
-import { format, addHours } from "date-fns";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
@@ -66,11 +64,26 @@ const formSchema = z.object({
     }),
   site_location: z.string().min(1, "Site location is required"),
   input_params: z.object({
-    quantity: z.coerce.number().positive("Quantity must be positive"),
-    pumping_speed: z.coerce.number().positive("Pumping speed must be positive"),
-    onward_time: z.coerce.number().positive("Onward time must be positive"),
-    return_time: z.coerce.number().positive("Return time must be positive"),
-    buffer_time: z.coerce.number().positive("Buffer time must be positive"),
+    quantity: z.union([
+      z.coerce.number().positive("Quantity must be positive"),
+      z.string().transform(val => val === '' ? 0 : parseFloat(val))
+    ]).pipe(z.coerce.number().positive("Quantity must be positive")),
+    pumping_speed: z.union([
+      z.coerce.number().positive("Pumping speed must be positive"),
+      z.string().transform(val => val === '' ? 0 : parseFloat(val))
+    ]).pipe(z.coerce.number().positive("Pumping speed must be positive")),
+    onward_time: z.union([
+      z.coerce.number().positive("Onward time must be positive"),
+      z.string().transform(val => val === '' ? 0 : parseFloat(val))
+    ]).pipe(z.coerce.number().positive("Onward time must be positive")),
+    return_time: z.union([
+      z.coerce.number().positive("Return time must be positive"),
+      z.string().transform(val => val === '' ? 0 : parseFloat(val))
+    ]).pipe(z.coerce.number().positive("Return time must be positive")),
+    buffer_time: z.union([
+      z.coerce.number().positive("Buffer time must be positive"),
+      z.string().transform(val => val === '' ? 0 : parseFloat(val))
+    ]).pipe(z.coerce.number().positive("Buffer time must be positive")),
     pump_start: z.date({
       required_error: "Pump start time is required",
     }),
@@ -132,12 +145,14 @@ export default function CreateSchedulePage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const [requiredTMCount, setRequiredTMCount] = useState<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [scheduleTmIdentifiers, setScheduleTmIdentifiers] = useState<string[]>([]);
   const [scheduleId, setScheduleId] = useState<string>("");
   const [outputData, setOutputData] = useState<ScheduleOutput | null>(null);
   const [selectedTMs, setSelectedTMs] = useState<string[]>([]);
   const [step, setStep] = useState<"input" | "select-tms" | "results">("input");
   const [useExistingClient, setUseExistingClient] = useState(true);
+  const [tmSearchQuery, setTmSearchQuery] = useState("");
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -229,7 +244,8 @@ export default function CreateSchedulePage() {
       setOutputData(response);
       setStep("results");
       toast.success("Schedule generated successfully");
-      // Invalidate schedules query to update the sidebar list
+  
+      // Invalidate schedules & calendar queries
       queryClient.invalidateQueries({ queryKey: ["schedules"] });
       queryClient.invalidateQueries({ queryKey: ["calendar"] });
     },
@@ -422,10 +438,10 @@ export default function CreateSchedulePage() {
                             <Input
                               type="number"
                               placeholder="100"
-                              {...field}
+                              value={field.value === undefined ? '' : field.value}
                               onChange={(e) => {
                                 const value = e.target.value;
-                                field.onChange(value === "" ? undefined : parseFloat(value));
+                                field.onChange(value === "" ? '' : parseFloat(value));
                               }}
                             />
                           </FormControl>
@@ -444,10 +460,10 @@ export default function CreateSchedulePage() {
                             <Input
                               type="number"
                               placeholder="30"
-                              {...field}
+                              value={field.value === undefined ? '' : field.value}
                               onChange={(e) => {
                                 const value = e.target.value;
-                                field.onChange(value === "" ? undefined : parseFloat(value));
+                                field.onChange(value === "" ? '' : parseFloat(value));
                               }}
                             />
                           </FormControl>
@@ -508,10 +524,10 @@ export default function CreateSchedulePage() {
                             <Input
                               type="number"
                               placeholder="30"
-                              {...field}
+                              value={field.value === undefined ? '' : field.value}
                               onChange={(e) => {
                                 const value = e.target.value;
-                                field.onChange(value === "" ? undefined : parseFloat(value));
+                                field.onChange(value === "" ? '' : parseFloat(value));
                               }}
                             />
                           </FormControl>
@@ -533,10 +549,10 @@ export default function CreateSchedulePage() {
                             <Input
                               type="number"
                               placeholder="30"
-                              {...field}
+                              value={field.value === undefined ? '' : field.value}
                               onChange={(e) => {
                                 const value = e.target.value;
-                                field.onChange(value === "" ? undefined : parseFloat(value));
+                                field.onChange(value === "" ? '' : parseFloat(value));
                               }}
                             />
                           </FormControl>
@@ -558,10 +574,10 @@ export default function CreateSchedulePage() {
                             <Input
                               type="number"
                               placeholder="15"
-                              {...field}
+                              value={field.value === undefined ? '' : field.value}
                               onChange={(e) => {
                                 const value = e.target.value;
-                                field.onChange(value === "" ? undefined : parseFloat(value));
+                                field.onChange(value === "" ? '' : parseFloat(value));
                               }}
                             />
                           </FormControl>
@@ -683,6 +699,7 @@ export default function CreateSchedulePage() {
                 ? `You need ${requiredTMCount} transit mixers for this schedule.`
                 : "Select transit mixers to use for this schedule."}
             </CardDescription>
+           
           </CardHeader>
           <CardContent>
             {tmsLoading ? (
@@ -697,27 +714,82 @@ export default function CreateSchedulePage() {
               </div>
             ) : (
               <>
-                <p className="text-muted-foreground mb-4">
-                  Recommended: {scheduleTmIdentifiers.join(", ")}
-                </p>
-                <div className="space-y-2">
-                  {availableTMs.map((tm) => (
-                    <div
-                      key={tm._id}
-                      className="flex items-center justify-between border p-3 rounded-md"
+                <div className="mb-4">
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      placeholder="Search Transit Mixers..."
+                      value={tmSearchQuery}
+                      onChange={(e) => setTmSearchQuery(e.target.value)}
+                      className="pr-10"
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute right-0 top-0 h-full"
+                      onClick={() => setTmSearchQuery("")}
+                      disabled={!tmSearchQuery}
                     >
-                      <div>
-                        <p className="font-medium">{tm.identifier}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Capacity: {tm.capacity} m³
-                        </p>
+                      {tmSearchQuery ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {availableTMs
+                    .filter(tm => 
+                      tmSearchQuery === "" || 
+                      tm.identifier.toLowerCase().includes(tmSearchQuery.toLowerCase())
+                    )
+                    .map((tm) => (
+                      <div
+                        key={tm._id}
+                        className={`flex items-center justify-between border p-2 rounded-md ${
+                          selectedTMs.includes(tm._id) ? "bg-primary/5 border-primary/30" : ""
+                        } hover:bg-accent cursor-pointer transition-colors`}
+                        onClick={() => handleTMSelect(tm._id)}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`tm-${tm._id}`}
+                            checked={selectedTMs.includes(tm._id)}
+                            onCheckedChange={() => handleTMSelect(tm._id)}
+                            onClick={e => e.stopPropagation()}
+                          />
+                          <div className="text-sm">
+                            <p className="font-medium">{tm.identifier}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Capacity: {tm.capacity} m³
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <Checkbox
-                        checked={selectedTMs.includes(tm._id)}
-                        onCheckedChange={() => handleTMSelect(tm._id)}
-                      />
-                    </div>
-                  ))}
+                    ))}
+                </div>
+                
+                <div className="mt-4 bg-muted/30 p-2 rounded-md">
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <span className="font-medium">{selectedTMs.length} TMs selected</span>
+                    {selectedTMs.length > 0 && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setSelectedTMs([])}
+                        className="h-7 px-2 text-xs"
+                      >
+                        Clear All
+                      </Button>
+                    )}
+                    {requiredTMCount && selectedTMs.length < requiredTMCount && (
+                      <span className="text-amber-600 text-xs">
+                        You need {requiredTMCount - selectedTMs.length} more TMs
+                      </span>
+                    )}
+                  </div>
                 </div>
               </>
             )}
@@ -823,9 +895,4 @@ export default function CreateSchedulePage() {
       )}
     </div>
   );
-}
-
-// Helper function to combine class names conditionally
-function cn(...classes: string[]) {
-  return classes.filter(Boolean).join(" ");
 }

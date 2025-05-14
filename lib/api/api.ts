@@ -2,36 +2,36 @@ import apiClient from './api-client';
 
 // Helper function for POST requests with array bodies
 // This is needed because our apiClient.post expects a Record<string, unknown> type
-async function postArrayBody<T>(url: string, arrayData: string[]): Promise<T> {
-  const session = await import('next-auth/react').then(mod => mod.getSession());
+// async function postArrayBody<T>(url: string, arrayData: string[]): Promise<T> {
+//   const session = await import('next-auth/react').then(mod => mod.getSession());
   
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    "Accept": "application/json",
-  };
+//   const headers: HeadersInit = {
+//     "Content-Type": "application/json",
+//     "Accept": "application/json",
+//   };
 
-  // @ts-expect-error - Custom property added by our callback
-  if (session?.backendAccessToken) {
-    // @ts-expect-error - Custom property added by our callback
-    headers["Authorization"] = `Bearer ${session.backendAccessToken}`;
-  }
+//   // @ts-expect-error - Custom property added by our callback
+//   if (session?.backendAccessToken) {
+//     // @ts-expect-error - Custom property added by our callback
+//     headers["Authorization"] = `Bearer ${session.backendAccessToken}`;
+//   }
   
-  const response = await fetch(`http://127.0.0.1:8000${url}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(arrayData),
-    mode: "cors",
-    credentials: "include",
-  });
+//   const response = await fetch(`http://127.0.0.1:8000${url}`, {
+//     method: "POST",
+//     headers,
+//     body: JSON.stringify(arrayData),
+//     mode: "cors",
+//     credentials: "include",
+//   });
   
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`API Error (${response.status}): ${errorText}`);
-    throw new Error(`API Error: ${response.status} ${response.statusText}\n${errorText}`);
-  }
+//   if (!response.ok) {
+//     const errorText = await response.text();
+//     console.error(`API Error (${response.status}): ${errorText}`);
+//     throw new Error(`API Error: ${response.status} ${response.statusText}\n${errorText}`);
+//   }
   
-  return response.json();
-}
+//   return response.json();
+// }
 
 // Standard response interface for all API responses
 export interface ApiResponse<T> {
@@ -58,7 +58,7 @@ export interface Plant {
   state: string;
   postal_code: string;
   contact_person: string;
-  contact_phone: string;
+  contact_number: string;
   contact_email: string;
   created_at: string;
 }
@@ -237,6 +237,20 @@ export const scheduleApi = {
     return response.data;
   },
 
+  // Get daily schedule data for Gantt chart
+  getDailySchedule: async (date: string) => {
+    const response = await apiClient.get<ApiResponse<{
+      tm: string;
+      trips: {
+        client: string;
+        start: string;
+        end: string;
+        volume: string;
+      }[];
+    }[]>>(`/schedules/daily?date=${date}`);
+    return response.data;
+  },
+
   // Step 1: Calculate TMs and create draft schedule
   calculateTMs: async (data: {
     client_id?: string;
@@ -268,37 +282,30 @@ export const scheduleApi = {
   // Step 2: Generate schedule with selected TMs
   generateSchedule: async ({
     scheduleId,
-    selected_tms
+    selected_tms,
   }: {
     scheduleId: string;
     selected_tms: string[];
   }) => {
-    const response = await apiClient.post<
-      ApiResponse<Schedule>,
-      { selected_tms: string[] }
-    >(`/schedules/${scheduleId}/generate-schedule`, { selected_tms });
+    const response = await apiClient.post<ApiResponse<Schedule>, { selected_tms: string[] }>(
+      `/schedules/${scheduleId}/generate-schedule`,
+      { selected_tms } // Correctly wrapped in an object
+    );
+    return response.data;
+  },
+
+  // Get TM availability slots for a specific date
+  getTmAvailability: async (tmId: string, date: string) => {
+    const response = await apiClient.get<ApiResponse<{
+      tm_id: string;
+      availability: {
+        start: string;
+        end: string;
+        status: 'available' | 'booked';
+      }[];
+    }>>(`/tms/${tmId}/availability?date=${date}`);
     return response.data;
   }
 };
 
-// Calendar API
-export const calendarApi = {
-  getCalendar: async (startDate: string, endDate: string, tmId?: string) => {
-    const params = new URLSearchParams();
-    params.append('start_date', startDate);
-    params.append('end_date', endDate);
-    if (tmId) params.append('tm_id', tmId);
-    
-    const response = await apiClient.post<ApiResponse<CalendarDay[]>, { start_date: string; end_date: string; tm_id?: string }>('/calendar', {
-      start_date: startDate,
-      end_date: endDate,
-      tm_id: tmId
-    });
-    return response.data;
-  },
-  
-  getTmAvailability: async (tmId: string, date: string) => {
-    const response = await apiClient.get<ApiResponse<TimeSlot[]>>(`/calendar/tm/${tmId}?date_val=${date}`);
-    return response.data;
-  }
-};
+// Calendar API - Removed as requested

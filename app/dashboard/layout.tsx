@@ -22,29 +22,30 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthApi } from "@/lib/api/use-auth-api";
 import { Spinner } from "@/components/Spinner";
+import { scheduleApi } from "@/lib/api/api";
 
-interface Schedule {
-  _id: string;
-  user_id: string;
-  client_id: string;
-  client_name: string;
-  site_location: string;
-  created_at: string;
-  last_updated: string;
-  input_params: {
-    quantity: number;
-    pumping_speed: number;
-    onward_time: number;
-    return_time: number;
-    buffer_time: number;
-    pump_start: string;
-    schedule_date: string;
-  };
-  output_table: unknown[];
-  tm_count: number | null;
-  pumping_time: number;
-  status: string;
-}
+// interface Schedule {
+//   _id: string;
+//   user_id: string;
+//   client_id: string;
+//   client_name: string;
+//   site_location: string;
+//   created_at: string;
+//   last_updated: string;
+//   input_params: {
+//     quantity: number;
+//     pumping_speed: number;
+//     onward_time: number;
+//     return_time: number;
+//     buffer_time: number;
+//     pump_start: string;
+//     schedule_date: string;
+//   };
+//   output_table: unknown[];
+//   tm_count: number | null;
+//   pumping_time: number;
+//   status: string;
+// }
 
 export default function DashboardLayout({
   children,
@@ -63,15 +64,17 @@ export default function DashboardLayout({
     }
   }, [isAuthenticated, authIsLoading, router]);
 
-  const { data: schedulesResponse, isLoading: schedulesIsLoading } = useQuery({
+  const { data: schedulesData, isLoading: schedulesIsLoading } = useQuery({
     queryKey: ["schedules"],
     queryFn: async () => {
-      return api.get<{ success: boolean; message: string; data: Schedule[] }>("/schedules");
-    },
+      const response = await scheduleApi.getSchedules();
+      console.log('Fetched schedules:', response);
+      return response;    },
     enabled: isAuthenticated && api.isAuthenticated,
   });
 
-  const schedules = schedulesResponse?.data || [];
+  const schedules = schedulesData || [];
+  // const schedules = schedulesResponse?.data || [];
 
   const routes = [
     {

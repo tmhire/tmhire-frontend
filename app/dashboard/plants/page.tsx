@@ -45,7 +45,7 @@ const plantFormSchema = z.object({
   state: z.string().min(1, "State is required"),
   postal_code: z.string().min(1, "Postal code is required"),
   contact_person: z.string().min(1, "Contact person is required"),
-  contact_phone: z.string().min(1, "Contact phone is required"),
+  contact_number: z.string().min(1, "Contact phone is required"),
   contact_email: z.string().email("Valid email is required"),
 });
 
@@ -72,7 +72,7 @@ function PlantForm({
       state: "",
       postal_code: "",
       contact_person: "",
-      contact_phone: "",
+      contact_number: "",
       contact_email: "",
     },
   });
@@ -91,20 +91,21 @@ function PlantForm({
       onClose();
       form.reset();
     },
-    onError: (error) => {
+    onError: error => {
       console.error("Error creating plant:", error);
       toast.error("Failed to create plant");
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: PlantFormValues) => plantApi.updatePlant(initialData!._id, data),
+    mutationFn: (data: PlantFormValues) =>
+      plantApi.updatePlant(initialData!._id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["plants"] });
       toast.success("Plant updated successfully");
       onClose();
     },
-    onError: (error) => {
+    onError: error => {
       console.error("Error updating plant:", error);
       toast.error("Failed to update plant");
     },
@@ -122,7 +123,9 @@ function PlantForm({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Plant" : "Add New Plant"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Edit Plant" : "Add New Plant"}
+          </DialogTitle>
           <DialogDescription>
             {isEditing
               ? "Update plant information"
@@ -219,7 +222,7 @@ function PlantForm({
 
               <FormField
                 control={form.control}
-                name="contact_phone"
+                name="contact_number"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Contact Phone</FormLabel>
@@ -238,7 +241,11 @@ function PlantForm({
                   <FormItem>
                     <FormLabel>Contact Email</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="john@example.com" type="email" />
+                      <Input
+                        {...field}
+                        placeholder="john@example.com"
+                        type="email"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -255,7 +262,10 @@ function PlantForm({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
                 {createMutation.isPending || updateMutation.isPending ? (
                   <Spinner size="small" />
                 ) : isEditing ? (
@@ -277,7 +287,9 @@ export default function PlantsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [editingPlant, setEditingPlant] = useState<Plant | undefined>(undefined);
+  const [editingPlant, setEditingPlant] = useState<Plant | undefined>(
+    undefined
+  );
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -302,14 +314,18 @@ export default function PlantsPage() {
       queryClient.invalidateQueries({ queryKey: ["plants"] });
       toast.success("Plant deleted successfully");
     },
-    onError: (error) => {
+    onError: error => {
       console.error("Error deleting plant:", error);
       toast.error("Failed to delete plant");
     },
   });
 
   const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this plant? This will also affect any transit mixers associated with this plant.")) {
+    if (
+      confirm(
+        "Are you sure you want to delete this plant? This will also affect any transit mixers associated with this plant."
+      )
+    ) {
       deleteMutation.mutate(id);
     }
   };
@@ -349,7 +365,9 @@ export default function PlantsPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex justify-center py-4"><Spinner size="small" /></div>
+            <div className="flex justify-center py-4">
+              <Spinner size="small" />
+            </div>
           ) : plants?.length === 0 ? (
             <div className="text-center py-4">
               <p className="text-muted-foreground">No plants found</p>
@@ -377,17 +395,20 @@ export default function PlantsPage() {
                   {plants?.map(plant => (
                     <tr key={plant._id} className="border-b">
                       <td className="py-3">{plant.name}</td>
-                      <td className="py-3">{plant.city}, {plant.state}</td>
+                      <td className="py-3">{plant.address}</td>
                       <td className="py-3">
                         <div>
                           <div>{plant.contact_person}</div>
-                          <div className="text-sm text-muted-foreground">{plant.contact_phone}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {plant.contact_number}
+                          </div>
                         </div>
                       </td>
                       <td className="py-3">
-                        {plant.created_at && formatDistanceToNow(new Date(plant.created_at), {
-                          addSuffix: true,
-                        })}
+                        {plant.created_at &&
+                          formatDistanceToNow(new Date(plant.created_at), {
+                            addSuffix: true,
+                          })}
                       </td>
                       <td className="py-3 text-right">
                         <div className="flex space-x-2 justify-end">
@@ -418,11 +439,11 @@ export default function PlantsPage() {
         </CardContent>
       </Card>
 
-      <PlantForm 
-        isOpen={isAddOpen} 
-        onClose={handleCloseForm} 
-        initialData={editingPlant} 
+      <PlantForm
+        isOpen={isAddOpen}
+        onClose={handleCloseForm}
+        initialData={editingPlant}
       />
     </div>
   );
-} 
+}

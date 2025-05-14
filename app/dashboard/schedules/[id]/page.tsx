@@ -64,7 +64,9 @@ interface OutputTableRow {
 interface Schedule {
   _id: string;
   user_id: string;
+  client_id: string;
   client_name: string;
+  site_location: string;
   created_at: string;
   last_updated: string;
   input_params: {
@@ -73,9 +75,12 @@ interface Schedule {
     onward_time: number;
     return_time: number;
     buffer_time: number;
+    pump_start: string;
+    schedule_date: string;
   };
   output_table: OutputTableRow[];
   tm_count: number | null;
+  tm_identifiers?: string[];
   pumping_time: number | null;
   status: string;
 }
@@ -114,7 +119,8 @@ export default function ScheduleDetailPage() {
   } = useQuery<Schedule>({
     queryKey: ["schedules", scheduleId],
     queryFn: async () => {
-      return api.get<Schedule>(`/schedules/${scheduleId}`);
+      const response = await api.get<{ success: boolean; message: string; data: Schedule }>(`/schedules/${scheduleId}`);
+      return response.data;
     },
     enabled: isAuthenticated && Boolean(scheduleId),
   });
@@ -122,7 +128,10 @@ export default function ScheduleDetailPage() {
   // Fetch available TMs
   const { data: availableTMs = [], isLoading: tmsLoading } = useQuery({
     queryKey: ["available-tms"],
-    queryFn: () => scheduleApi.getAvailableTMs(),
+    queryFn: () => {
+      const date = schedule?.input_params?.schedule_date || new Date().toISOString().split('T')[0];
+      return scheduleApi.getAvailableTMs(date);
+    },
     enabled: isAuthenticated && isGenerating,
   });
 
@@ -152,7 +161,7 @@ export default function ScheduleDetailPage() {
     mutationFn: () =>
       scheduleApi.generateSchedule({
         scheduleId,
-        selected_tm_ids: selectedTMs,
+        selected_tms: selectedTMs,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["schedules", scheduleId] });

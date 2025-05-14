@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { plantApi, Plant, TransitMixer } from "@/lib/api/api";
+import { plantApi, TransitMixer } from "@/lib/api/api";
 import {
   Dialog,
   DialogContent,
@@ -13,9 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/Spinner";
-import { toast } from "sonner";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,7 +35,10 @@ import {
 
 const tmFormSchema = z.object({
   identifier: z.string().min(1, "Identifier is required"),
-  capacity: z.coerce.number().positive("Capacity must be a positive number"),
+  capacity: z.union([
+    z.coerce.number().positive("Capacity must be a positive number"),
+    z.string().transform(val => val === '' ? 0 : parseFloat(val))
+  ]).pipe(z.coerce.number().positive("Capacity must be a positive number")),
   plant_id: z.string().optional(),
 });
 
@@ -64,7 +65,7 @@ export default function TMForm({
     resolver: zodResolver(tmFormSchema),
     defaultValues: {
       identifier: tm?.identifier || "",
-      capacity: tm?.capacity || undefined,
+      capacity: tm?.capacity || '',
       plant_id: tm?.plant_id || undefined,
     },
   });
@@ -73,13 +74,13 @@ export default function TMForm({
     if (tm) {
       form.reset({
         identifier: tm.identifier,
-        capacity: tm.capacity,
+        capacity: tm.capacity || '',
         plant_id: tm.plant_id,
       });
     } else {
       form.reset({
         identifier: "",
-        capacity: undefined,
+        capacity: '',
         plant_id: undefined,
       });
     }
@@ -95,6 +96,11 @@ export default function TMForm({
   });
 
   const handleSubmit = (data: TMFormValues) => {
+    // Convert "none" value to undefined for plant_id
+    if (data.plant_id === "none") {
+      data.plant_id = undefined;
+    }
+    
     onSubmit(data);
   };
 
@@ -137,11 +143,11 @@ export default function TMForm({
                       type="number"
                       placeholder="6"
                       step="0.1"
-                      {...field}
+                      value={field.value === undefined ? '' : field.value}
                       onChange={(e) => {
                         const value = e.target.value;
                         if (value === "") {
-                          field.onChange(undefined);
+                          field.onChange('');
                         } else {
                           field.onChange(parseFloat(value));
                         }
@@ -161,8 +167,8 @@ export default function TMForm({
                   <FormLabel>Plant</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    value={field.value}
+                    defaultValue={field.value || "none"}
+                    value={field.value || "none"}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -170,7 +176,7 @@ export default function TMForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {plantsLoading ? (
                         <div className="flex justify-center py-2">
                           <Spinner size="small" />
@@ -182,7 +188,7 @@ export default function TMForm({
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="" disabled>
+                        <SelectItem value="no_plants" disabled>
                           No plants available
                         </SelectItem>
                       )}

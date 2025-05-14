@@ -59,7 +59,8 @@ export default function DashboardPage() {
   const { data: tmsData, isLoading: tmsLoading } = useQuery({
     queryKey: ["tms"],
     queryFn: async () => {
-      return api.get<TransitMixer[]>("/tms");
+      const response = await api.get<{ success: boolean; message: string; data: TransitMixer[] }>("/tms");
+      return response.data;
     },
     enabled: isAuthenticated && api.isAuthenticated,
   });
@@ -67,7 +68,8 @@ export default function DashboardPage() {
   const { data: schedulesData, isLoading: schedulesLoading } = useQuery({
     queryKey: ["schedules"],
     queryFn: async () => {
-      return api.get<Schedule[]>("/schedules");
+      const response = await api.get<{ success: boolean; message: string; data: Schedule[] }>("/schedules");
+      return response.data;
     },
     enabled: isAuthenticated && api.isAuthenticated,
   });

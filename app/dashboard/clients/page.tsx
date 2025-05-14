@@ -11,8 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, PencilIcon, TrashIcon } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from "lucide-react";
+// import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/Spinner";
@@ -25,7 +25,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+// import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { z } from "zod";
@@ -409,6 +409,14 @@ export default function ClientsPage() {
                       </td>
                       <td className="py-3 text-right">
                         <div className="flex space-x-2 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => router.push(`/dashboard/clients/${client._id}`)}
+                          >
+                            <EyeIcon className="h-4 w-4" />
+                            <span className="sr-only">View</span>
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
