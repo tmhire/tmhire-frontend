@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler, Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -58,32 +58,14 @@ import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   client_id: z.string().optional(),
-  client_name: z.string().min(1, "Client name is required").optional()
-    .refine(val => val !== undefined, {
-      message: "Either client name or client ID must be provided",
-    }),
+  client_name: z.string().min(1, "Client name is required").optional(),
   site_location: z.string().min(1, "Site location is required"),
   input_params: z.object({
-    quantity: z.union([
-      z.coerce.number().positive("Quantity must be positive"),
-      z.string().transform(val => val === '' ? 0 : parseFloat(val))
-    ]).pipe(z.coerce.number().positive("Quantity must be positive")),
-    pumping_speed: z.union([
-      z.coerce.number().positive("Pumping speed must be positive"),
-      z.string().transform(val => val === '' ? 0 : parseFloat(val))
-    ]).pipe(z.coerce.number().positive("Pumping speed must be positive")),
-    onward_time: z.union([
-      z.coerce.number().positive("Onward time must be positive"),
-      z.string().transform(val => val === '' ? 0 : parseFloat(val))
-    ]).pipe(z.coerce.number().positive("Onward time must be positive")),
-    return_time: z.union([
-      z.coerce.number().positive("Return time must be positive"),
-      z.string().transform(val => val === '' ? 0 : parseFloat(val))
-    ]).pipe(z.coerce.number().positive("Return time must be positive")),
-    buffer_time: z.union([
-      z.coerce.number().positive("Buffer time must be positive"),
-      z.string().transform(val => val === '' ? 0 : parseFloat(val))
-    ]).pipe(z.coerce.number().positive("Buffer time must be positive")),
+    quantity: z.coerce.number().positive("Quantity must be positive"),
+    pumping_speed: z.coerce.number().positive("Pumping speed must be positive"),
+    onward_time: z.coerce.number().positive("Onward time must be positive"),
+    return_time: z.coerce.number().positive("Return time must be positive"),
+    buffer_time: z.coerce.number().positive("Buffer time must be positive"),
     pump_start: z.date({
       required_error: "Pump start time is required",
     }),
@@ -91,7 +73,15 @@ const formSchema = z.object({
       required_error: "Schedule date is required",
     }),
   }),
-});
+}).refine(
+  (data) => {
+    return data.client_id !== undefined || data.client_name !== undefined;
+  },
+  {
+    message: "Either client name or client ID must be provided",
+    path: ["client_name"],
+  }
+);
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -241,7 +231,7 @@ export default function CreateSchedulePage() {
         selected_tms: selectedTMs,
       }),
     onSuccess: response => {
-      setOutputData(response);
+      setOutputData(response as ScheduleOutput);
       setStep("results");
       toast.success("Schedule generated successfully");
   
@@ -330,7 +320,7 @@ export default function CreateSchedulePage() {
           <CardContent>
             <Form {...form}>
               <form
-                onSubmit={form.handleSubmit(onSubmit)}
+                onSubmit={form.handleSubmit(onSubmit as SubmitHandler<FormValues>)}
                 className="space-y-6"
                 id="schedule-form"
               >
@@ -351,7 +341,7 @@ export default function CreateSchedulePage() {
 
                   {useExistingClient ? (
                     <FormField
-                      control={form.control}
+                      control={form.control as Control<FormValues>}
                       name="client_id"
                       render={({ field }) => (
                         <FormItem>
@@ -399,7 +389,7 @@ export default function CreateSchedulePage() {
                     />
                   ) : (
                     <FormField
-                      control={form.control}
+                      control={form.control as Control<FormValues>}
                       name="client_name"
                       render={({ field }) => (
                         <FormItem>
@@ -414,7 +404,7 @@ export default function CreateSchedulePage() {
                   )}
 
                   <FormField
-                    control={form.control}
+                    control={form.control as Control<FormValues>}
                     name="site_location"
                     render={({ field }) => (
                       <FormItem>
@@ -429,7 +419,7 @@ export default function CreateSchedulePage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField
-                      control={form.control}
+                      control={form.control as Control<FormValues>}
                       name="input_params.quantity"
                       render={({ field }) => (
                         <FormItem>
@@ -451,7 +441,7 @@ export default function CreateSchedulePage() {
                     />
 
                     <FormField
-                      control={form.control}
+                      control={form.control as Control<FormValues>}
                       name="input_params.pumping_speed"
                       render={({ field }) => (
                         <FormItem>
@@ -473,7 +463,7 @@ export default function CreateSchedulePage() {
                     />
 
                     <FormField
-                      control={form.control}
+                      control={form.control as Control<FormValues>}
                       name="input_params.schedule_date"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
@@ -515,7 +505,7 @@ export default function CreateSchedulePage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField
-                      control={form.control}
+                      control={form.control as Control<FormValues>}
                       name="input_params.onward_time"
                       render={({ field }) => (
                         <FormItem>
@@ -540,7 +530,7 @@ export default function CreateSchedulePage() {
                     />
 
                     <FormField
-                      control={form.control}
+                      control={form.control as Control<FormValues>}
                       name="input_params.return_time"
                       render={({ field }) => (
                         <FormItem>
@@ -565,7 +555,7 @@ export default function CreateSchedulePage() {
                     />
 
                     <FormField
-                      control={form.control}
+                      control={form.control as Control<FormValues>}
                       name="input_params.buffer_time"
                       render={({ field }) => (
                         <FormItem>
@@ -591,7 +581,7 @@ export default function CreateSchedulePage() {
                   </div>
 
                   <FormField
-                    control={form.control}
+                    control={form.control as Control<FormValues>}
                     name="input_params.pump_start"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
