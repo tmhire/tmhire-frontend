@@ -68,9 +68,11 @@ export default function ClientDetailPage({
   const { data: clientStats, isLoading: statsLoading } = useQuery({
     queryKey: ["client-stats", params.id],
     queryFn: async () => {
-      const response = await api.get<{ success: boolean; message: string; data: ClientStats }>(
-        `/clients/${params.id}/stats`
-      );
+      const response = await api.get<{
+        success: boolean;
+        message: string;
+        data: ClientStats;
+      }>(`/clients/${params.id}/stats`);
       return response.data;
     },
     enabled: isAuthenticated && api.isAuthenticated && !!params.id,
@@ -80,9 +82,11 @@ export default function ClientDetailPage({
   const { data: tripHistory, isLoading: historyLoading } = useQuery({
     queryKey: ["client-trips", params.id],
     queryFn: async () => {
-      const response = await api.get<{ success: boolean; message: string; data: TripHistory[] }>(
-        `/clients/${params.id}/trips`
-      );
+      const response = await api.get<{
+        success: boolean;
+        message: string;
+        data: TripHistory[];
+      }>(`/clients/${params.id}/trips`);
       return response.data;
     },
     enabled: isAuthenticated && api.isAuthenticated && !!params.id,
@@ -151,7 +155,7 @@ export default function ClientDetailPage({
 
       {/* Client Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+        <Card className="bg-blue-100 border border-blue-300">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Total Scheduled</CardTitle>
           </CardHeader>
@@ -159,13 +163,14 @@ export default function ClientDetailPage({
             {statsLoading ? (
               <Spinner size="small" />
             ) : (
-              <div className="text-3xl font-bold text-blue-600">
+              <div className="text-3xl font-bold text-blue-500">
                 {clientStats?.total_scheduled || 0} m³
               </div>
             )}
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="bg-green-100 border border-green-300">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Total Delivered</CardTitle>
           </CardHeader>
@@ -173,13 +178,14 @@ export default function ClientDetailPage({
             {statsLoading ? (
               <Spinner size="small" />
             ) : (
-              <div className="text-3xl font-bold text-green-600">
+              <div className="text-3xl font-bold text-green-500">
                 {clientStats?.total_delivered || 0} m³
               </div>
             )}
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="bg-amber-100 border border-amber-300">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Total Pending</CardTitle>
           </CardHeader>
@@ -187,7 +193,7 @@ export default function ClientDetailPage({
             {statsLoading ? (
               <Spinner size="small" />
             ) : (
-              <div className="text-3xl font-bold text-amber-600">
+              <div className="text-3xl font-bold text-amber-500">
                 {clientStats?.total_pending || 0} m³
               </div>
             )}
@@ -199,7 +205,9 @@ export default function ClientDetailPage({
       <Card>
         <CardHeader>
           <CardTitle>Trip History</CardTitle>
-          <CardDescription>Recent deliveries and scheduled trips</CardDescription>
+          <CardDescription>
+            Recent deliveries and scheduled trips
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {historyLoading ? (
@@ -217,7 +225,7 @@ export default function ClientDetailPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tripHistory.map((trip) => (
+                {tripHistory.map(trip => (
                   <TableRow key={trip.trip_id}>
                     <TableCell>
                       {new Date(trip.date).toLocaleDateString()}
@@ -259,4 +267,4 @@ export default function ClientDetailPage({
       </div>
     </div>
   );
-} 
+}

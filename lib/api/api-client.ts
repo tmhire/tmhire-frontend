@@ -1,5 +1,6 @@
 // API client with authentication
 import { getSession } from "next-auth/react";
+import { toast } from "sonner";
 
 interface ApiClientOptions {
   baseUrl?: string;
@@ -58,9 +59,10 @@ class ApiClient {
         return obj;
       }, {} as Record<string, string>));
       
-      if (!response.ok) {
+      if (response.status === 400) {
         const errorText = await response.text();
-        console.error(`API Error (${response.status}): ${errorText}`);
+        toast.error(`API Error: ${errorText || response.statusText}`);
+        console.log(`API Error (${response.status}): ${null}`);
         throw new Error(`API Error: ${response.status} ${response.statusText}\n${errorText}`);
       }
       

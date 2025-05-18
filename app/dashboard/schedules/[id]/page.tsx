@@ -49,6 +49,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { formatTo12Hour, formatUTCtoIST } from "@/lib/utils/date-utils";
 
 interface OutputTableRow {
   trip_no: number;
@@ -85,15 +86,6 @@ interface Schedule {
   status: string;
 }
 
-const formatTo12Hour = (timestamp: string | number | Date) => {
-  if (!timestamp) return '-';
-  return new Date(timestamp).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-
 export default function ScheduleDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -119,7 +111,11 @@ export default function ScheduleDetailPage() {
   } = useQuery<Schedule>({
     queryKey: ["schedules", scheduleId],
     queryFn: async () => {
-      const response = await api.get<{ success: boolean; message: string; data: Schedule }>(`/schedules/${scheduleId}`);
+      const response = await api.get<{
+        success: boolean;
+        message: string;
+        data: Schedule;
+      }>(`/schedules/${scheduleId}`);
       return response.data;
     },
     enabled: isAuthenticated && Boolean(scheduleId),
@@ -129,7 +125,9 @@ export default function ScheduleDetailPage() {
   const { data: availableTMs = [], isLoading: tmsLoading } = useQuery({
     queryKey: ["available-tms"],
     queryFn: () => {
-      const date = schedule?.input_params?.schedule_date || new Date().toISOString().split('T')[0];
+      const date =
+        schedule?.input_params?.schedule_date ||
+        new Date().toISOString().split("T")[0];
       return scheduleApi.getAvailableTMs(date);
     },
     enabled: isAuthenticated && isGenerating,
@@ -281,7 +279,8 @@ export default function ScheduleDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen gap-2">
-        <Spinner size="small" />Loading schedule data...
+        <Spinner size="small" />
+        Loading schedule data...
       </div>
     );
   }
@@ -342,7 +341,7 @@ export default function ScheduleDetailPage() {
             variant="destructive"
             size="sm"
             onClick={handleDelete}
-          // disabled={schedule?.status !== "draft"}
+            // disabled={schedule?.status !== "draft"}
           >
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
@@ -387,10 +386,7 @@ export default function ScheduleDetailPage() {
                           checked={selectedTMs.includes(tm._id)}
                           onCheckedChange={() => handleTMSelect(tm._id)}
                         />
-                        <Label
-                          htmlFor={`tm-${tm._id}`}
-                          className="font-medium"
-                        >
+                        <Label htmlFor={`tm-${tm._id}`} className="font-medium">
                           {tm.identifier}
                         </Label>
                       </div>
@@ -413,7 +409,10 @@ export default function ScheduleDetailPage() {
                   </Button>
                   <Button
                     onClick={handleGenerateClick}
-                    disabled={selectedTMs.length === 0 || generateScheduleMutation.isPending}
+                    disabled={
+                      selectedTMs.length === 0 ||
+                      generateScheduleMutation.isPending
+                    }
                   >
                     {generateScheduleMutation.isPending
                       ? "Generating..."
@@ -508,16 +507,19 @@ export default function ScheduleDetailPage() {
                     First Dispatch
                   </p>
                   <p className="text-lg font-medium">
-                    {schedule.output_table[0].plant_start}
+                    {schedule.output_table?.length > 0 
+                      ? formatUTCtoIST(schedule.output_table[0].plant_start) 
+                      : "-"}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Last Return</p>
                   <p className="text-lg font-medium">
-                    {
-                      schedule.output_table[schedule.output_table.length - 1]
-                        .return
-                    }
+                    {schedule.output_table?.length > 0
+                      ? formatUTCtoIST(
+                          schedule.output_table[schedule.output_table.length - 1].return
+                        )
+                      : "-"}
                   </p>
                 </div>
               </>
@@ -537,13 +539,17 @@ export default function ScheduleDetailPage() {
             <div>
               <p className="text-sm text-muted-foreground">Created At</p>
               <p className="text-lg font-medium">
-                {format(new Date(schedule.created_at), "MMM dd, yyyy HH:mm")}
+                {schedule.created_at
+                  ? formatUTCtoIST(schedule.created_at)
+                  : "-"}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Last Updated</p>
               <p className="text-lg font-medium">
-                {format(new Date(schedule.last_updated), "MMM dd, yyyy HH:mm")}
+                {schedule.last_updated
+                  ? formatUTCtoIST(schedule.last_updated)
+                  : "-"}
               </p>
             </div>
             <div>
@@ -596,7 +602,11 @@ export default function ScheduleDetailPage() {
                     <TableCell>{formatTo12Hour(trip.pump_start)}</TableCell>
                     <TableCell>{formatTo12Hour(trip.unloading_time)}</TableCell>
                     <TableCell>{formatTo12Hour(trip.return)}</TableCell>
-                    <TableCell>{trip.completed_capacity !== undefined ? `${trip.completed_capacity} m³` : "-"}</TableCell>
+                    <TableCell>
+                      {trip.completed_capacity !== undefined
+                        ? `${trip.completed_capacity} m³`
+                        : "-"}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -630,11 +640,15 @@ export default function ScheduleDetailPage() {
           <DialogHeader>
             <DialogTitle>Delete Schedule</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this schedule? This action cannot be undone.
+              Are you sure you want to delete this schedule? This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={confirmDelete}>

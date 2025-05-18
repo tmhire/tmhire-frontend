@@ -808,7 +808,7 @@ export default function CreateSchedulePage() {
           <CardHeader>
             <CardTitle>Schedule Generated</CardTitle>
             <CardDescription>
-              Schedule details for {outputData.client_name}
+              Schedule details for {outputData?.client_name}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -819,22 +819,22 @@ export default function CreateSchedulePage() {
                     Total Quantity
                   </h3>
                   <p className="text-lg font-medium">
-                    {outputData.input_params.quantity} m³
+                    {outputData?.input_params?.quantity} m³
                   </p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground">
                     Transit Mixers Used
                   </h3>
-                  <p className="text-lg font-medium">{outputData.tm_count}</p>
+                  <p className="text-lg font-medium">{outputData?.tm_count}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground">
                     Pumping Time
                   </h3>
                   <p className="text-lg font-medium">
-                    {outputData.pumping_time
-                      ? `${outputData.pumping_time} minutes`
+                    {outputData?.pumping_time
+                      ? `${outputData?.pumping_time} minutes`
                       : "Not calculated"}
                   </p>
                 </div>
@@ -856,7 +856,7 @@ export default function CreateSchedulePage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {outputData.output_table.map((row) => (
+                      {outputData?.output_table.map((row) => (
                         <TableRow key={`${row.trip_no}-${row.tm_no}`}>
                           <TableCell>{row.trip_no}</TableCell>
                           <TableCell>{row.tm_no}</TableCell>

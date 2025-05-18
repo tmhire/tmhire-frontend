@@ -41,12 +41,8 @@ import {
 const plantFormSchema = z.object({
   name: z.string().min(1, "Plant name is required"),
   address: z.string().min(1, "Address is required"),
-  city: z.string().min(1, "City is required"),
-  state: z.string().min(1, "State is required"),
-  postal_code: z.string().min(1, "Postal code is required"),
-  contact_person: z.string().min(1, "Contact person is required"),
+  location: z.string().min(1, "Location is required"),
   contact_number: z.string().min(1, "Contact phone is required"),
-  contact_email: z.string().email("Valid email is required"),
 });
 
 type PlantFormValues = z.infer<typeof plantFormSchema>;
@@ -68,18 +64,19 @@ function PlantForm({
     defaultValues: initialData || {
       name: "",
       address: "",
-      city: "",
-      state: "",
-      postal_code: "",
-      contact_person: "",
+      location: "",
       contact_number: "",
-      contact_email: "",
     },
   });
 
   useEffect(() => {
     if (initialData) {
-      form.reset(initialData);
+      form.reset({
+        name: initialData.name,
+        address: initialData.address,
+        location: initialData.location || "",
+        contact_number: initialData.contact_number,
+      });
     }
   }, [initialData, form]);
 
@@ -166,10 +163,10 @@ function PlantForm({
 
               <FormField
                 control={form.control}
-                name="city"
+                name="location"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
+                  <FormItem className="col-span-2">
+                    <FormLabel>Location</FormLabel>
                     <FormControl>
                       <Input {...field} placeholder="Chennai" />
                     </FormControl>
@@ -180,72 +177,12 @@ function PlantForm({
 
               <FormField
                 control={form.control}
-                name="state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Tamil Nadu" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="postal_code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Postal Code</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="600001" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="contact_person"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contact Person</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="John Doe" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
                 name="contact_number"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="col-span-2">
                     <FormLabel>Contact Phone</FormLabel>
                     <FormControl>
                       <Input {...field} placeholder="9876543210" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="contact_email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contact Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="john@example.com"
-                        type="email"
-                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -385,6 +322,7 @@ export default function PlantsPage() {
                 <thead>
                   <tr className="border-b">
                     <th className="py-3 text-left font-medium">Name</th>
+                    <th className="py-3 text-left font-medium">Address</th>
                     <th className="py-3 text-left font-medium">Location</th>
                     <th className="py-3 text-left font-medium">Contact</th>
                     <th className="py-3 text-left font-medium">Created</th>
@@ -396,12 +334,10 @@ export default function PlantsPage() {
                     <tr key={plant._id} className="border-b">
                       <td className="py-3">{plant.name}</td>
                       <td className="py-3">{plant.address}</td>
+                      <td className="py-3">{plant.location}</td>
                       <td className="py-3">
-                        <div>
-                          <div>{plant.contact_person}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {plant.contact_number}
-                          </div>
+                        <div className="text-sm">
+                          {plant.contact_number}
                         </div>
                       </td>
                       <td className="py-3">

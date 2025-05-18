@@ -54,12 +54,8 @@ export interface Plant {
   _id: string;
   name: string;
   address: string;
-  city: string;
-  state: string;
-  postal_code: string;
-  contact_person: string;
+  location: string;
   contact_number: string;
-  contact_email: string;
   created_at: string;
 }
 
@@ -289,7 +285,7 @@ export const scheduleApi = {
   }) => {
     const response = await apiClient.post<ApiResponse<Schedule>, { selected_tms: string[] }>(
       `/schedules/${scheduleId}/generate-schedule`,
-      { selected_tms } // Correctly wrapped in an object
+      selected_tms  // Correctly wrapped in an object
     );
     return response.data;
   },
