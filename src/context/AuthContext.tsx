@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useRouter, usePathname } from "next/navigation";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -18,42 +18,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Check if user is authenticated
-    const authStatus = localStorage.getItem('isAuthenticated');
-    if (authStatus === 'true') {
+    const authStatus = localStorage.getItem("isAuthenticated");
+    if (authStatus === "true") {
       setIsAuthenticated(true);
     }
   }, []);
 
-  useEffect(() => {
-    // Handle routing based on authentication status
-    if (isAuthenticated && pathname === '/signin') {
-      router.push('/');
-    } else if (!isAuthenticated && pathname !== '/signin') {
-      router.push('/signin');
-    }
-  }, [isAuthenticated, pathname, router]);
+  // useEffect(() => {
+  //   // Handle routing based on authentication status
+  //   if (isAuthenticated && pathname === '/signin') {
+  //     router.push('/');
+  //   } else if (!isAuthenticated && pathname !== '/signin') {
+  //     router.push('/signin');
+  //   }
+  // }, [isAuthenticated, pathname, router]);
 
   const login = () => {
     setIsAuthenticated(true);
-    localStorage.setItem('isAuthenticated', 'true');
+    localStorage.setItem("isAuthenticated", "true");
   };
 
   const logout = () => {
     setIsAuthenticated(false);
-    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem("isAuthenticated");
   };
 
-  return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ isAuthenticated, login, logout }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-} 
+}
