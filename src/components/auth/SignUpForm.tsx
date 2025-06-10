@@ -3,6 +3,7 @@ import Checkbox from "@/components/form/input/Checkbox";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
 import React, { useState } from "react";
 
@@ -26,20 +27,17 @@ export default function SignUpForm() {
             <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
               Sign Up
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Enter your email and password to sign up!
-            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Enter your email and password to sign up!</p>
           </div>
           <div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
-              <button className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+              <button
+                onClick={() => {
+                  signIn("google");
+                }}
+                className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M18.7511 10.1944C18.7511 9.47495 18.6915 8.94995 18.5626 8.40552H10.1797V11.6527H15.1003C15.0011 12.4597 14.4654 13.675 13.2749 14.4916L13.2582 14.6003L15.9087 16.6126L16.0924 16.6305C17.7788 15.1041 18.7511 12.8583 18.7511 10.1944Z"
                     fill="#4285F4"
@@ -78,9 +76,7 @@ export default function SignUpForm() {
                 <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="p-2 text-gray-400 bg-white dark:bg-gray-900 sm:px-5 sm:py-2">
-                  Or
-                </span>
+                <span className="p-2 text-gray-400 bg-white dark:bg-gray-900 sm:px-5 sm:py-2">Or</span>
               </div>
             </div>
             <form>
@@ -91,24 +87,14 @@ export default function SignUpForm() {
                     <Label>
                       First Name<span className="text-error-500">*</span>
                     </Label>
-                    <Input
-                      type="text"
-                      id="fname"
-                      name="fname"
-                      placeholder="Enter your first name"
-                    />
+                    <Input type="text" id="fname" name="fname" placeholder="Enter your first name" />
                   </div>
                   {/* <!-- Last Name --> */}
                   <div className="sm:col-span-1">
                     <Label>
                       Last Name<span className="text-error-500">*</span>
                     </Label>
-                    <Input
-                      type="text"
-                      id="lname"
-                      name="lname"
-                      placeholder="Enter your last name"
-                    />
+                    <Input type="text" id="lname" name="lname" placeholder="Enter your last name" />
                   </div>
                 </div>
                 {/* <!-- Email --> */}
@@ -116,12 +102,7 @@ export default function SignUpForm() {
                   <Label>
                     Email<span className="text-error-500">*</span>
                   </Label>
-                  <Input
-                    type="email"
-                    id="email"
-                    name="email"
-                    placeholder="Enter your email"
-                  />
+                  <Input type="email" id="email" name="email" placeholder="Enter your email" />
                 </div>
                 {/* <!-- Password --> */}
                 <div>
@@ -129,10 +110,7 @@ export default function SignUpForm() {
                     Password<span className="text-error-500">*</span>
                   </Label>
                   <div className="relative">
-                    <Input
-                      placeholder="Enter your password"
-                      type={showPassword ? "text" : "password"}
-                    />
+                    <Input placeholder="Enter your password" type={showPassword ? "text" : "password"} />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
@@ -147,20 +125,11 @@ export default function SignUpForm() {
                 </div>
                 {/* <!-- Checkbox --> */}
                 <div className="flex items-center gap-3">
-                  <Checkbox
-                    className="w-5 h-5"
-                    checked={isChecked}
-                    onChange={setIsChecked}
-                  />
+                  <Checkbox className="w-5 h-5" checked={isChecked} onChange={setIsChecked} />
                   <p className="inline-block font-normal text-gray-500 dark:text-gray-400">
                     By creating an account means you agree to the{" "}
-                    <span className="text-gray-800 dark:text-white/90">
-                      Terms and Conditions,
-                    </span>{" "}
-                    and our{" "}
-                    <span className="text-gray-800 dark:text-white">
-                      Privacy Policy
-                    </span>
+                    <span className="text-gray-800 dark:text-white/90">Terms and Conditions,</span> and our{" "}
+                    <span className="text-gray-800 dark:text-white">Privacy Policy</span>
                   </p>
                 </div>
                 {/* <!-- Button --> */}
@@ -175,10 +144,7 @@ export default function SignUpForm() {
             <div className="mt-5">
               <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
                 Already have an account?
-                <Link
-                  href="/signin"
-                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
-                >
+                <Link href="/signin" className="text-brand-500 hover:text-brand-600 dark:text-brand-400">
                   Sign In
                 </Link>
               </p>
