@@ -5,12 +5,46 @@ import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const searchParams = useSearchParams();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (email === "") {
+      return setError("Email should not be empty");
+    }
+    if (password === "") {
+      return setError("Password should not be empty");
+    }
+    signIn("signin", {
+      email: email,
+      password: password,
+    }).then((res) => {
+      if (!res?.ok) {
+        setError("Invalid credentials");
+      }
+    });
+  };
+
+  useEffect(() => {
+    const error = searchParams.get("error");
+    if (error === "CredentialsSignin") {
+      setError("Invalid Credentials");
+    } else if (error) {
+      setError("An unknown error occurred. Please try again.");
+    }
+  }, [searchParams]);
+
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full">
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
@@ -34,7 +68,11 @@ export default function SignInForm() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
               <button
                 onClick={() => {
-                  signIn("google");
+                  signIn("google").then((res) => {
+                    if (!res?.ok) {
+                      setError("Login failed");
+                    }
+                  });
                 }}
                 className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10"
               >
@@ -80,20 +118,30 @@ export default function SignInForm() {
                 <span className="p-2 text-gray-400 bg-white dark:bg-gray-900 sm:px-5 sm:py-2">Or</span>
               </div>
             </div>
-            <form>
+            <form onSubmit={handleSubmit}>
               <div className="space-y-6">
                 <div>
                   <Label>
                     Email <span className="text-error-500">*</span>{" "}
                   </Label>
-                  <Input placeholder="info@gmail.com" type="email" />
+                  <Input
+                    placeholder="info@gmail.com"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label>
                     Password <span className="text-error-500">*</span>{" "}
                   </Label>
                   <div className="relative">
-                    <Input type={showPassword ? "text" : "password"} placeholder="Enter your password" />
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
@@ -124,6 +172,7 @@ export default function SignInForm() {
                   <Button className="w-full" size="sm">
                     Sign in
                   </Button>
+                  {error && <p className="text-red-500">{error}</p>}
                 </div>
               </div>
             </form>
