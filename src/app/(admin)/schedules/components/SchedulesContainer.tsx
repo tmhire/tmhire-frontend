@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
+import { useRouter } from "next/navigation";
 
 interface Schedule {
   id: string;
@@ -30,6 +31,7 @@ const tableData: Schedule[] = [
 ];
 
 export default function SchedulesContainer() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [isPlantFilterOpen, setIsPlantFilterOpen] = useState(false);
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
@@ -48,7 +50,7 @@ export default function SchedulesContainer() {
   });
 
   const handleAddSchedule = () => {
-    setIsCreateModalOpen(true);
+    router.push("/schedules/new")
   };
 
   const handleCreateSchedule = () => {

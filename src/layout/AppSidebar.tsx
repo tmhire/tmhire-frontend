@@ -51,9 +51,11 @@ const navItems: NavItem[] = [
     path: "/calendar",
   },
   {
-    name: "Forms",
-    icon: <Calendar />,
-    subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
+    name: "Authentication",
+    subItems: [
+      { name: "Sign In", path: "/signin", pro: false },
+      { name: "Sign Up", path: "/signup", pro: false },
+    ],    icon: <Calendar />,
   },
   // {
   //   name: "Tables",
