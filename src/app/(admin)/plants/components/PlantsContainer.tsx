@@ -3,10 +3,11 @@
 import PlantsTable from "./PlantsTable";
 import { PlusIcon, Search } from "lucide-react";
 import Button from "@/components/ui/button/Button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
+import { useApiClient } from "@/hooks/useApiClient";
 
 interface Plant {
   id: string;
@@ -17,19 +18,10 @@ interface Plant {
   created: string;
 }
 
-// Define the table data
-const tableData: Plant[] = [
-  {
-    id: "1",
-    name: "Main Plant",
-    address: "123 Industrial Ave",
-    location: "New York",
-    created: "2024-03-20",
-    contact: "999999999",
-  },
-];
-
 export default function PlantsContainer() {
+  const { fetchWithAuth } = useApiClient();
+  const [plants, setPlants] = useState<Plant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLocationFilterOpen, setIsLocationFilterOpen] = useState(false);
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
@@ -46,20 +38,49 @@ export default function PlantsContainer() {
     contact: "",
   });
 
+  // Fetch plants on component mount
+  useEffect(() => {
+    fetchPlants();
+  }, []);
+
+  const fetchPlants = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetchWithAuth('/plants');
+      if (!response?.ok) throw new Error('Failed to fetch plants');
+      const data = await response.json();
+      setPlants(data.data || []);
+    } catch (error) {
+      console.error('Error fetching plants:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleAddPlant = () => {
     setIsCreateModalOpen(true);
   };
 
-  const handleCreatePlant = () => {
-    // Handle create logic here
-    console.log("Creating new plant:", newPlant);
-    setIsCreateModalOpen(false);
-    setNewPlant({
-      name: "",
-      address: "",
-      location: "",
-      contact: "",
-    });
+  const handleCreatePlant = async () => {
+    try {
+      const response = await fetchWithAuth('/plants', {
+        method: 'POST',
+        body: JSON.stringify(newPlant),
+      });
+      
+      if (!response?.ok) throw new Error('Failed to create plant');
+      
+      await fetchPlants(); // Refresh the list
+      setIsCreateModalOpen(false);
+      setNewPlant({
+        name: "",
+        address: "",
+        location: "",
+        contact: "",
+      });
+    } catch (error) {
+      console.error('Error creating plant:', error);
+    }
   };
 
   const handleEdit = (plant: Plant) => {
@@ -72,16 +93,39 @@ export default function PlantsContainer() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleSaveEdit = () => {
-    // Handle save logic here
-    console.log("Saving changes for plant:", selectedPlant);
-    setIsEditModalOpen(false);
+  const handleSaveEdit = async () => {
+    if (!selectedPlant) return;
+    
+    try {
+      const response = await fetchWithAuth(`/plants/${selectedPlant.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(selectedPlant),
+      });
+      
+      if (!response?.ok) throw new Error('Failed to update plant');
+      
+      await fetchPlants(); // Refresh the list
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error('Error updating plant:', error);
+    }
   };
 
-  const handleConfirmDelete = () => {
-    // Handle delete logic here
-    console.log("Deleting plant:", selectedPlant);
-    setIsDeleteModalOpen(false);
+  const handleConfirmDelete = async () => {
+    if (!selectedPlant) return;
+    
+    try {
+      const response = await fetchWithAuth(`/plants/${selectedPlant.id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response?.ok) throw new Error('Failed to delete plant');
+      
+      await fetchPlants(); // Refresh the list
+      setIsDeleteModalOpen(false);
+    } catch (error) {
+      console.error('Error deleting plant:', error);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,7 +139,7 @@ export default function PlantsContainer() {
   const locations = ["New York", "Los Angeles", "Chicago", "Houston"];
   const dateRanges = ["Last 7 days", "Last 30 days", "Last 90 days", "All time"];
 
-  const filteredData = tableData.filter((plant) => {
+  const filteredData = plants.filter((plant) => {
     const matchesSearch =
       plant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       plant.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -203,11 +247,15 @@ export default function PlantsContainer() {
           {/* Card Body */}
           <div className="p-4 border-t border-gray-100 dark:border-gray-800 sm:p-6">
             <div className="space-y-6">
-              <PlantsTable 
-                data={filteredData} 
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
+              {isLoading ? (
+                <div className="text-center py-4">Loading...</div>
+              ) : (
+                <PlantsTable 
+                  data={filteredData} 
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              )}
             </div>
           </div>
         </div>
