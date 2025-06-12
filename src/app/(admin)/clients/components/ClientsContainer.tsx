@@ -10,6 +10,7 @@ import Input from "@/components/form/input/InputField";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Client {
   _id: string;
@@ -373,11 +374,15 @@ export default function ClientsContainer() {
           <div className="p-4 border-t border-gray-100 dark:border-gray-800 sm:p-6">
             <div className="space-y-6">
               {status === "loading" ? (
-                <div className="text-center py-4 text-gray-800 dark:text-white/90">Loading session...</div>
+                <div className="flex justify-center py-4">
+                  <Spinner text="Loading session..." />
+                </div>
               ) : status === "unauthenticated" ? (
                 <div className="text-center py-4 text-gray-800 dark:text-white/90">Please sign in again to view clients</div>
               ) : isLoadingClients ? (
-                <div className="text-center py-4 text-gray-800 dark:text-white/90">Loading clients...</div>
+                <div className="flex justify-center py-4">
+                  <Spinner text="Loading clients..." />
+                </div>
               ) : (
                 <ClientsTable 
                   data={filteredData} 
@@ -494,7 +499,12 @@ export default function ClientsContainer() {
             onClick={handleCreateClient}
             disabled={createClientMutation.isPending}
           >
-            {createClientMutation.isPending ? 'Creating...' : 'Create Client'}
+            {createClientMutation.isPending ? (
+              <div className="flex items-center gap-2">
+                <Spinner size="sm" />
+                <span>Creating...</span>
+              </div>
+            ) : 'Create Client'}
           </Button>
         </div>
       </Modal>
@@ -596,7 +606,12 @@ export default function ClientsContainer() {
             onClick={handleSaveEdit}
             disabled={editClientMutation.isPending}
           >
-            {editClientMutation.isPending ? 'Saving...' : 'Save Changes'}
+            {editClientMutation.isPending ? (
+              <div className="flex items-center gap-2">
+                <Spinner size="sm" />
+                <span>Saving...</span>
+              </div>
+            ) : 'Save Changes'}
           </Button>
         </div>
       </Modal>
@@ -619,7 +634,12 @@ export default function ClientsContainer() {
                 onClick={handleConfirmDelete}
                 disabled={deleteClientMutation.isPending}
               >
-                {deleteClientMutation.isPending ? 'Deleting...' : 'Delete'}
+                {deleteClientMutation.isPending ? (
+                  <div className="flex items-center gap-2">
+                    <Spinner size="sm" />
+                    <span>Deleting...</span>
+                  </div>
+                ) : 'Delete'}
               </Button>
             </div>
           </div>

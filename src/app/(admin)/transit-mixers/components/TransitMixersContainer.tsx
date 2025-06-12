@@ -10,6 +10,7 @@ import Input from "@/components/form/input/InputField";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Spinner } from "@/components/ui/spinner";
 
 interface TransitMixer {
   _id: string;
@@ -408,11 +409,13 @@ export default function TransitMixersContainer() {
           <div className="p-4 border-t border-gray-100 dark:border-gray-800 sm:p-6">
             <div className="space-y-6">
               {status === "loading" ? (
-                <div className="text-center py-4 text-gray-800 dark:text-white/90">Loading session...</div>
-              ) : status === "unauthenticated" ? (
-                <div className="text-center py-4 text-gray-800 dark:text-white/90">Please sign in to view transit mixers</div>
+                <div className="flex justify-center py-4">
+                  <Spinner text="Loading session..." />
+                </div>
               ) : isLoadingTransitMixers ? (
-                <div className="text-center py-4 text-gray-800 dark:text-white/90">Loading transit mixers...</div>
+                <div className="flex justify-center py-4">
+                  <Spinner text="Loading transit mixers..." />
+                </div>
               ) : (
                 <TransitMixersTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} plants={plants} />
               )}
@@ -504,7 +507,12 @@ export default function TransitMixersContainer() {
             onClick={handleCreateMixer}
             disabled={createTransitMixerMutation.isPending}
           >
-            {createTransitMixerMutation.isPending ? 'Creating...' : 'Create'}
+            {createTransitMixerMutation.isPending ? (
+              <div className="flex items-center gap-2">
+                <Spinner size="sm" />
+                <span>Creating...</span>
+              </div>
+            ) : 'Create'}
           </Button>
         </div>
       </Modal>
@@ -584,7 +592,12 @@ export default function TransitMixersContainer() {
                 onClick={handleSaveEdit}
                 disabled={editTransitMixerMutation.isPending}
               >
-                {editTransitMixerMutation.isPending ? 'Saving...' : 'Save Changes'}
+                {editTransitMixerMutation.isPending ? (
+                  <div className="flex items-center gap-2">
+                    <Spinner size="sm" />
+                    <span>Saving...</span>
+                  </div>
+                ) : 'Save Changes'}
               </Button>
             </div>
           </div>
@@ -612,7 +625,12 @@ export default function TransitMixersContainer() {
                 onClick={handleConfirmDelete}
                 disabled={deleteTransitMixerMutation.isPending}
               >
-                {deleteTransitMixerMutation.isPending ? 'Deleting...' : 'Delete'}
+                {deleteTransitMixerMutation.isPending ? (
+                  <div className="flex items-center gap-2">
+                    <Spinner size="sm" />
+                    <span>Deleting...</span>
+                  </div>
+                ) : 'Delete'}
               </Button>
             </div>
           </>
