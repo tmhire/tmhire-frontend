@@ -233,11 +233,11 @@ export default function PumpsContainer() {
   };
 
   // Get unique plants from pumps data
-  const plants = useMemo(() => {
-    if (!pumpsData) return [];
-    const uniquePlants = Array.from(new Set(pumpsData.map((pump) => pump.plant_id)));
-    return uniquePlants.sort();
-  }, [pumpsData]);
+  // const plants = useMemo(() => {
+  //   if (!pumpsData) return [];
+  //   const uniquePlants = Array.from(new Set(pumpsData.map((pump) => pump.plant_id)));
+  //   return uniquePlants.sort();
+  // }, [pumpsData]);
 
   // Date range options
   const dateRanges = ["Last 7 days", "Last 30 days", "Last 90 days", "All time"];

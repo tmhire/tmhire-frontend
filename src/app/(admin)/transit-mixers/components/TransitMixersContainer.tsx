@@ -20,7 +20,7 @@ interface TransitMixer {
   capacity: number;
   driver_name: string | null;
   driver_contact: string | null;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   created_at: string;
 }
 
@@ -58,16 +58,17 @@ export default function TransitMixersContainer() {
     status: "active",
   });
   const [plants, setPlants] = useState<{ _id: string; name: string }[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isPlantsLoading, setIsPlantsLoading] = useState(false);
 
   // Fetch transit mixers
   const { data: transitMixersData, isLoading: isLoadingTransitMixers } = useQuery({
-    queryKey: ['transit-mixers'],
+    queryKey: ["transit-mixers"],
     queryFn: async () => {
-      const response = await fetchWithAuth('/tms/');
-      if (!response) throw new Error('No response from server');
+      const response = await fetchWithAuth("/tms/");
+      if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to fetch transit mixers');
+      if (!data.success) throw new Error(data.message || "Failed to fetch transit mixers");
       return data.data as TransitMixer[];
     },
     enabled: status === "authenticated",
@@ -76,17 +77,17 @@ export default function TransitMixersContainer() {
   // Create transit mixer mutation
   const createTransitMixerMutation = useMutation({
     mutationFn: async (mixerData: CreateTransitMixerData) => {
-      const response = await fetchWithAuth('/tms/', {
-        method: 'POST',
+      const response = await fetchWithAuth("/tms/", {
+        method: "POST",
         body: JSON.stringify(mixerData),
       });
-      if (!response) throw new Error('No response from server');
+      if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to create transit mixer');
+      if (!data.success) throw new Error(data.message || "Failed to create transit mixer");
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transit-mixers'] });
+      queryClient.invalidateQueries({ queryKey: ["transit-mixers"] });
       setIsCreateModalOpen(false);
       setNewMixer({
         identifier: "",
@@ -103,16 +104,16 @@ export default function TransitMixersContainer() {
   const editTransitMixerMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: CreateTransitMixerData }) => {
       const response = await fetchWithAuth(`/tms/${id}`, {
-        method: 'PUT',
+        method: "PUT",
         body: JSON.stringify(data),
       });
-      if (!response) throw new Error('No response from server');
+      if (!response) throw new Error("No response from server");
       const responseData = await response.json();
-      if (!responseData.success) throw new Error(responseData.message || 'Failed to update transit mixer');
+      if (!responseData.success) throw new Error(responseData.message || "Failed to update transit mixer");
       return responseData.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transit-mixers'] });
+      queryClient.invalidateQueries({ queryKey: ["transit-mixers"] });
       setIsEditModalOpen(false);
       setSelectedMixer(null);
     },
@@ -122,15 +123,15 @@ export default function TransitMixersContainer() {
   const deleteTransitMixerMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await fetchWithAuth(`/tms/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
-      if (!response) throw new Error('No response from server');
+      if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to delete transit mixer');
+      if (!data.success) throw new Error(data.message || "Failed to delete transit mixer");
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transit-mixers'] });
+      queryClient.invalidateQueries({ queryKey: ["transit-mixers"] });
       setIsDeleteModalOpen(false);
       setSelectedMixer(null);
     },
@@ -141,12 +142,13 @@ export default function TransitMixersContainer() {
     const fetchPlants = async () => {
       setIsPlantsLoading(true);
       try {
-        const response = await fetchWithAuth('/plants/');
-        if (!response) throw new Error('No response from server');
+        const response = await fetchWithAuth("/plants/");
+        if (!response) throw new Error("No response from server");
         const data = await response.json();
         if (data.success) {
           setPlants(data.data);
         }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (e) {
         setPlants([]);
       } finally {
@@ -164,7 +166,7 @@ export default function TransitMixersContainer() {
     try {
       await createTransitMixerMutation.mutateAsync(newMixer);
     } catch (error) {
-      console.error('Error creating transit mixer:', error);
+      console.error("Error creating transit mixer:", error);
     }
   };
 
@@ -191,7 +193,7 @@ export default function TransitMixersContainer() {
         },
       });
     } catch (error) {
-      console.error('Error updating transit mixer:', error);
+      console.error("Error updating transit mixer:", error);
     }
   };
 
@@ -200,7 +202,7 @@ export default function TransitMixersContainer() {
     try {
       await deleteTransitMixerMutation.mutateAsync(selectedMixer._id);
     } catch (error) {
-      console.error('Error deleting transit mixer:', error);
+      console.error("Error deleting transit mixer:", error);
     }
   };
 
@@ -208,7 +210,7 @@ export default function TransitMixersContainer() {
     const { name, value } = e.target;
     setNewMixer((prev) => ({
       ...prev,
-      [name]: name === 'capacity' ? Number(value) : value,
+      [name]: name === "capacity" ? Number(value) : value,
     }));
   };
 
@@ -218,43 +220,44 @@ export default function TransitMixersContainer() {
     if (!selectedMixer) return;
     setSelectedMixer({
       ...selectedMixer,
-      [name]: name === 'capacity' ? Number(value) : value,
+      [name]: name === "capacity" ? Number(value) : value,
     });
   };
 
-  const plantsOptions = ["Main Plant", "North Plant", "South Plant", "East Plant"];
+  // const plantsOptions = ["Main Plant", "North Plant", "South Plant", "East Plant"];
   const dateRanges = ["Last 7 days", "Last 30 days", "Last 90 days", "All time"];
   const statusOptions = ["active", "inactive", "all"];
 
-  const filteredData = (transitMixersData || []).filter((mixer) => {
-    // Search filter (identifier, driver name, driver contact)
-    const matchesSearch =
-      mixer.identifier.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (mixer.driver_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (mixer.driver_contact || '').toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredData =
+    (transitMixersData || []).filter((mixer) => {
+      // Search filter (identifier, driver name, driver contact)
+      const matchesSearch =
+        mixer.identifier.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (mixer.driver_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (mixer.driver_contact || "").toLowerCase().includes(searchQuery.toLowerCase());
 
-    // Plant filter
-    const matchesPlant = !selectedPlant || mixer.plant_id === selectedPlant;
+      // Plant filter
+      const matchesPlant = !selectedPlant || mixer.plant_id === selectedPlant;
 
-    // Status filter
-    const matchesStatus = selectedStatus === "all" || mixer.status === selectedStatus;
+      // Status filter
+      const matchesStatus = selectedStatus === "all" || mixer.status === selectedStatus;
 
-    // Date filter
-    let matchesDate = true;
-    if (selectedDate && selectedDate !== "All time") {
-      const now = new Date();
-      let days = 0;
-      if (selectedDate === "Last 7 days") days = 7;
-      else if (selectedDate === "Last 30 days") days = 30;
-      else if (selectedDate === "Last 90 days") days = 90;
-      if (days > 0) {
-        const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-        matchesDate = new Date(mixer.created_at) >= cutoff;
+      // Date filter
+      let matchesDate = true;
+      if (selectedDate && selectedDate !== "All time") {
+        const now = new Date();
+        let days = 0;
+        if (selectedDate === "Last 7 days") days = 7;
+        else if (selectedDate === "Last 30 days") days = 30;
+        else if (selectedDate === "Last 90 days") days = 90;
+        if (days > 0) {
+          const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+          matchesDate = new Date(mixer.created_at) >= cutoff;
+        }
       }
-    }
 
-    return matchesSearch && matchesPlant && matchesStatus && matchesDate;
-  }) || [];
+      return matchesSearch && matchesPlant && matchesStatus && matchesDate;
+    }) || [];
 
   // Calculate average capacity based on filteredData
   const calculateAverageCapacity = () => {
@@ -314,7 +317,7 @@ export default function TransitMixersContainer() {
                   className="dropdown-toggle"
                   size="sm"
                 >
-                  Plant: {selectedPlant ? (plants.find(p => p._id === selectedPlant)?.name || "Unknown") : "All"}
+                  Plant: {selectedPlant ? plants.find((p) => p._id === selectedPlant)?.name || "Unknown" : "All"}
                 </Button>
                 <Dropdown isOpen={isPlantFilterOpen} onClose={() => setIsPlantFilterOpen(false)} className="w-48">
                   <div className="p-2 text-gray-800 dark:text-white/90 ">
@@ -461,8 +464,10 @@ export default function TransitMixersContainer() {
               className="w-full h-11 rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
             >
               <option value="">Select Plant</option>
-              {plants.map(plant => (
-                <option key={plant._id} value={plant._id}>{plant.name}</option>
+              {plants.map((plant) => (
+                <option key={plant._id} value={plant._id}>
+                  {plant.name}
+                </option>
               ))}
             </select>
           </div>
@@ -503,16 +508,15 @@ export default function TransitMixersContainer() {
           <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleCreateMixer}
-            disabled={createTransitMixerMutation.isPending}
-          >
+          <Button onClick={handleCreateMixer} disabled={createTransitMixerMutation.isPending}>
             {createTransitMixerMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />
                 <span>Creating...</span>
               </div>
-            ) : 'Create'}
+            ) : (
+              "Create"
+            )}
           </Button>
         </div>
       </Modal>
@@ -524,21 +528,11 @@ export default function TransitMixersContainer() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Identifier</label>
-              <Input
-                type="text"
-                name="identifier"
-                value={selectedMixer.identifier}
-                onChange={handleEditInputChange}
-              />
+              <Input type="text" name="identifier" value={selectedMixer.identifier} onChange={handleEditInputChange} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity (m³)</label>
-              <Input
-                type="number"
-                name="capacity"
-                value={selectedMixer.capacity}
-                onChange={handleEditInputChange}
-              />
+              <Input type="number" name="capacity" value={selectedMixer.capacity} onChange={handleEditInputChange} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plant</label>
@@ -549,8 +543,10 @@ export default function TransitMixersContainer() {
                 className="w-full h-11 rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
               >
                 <option value="">Select Plant</option>
-                {plants.map(plant => (
-                  <option key={plant._id} value={plant._id}>{plant.name}</option>
+                {plants.map((plant) => (
+                  <option key={plant._id} value={plant._id}>
+                    {plant.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -564,7 +560,9 @@ export default function TransitMixersContainer() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Contact</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Driver Contact
+              </label>
               <Input
                 type="text"
                 name="driver_contact"
@@ -588,16 +586,15 @@ export default function TransitMixersContainer() {
               <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
                 Cancel
               </Button>
-              <Button 
-                onClick={handleSaveEdit}
-                disabled={editTransitMixerMutation.isPending}
-              >
+              <Button onClick={handleSaveEdit} disabled={editTransitMixerMutation.isPending}>
                 {editTransitMixerMutation.isPending ? (
                   <div className="flex items-center gap-2">
                     <Spinner size="sm" />
                     <span>Saving...</span>
                   </div>
-                ) : 'Save Changes'}
+                ) : (
+                  "Save Changes"
+                )}
               </Button>
             </div>
           </div>
@@ -620,17 +617,15 @@ export default function TransitMixersContainer() {
               <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
                 Cancel
               </Button>
-              <Button 
-                variant="warning" 
-                onClick={handleConfirmDelete}
-                disabled={deleteTransitMixerMutation.isPending}
-              >
+              <Button variant="warning" onClick={handleConfirmDelete} disabled={deleteTransitMixerMutation.isPending}>
                 {deleteTransitMixerMutation.isPending ? (
                   <div className="flex items-center gap-2">
                     <Spinner size="sm" />
                     <span>Deleting...</span>
                   </div>
-                ) : 'Delete'}
+                ) : (
+                  "Delete"
+                )}
               </Button>
             </div>
           </>
