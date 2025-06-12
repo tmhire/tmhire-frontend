@@ -25,6 +25,7 @@ interface AuthProps {
   id: string;
   name: string;
   email: string;
+  new_user: boolean;
   accessToken: string;
   refreshToken: string;
   tokenType: string;
@@ -76,6 +77,7 @@ async function handleEmailPassword(
       id: json?.data?.id,
       name: json?.data?.name,
       email: json?.data?.email,
+      new_user: json?.data?.new_user || false,
       accessToken: json?.data?.access_token,
       refreshToken: json?.data?.refresh_token,
       tokenType: json?.data?.token_type,
@@ -123,6 +125,7 @@ async function exchangeGoogleToken(idToken: string): Promise<AuthProps | null> {
       id: "",
       name: "",
       email: "",
+      new_user: data?.data?.new_user || false,
       accessToken: data?.data?.access_token,
       refreshToken: data?.data?.refresh_token,
       tokenType: data?.data?.token_type,
@@ -207,6 +210,7 @@ const handler = NextAuth({
         token.backendRefreshToken = session.backendRefreshToken;
         token.backendRefreshTokenExpires = session.backendRefreshTokenExpires;
         token.backendTokenType = session.backendTokenType;
+        token.new_user = session.new_user;
 
         return token;
       }
@@ -227,6 +231,7 @@ const handler = NextAuth({
             token.backendAccessToken = backendAuth.accessToken;
             token.backendRefreshToken = backendAuth.refreshToken;
             token.backendTokenType = backendAuth.tokenType;
+            token.new_user = backendAuth.new_user;
 
             // Decode access token to store expiration
             const decoded: any = jwtDecode(backendAuth.accessToken);
@@ -246,6 +251,7 @@ const handler = NextAuth({
           token.backendAccessToken = user.accessToken;
           token.backendRefreshToken = user.refreshToken;
           token.backendTokenType = user.tokenType;
+          token.new_user = user.new_user;
 
           // Decode access token to store expiration
           const decoded: any = jwtDecode(user.accessToken);
@@ -308,6 +314,7 @@ const handler = NextAuth({
         session.backendAccessTokenExpires = token.backendAccessTokenExpires as number;
         session.backendRefreshToken = token.backendRefreshToken as string;
         session.backendTokenType = token.backendTokenType as string;
+        session.new_user = token.new_user;
 
         // Log authentication status
         const hasToken = !!token.backendAccessToken;
