@@ -25,7 +25,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 {session?.new_user && (
                   <>
                     <div className="dark:bg-gray-800 bg-gray-200 p-3 dark:text-brand-300 text-brand-800 text-sm text-right">
-                      Welcome! Let's get you started.
+                      Welcome! Let&apos;s get you started.
                     </div>
                     <WelcomeModal />
                   </>

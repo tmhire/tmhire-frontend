@@ -7,17 +7,6 @@ import { JWT } from "next-auth/jwt";
 // Configure backend API URL from environment or use default
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
-// Add type definition for the token
-interface ExtendedToken extends JWT {
-  userId?: string;
-  name?: string;
-  image?: string;
-  backendAccessToken?: string;
-  backendAccessTokenExpires?: number;
-  backendRefreshToken?: string;
-  backendTokenType?: string;
-}
-
 /**
  * Safely sends the Google token to the backend and gets an access token
  */
@@ -205,7 +194,7 @@ export const authOptions: AuthOptions = {
     error: "/signup",
   },
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user }) {
       if (user === null) {
         return false;
       }
@@ -220,9 +209,9 @@ export const authOptions: AuthOptions = {
         token.backendRefreshTokenExpires = session.backendRefreshTokenExpires;
         token.backendTokenType = session.backendTokenType;
         if (session?.new_user) token.new_user = session.new_user;
-        if (session?.company) token.new_user = session.company;
-        if (session?.city) token.new_user = session.city;
-        if (session?.contact) token.new_user = session.contact;
+        if (session?.company) token.company = session.company;
+        if (session?.city) token.city = session.city;
+        if (session?.contact) token.contact = session.contact;
 
         return token;
       }
@@ -249,11 +238,11 @@ export const authOptions: AuthOptions = {
             token.contact = backendAuth.contact;
 
             // Decode access token to store expiration
-            const decoded: any = jwtDecode(backendAuth.accessToken);
+            const decoded = jwtDecode<{ exp: number }>(backendAuth.accessToken);
             token.backendAccessTokenExpires = decoded.exp * 1000; // store in ms
 
             // Decode refresh token to store expiration
-            const decoded_refresh: any = jwtDecode(backendAuth.refreshToken);
+            const decoded_refresh = jwtDecode<{ exp: number }>(backendAuth.refreshToken);
             token.backendRefreshTokenExpires = decoded_refresh.exp * 1000; // store in ms
           } else {
             throw new Error("BackendAuthFailed");
@@ -272,11 +261,11 @@ export const authOptions: AuthOptions = {
           token.contact = user.contact;
 
           // Decode access token to store expiration
-          const decoded: any = jwtDecode(user.accessToken);
+          const decoded = jwtDecode<{ exp: number }>(user.accessToken);
           token.backendAccessTokenExpires = decoded.exp * 1000; // store in ms
 
           // Decode refresh token to store expiration
-          const decoded_refresh: any = jwtDecode(user.refreshToken);
+          const decoded_refresh = jwtDecode<{ exp: number }>(user.refreshToken);
           token.backendRefreshTokenExpires = decoded_refresh.exp * 1000; // store in ms
         } // Refreshing the access token manually
         if (token.backendAccessTokenExpires) {
@@ -297,12 +286,12 @@ export const authOptions: AuthOptions = {
               if (res.ok && json?.data?.access_token) {
                 token.backendAccessToken = json.data.access_token;
 
-                const decoded: any = jwtDecode(json.data.access_token);
+                const decoded = jwtDecode<{ exp: number }>(json.data.access_token);
                 token.backendAccessTokenExpires = decoded.exp * 1000;
 
                 // Refresh token rotation (optional)
                 token.backendRefreshToken = json.data.refresh_token || token.backendRefreshToken;
-                const decoded_refresh: any = jwtDecode(token.backendRefreshToken as string);
+                const decoded_refresh = jwtDecode<{ exp: number }>(token.backendRefreshToken as string);
                 token.backendRefreshTokenExpires = decoded_refresh.exp * 1000; // store in ms
               } else {
                 throw new Error("Failed to refresh token");
