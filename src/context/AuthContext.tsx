@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useRouter, usePathname } from "next/navigation";
+// import { useRouter, usePathname } from "next/navigation";
+import { SessionProvider } from "next-auth/react";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -13,8 +14,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const router = useRouter();
-  const pathname = usePathname();
+  // const router = useRouter();
+  // const pathname = usePathname();
 
   useEffect(() => {
     // Check if user is authenticated
@@ -43,7 +44,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("isAuthenticated");
   };
 
-  return <AuthContext.Provider value={{ isAuthenticated, login, logout }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+      <SessionProvider>{children}</SessionProvider>
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

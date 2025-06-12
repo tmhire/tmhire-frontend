@@ -23,6 +23,11 @@
     "autoprefixer": "^10.4.20",
     "flatpickr": "^4.6.13",
     "jwt-decode": "^4.0.0",
+<<<<<<< HEAD
+=======
+    "lucide-react": "^0.514.0",
+    "motion": "^12.17.0",
+>>>>>>> d0a113ebc6566d74510617f149f7f0c7d1ca73ec
     "next": "15.2.3",
     "next-auth": "^4.24.11",
     "react": "^19.0.0",

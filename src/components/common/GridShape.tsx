@@ -8,7 +8,7 @@ export default function GridShape() {
         <Image
           width={540}
           height={254}
-          src="/images/shape/grid-01.svg"
+          src="/images/grid-image/image-01.png  "
           alt="grid"
         />
       </div>

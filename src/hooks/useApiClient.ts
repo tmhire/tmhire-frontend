@@ -35,9 +35,11 @@ export function useApiClient() {
 
           if (accessToken && refreshToken) {
             // Decode new expiry
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const decoded: any = jwtDecode(accessToken);
             const newExpires = decoded.exp * 1000;
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const decoded_refresh: any = jwtDecode(refreshToken);
             const refreshExpires = decoded_refresh * 1000;
 
