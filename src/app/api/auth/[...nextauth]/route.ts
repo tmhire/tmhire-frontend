@@ -2,9 +2,21 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { jwtDecode } from "jwt-decode";
+import { JWT } from "next-auth/jwt";
 
 // Configure backend API URL from environment or use default
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+
+// Add type definition for the token
+interface ExtendedToken extends JWT {
+  userId?: string;
+  name?: string;
+  image?: string;
+  backendAccessToken?: string;
+  backendAccessTokenExpires?: number;
+  backendRefreshToken?: string;
+  backendTokenType?: string;
+}
 
 /**
  * Safely sends the Google token to the backend and gets an access token
@@ -202,6 +214,9 @@ const handler = NextAuth({
       if (account && user) {
         // Store the user ID in the token
         token.userId = user.id;
+        // Store user's name and image
+        token.name = user.name;
+        token.image = user.image;
         // Handle Google authentication specifically
         if (account.provider === "google" && account.id_token) {
           // Exchange the Google token for a backend token
@@ -284,6 +299,9 @@ const handler = NextAuth({
       if (session.user) {
         // Add user ID to the session
         session.user.id = token.userId as string;
+        // Add user's name and image
+        session.user.name = token.name as string;
+        session.user.image = token.image as string;
         console.log(`Session : ${session}`);
         // Add backend access token to the session
         session.backendAccessToken = token.backendAccessToken as string;

@@ -342,11 +342,11 @@ export default function PlantsContainer() {
           <div className="p-4 border-t border-gray-100 dark:border-gray-800 sm:p-6">
             <div className="space-y-6">
               {status === "loading" ? (
-                <div className="text-center py-4">Loading session...</div>
+                <div className="text-center py-4 text-gray-800 dark:text-white/90">Loading session...</div>
               ) : status === "unauthenticated" ? (
-                <div className="text-center py-4">Please sign in to view plants</div>
+                <div className="text-center py-4 text-gray-800 dark:text-white/90">Please sign in to view plants</div>
               ) : isLoadingPlants ? (
-                <div className="text-center py-4">Loading plants...</div>
+                <div className="text-center py-4 text-gray-800 dark:text-white/90">Loading plants...</div>
               ) : (
                 <PlantsTable 
                   data={filteredData} 

@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
     });
     return config;
   },
+  reactStrictMode:false,
+    images:{
+        domains:[
+            'lh3.googleusercontent.com'
+        ]
+    }
 };
 
 export default nextConfig;

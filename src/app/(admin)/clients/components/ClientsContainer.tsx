@@ -3,33 +3,46 @@
 import ClientsTable from "./ClientsTable";
 import { PlusIcon, Search } from "lucide-react";
 import Button from "@/components/ui/button/Button";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
+import { useApiClient } from "@/hooks/useApiClient";
+import { useSession } from "next-auth/react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface Client {
-  id: string;
+  _id: string;
+  user_id: string;
   name: string;
   address: string;
-  location: string;
-  contact: string;
-  created: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  contact_person: string;
+  contact_email: string;
+  contact_phone: string;
+  notes: string;
+  created_at: string;
+  last_updated: string;
 }
 
-// Define the table data
-const tableData: Client[] = [
-  {
-    id: "1",
-    name: "ABC Corporation",
-    address: "123 Business St",
-    location: "New York",
-    created: "2024-03-20",
-    contact: "999999999",
-  },
-];
+interface CreateClientData {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  contact_person: string;
+  contact_email: string;
+  contact_phone: string;
+  notes: string;
+}
 
 export default function ClientsContainer() {
+  const { fetchWithAuth } = useApiClient();
+  const { status } = useSession();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [isLocationFilterOpen, setIsLocationFilterOpen] = useState(false);
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
@@ -39,31 +52,132 @@ export default function ClientsContainer() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [newClient, setNewClient] = useState<Partial<Client>>({
+  const [editedClient, setEditedClient] = useState<CreateClientData>({
     name: "",
     address: "",
-    location: "",
-    contact: "",
+    city: "",
+    state: "",
+    postal_code: "",
+    contact_person: "",
+    contact_email: "",
+    contact_phone: "",
+    notes: "",
+  });
+  const [newClient, setNewClient] = useState<CreateClientData>({
+    name: "",
+    address: "",
+    city: "",
+    state: "",
+    postal_code: "",
+    contact_person: "",
+    contact_email: "",
+    contact_phone: "",
+    notes: "",
+  });
+
+  const { data: clientsData, isLoading: isLoadingClients } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
+      const response = await fetchWithAuth('/clients');
+      if (!response) throw new Error('No response from server');
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message || 'Failed to fetch clients');
+      return data.data as Client[];
+    },
+    enabled: status === "authenticated",
+  });
+
+  // Create client mutation
+  const createClientMutation = useMutation({
+    mutationFn: async (clientData: CreateClientData) => {
+      const response = await fetchWithAuth('/clients', {
+        method: 'POST',
+        body: JSON.stringify(clientData),
+      });
+      if (!response) throw new Error('No response from server');
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message || 'Failed to create client');
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      setIsCreateModalOpen(false);
+      setNewClient({
+        name: "",
+        address: "",
+        city: "",
+        state: "",
+        postal_code: "",
+        contact_person: "",
+        contact_email: "",
+        contact_phone: "",
+        notes: "",
+      });
+    },
+  });
+
+  // Edit client mutation
+  const editClientMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: CreateClientData }) => {
+      const response = await fetchWithAuth(`/clients/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+      if (!response) throw new Error('No response from server');
+      const responseData = await response.json();
+      if (!responseData.success) throw new Error(responseData.message || 'Failed to update client');
+      return responseData.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      setIsEditModalOpen(false);
+      setSelectedClient(null);
+    },
+  });
+
+  // Delete client mutation
+  const deleteClientMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetchWithAuth(`/clients/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response) throw new Error('No response from server');
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message || 'Failed to delete client');
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      setIsDeleteModalOpen(false);
+      setSelectedClient(null);
+    },
   });
 
   const handleAddClient = () => {
     setIsCreateModalOpen(true);
   };
 
-  const handleCreateClient = () => {
-    // Handle create logic here
-    console.log("Creating new client:", newClient);
-    setIsCreateModalOpen(false);
-    setNewClient({
-      name: "",
-      address: "",
-      location: "",
-      contact: "",
-    });
+  const handleCreateClient = async () => {
+    try {
+      await createClientMutation.mutateAsync(newClient);
+    } catch (error) {
+      console.error('Error creating client:', error);
+    }
   };
 
   const handleEdit = (client: Client) => {
     setSelectedClient(client);
+    setEditedClient({
+      name: client.name,
+      address: client.address,
+      city: client.city,
+      state: client.state,
+      postal_code: client.postal_code,
+      contact_person: client.contact_person,
+      contact_email: client.contact_email,
+      contact_phone: client.contact_phone,
+      notes: client.notes,
+    });
     setIsEditModalOpen(true);
   };
 
@@ -72,16 +186,25 @@ export default function ClientsContainer() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleSaveEdit = () => {
-    // Handle save logic here
-    console.log("Saving changes for client:", selectedClient);
-    setIsEditModalOpen(false);
+  const handleSaveEdit = async () => {
+    if (!selectedClient) return;
+    try {
+      await editClientMutation.mutateAsync({
+        id: selectedClient._id,
+        data: editedClient,
+      });
+    } catch (error) {
+      console.error('Error updating client:', error);
+    }
   };
 
-  const handleConfirmDelete = () => {
-    // Handle delete logic here
-    console.log("Deleting client:", selectedClient);
-    setIsDeleteModalOpen(false);
+  const handleConfirmDelete = async () => {
+    if (!selectedClient) return;
+    try {
+      await deleteClientMutation.mutateAsync(selectedClient._id);
+    } catch (error) {
+      console.error('Error deleting client:', error);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,17 +215,63 @@ export default function ClientsContainer() {
     }));
   };
 
-  const locations = ["New York", "Los Angeles", "Chicago", "Houston"];
-  const dateRanges = ["Last 7 days", "Last 30 days", "Last 90 days", "All time"];
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setEditedClient((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-  const filteredData = tableData.filter((client) => {
-    const matchesSearch =
-      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.location.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesLocation = !selectedLocation || client.location === selectedLocation;
-    return matchesSearch && matchesLocation;
-  });
+  // Get unique cities from clients data
+  const locations = useMemo(() => {
+    if (!clientsData) return [];
+    const uniqueLocations = Array.from(new Set(clientsData.map(client => client.city)));
+    return uniqueLocations.sort();
+  }, [clientsData]);
+
+  // Date range options
+  const dateRanges = useMemo(() => {
+    return [
+      { label: "Last 7 days", days: 7 },
+      { label: "Last 30 days", days: 30 },
+      { label: "Last 90 days", days: 90 },
+      { label: "All time", days: Infinity }
+    ];
+  }, []);
+
+  // Filter clients based on search, location, and date
+  const filteredData = useMemo(() => {
+    if (!clientsData) return [];
+
+    return clientsData.filter((client) => {
+      // Search filter
+      const matchesSearch =
+        client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        client.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        client.city.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Location filter
+      const matchesLocation = !selectedLocation || client.city === selectedLocation;
+
+      // Date filter
+      const clientDate = new Date(client.created_at);
+      const now = new Date();
+      let matchesDate = true;
+
+      if (selectedDate) {
+        const selectedRange = dateRanges.find(range => range.label === selectedDate);
+        if (selectedRange) {
+          if (selectedRange.days !== Infinity) {
+            const cutoffDate = new Date(now.getTime() - selectedRange.days * 24 * 60 * 60 * 1000);
+            matchesDate = clientDate >= cutoffDate;
+          }
+        }
+      }
+
+      return matchesSearch && matchesLocation && matchesDate;
+    });
+  }, [clientsData, searchQuery, selectedLocation, selectedDate, dateRanges]);
 
   return (
     <div>
@@ -184,14 +353,14 @@ export default function ClientsContainer() {
                   <div className="p-2 text-gray-800 dark:text-white/90">
                     {dateRanges.map((range) => (
                       <button
-                        key={range}
+                        key={range.label}
                         className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                         onClick={() => {
-                          setSelectedDate(range);
+                          setSelectedDate(range.label);
                           setIsDateFilterOpen(false);
                         }}
                       >
-                        {range}
+                        {range.label}
                       </button>
                     ))}
                   </div>
@@ -199,18 +368,32 @@ export default function ClientsContainer() {
               </div>
             </div>
           </div>
+
+          {/* Card Body */}
           <div className="p-4 border-t border-gray-100 dark:border-gray-800 sm:p-6">
             <div className="space-y-6">
-              <ClientsTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} />
+              {status === "loading" ? (
+                <div className="text-center py-4 text-gray-800 dark:text-white/90">Loading session...</div>
+              ) : status === "unauthenticated" ? (
+                <div className="text-center py-4 text-gray-800 dark:text-white/90">Please sign in again to view clients</div>
+              ) : isLoadingClients ? (
+                <div className="text-center py-4 text-gray-800 dark:text-white/90">Loading clients...</div>
+              ) : (
+                <ClientsTable 
+                  data={filteredData} 
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              )}
             </div>
           </div>
         </div>
       </div>
 
       {/* Create Modal */}
-      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} className="max-w-[600px] p-5 lg:p-10">
+      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} className="max-w-[800px] p-5 lg:p-10">
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Client</h4>
-        <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
             <Input
@@ -232,22 +415,72 @@ export default function ClientsContainer() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">City</label>
             <Input
               type="text"
-              name="location"
-              placeholder="Enter client location"
-              value={newClient.location}
+              name="city"
+              placeholder="Enter city"
+              value={newClient.city}
               onChange={handleInputChange}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">State</label>
             <Input
               type="text"
-              name="contact"
-              placeholder="Enter contact number"
-              value={newClient.contact}
+              name="state"
+              placeholder="Enter state"
+              value={newClient.state}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Postal Code</label>
+            <Input
+              type="text"
+              name="postal_code"
+              placeholder="Enter postal code"
+              value={newClient.postal_code}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Person</label>
+            <Input
+              type="text"
+              name="contact_person"
+              placeholder="Enter contact person name"
+              value={newClient.contact_person}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Email</label>
+            <Input
+              type="email"
+              name="contact_email"
+              placeholder="Enter contact email"
+              value={newClient.contact_email}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Phone</label>
+            <Input
+              type="tel"
+              name="contact_phone"
+              placeholder="Enter contact phone"
+              value={newClient.contact_phone}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Notes</label>
+            <Input
+              type="text"
+              name="notes"
+              placeholder="Enter any additional notes"
+              value={newClient.notes}
               onChange={handleInputChange}
             />
           </div>
@@ -256,23 +489,28 @@ export default function ClientsContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
             Cancel
           </Button>
-          <Button size="sm" onClick={handleCreateClient}>
-            Create Client
+          <Button 
+            size="sm" 
+            onClick={handleCreateClient}
+            disabled={createClientMutation.isPending}
+          >
+            {createClientMutation.isPending ? 'Creating...' : 'Create Client'}
           </Button>
         </div>
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-[600px] p-5 lg:p-10">
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-[800px] p-5 lg:p-10">
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Edit Client</h4>
         {selectedClient && (
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
               <Input
                 type="text"
                 name="name"
-                defaultValue={selectedClient.name}
+                value={editedClient.name}
+                onChange={handleEditInputChange}
               />
             </div>
             <div>
@@ -280,23 +518,71 @@ export default function ClientsContainer() {
               <Input
                 type="text"
                 name="address"
-                defaultValue={selectedClient.address}
+                value={editedClient.address}
+                onChange={handleEditInputChange}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">City</label>
               <Input
                 type="text"
-                name="location"
-                defaultValue={selectedClient.location}
+                name="city"
+                value={editedClient.city}
+                onChange={handleEditInputChange}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">State</label>
               <Input
                 type="text"
-                name="contact"
-                defaultValue={selectedClient.contact}
+                name="state"
+                value={editedClient.state}
+                onChange={handleEditInputChange}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Postal Code</label>
+              <Input
+                type="text"
+                name="postal_code"
+                value={editedClient.postal_code}
+                onChange={handleEditInputChange}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Person</label>
+              <Input
+                type="text"
+                name="contact_person"
+                value={editedClient.contact_person}
+                onChange={handleEditInputChange}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Email</label>
+              <Input
+                type="email"
+                name="contact_email"
+                value={editedClient.contact_email}
+                onChange={handleEditInputChange}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Phone</label>
+              <Input
+                type="tel"
+                name="contact_phone"
+                value={editedClient.contact_phone}
+                onChange={handleEditInputChange}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Notes</label>
+              <Input
+                type="text"
+                name="notes"
+                value={editedClient.notes}
+                onChange={handleEditInputChange}
               />
             </div>
           </div>
@@ -305,8 +591,12 @@ export default function ClientsContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsEditModalOpen(false)}>
             Cancel
           </Button>
-          <Button size="sm" onClick={handleSaveEdit}>
-            Save Changes
+          <Button 
+            size="sm" 
+            onClick={handleSaveEdit}
+            disabled={editClientMutation.isPending}
+          >
+            {editClientMutation.isPending ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
       </Modal>
@@ -323,8 +613,13 @@ export default function ClientsContainer() {
               <Button size="sm" variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
                 Cancel
               </Button>
-              <Button size="sm" variant="warning" onClick={handleConfirmDelete}>
-                Delete
+              <Button 
+                size="sm" 
+                variant="warning" 
+                onClick={handleConfirmDelete}
+                disabled={deleteClientMutation.isPending}
+              >
+                {deleteClientMutation.isPending ? 'Deleting...' : 'Delete'}
               </Button>
             </div>
           </div>

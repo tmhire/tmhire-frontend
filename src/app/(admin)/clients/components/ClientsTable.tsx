@@ -4,12 +4,19 @@ import Button from "@/components/ui/button/Button";
 import { Edit, Trash } from "lucide-react";
 
 interface Client {
-  id: string;
+  _id: string;
+  user_id: string;
   name: string;
   address: string;
-  location: string;
-  contact: string;
-  created: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  contact_person: string;
+  contact_email: string;
+  contact_phone: string;
+  notes: string;
+  created_at: string;
+  last_updated: string;
 }
 
 interface ClientsTableProps {
@@ -31,12 +38,6 @@ export default function ClientsTable({ data, onEdit, onDelete }: ClientsTablePro
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  ID
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
                   Name
                 </TableCell>
                 <TableCell
@@ -49,13 +50,25 @@ export default function ClientsTable({ data, onEdit, onDelete }: ClientsTablePro
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Location
+                  City
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Contact
+                  State
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Contact Person
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Contact Phone
                 </TableCell>
                 <TableCell
                   isHeader
@@ -75,16 +88,7 @@ export default function ClientsTable({ data, onEdit, onDelete }: ClientsTablePro
             {/* Table Body */}
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
               {data.map((client) => (
-                <TableRow key={client.id}>
-                  <TableCell className="px-5 py-4 text-start">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <span className="block font-medium text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                          {client.id}
-                        </span>
-                      </div>
-                    </div>
-                  </TableCell>
+                <TableRow key={client._id}>
                   <TableCell className="px-5 py-4 text-start">
                     <div className="flex items-center gap-3">
                       <div>
@@ -98,13 +102,19 @@ export default function ClientsTable({ data, onEdit, onDelete }: ClientsTablePro
                     {client.address}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {client.location}
+                    {client.city}
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-theme-sm dark:text-gray-400">
-                    {client.contact}
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {client.state}
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-theme-sm dark:text-gray-400">
-                    {client.created}
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {client.contact_person}
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {client.contact_phone}
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {new Date(client.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="px-5 py-4">
                     <div className="flex items-center gap-2">
