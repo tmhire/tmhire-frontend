@@ -8,6 +8,7 @@ import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
 import { useApiClient } from "@/hooks/useApiClient";
+import { useSession } from "next-auth/react";
 
 interface Plant {
   id: string;
@@ -20,6 +21,7 @@ interface Plant {
 
 export default function PlantsContainer() {
   const { fetchWithAuth } = useApiClient();
+  const { status } = useSession();
   const [plants, setPlants] = useState<Plant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,17 +40,24 @@ export default function PlantsContainer() {
     contact: "",
   });
 
-  // Fetch plants on component mount
+  // Fetch plants when session is ready
   useEffect(() => {
-    fetchPlants();
-  }, []);
+    if (status === "authenticated") {
+      fetchPlants();
+    }
+  }, [status]);
 
   const fetchPlants = async () => {
     try {
       setIsLoading(true);
       const response = await fetchWithAuth('/plants');
-      if (!response?.ok) throw new Error('Failed to fetch plants');
+      if (!response) {
+        throw new Error('No response from server');
+      }
       const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to fetch plants');
+      }
       setPlants(data.data || []);
     } catch (error) {
       console.error('Error fetching plants:', error);
@@ -247,8 +256,12 @@ export default function PlantsContainer() {
           {/* Card Body */}
           <div className="p-4 border-t border-gray-100 dark:border-gray-800 sm:p-6">
             <div className="space-y-6">
-              {isLoading ? (
-                <div className="text-center py-4">Loading...</div>
+              {status === "loading" ? (
+                <div className="text-center py-4">Loading session...</div>
+              ) : status === "unauthenticated" ? (
+                <div className="text-center py-4">Please sign in to view plants</div>
+              ) : isLoading ? (
+                <div className="text-center py-4">Loading plants...</div>
               ) : (
                 <PlantsTable 
                   data={filteredData} 
