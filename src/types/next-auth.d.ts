@@ -2,7 +2,10 @@ import NextAuth from "next-auth";
 
 declare module "next-auth" {
   interface Session {
-    new_user;
+    new_user: string;
+    company?: string;
+    city?: string;
+    contact?: number;
     backendAccessToken?: string;
     backendAccessTokenExpires?: number;
     backendRefreshToken?: string;
@@ -21,6 +24,9 @@ declare module "next-auth" {
     new_user: boolean;
     name: string;
     email: string;
+    company?: string;
+    city?: string;
+    contact?: number;
     image?: string | null;
     accessToken?: string | null;
     refreshToken?: string | null;
