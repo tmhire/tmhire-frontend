@@ -1,19 +1,18 @@
 "use client";
 import React from "react";
 import Badge from "../ui/badge/Badge";
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-} from "@/icons";
-import {
-  Factory,
-  Truck,
-  Users,
-  ShoppingCart,
-  TruckElectric,
-} from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon } from "@/icons";
+import { Factory, Truck, Users, ShoppingCart, TruckElectric } from "lucide-react";
 
-export const EcommerceMetrics = () => {
+interface CountsProps {
+  plants: number;
+  transit_mixers: number;
+  clients: number;
+  pumps: number;
+  orders_today: number;
+}
+
+export const EcommerceMetrics = ({ counts }: { counts: CountsProps }) => {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-5 md:gap-6">
       {/* Plants */}
@@ -25,7 +24,7 @@ export const EcommerceMetrics = () => {
         <div className="flex items-end justify-between mt-5">
           <div>
             <span className="text-sm text-gray-500 dark:text-gray-400">Plants</span>
-            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">3,782</h4>
+            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">{counts.plants}</h4>
           </div>
           <Badge color="success">
             <ArrowUpIcon />
@@ -43,7 +42,7 @@ export const EcommerceMetrics = () => {
         <div className="flex items-end justify-between mt-5">
           <div>
             <span className="text-sm text-gray-500 dark:text-gray-400">Transit Mixers</span>
-            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">3,782</h4>
+            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">{counts.transit_mixers}</h4>
           </div>
           <Badge color="success">
             <ArrowUpIcon />
@@ -60,7 +59,7 @@ export const EcommerceMetrics = () => {
         <div className="flex items-end justify-between mt-5">
           <div>
             <span className="text-sm text-gray-500 dark:text-gray-400">Clients</span>
-            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">5,359</h4>
+            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">{counts.clients}</h4>
           </div>
           <Badge color="error">
             <ArrowDownIcon className="text-error-500" />
@@ -78,7 +77,7 @@ export const EcommerceMetrics = () => {
         <div className="flex items-end justify-between mt-5">
           <div>
             <span className="text-sm text-gray-500 dark:text-gray-400">Pumps</span>
-            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">3,782</h4>
+            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">{counts.pumps}</h4>
           </div>
           <Badge color="success">
             <ArrowUpIcon />
@@ -95,7 +94,7 @@ export const EcommerceMetrics = () => {
         <div className="flex items-end justify-between mt-5">
           <div>
             <span className="text-sm text-gray-500 dark:text-gray-400">Orders Today</span>
-            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">5,359</h4>
+            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">{counts.orders_today}</h4>
           </div>
           <Badge color="error">
             <ArrowDownIcon className="text-error-500" />

@@ -1,55 +1,18 @@
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../ui/table";
 import Badge from "../ui/badge/Badge";
 
-// Define the TypeScript interface for the table rows
-interface Product {
-  id: number;
+interface Order {
   client: string;
-  quantity: number;
-  orderDate: string; // or use Date if you want to format it later
-  status: "Delivered" | "Pending" | "Canceled";
+  quantity: string;
+  order_date: string;
+  status: string;
 }
 
-// Define the table data using the interface
-const tableData: Product[] = [
-  {
-    id: 1,
-    client: "John Doe",
-    quantity: 3,
-    orderDate: "2025-06-08",
-    status: "Delivered",
-  },
-  {
-    id: 2,
-    client: "Jane Smith",
-    quantity: 1,
-    orderDate: "2025-06-10",
-    status: "Pending",
-  },
-  {
-    id: 3,
-    client: "Michael Johnson",
-    quantity: 5,
-    orderDate: "2025-06-05",
-    status: "Delivered",
-  },
-  {
-    id: 4,
-    client: "Samantha Lee",
-    quantity: 2,
-    orderDate: "2025-06-02",
-    status: "Canceled",
-  },
-  {
-    id: 5,
-    client: "Carlos Alvarez",
-    quantity: 4,
-    orderDate: "2025-06-07",
-    status: "Delivered",
-  },
-];
+interface RecentOrdersProps {
+  orders: Order[];
+}
 
-export default function RecentOrders() {
+export default function RecentOrders({ orders }: RecentOrdersProps) {
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
       <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
@@ -103,7 +66,6 @@ export default function RecentOrders() {
       </div>
       <div className="max-w-full overflow-x-auto">
         <Table>
-          {/* Table Header */}
           <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
             <TableRow>
               <TableCell
@@ -133,27 +95,27 @@ export default function RecentOrders() {
             </TableRow>
           </TableHeader>
 
-          {/* Table Body */}
-
           <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {tableData.map((product) => (
-              <TableRow key={product.id}>
+            {orders.map((order, index) => (
+              <TableRow key={index}>
                 <TableCell className="py-3 text-gray-800 font-medium text-theme-sm dark:text-white/90">
-                  {product.client}
+                  {order.client}
                 </TableCell>
 
-                <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">{product.quantity}</TableCell>
+                <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
+                  {order.quantity}
+                </TableCell>
 
                 <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                  {new Date(product.orderDate).toLocaleDateString()}
+                  {new Date(order.order_date).toLocaleDateString()}
                 </TableCell>
 
                 <TableCell className="py-3">
                   <Badge
                     size="sm"
-                    color={product.status === "Delivered" ? "success" : product.status === "Pending" ? "warning" : "error"}
+                    color={order.status === "Delivered" ? "success" : order.status === "Pending" ? "warning" : "error"}
                   >
-                    {product.status}
+                    {order.status}
                   </Badge>
                 </TableCell>
               </TableRow>
