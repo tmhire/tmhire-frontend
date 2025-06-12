@@ -10,6 +10,7 @@ import Input from "@/components/form/input/InputField";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Plant {
   _id: string;
@@ -399,12 +400,17 @@ export default function PumpsContainer() {
 
           {/* Card Body */}
           <div className="p-4 border-t border-gray-100 dark:border-gray-800 sm:p-6">
-            <div className="space-y-6">              {status === "loading" ? (
-                <div>Loading...</div>
+            <div className="space-y-6">
+              {status === "loading" ? (
+                <div className="flex justify-center py-4">
+                  <Spinner text="Loading session..." />
+                </div>
               ) : status === "unauthenticated" ? (
-                <div>Please sign in to view pumps</div>
+                <div className="text-center py-4 text-gray-800 dark:text-white/90">Please sign in to view pumps</div>
               ) : isLoadingPumps ? (
-                <div>Loading pumps...</div>
+                <div className="flex justify-center py-4">
+                  <Spinner text="Loading pumps..." />
+                </div>
               ) : (
                 <PumpsTable 
                   data={filteredData} 
@@ -476,7 +482,17 @@ export default function PumpsContainer() {
             <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreatePump}>Create</Button>
+            <Button 
+              onClick={handleCreatePump}
+              disabled={createPumpMutation.isPending}
+            >
+              {createPumpMutation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <Spinner size="sm" />
+                  <span>Creating...</span>
+                </div>
+              ) : 'Create'}
+            </Button>
           </div>
         </div>
       </Modal>
@@ -539,7 +555,17 @@ export default function PumpsContainer() {
               <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveEdit}>Save Changes</Button>
+              <Button 
+                onClick={handleSaveEdit}
+                disabled={editPumpMutation.isPending}
+              >
+                {editPumpMutation.isPending ? (
+                  <div className="flex items-center gap-2">
+                    <Spinner size="sm" />
+                    <span>Saving...</span>
+                  </div>
+                ) : 'Save Changes'}
+              </Button>
             </div>
           </div>
         )}
@@ -555,8 +581,17 @@ export default function PumpsContainer() {
           <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
             Cancel
           </Button>
-          <Button variant="warning" onClick={handleConfirmDelete}>
-            Delete
+          <Button 
+            variant="warning" 
+            onClick={handleConfirmDelete}
+            disabled={deletePumpMutation.isPending}
+          >
+            {deletePumpMutation.isPending ? (
+              <div className="flex items-center gap-2">
+                <Spinner size="sm" />
+                <span>Deleting...</span>
+              </div>
+            ) : 'Delete'}
           </Button>
         </div>
       </Modal>

@@ -7,6 +7,7 @@ import { EcommerceMetrics } from "@/components/ecommerce/EcommerceMetrics";
 import React from "react";
 import StatisticsChart from "@/components/ecommerce/StatisticsChart";
 import RecentOrders from "@/components/ecommerce/RecentOrders";
+import { Spinner } from "@/components/ui/spinner";
 
 interface DashboardData {
   counts: {
@@ -45,7 +46,11 @@ export default function DashboardContainer() {
   });
 
   if (isLoading || !dashboardData) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[500px]">
+        <Spinner size="lg" text="Loading dashboard..." />
+      </div>
+    );
   }
 
   return (
