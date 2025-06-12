@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import WelcomeModal from "@/components/onboarding/WelcomeModal";
+import { Analytics } from "@vercel/analytics/next";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -22,6 +23,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <AuthProvider>
             <ThemeProvider>
               <SidebarProvider>
+                <Analytics />
                 {session?.new_user && (
                   <>
                     <div className="dark:bg-gray-800 bg-gray-200 p-3 dark:text-brand-300 text-brand-800 text-sm text-right">
