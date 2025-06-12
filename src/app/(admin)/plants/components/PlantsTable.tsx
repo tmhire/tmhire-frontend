@@ -4,12 +4,12 @@ import Button from "@/components/ui/button/Button";
 import { Edit, Trash } from "lucide-react";
 
 interface Plant {
-  id: string;
+  _id: string;
   name: string;
   address: string;
   location: string;
-  contact: string;
-  created: string;
+  contact_number: string;
+  created_at: string;
 }
 
 interface PlantsTableProps {
@@ -75,12 +75,15 @@ export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps
             {/* Table Body */}
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
               {data.map((plant) => (
-                <TableRow key={plant.id}>
+                <TableRow key={plant._id}>
                   <TableCell className="px-5 py-4 text-start">
                     <div className="flex items-center gap-3">
                       <div>
-                        <span className="block font-medium text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                          {plant.id}
+                        <span
+                          className="block text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                          title={plant._id}
+                        >
+                          {plant._id.slice(0, 4)}...{plant._id.slice(-4)}
                         </span>
                       </div>
                     </div>
@@ -101,10 +104,10 @@ export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps
                     {plant.address}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-theme-sm dark:text-gray-400">
-                    {plant.contact}
+                    {plant.contact_number}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-theme-sm dark:text-gray-400">
-                    {plant.created}
+                    {new Date(plant.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="px-5 py-4">
                     <div className="flex items-center gap-2">

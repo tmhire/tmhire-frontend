@@ -3,27 +3,34 @@
 import PlantsTable from "./PlantsTable";
 import { PlusIcon, Search } from "lucide-react";
 import Button from "@/components/ui/button/Button";
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface Plant {
-  id: string;
+  _id: string;
   name: string;
   address: string;
   location: string;
-  contact: string;
-  created: string;
+  contact_number: string;
+  created_at: string;
+}
+
+interface CreatePlantData {
+  name: string;
+  address: string;
+  location: string;
+  contact_number: string;
 }
 
 export default function PlantsContainer() {
   const { fetchWithAuth } = useApiClient();
   const { status } = useSession();
-  const [plants, setPlants] = useState<Plant[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [isLocationFilterOpen, setIsLocationFilterOpen] = useState(false);
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
@@ -33,38 +40,91 @@ export default function PlantsContainer() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
-  const [newPlant, setNewPlant] = useState<Partial<Plant>>({
+  const [editedPlant, setEditedPlant] = useState<CreatePlantData>({
     name: "",
     address: "",
     location: "",
-    contact: "",
+    contact_number: "",
+  });
+  const [newPlant, setNewPlant] = useState<CreatePlantData>({
+    name: "",
+    address: "",
+    location: "",
+    contact_number: "",
   });
 
-  // Fetch plants when session is ready
-  useEffect(() => {
-    if (status === "authenticated") {
-      fetchPlants();
-    }
-  }, [status]);
-
-  const fetchPlants = async () => {
-    try {
-      setIsLoading(true);
+  const { data: plantsData, isLoading: isLoadingPlants } = useQuery({
+    queryKey: ['plants'],
+    queryFn: async () => {
       const response = await fetchWithAuth('/plants');
-      if (!response) {
-        throw new Error('No response from server');
-      }
+      if (!response) throw new Error('No response from server');
       const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to fetch plants');
-      }
-      setPlants(data.data || []);
-    } catch (error) {
-      console.error('Error fetching plants:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      if (!data.success) throw new Error(data.message || 'Failed to fetch plants');
+      return data.data as Plant[];
+    },
+    enabled: status === "authenticated",
+  });
+
+  // Create plant mutation
+  const createPlantMutation = useMutation({
+    mutationFn: async (plantData: CreatePlantData) => {
+      const response = await fetchWithAuth('/plants', {
+        method: 'POST',
+        body: JSON.stringify(plantData),
+      });
+      if (!response) throw new Error('No response from server');
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message || 'Failed to create plant');
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plants'] });
+      setIsCreateModalOpen(false);
+      setNewPlant({
+        name: "",
+        address: "",
+        location: "",
+        contact_number: "",
+      });
+    },
+  });
+
+  // Edit plant mutation
+  const editPlantMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: CreatePlantData }) => {
+      const response = await fetchWithAuth(`/plants/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+      if (!response) throw new Error('No response from server');
+      const responseData = await response.json();
+      if (!responseData.success) throw new Error(responseData.message || 'Failed to update plant');
+      return responseData.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plants'] });
+      setIsEditModalOpen(false);
+      setSelectedPlant(null);
+    },
+  });
+
+  // Delete plant mutation
+  const deletePlantMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetchWithAuth(`/plants/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response) throw new Error('No response from server');
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message || 'Failed to delete plant');
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plants'] });
+      setIsDeleteModalOpen(false);
+      setSelectedPlant(null);
+    },
+  });
 
   const handleAddPlant = () => {
     setIsCreateModalOpen(true);
@@ -72,21 +132,7 @@ export default function PlantsContainer() {
 
   const handleCreatePlant = async () => {
     try {
-      const response = await fetchWithAuth('/plants', {
-        method: 'POST',
-        body: JSON.stringify(newPlant),
-      });
-      
-      if (!response?.ok) throw new Error('Failed to create plant');
-      
-      await fetchPlants(); // Refresh the list
-      setIsCreateModalOpen(false);
-      setNewPlant({
-        name: "",
-        address: "",
-        location: "",
-        contact: "",
-      });
+      await createPlantMutation.mutateAsync(newPlant);
     } catch (error) {
       console.error('Error creating plant:', error);
     }
@@ -94,6 +140,12 @@ export default function PlantsContainer() {
 
   const handleEdit = (plant: Plant) => {
     setSelectedPlant(plant);
+    setEditedPlant({
+      name: plant.name,
+      address: plant.address,
+      location: plant.location,
+      contact_number: plant.contact_number,
+    });
     setIsEditModalOpen(true);
   };
 
@@ -104,17 +156,11 @@ export default function PlantsContainer() {
 
   const handleSaveEdit = async () => {
     if (!selectedPlant) return;
-    
     try {
-      const response = await fetchWithAuth(`/plants/${selectedPlant.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(selectedPlant),
+      await editPlantMutation.mutateAsync({
+        id: selectedPlant._id,
+        data: editedPlant,
       });
-      
-      if (!response?.ok) throw new Error('Failed to update plant');
-      
-      await fetchPlants(); // Refresh the list
-      setIsEditModalOpen(false);
     } catch (error) {
       console.error('Error updating plant:', error);
     }
@@ -122,16 +168,8 @@ export default function PlantsContainer() {
 
   const handleConfirmDelete = async () => {
     if (!selectedPlant) return;
-    
     try {
-      const response = await fetchWithAuth(`/plants/${selectedPlant.id}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response?.ok) throw new Error('Failed to delete plant');
-      
-      await fetchPlants(); // Refresh the list
-      setIsDeleteModalOpen(false);
+      await deletePlantMutation.mutateAsync(selectedPlant._id);
     } catch (error) {
       console.error('Error deleting plant:', error);
     }
@@ -145,17 +183,64 @@ export default function PlantsContainer() {
     }));
   };
 
-  const locations = ["New York", "Los Angeles", "Chicago", "Houston"];
-  const dateRanges = ["Last 7 days", "Last 30 days", "Last 90 days", "All time"];
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setEditedPlant((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-  const filteredData = plants.filter((plant) => {
-    const matchesSearch =
-      plant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      plant.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      plant.location.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesLocation = !selectedLocation || plant.location === selectedLocation;
-    return matchesSearch && matchesLocation;
-  });
+  // Get unique locations from plants data
+  const locations = useMemo(() => {
+    if (!plantsData) return [];
+    const uniqueLocations = Array.from(new Set(plantsData.map(plant => plant.location)));
+    return uniqueLocations.sort();
+  }, [plantsData]);
+
+  // Date range options
+  const dateRanges = useMemo(() => {
+    // const now = new Date();
+    return [
+      { label: "Last 7 days", days: 7 },
+      { label: "Last 30 days", days: 30 },
+      { label: "Last 90 days", days: 90 },
+      { label: "All time", days: Infinity }
+    ];
+  }, []);
+
+  // Filter plants based on search, location, and date
+  const filteredData = useMemo(() => {
+    if (!plantsData) return [];
+
+    return plantsData.filter((plant) => {
+      // Search filter
+      const matchesSearch =
+        plant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        plant.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        plant.location.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Location filter
+      const matchesLocation = !selectedLocation || plant.location === selectedLocation;
+
+      // Date filter
+      const plantDate = new Date(plant.created_at);
+      const now = new Date();
+      let matchesDate = true;
+
+      if (selectedDate) {
+        const selectedRange = dateRanges.find(range => range.label === selectedDate);
+        if (selectedRange) {
+          if (selectedRange.days !== Infinity) {
+            const cutoffDate = new Date(now.getTime() - selectedRange.days * 24 * 60 * 60 * 1000);
+            matchesDate = plantDate >= cutoffDate;
+          }
+        }
+      }
+
+      return matchesSearch && matchesLocation && matchesDate;
+    });
+  }, [plantsData, searchQuery, selectedLocation, selectedDate, dateRanges]);
 
   return (
     <div>
@@ -237,14 +322,14 @@ export default function PlantsContainer() {
                   <div className="p-2 text-gray-800 dark:text-white/90">
                     {dateRanges.map((range) => (
                       <button
-                        key={range}
+                        key={range.label}
                         className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                         onClick={() => {
-                          setSelectedDate(range);
+                          setSelectedDate(range.label);
                           setIsDateFilterOpen(false);
                         }}
                       >
-                        {range}
+                        {range.label}
                       </button>
                     ))}
                   </div>
@@ -260,7 +345,7 @@ export default function PlantsContainer() {
                 <div className="text-center py-4">Loading session...</div>
               ) : status === "unauthenticated" ? (
                 <div className="text-center py-4">Please sign in to view plants</div>
-              ) : isLoading ? (
+              ) : isLoadingPlants ? (
                 <div className="text-center py-4">Loading plants...</div>
               ) : (
                 <PlantsTable 
@@ -312,9 +397,9 @@ export default function PlantsContainer() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact</label>
             <Input
               type="text"
-              name="contact"
+              name="contact_number"
               placeholder="Enter contact number"
-              value={newPlant.contact}
+              value={newPlant.contact_number}
               onChange={handleInputChange}
             />
           </div>
@@ -323,8 +408,12 @@ export default function PlantsContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
             Cancel
           </Button>
-          <Button size="sm" onClick={handleCreatePlant}>
-            Create Plant
+          <Button 
+            size="sm" 
+            onClick={handleCreatePlant}
+            disabled={createPlantMutation.isPending}
+          >
+            {createPlantMutation.isPending ? 'Creating...' : 'Create Plant'}
           </Button>
         </div>
       </Modal>
@@ -339,7 +428,8 @@ export default function PlantsContainer() {
               <Input
                 type="text"
                 name="name"
-                defaultValue={selectedPlant.name}
+                value={editedPlant.name}
+                onChange={handleEditInputChange}
               />
             </div>
             <div>
@@ -347,7 +437,8 @@ export default function PlantsContainer() {
               <Input
                 type="text"
                 name="address"
-                defaultValue={selectedPlant.address}
+                value={editedPlant.address}
+                onChange={handleEditInputChange}
               />
             </div>
             <div>
@@ -355,15 +446,17 @@ export default function PlantsContainer() {
               <Input
                 type="text"
                 name="location"
-                defaultValue={selectedPlant.location}
+                value={editedPlant.location}
+                onChange={handleEditInputChange}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact</label>
               <Input
                 type="text"
-                name="contact"
-                defaultValue={selectedPlant.contact}
+                name="contact_number"
+                value={editedPlant.contact_number}
+                onChange={handleEditInputChange}
               />
             </div>
           </div>
@@ -372,8 +465,12 @@ export default function PlantsContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsEditModalOpen(false)}>
             Cancel
           </Button>
-          <Button size="sm" onClick={handleSaveEdit}>
-            Save Changes
+          <Button 
+            size="sm" 
+            onClick={handleSaveEdit}
+            disabled={editPlantMutation.isPending}
+          >
+            {editPlantMutation.isPending ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
       </Modal>
@@ -390,8 +487,13 @@ export default function PlantsContainer() {
               <Button size="sm" variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
                 Cancel
               </Button>
-              <Button size="sm" variant="warning" onClick={handleConfirmDelete}>
-                Delete
+              <Button 
+                size="sm" 
+                variant="warning" 
+                onClick={handleConfirmDelete}
+                disabled={deletePlantMutation.isPending}
+              >
+                {deletePlantMutation.isPending ? 'Deleting...' : 'Delete'}
               </Button>
             </div>
           </div>
