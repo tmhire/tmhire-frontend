@@ -50,13 +50,6 @@ const navItems: NavItem[] = [
     name: "Calendar",
     path: "/calendar",
   },
-  {
-    name: "Authentication",
-    subItems: [
-      { name: "Sign In", path: "/signin", pro: false },
-      { name: "Sign Up", path: "/signup", pro: false },
-    ],    icon: <Calendar />,
-  },
   // {
   //   name: "Tables",
   //   icon: <SquareChartGantt />,

@@ -6,6 +6,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import WelcomeModal from "@/components/onboarding/WelcomeModal";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -22,9 +23,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <ThemeProvider>
               <SidebarProvider>
                 {session?.new_user && (
-                  <div className="bg-blue-100 p-3 text-blue-800 text-sm text-center">
-                    Welcome! Let's get you started 🎉
-                  </div>
+                  <>
+                    <div className="dark:bg-gray-800 bg-gray-200 p-3 dark:text-brand-300 text-brand-800 text-sm text-right">
+                      Welcome! Let's get you started.
+                    </div>
+                    <WelcomeModal />
+                  </>
                 )}
                 {children}
               </SidebarProvider>

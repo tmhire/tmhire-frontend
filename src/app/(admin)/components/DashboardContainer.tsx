@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { EcommerceMetrics } from "@/components/ecommerce/EcommerceMetrics";
 import React from "react";
 import StatisticsChart from "@/components/ecommerce/StatisticsChart";
-import RecentOrders from "@/components/ecommerce/RecentOrders";
+import RecentSchedules from "@/components/ecommerce/RecentOrders";
 import { Spinner } from "@/components/ui/spinner";
 
 interface DashboardData {
@@ -64,7 +64,7 @@ export default function DashboardContainer() {
       </div>
 
       <div className="col-span-12 xl:col-span-6">
-        <RecentOrders orders={dashboardData.recent_orders} />
+        <RecentSchedules orders={dashboardData.recent_orders} />
       </div>
     </div>
   );
