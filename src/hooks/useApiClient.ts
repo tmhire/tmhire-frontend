@@ -2,10 +2,17 @@ import { useSession, signOut } from "next-auth/react";
 import { jwtDecode } from "jwt-decode";
 
 export function useApiClient() {
-  const { data: session, update } = useSession();
+  const { data: session, status, update } = useSession();
+  const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
   const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
-    if (!session) throw new Error("Not authenticated");
+    console.log("status", status);
+    if (status === "loading" || !session) {
+      // Wait for up to 2 seconds for the session to load
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+      return null;
+    }
+    if (status !== "authenticated") throw new Error("Not authenticated");
 
     let accessToken = session.backendAccessToken;
     let refreshToken = session.backendRefreshToken;
@@ -17,7 +24,7 @@ export function useApiClient() {
         console.log("Access token expired. Refreshing...");
 
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/refresh`, {
+          const res = await fetch(`${BACKEND_URL}/auth/refresh`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ refresh_token: refreshToken }),
@@ -58,8 +65,9 @@ export function useApiClient() {
       }
     }
 
+    console.log(`${BACKEND_URL}${endpoint}`, options);
     // Now use the valid token to call API
-    return fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}${endpoint}`, {
+    return fetch(`${BACKEND_URL}${endpoint}`, {
       ...options,
       headers: {
         ...(options.headers || {}),

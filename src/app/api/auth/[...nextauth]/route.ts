@@ -32,7 +32,6 @@ async function handleEmailPassword(
   }
 
   const endPoint = isSignup ? "auth/signup" : "auth/signin";
-  console.log(`Calling ${endPoint} endpoint from backend`);
   try {
     const response = await fetch(`${BACKEND_URL}/${endPoint}`, {
       method: "POST",
@@ -188,14 +187,21 @@ const handler = NextAuth({
       }
       return true;
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger, session }) {
+      if (trigger === "update" && session) {
+        // ✅ Persist updated tokens into JWT after session.update()
+        token.backendAccessToken = session.backendAccessToken;
+        token.backendAccessTokenExpires = session.backendAccessTokenExpires;
+        token.backendRefreshToken = session.backendRefreshToken;
+        token.backendRefreshTokenExpires = session.backendRefreshTokenExpires;
+        token.backendTokenType = session.backendTokenType;
+
+        return token;
+      }
       // Initial sign in
-      console.log("User", user);
       if (account && user) {
         // Store the user ID in the token
         token.userId = user.id;
-        console.log("User ID: ", user.id);
-        console.log("Token User ID: ", token.userId);
         // Handle Google authentication specifically
         if (account.provider === "google" && account.id_token) {
           // Exchange the Google token for a backend token
