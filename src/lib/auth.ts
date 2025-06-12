@@ -2,7 +2,9 @@ import { AuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { jwtDecode } from "jwt-decode";
-import { JWT } from "next-auth/jwt";
+import type { JWT } from "next-auth/jwt";
+import type { Account, Session, User } from "next-auth";
+import type { AdapterUser } from "next-auth/adapters";
 
 // Configure backend API URL from environment or use default
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
@@ -134,6 +136,11 @@ async function exchangeGoogleToken(idToken: string): Promise<AuthProps | null> {
   }
 }
 
+// interface TokenData {
+//   exp: number;
+//   [key: string]: unknown;
+// }
+
 export const authOptions: AuthOptions = {
   providers: [
     //Google
@@ -194,13 +201,19 @@ export const authOptions: AuthOptions = {
     error: "/signup",
   },
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user }: { user: User | AdapterUser }): Promise<boolean> {
       if (user === null) {
         return false;
       }
       return true;
     },
-    async jwt({ token, user, account, trigger, session }) {
+    async jwt({ token, user, account, trigger, session }: { 
+      token: JWT, 
+      user?: User | AdapterUser, 
+      account?: Account | null, 
+      trigger?: string,
+      session?: Session 
+    }): Promise<JWT> {
       if (trigger === "update" && session) {
         // ✅ Persist updated tokens into JWT after session.update()
         token.backendAccessToken = session.backendAccessToken;
@@ -208,7 +221,7 @@ export const authOptions: AuthOptions = {
         token.backendRefreshToken = session.backendRefreshToken;
         token.backendRefreshTokenExpires = session.backendRefreshTokenExpires;
         token.backendTokenType = session.backendTokenType;
-        if (session?.new_user) token.new_user = session.new_user;
+        if (session?.new_user) token.new_user = Boolean(session.new_user);
         if (session?.company) token.company = session.company;
         if (session?.city) token.city = session.city;
         if (session?.contact) token.contact = session.contact;
@@ -307,7 +320,7 @@ export const authOptions: AuthOptions = {
       console.log("token", token);
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: Session, token: JWT }): Promise<Session> {
       // Send properties to the client
       if (session.user) {
         // Add user ID to the session
@@ -321,7 +334,7 @@ export const authOptions: AuthOptions = {
         session.backendAccessTokenExpires = token.backendAccessTokenExpires as number;
         session.backendRefreshToken = token.backendRefreshToken as string;
         session.backendTokenType = token.backendTokenType as string;
-        session.new_user = token.new_user as string;
+        session.new_user = token.new_user as unknown as string;
         session.company = token.company as string;
         session.city = token.city as string;
         session.contact = token.contact as number;

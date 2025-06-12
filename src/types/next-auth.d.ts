@@ -1,5 +1,8 @@
+import type { DefaultSession } from 'next-auth';
+import type { DefaultJWT } from 'next-auth/jwt';
+
 declare module "next-auth" {
-  interface Session {
+  interface Session extends DefaultSession {
     new_user: string;
     company?: string;
     city?: string;
@@ -14,7 +17,7 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
-    };
+    } & DefaultSession["user"]
   }
 
   interface User {
@@ -26,14 +29,23 @@ declare module "next-auth" {
     city?: string;
     contact?: number;
     image?: string | null;
-    accessToken?: string | null;
-    refreshToken?: string | null;
-    tokenType?: string | null;
+    accessToken?: string;
+    refreshToken?: string;
+    tokenType?: string;
   }
+}
 
-  interface JWT {
+declare module "next-auth/jwt" {
+  interface JWT extends DefaultJWT {
     backendAccessToken?: string;
+    backendRefreshToken?: string;
     backendTokenType?: string;
     userId?: string;
+    new_user?: boolean;
+    company?: string;
+    city?: string;
+    contact?: number;
+    backendAccessTokenExpires?: number;
+    backendRefreshTokenExpires?: number;
   }
 }

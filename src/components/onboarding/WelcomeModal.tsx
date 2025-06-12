@@ -53,8 +53,7 @@ export default function WelcomeModal() {
       [name]: value
     }));
   };
-
-  const handleSubmit = async () => {
+  const handleSubmit = async (): Promise<void> => {
     if (!formData.company || !formData.contact || !formData.city) {
       return; // Don&apos;t submit if required fields are empty
     }
@@ -73,7 +72,7 @@ export default function WelcomeModal() {
       
       if (data.success) {
         await update({
-          ...(session as Record<string, unknown>),
+          ...(session as unknown as Record<string, unknown>),
           user: {
             ...session?.user,
             new_user: false,
