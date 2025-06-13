@@ -207,18 +207,12 @@ export const authOptions: AuthOptions = {
       }
       return true;
     },
-    async jwt({
-      token,
-      user,
-      account,
-      trigger,
-      session,
-    }: {
-      token: JWT;
-      user?: User | AdapterUser;
-      account?: Account | null;
-      trigger?: string;
-      session?: Session;
+    async jwt({ token, user, account, trigger, session }: { 
+      token: JWT, 
+      user?: User | AdapterUser, 
+      account?: Account | null, 
+      trigger?: string,
+      session?: Session 
     }): Promise<JWT> {
       if (trigger === "update" && session) {
         // ✅ Persist updated tokens into JWT after session.update()
@@ -323,9 +317,10 @@ export const authOptions: AuthOptions = {
           }
         }
       }
+      console.log("token", token);
       return token;
     },
-    async session({ session, token }: { session: Session; token: JWT }): Promise<Session> {
+    async session({ session, token }: { session: Session, token: JWT }): Promise<Session> {
       // Send properties to the client
       if (session.user) {
         // Add user ID to the session

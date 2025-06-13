@@ -5,12 +5,10 @@ import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
 
 export default function SignInForm() {
-  const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [email, setEmail] = useState("");
@@ -29,22 +27,13 @@ export default function SignInForm() {
     signIn("signin", {
       email: email,
       password: password,
-      callbackUrl: process.env.FRONTEND_URL!,
+      redirect: false,
     }).then((res) => {
       if (!res?.ok) {
         setError("Invalid credentials");
       }
     });
   };
-
-  useEffect(() => {
-    const error = searchParams.get("error");
-    if (error === "CredentialsSignin") {
-      setError("Invalid Credentials");
-    } else if (error) {
-      setError("An unknown error occurred. Please try again.");
-    }
-  }, [searchParams]);
 
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full">
@@ -60,7 +49,7 @@ export default function SignInForm() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-1 sm:gap-5">
               <button
                 onClick={() => {
-                  signIn("google", { callbackUrl: process.env.FRONTEND_URL! }).then((res) => {
+                  signIn("google").then((res) => {
                     if (!res?.ok) {
                       setError("Login failed");
                     }
