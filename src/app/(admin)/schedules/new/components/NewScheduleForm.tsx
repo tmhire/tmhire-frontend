@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Button from "@/components/ui/button/Button";
 import Select from "@/components/form/Select";
 import Radio from "@/components/form/input/Radio";
@@ -70,6 +70,17 @@ export default function NewScheduleForm() {
     productionTime: "",
     concreteGrade: "",
   });
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    setIsDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
+    
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
+    
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -102,7 +113,6 @@ export default function NewScheduleForm() {
   const selectedClientDetails = clients.find((c) => c.id === selectedClient);
   const filteredPumps = pumpTypes.filter((p) => p.type === pumpType);
   const progressPercentage = ((step - 1) / (steps.length - 1)) * 100;
-  const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
   // Group TMs by plant
   const tmsByPlant = tms.reduce((acc, tm) => {
