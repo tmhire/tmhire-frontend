@@ -5,9 +5,8 @@ import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -15,7 +14,6 @@ export default function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const searchParams = useSearchParams();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,21 +27,13 @@ export default function SignInForm() {
     signIn("signin", {
       email: email,
       password: password,
+      redirect: false,
     }).then((res) => {
       if (!res?.ok) {
         setError("Invalid credentials");
       }
     });
   };
-
-  useEffect(() => {
-    const error = searchParams.get("error");
-    if (error === "CredentialsSignin") {
-      setError("Invalid Credentials");
-    } else if (error) {
-      setError("An unknown error occurred. Please try again.");
-    }
-  }, [searchParams]);
 
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full">
