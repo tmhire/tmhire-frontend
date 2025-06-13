@@ -17,6 +17,17 @@ interface Series {
 export default function StatisticsChart({ series }: { series: Series[] }) {
   const [selectedSeriesIndex, setSelectedSeriesIndex] = useState(0);
 
+  // Generate last 12 months in descending order
+  const getLast12Months = () => {
+    const months = [];
+    const currentDate = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+      months.push(date.toLocaleString("default", { month: "short" }));
+    }
+    return months;
+  };
+
   const options: ApexOptions = {
     legend: {
       show: false,
@@ -74,7 +85,7 @@ export default function StatisticsChart({ series }: { series: Series[] }) {
     },
     xaxis: {
       type: "category",
-      categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+      categories: getLast12Months(),
       axisBorder: {
         show: false,
       },

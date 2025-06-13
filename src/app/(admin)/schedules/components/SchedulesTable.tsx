@@ -4,12 +4,32 @@ import Button from "@/components/ui/button/Button";
 import { Edit, Trash } from "lucide-react";
 
 interface Schedule {
-  id: string;
-  clientName: string;
-  capacity: string;
-  plantsUsed: string[];
-  tmsUsed: number;
-  created: string;
+  _id: string;
+  client_name: string;
+  client_id: string;
+  site_location: string;
+  status: string;
+  input_params: {
+    quantity: number;
+    pumping_speed: number;
+    onward_time: number;
+    return_time: number;
+    buffer_time: number;
+    pump_start: string;
+    schedule_date: string;
+  };
+  output_table: Array<{
+    trip_no: number;
+    tm_no: string;
+    tm_id: string;
+    plant_start: string;
+    pump_start: string;
+    unloading_time: string;
+    return: string;
+    completed_capacity: number;
+  }>;
+  tm_count: number;
+  created_at: string;
 }
 
 interface SchedulesTableProps {
@@ -38,24 +58,35 @@ export default function SchedulesTable({ data, onEdit, onDelete }: SchedulesTabl
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Client Name
+                </TableCell>                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Site Location
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Capacity
+                  Quantity
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Plants Used
+                  Schedule Date
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  TMs Used
+                  TM Count
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Status
                 </TableCell>
                 <TableCell
                   isHeader
@@ -69,27 +100,36 @@ export default function SchedulesTable({ data, onEdit, onDelete }: SchedulesTabl
             {/* Table Body */}
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
               {data.map((schedule) => (
-                <TableRow key={schedule.id}>
+                <TableRow key={schedule._id}>
                   <TableCell className="px-5 py-4 text-start">
                     <div className="flex items-center gap-3">
                       <div>
-                        <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                          {schedule.id}
+                         <span
+                          className="block text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                          title={schedule._id}
+                        >
+                          {schedule._id.slice(0, 4)}...{schedule._id.slice(-4)}
                         </span>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {schedule.clientName}
+                    {schedule.client_name}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {schedule.capacity}
+                    {schedule.site_location}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {schedule.plantsUsed.join(", ")}
+                    {schedule.input_params.quantity}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {schedule.tmsUsed}
+                    {schedule.input_params.schedule_date}
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {schedule.tm_count}
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {schedule.status}
                   </TableCell>
                   <TableCell className="px-5 py-4">
                     <div className="flex items-center gap-2">

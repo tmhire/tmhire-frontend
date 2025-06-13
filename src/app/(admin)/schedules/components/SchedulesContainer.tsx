@@ -3,72 +3,100 @@
 import SchedulesTable from "./SchedulesTable";
 import { PlusIcon, Search } from "lucide-react";
 import Button from "@/components/ui/button/Button";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
 import { useRouter } from "next/navigation";
+import { useApiClient } from "@/hooks/useApiClient";
+import { useSession } from "next-auth/react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Spinner } from "@/components/ui/spinner";
+import DatePickerInput from "@/components/form/input/DatePickerInput";
 
 interface Schedule {
-  id: string;
-  clientName: string;
-  capacity: string;
-  plantsUsed: string[];
-  tmsUsed: number;
-  created: string;
+  _id: string;
+  client_name: string;
+  client_id: string;
+  site_location: string;
+  status: string;
+  input_params: {
+    quantity: number;
+    pumping_speed: number;
+    onward_time: number;
+    return_time: number;
+    buffer_time: number;
+    pump_start: string;
+    schedule_date: string;
+  };
+  output_table: Array<{
+    trip_no: number;
+    tm_no: string;
+    tm_id: string;
+    plant_start: string;
+    pump_start: string;
+    unloading_time: string;
+    return: string;
+    completed_capacity: number;
+  }>;
+  tm_count: number;
+  created_at: string;
 }
-
-// Define the table data
-const tableData: Schedule[] = [
-  {
-    id: "SCH001",
-    clientName: "ABC Construction",
-    capacity: "50m³",
-    plantsUsed: ["Main Plant", "North Plant"],
-    tmsUsed: 3,
-    created: "2024-03-20",
-  },
-];
 
 export default function SchedulesContainer() {
   const router = useRouter();
+  const { fetchWithAuth } = useApiClient();
+  const { status } = useSession();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
-  const [isPlantFilterOpen, setIsPlantFilterOpen] = useState(false);
+  const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
+  const [isClientFilterOpen, setIsClientFilterOpen] = useState(false);
+  const [isSiteFilterOpen, setIsSiteFilterOpen] = useState(false);
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
-  const [selectedPlant, setSelectedPlant] = useState<string>("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [selectedClient, setSelectedClient] = useState<string>("");
+  const [selectedSite, setSelectedSite] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
-  const [newSchedule, setNewSchedule] = useState<Partial<Schedule>>({
-    id: "",
-    clientName: "",
-    capacity: "",
-    plantsUsed: [],
-    tmsUsed: 0,
+
+  // Fetch schedules
+  const { data: schedulesData, isLoading: isLoadingSchedules } = useQuery({
+    queryKey: ['schedules'],
+    queryFn: async () => {
+      const response = await fetchWithAuth('/schedules');
+      if (!response) throw new Error('No response from server');
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message || 'Failed to fetch schedules');
+      return data.data as Schedule[];
+    },
+    enabled: status === "authenticated",
+  });
+
+  // Delete schedule mutation
+  const deleteScheduleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetchWithAuth(`/schedules/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response) throw new Error('No response from server');
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message || 'Failed to delete schedule');
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      setIsDeleteModalOpen(false);
+      setSelectedSchedule(null);
+    },
   });
 
   const handleAddSchedule = () => {
-    router.push("/schedules/new")
-  };
-
-  const handleCreateSchedule = () => {
-    // Handle create logic here
-    console.log("Creating new schedule:", newSchedule);
-    setIsCreateModalOpen(false);
-    setNewSchedule({
-      id: "",
-      clientName: "",
-      capacity: "",
-      plantsUsed: [],
-      tmsUsed: 0,
-    });
+    router.push("/schedules/new");
   };
 
   const handleEdit = (schedule: Schedule) => {
-    setSelectedSchedule(schedule);
-    setIsEditModalOpen(true);
+    router.push(`/schedules/edit/${schedule._id}`);
   };
 
   const handleDelete = (schedule: Schedule) => {
@@ -76,284 +104,294 @@ export default function SchedulesContainer() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleSaveEdit = () => {
-    // Handle save logic here
-    console.log("Saving changes for schedule:", selectedSchedule);
-    setIsEditModalOpen(false);
+  const handleConfirmDelete = async () => {
+    if (!selectedSchedule) return;
+    try {
+      await deleteScheduleMutation.mutateAsync(selectedSchedule._id);
+    } catch (error) {
+      console.error('Error deleting schedule:', error);
+    }
   };
 
-  const handleConfirmDelete = () => {
-    // Handle delete logic here
-    console.log("Deleting schedule:", selectedSchedule);
-    setIsDeleteModalOpen(false);
-  };
+  // Get unique values for filters
+  const { clients, sites, statuses } = useMemo(() => {
+    if (!schedulesData) return { clients: [], sites: [], statuses: [] };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewSchedule((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+    const uniqueClients = Array.from(new Set(schedulesData.map(schedule => schedule.client_name)));
+    const uniqueSites = Array.from(new Set(schedulesData.map(schedule => schedule.site_location)));
+    const uniqueStatuses = Array.from(new Set(schedulesData.map(schedule => schedule.status)));
 
-  const plants = ["Main Plant", "North Plant", "South Plant", "East Plant"];
-  const dateRanges = ["Last 7 days", "Last 30 days", "Last 90 days", "All time"];
+    return {
+      clients: uniqueClients.sort(),
+      sites: uniqueSites.sort(),
+      statuses: uniqueStatuses.sort()
+    };
+  }, [schedulesData]);
 
-  const filteredData = tableData.filter((schedule) => {
-    const matchesSearch =
-      schedule.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      schedule.clientName.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesPlant = !selectedPlant || schedule.plantsUsed.includes(selectedPlant);
-    return matchesSearch && matchesPlant;
-  });
+  // Filter schedules based on search query and filters
+  const filteredSchedules = useMemo(() => {
+    if (!schedulesData) return [];
+
+    return schedulesData.filter((schedule) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        schedule.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        schedule.site_location.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesStatus =
+        selectedStatus === "" || schedule.status === selectedStatus;
+
+      const matchesClient =
+        selectedClient === "" || schedule.client_name === selectedClient;
+
+      const matchesSite =
+        selectedSite === "" || schedule.site_location === selectedSite; const matchesDate = !selectedDate ||
+          schedule.input_params.schedule_date === selectedDate;
+
+      return matchesSearch && matchesStatus && matchesClient && matchesSite && matchesDate;
+    });
+  }, [schedulesData, searchQuery, selectedStatus, selectedClient, selectedSite, selectedDate]);
+
+  if (isLoadingSchedules) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Schedules</h2>
-        <nav>
-          <Button className="flex items-center gap-2" size="sm" onClick={handleAddSchedule}>
-            <PlusIcon className="w-4 h-4" />
-            Add Schedule
-          </Button>
-        </nav>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-xl font-semibold text-black dark:text-white">
+          Schedules Management
+        </h2>
+        <Button onClick={handleAddSchedule} className="flex items-center gap-2" size="sm">
+          <PlusIcon className="w-4 h-4" />
+          Add Schedule
+        </Button>
       </div>
-      <div className="space-y-6">
-        <div className={`rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]`}>
-          <div className="px-6 py-5">
-            <div className="flex flex-wrap items-center gap-4">
-              {/* Search Bar */}
-              <div className="relative">
-                <span className="absolute -translate-y-1/2 left-4 top-1/2 pointer-events-none">
-                  <Search size={"15px"} className="text-gray-800 dark:text-white/90" />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]"
-                />
-              </div>
 
-              {/* Plant Filter */}
-              <div className="relative text-sm">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsPlantFilterOpen(!isPlantFilterOpen)}
-                  className="dropdown-toggle"
-                  size="sm"
-                >
-                  Plant: {selectedPlant || "All"}
-                </Button>
-                <Dropdown isOpen={isPlantFilterOpen} onClose={() => setIsPlantFilterOpen(false)} className="w-48">
-                  <div className="p-2 text-gray-800 dark:text-white/90 ">
+      <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <div className="px-6 py-5">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Search Bar */}
+            <div className="relative">
+              <span className="absolute -translate-y-1/2 left-4 top-1/2 pointer-events-none">
+                <Search size={"15px"} className="text-gray-800 dark:text-white/90" />
+              </span>
+              <input
+                type="text"
+                placeholder="Search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]"
+              />
+            </div>
+
+            {/* Client Filter */}
+            <div className="relative text-sm">
+              <Button
+                variant="outline"
+                onClick={() => setIsClientFilterOpen(!isClientFilterOpen)}
+                className="dropdown-toggle"
+                size="sm"
+              >
+                Client: {selectedClient || "All"}
+              </Button>
+              <Dropdown isOpen={isClientFilterOpen} onClose={() => setIsClientFilterOpen(false)} className="w-48">
+                <div className="p-2 text-gray-800 dark:text-white/90">
+                  <button
+                    className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                    onClick={() => {
+                      setSelectedClient("");
+                      setIsClientFilterOpen(false);
+                    }}
+                  >
+                    All
+                  </button>
+                  {clients.map((client) => (
                     <button
+                      key={client}
                       className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                       onClick={() => {
-                        setSelectedPlant("");
-                        setIsPlantFilterOpen(false);
+                        setSelectedClient(client);
+                        setIsClientFilterOpen(false);
                       }}
                     >
-                      All
+                      {client}
                     </button>
-                    {plants.map((plant) => (
-                      <button
-                        key={plant}
-                        className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                        onClick={() => {
-                          setSelectedPlant(plant);
-                          setIsPlantFilterOpen(false);
-                        }}
-                      >
-                        {plant}
-                      </button>
-                    ))}
-                  </div>
-                </Dropdown>
-              </div>
+                  ))}
+                </div>
+              </Dropdown>
+            </div>
 
-              {/* Date Filter */}
-              <div className="relative text-sm">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsDateFilterOpen(!isDateFilterOpen)}
-                  className="dropdown-toggle"
-                >
-                  Date Added: {selectedDate || "All time"}
-                </Button>
-                <Dropdown isOpen={isDateFilterOpen} onClose={() => setIsDateFilterOpen(false)} className="w-48 text-xs">
-                  <div className="p-2 text-gray-800 dark:text-white/90">
-                    {dateRanges.map((range) => (
-                      <button
-                        key={range}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                        onClick={() => {
-                          setSelectedDate(range);
-                          setIsDateFilterOpen(false);
-                        }}
-                      >
-                        {range}
-                      </button>
-                    ))}
+            {/* Site Location Filter */}
+            <div className="relative text-sm">
+              <Button
+                variant="outline"
+                onClick={() => setIsSiteFilterOpen(!isSiteFilterOpen)}
+                className="dropdown-toggle"
+                size="sm"
+              >
+                Location: {selectedSite || "All"}
+              </Button>
+              <Dropdown isOpen={isSiteFilterOpen} onClose={() => setIsSiteFilterOpen(false)} className="w-48">
+                <div className="p-2 text-gray-800 dark:text-white/90">
+                  <button
+                    className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                    onClick={() => {
+                      setSelectedSite("");
+                      setIsSiteFilterOpen(false);
+                    }}
+                  >
+                    All
+                  </button>
+                  {sites.map((site) => (
+                    <button
+                      key={site}
+                      className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                      onClick={() => {
+                        setSelectedSite(site);
+                        setIsSiteFilterOpen(false);
+                      }}
+                    >
+                      {site}
+                    </button>
+                  ))}
+                </div>
+              </Dropdown>
+            </div>
+
+            {/* Status Filter */}
+            <div className="relative text-sm">
+              <Button
+                variant="outline"
+                onClick={() => setIsStatusFilterOpen(!isStatusFilterOpen)}
+                className="dropdown-toggle"
+                size="sm"
+              >
+                Status: {selectedStatus || "All"}
+              </Button>
+              <Dropdown isOpen={isStatusFilterOpen} onClose={() => setIsStatusFilterOpen(false)} className="w-48">
+                <div className="p-2 text-gray-800 dark:text-white/90">
+                  <button
+                    className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                    onClick={() => {
+                      setSelectedStatus("");
+                      setIsStatusFilterOpen(false);
+                    }}
+                  >
+                    All
+                  </button>
+                  {statuses.map((status) => (
+                    <button
+                      key={status}
+                      className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                      onClick={() => {
+                        setSelectedStatus(status);
+                        setIsStatusFilterOpen(false);
+                      }}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </Dropdown>
+            </div>            {/* Date Filter */}
+            <div className="relative text-sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDateFilterOpen(!isDateFilterOpen)}
+                className="dropdown-toggle"
+              >
+                Date: {selectedDate ? new Date(selectedDate).toLocaleDateString() : "All"}
+              </Button>
+              <Dropdown isOpen={isDateFilterOpen} onClose={() => setIsDateFilterOpen(false)} className="w-72 text-xs">
+                <div className="p-2">
+                  <div className="mb-2">
+                    <DatePickerInput
+                      value={selectedDate}
+                      onChange={(date: string) => {
+                        setSelectedDate(date);
+                        setIsDateFilterOpen(false);
+                      }}
+                      placeholder="Select date"
+                    />
                   </div>
-                </Dropdown>
-              </div>
+                  <button
+                    className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-800 dark:text-white/90"
+                    onClick={() => {
+                      setSelectedDate("");
+                      setIsDateFilterOpen(false);
+                    }}
+                  >
+                    Clear Date
+                  </button>
+                </div>
+              </Dropdown>
             </div>
           </div>
+        </div>
 
-          {/* Card Body */}
-          <div className="p-4 border-t border-gray-100 dark:border-gray-800 sm:p-6">
-            <div className="space-y-6">
-              <SchedulesTable 
-                data={filteredData} 
+        {/* Card Body */}
+        <div className="p-4 border-t border-gray-100 dark:border-gray-800 sm:p-6">
+          <div className="space-y-6">
+            {status === "loading" ? (
+              <div className="flex justify-center py-4">
+                <Spinner text="Loading session..." />
+              </div>
+            ) : status === "unauthenticated" ? (
+              <div className="text-center py-4 text-gray-800 dark:text-white/90">Please sign in to view schedules</div>
+            ) : isLoadingSchedules ? (
+              <div className="flex justify-center py-4">
+                <Spinner text="Loading schedules..." />
+              </div>
+            ) : (
+              <SchedulesTable
+                data={filteredSchedules}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
               />
-            </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Create Modal */}
-      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} className="max-w-[600px] p-5 lg:p-10">
-        <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Schedule</h4>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ID</label>
-            <Input
-              type="text"
-              name="id"
-              placeholder="Enter ID"
-              value={newSchedule.id}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Client Name</label>
-            <Input
-              type="text"
-              name="clientName"
-              placeholder="Enter client name"
-              value={newSchedule.clientName}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity</label>
-            <Input
-              type="text"
-              name="capacity"
-              placeholder="Enter capacity"
-              value={newSchedule.capacity}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plants Used</label>
-            <Input
-              type="text"
-              name="plantsUsed"
-              placeholder="Enter plants (comma-separated)"
-              value={newSchedule.plantsUsed?.join(", ")}
-              onChange={(e) => setNewSchedule({ ...newSchedule, plantsUsed: e.target.value.split(",").map(p => p.trim()) })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">TMs Used</label>
-            <Input
-              type="number"
-              name="tmsUsed"
-              placeholder="Enter number of TMs"
-              value={newSchedule.tmsUsed}
-              onChange={(e) => setNewSchedule({ ...newSchedule, tmsUsed: parseInt(e.target.value) || 0 })}
-            />
-          </div>
-          <div className="flex justify-end gap-3 mt-6">
-            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+      {/* Delete Modal */}
+      <Modal
+        className="max-w-[500px] p-5" 
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+      >
+        <div className="p-6">
+          <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Delete Schedule</h4>
+          <p className="mb-6">
+            Are you sure you want to delete this schedule? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-4">
+            <Button
+              onClick={() => setIsDeleteModalOpen(false)}
+              variant="outline"
+            >
               Cancel
             </Button>
-            <Button onClick={handleCreateSchedule}>Create</Button>
+            <Button
+              onClick={handleConfirmDelete}
+              variant="warning"
+              disabled={deleteScheduleMutation.isPending}
+            >
+              {deleteScheduleMutation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <Spinner size="sm" />
+                  <span>Deleting...</span>
+                </div>
+              ) : 'Delete'}
+            </Button>
           </div>
-        </div>
-      </Modal>
-
-      {/* Edit Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-[600px] p-5 lg:p-10">
-        <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Edit Schedule</h4>
-        {selectedSchedule && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ID</label>
-              <Input
-                type="text"
-                name="id"
-                value={selectedSchedule.id}
-                onChange={(e) => setSelectedSchedule({ ...selectedSchedule, id: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Client Name</label>
-              <Input
-                type="text"
-                name="clientName"
-                value={selectedSchedule.clientName}
-                onChange={(e) => setSelectedSchedule({ ...selectedSchedule, clientName: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity</label>
-              <Input
-                type="text"
-                name="capacity"
-                value={selectedSchedule.capacity}
-                onChange={(e) => setSelectedSchedule({ ...selectedSchedule, capacity: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plants Used</label>
-              <Input
-                type="text"
-                name="plantsUsed"
-                value={selectedSchedule.plantsUsed.join(", ")}
-                onChange={(e) => setSelectedSchedule({ ...selectedSchedule, plantsUsed: e.target.value.split(",").map(p => p.trim()) })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">TMs Used</label>
-              <Input
-                type="number"
-                name="tmsUsed"
-                value={selectedSchedule.tmsUsed}
-                onChange={(e) => setSelectedSchedule({ ...selectedSchedule, tmsUsed: parseInt(e.target.value) || 0 })}
-              />
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveEdit}>Save Changes</Button>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* Delete Modal */}
-      <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} className="max-w-[400px] p-5 lg:p-10">
-        <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Delete Schedule</h4>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Are you sure you want to delete this schedule? This action cannot be undone.
-        </p>
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
-            Cancel
-          </Button>
-          <Button variant="warning" onClick={handleConfirmDelete}>
-            Delete
-          </Button>
         </div>
       </Modal>
     </div>
   );
-} 
+}
