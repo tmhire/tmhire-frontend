@@ -3,6 +3,7 @@ import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
 // import NotificationDropdown from "@/components/header/NotificationDropdown";
 import UserDropdown from "@/components/header/UserDropdown";
 import { useSidebar } from "@/context/SidebarContext";
+import { useProfile } from "@/hooks/useProfile";
 import { Truck } from "lucide-react";
 import Link from "next/link";
 import React, { useState, useEffect, useRef } from "react";
@@ -11,6 +12,7 @@ const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const { profile, loading } = useProfile();
 
   const handleToggle = () => {
     if (window.innerWidth >= 1024) {
@@ -77,7 +79,9 @@ const AppHeader: React.FC = () => {
                 <Truck className="text-white w-6 h-6" />
               </div>
               <div className="flex flex-col justify-center">
-                <h1 className="text-gray-800 dark:text-white/90 text-xl font-semibold">ABC Company</h1>
+                <h1 className="text-gray-800 dark:text-white/90 text-xl font-semibold">
+                  {loading ? "Loading..." : profile?.company || "Company"}
+                </h1>
                 <p className="text-gray-500 dark:text-gray-400 text-xs">powered by TM Hire</p>
               </div>
             </div>

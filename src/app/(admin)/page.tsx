@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import DashboardContainer from "./components/DashboardContainer";
 
 export const metadata: Metadata = {
-  title: "TM Hire",
-  description: "This is Dashboard for TM Hire",
+  title: "Dashboard | TM Hire - Concrete Calculator",
+  description: "Monitor and manage your concrete operations with TM Hire's comprehensive dashboard",
 };
 
 export default function Ecommerce() {

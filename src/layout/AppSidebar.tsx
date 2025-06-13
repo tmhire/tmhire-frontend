@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import { BoxCubeIcon, ChevronDownIcon, PieChartIcon, PlugInIcon, TruckIcon } from "../icons/index";
 import { Box, Calendar, Grid, SquareChartGantt, Truck, TruckElectric, Users } from "lucide-react";
+import { useProfile } from "../hooks/useProfile";
 // import SidebarWidget from "./SidebarWidget";
 
 type NavItem = {
@@ -127,6 +128,7 @@ const othersItems: NavItem[] = [
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
+  const { profile, loading } = useProfile();
 
   const renderMenuItems = (navItems: NavItem[], menuType: "main" | "others") => (
     <ul className="flex flex-col gap-4">
@@ -298,16 +300,40 @@ const AppSidebar: React.FC = () => {
           {isExpanded || isHovered || isMobileOpen ? (
             <div className="flex items-center space-x-3">
               <div className="bg-brand-500 rounded-lg p-2 w-9 h-9 flex items-center justify-center">
-                <Truck className="text-white w-6 h-6" />
+                {loading ? (
+                  <Truck className="text-white w-6 h-6" />
+                ) : profile?.company ? (
+                  <div>
+                    {profile.company
+                      .split(" ")
+                      .map((word) => word[0])
+                      .join("")}
+                  </div>
+                ) : (
+                  <Truck className="text-white w-6 h-6" />
+                )}
               </div>
               <div className="flex flex-col justify-center">
-                <h1 className="text-gray-800 dark:text-white/90 text-lg font-semibold">ABC Company</h1>
+                <h1 className="text-gray-800 dark:text-white/90 text-lg font-semibold">
+                  {loading ? "Loading..." : profile?.company || "Company"}
+                </h1>
                 <p className="text-gray-500 dark:text-gray-400 text-xs">powered by TM Hire</p>
               </div>
             </div>
           ) : (
             <div className="bg-brand-500 rounded-lg p-2 w-9 h-9 flex items-center justify-center">
-              <Truck className="text-white w-6 h-6" />
+              {loading ? (
+                <Truck className="text-white w-6 h-6" />
+              ) : profile?.company ? (
+                <div className="text-white">
+                  {profile.company
+                    .split(" ")
+                    .map((word) => word[0])
+                    .join("")}
+                </div>
+              ) : (
+                <Truck className="text-white w-6 h-6" />
+              )}
             </div>
           )}
         </Link>
