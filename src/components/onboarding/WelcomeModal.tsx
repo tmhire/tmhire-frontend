@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
@@ -8,19 +8,19 @@ import { useSession } from "next-auth/react";
 import { Factory, Truck, Users, Wrench, Calendar } from "lucide-react";
 import { useApiClient } from "@/hooks/useApiClient";
 
-interface SessionUser {
-  id?: string;
-  name?: string | null;
-  email?: string | null;
-  image?: string | null;
-  new_user?: boolean;
-  company?: string;
-  city?: string;
-  contact?: number;
-}
+// interface SessionUser {
+//   id?: string;
+//   name?: string | null;
+//   email?: string | null;
+//   image?: string | null;
+//   new_user?: boolean;
+//   company?: string;
+//   city?: string;
+//   contact?: number;
+// }
 
 export default function WelcomeModal() {
-  const { data: session, status, update } = useSession();
+  const { data: session, update } = useSession();
   const { fetchWithAuth } = useApiClient();
   const [isOpen, setIsOpen] = useState(true);
   const [formData, setFormData] = useState({

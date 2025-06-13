@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 
 export default function ProfileCheck() {
   const { profile, loading } = useProfile();
-  const { status, data: session } = useSession();
+  const { status } = useSession();
 
   // Wait for both session and profile to load
   if (loading || status === "loading") return null;
