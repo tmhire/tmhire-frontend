@@ -1,9 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
-import { Search, Filter, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, Filter, Calendar } from "lucide-react";
+import { useApiClient } from "@/hooks/useApiClient";
+import DatePickerInput from "@/components/form/input/DatePickerInput";
 
 // Types for better type safety and backend integration
+type ApiTask = {
+  id: string;
+  start: string;
+  end: string;
+  client: string;
+};
+
 type Task = {
   id: string;
   start: number;
@@ -21,209 +30,134 @@ type Mixer = {
   tasks: Task[];
 };
 
-// Sample data with client information
-const initialGanttData: Mixer[] = [
-  {
-    id: "1",
-    name: "Mixer 1",
-    plant: "Plant A",
-    client: "ABC Construction",
-    tasks: [{ 
-      id: "task-1",
-      start: 6, 
-      duration: 3, 
-      color: "bg-orange-500", 
-      client: "ABC Construction",
-      type: "production"
-    }],
-  },
-  {
-    id: "3",
-    name: "Mixer 3",
-    plant: "Plant B",
-    client: "XYZ Builders",
-    tasks: [{ 
-      id: "task-3",
-      start: 9, 
-      duration: 4, 
-      color: "bg-orange-500", 
-      client: "XYZ Builders",
-      type: "production"
-    }],
-  },
-  {
-    id: "4",
-    name: "Mixer 4",
-    plant: "Plant A",
-    client: "City Projects",
-    tasks: [{ 
-      id: "task-4",
-      start: 15, 
-      duration: 3, 
-      color: "bg-orange-500", 
-      client: "City Projects",
-      type: "production"
-    }],
-  },
-  {
-    id: "5",
-    name: "Mixer 5",
-    plant: "Plant C",
-    client: null,
-    tasks: [],
-  },
-  {
-    id: "6",
-    name: "Mixer 6",
-    plant: "Plant B",
-    client: "Metro Construction",
-    tasks: [{ 
-      id: "task-6",
-      start: 13, 
-      duration: 2, 
-      color: "bg-orange-500", 
-      client: "Metro Construction",
-      type: "production"
-    }],
-  },
-  {
-    id: "7",
-    name: "Mixer 7",
-    plant: "Plant A",
-    client: "Highway Builders",
-    tasks: [{ 
-      id: "task-7",
-      start: 6, 
-      duration: 1, 
-      color: "bg-blue-500", 
-      client: "Highway Builders",
-      type: "cleaning"
-    }],
-  },
-  {
-    id: "8",
-    name: "Mixer 8",
-    plant: "Plant C",
-    client: null,
-    tasks: [],
-  },
-  {
-    id: "9",
-    name: "Mixer 9",
-    plant: "Plant B",
-    client: "Skyline Projects",
-    tasks: [{ 
-      id: "task-9",
-      start: 7, 
-      duration: 2, 
-      color: "bg-blue-500", 
-      client: "Skyline Projects",
-      type: "cleaning"
-    }],
-  },
-  {
-    id: "10",
-    name: "Mixer 10",
-    plant: "Plant A",
-    client: "Urban Developers",
-    tasks: [{ 
-      id: "task-10",
-      start: 9, 
-      duration: 4, 
-      color: "bg-yellow-600", 
-      client: "Urban Developers",
-      type: "setup"
-    }],
-  },
-  {
-    id: "11",
-    name: "Mixer 11",
-    plant: "Plant B",
-    client: "Coastal Construction",
-    tasks: [{ 
-      id: "task-11",
-      start: 15, 
-      duration: 3, 
-      color: "bg-green-500", 
-      client: "Coastal Construction",
-      type: "quality"
-    }],
-  },
-  {
-    id: "12",
-    name: "Mixer 12",
-    plant: "Plant C",
-    client: null,
-    tasks: [],
-  },
-  {
-    id: "13",
-    name: "Mixer 13",
-    plant: "Plant A",
-    client: "Bridge Builders",
-    tasks: [{ 
-      id: "task-13",
-      start: 13, 
-      duration: 2, 
-      color: "bg-pink-500", 
-      client: "Bridge Builders",
-      type: "maintenance"
-    }],
-  },
-  {
-    id: "14",
-    name: "Mixer 14",
-    plant: "Plant B",
-    client: "Tunnel Projects",
-    tasks: [{ 
-      id: "task-14",
-      start: 7, 
-      duration: 2, 
-      color: "bg-yellow-600", 
-      client: "Tunnel Projects",
-      type: "setup"
-    }],
-  },
-  {
-    id: "15",
-    name: "Mixer 15",
-    plant: "Plant C",
-    client: null,
-    tasks: [],
-  },
-];
+type ApiResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    mixers: {
+      id: string;
+      name: string;
+      plant: string;
+      tasks: ApiTask[];
+    }[];
+  };
+};
 
 // Client color mapping for consistent colors
 const clientColors: Record<string, string> = {
-  "ABC Construction": "bg-orange-500",
-  "XYZ Builders": "bg-orange-500",
-  "City Projects": "bg-orange-500",
-  "Metro Construction": "bg-orange-500",
-  "Highway Builders": "bg-blue-500",
-  "Skyline Projects": "bg-blue-500",
-  "Urban Developers": "bg-yellow-600",
-  "Coastal Construction": "bg-green-500",
-  "Bridge Builders": "bg-pink-500",
-  "Tunnel Projects": "bg-yellow-600",
+  "XYZ Client": "bg-orange-500",
+  "ABC Construction": "bg-blue-500",
+  "City Projects": "bg-green-500",
+  "Metro Construction": "bg-purple-500",
+  "Highway Builders": "bg-red-500",
+  "Skyline Projects": "bg-yellow-600",
+  "Urban Developers": "bg-pink-500",
+  "Coastal Construction": "bg-indigo-500",
+  "Bridge Builders": "bg-teal-500",
+  "Tunnel Projects": "bg-cyan-500",
 };
+
+const defaultClientColor = "bg-gray-500";
 
 const timeSlots = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 
+// Helper function to convert time string to hour number
+const timeStringToHour = (timeStr: string): number => {
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return hours + (minutes / 60);
+};
+
+// Helper function to calculate duration between two times
+const calculateDuration = (start: string, end: string): number => {
+  const startHour = timeStringToHour(start);
+  const endHour = timeStringToHour(end);
+  return Math.max(0.5, endHour - startHour); // Minimum 30 minutes
+};
+
+// Helper function to transform API data to component format
+const transformApiData = (apiData: ApiResponse): Mixer[] => {
+  return apiData.data.mixers.map(mixer => {
+    const transformedTasks: Task[] = mixer.tasks.map(task => {
+      const startHour = Math.floor(timeStringToHour(task.start));
+      const duration = calculateDuration(task.start, task.end);
+      const color = clientColors[task.client] || defaultClientColor;
+      
+      return {
+        id: task.id,
+        start: startHour,
+        duration: Math.ceil(duration), // Round up for display
+        color,
+        client: task.client,
+        type: "production" // Default type since API doesn't provide this
+      };
+    });
+
+    // Determine mixer's current client (first task's client or null)
+    const currentClient = transformedTasks.length > 0 ? transformedTasks[0].client : null;
+
+    return {
+      id: mixer.id,
+      name: mixer.name,
+      plant: mixer.plant,
+      client: currentClient,
+      tasks: transformedTasks
+    };
+  });
+};
+
 export default function CalendarContainer() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPlant, setSelectedPlant] = useState("all");
   const [selectedMixer, setSelectedMixer] = useState("all");
   const [selectedClient, setSelectedClient] = useState("all");
   const [timeFormat, setTimeFormat] = useState("24h");
-  const [ganttData] = useState<Mixer[]>(initialGanttData);
+  const [ganttData, setGanttData] = useState<Mixer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Dropdown states
   const [isPlantFilterOpen, setIsPlantFilterOpen] = useState(false);
   const [isMixerFilterOpen, setIsMixerFilterOpen] = useState(false);
   const [isClientFilterOpen, setIsClientFilterOpen] = useState(false);
   const [isTimeFormatOpen, setIsTimeFormatOpen] = useState(false);
+
+  const { fetchWithAuth } = useApiClient();
+
+  // Fetch gantt data from API
+  const fetchGanttData = async (date: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetchWithAuth('/calendar/gantt', {
+        method: 'POST',
+        body: JSON.stringify({
+          query_date: date
+        })
+      });
+
+      const data: ApiResponse = await response.json();
+      
+      if (data.success) {
+        const transformedData = transformApiData(data);
+        setGanttData(transformedData);
+      } else {
+        setError(data.message || 'Failed to fetch gantt data');
+      }
+    } catch (err) {
+      console.error('Error fetching gantt data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch gantt data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch data when component mounts or date changes
+  useEffect(() => {
+    fetchGanttData(selectedDate);
+  }, [selectedDate]);
 
   // Filter data based on search term and selected filters
   const filteredData = ganttData.filter((item) => {
@@ -235,15 +169,6 @@ export default function CalendarContainer() {
     return matchesSearch && matchesPlant && matchesMixer && matchesClient;
   });
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
   const formatTime = (hour: number) => {
     if (timeFormat === "12h") {
       const period = hour >= 12 ? "PM" : "AM";
@@ -251,16 +176,6 @@ export default function CalendarContainer() {
       return `${displayHour}:00 ${period}`;
     }
     return `${String(hour).padStart(2, "0")}:00`;
-  };
-
-  const navigateDate = (direction: number) => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(selectedDate.getDate() + direction);
-    setSelectedDate(newDate);
-  };
-
-  const goToToday = () => {
-    setSelectedDate(new Date());
   };
 
   // Get unique values for filter options
@@ -275,9 +190,36 @@ export default function CalendarContainer() {
     new Set(
       ganttData
         .flatMap((mixer) => mixer.tasks)
-        .map((task) => ({ name: task.client, color: clientColors[task.client] }))
+        .map((task) => ({ name: task.client, color: task.color }))
     )
   );
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-500 dark:text-gray-400">Loading calendar data...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <div className="text-red-800 dark:text-red-200 font-medium">Error loading calendar data</div>
+          <div className="text-red-600 dark:text-red-300 text-sm mt-1">{error}</div>
+          <button
+            onClick={() => fetchGanttData(selectedDate)}
+            className="mt-3 px-4 py-2 bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 rounded-lg hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -322,30 +264,19 @@ export default function CalendarContainer() {
                 </button>
               </div>
 
-              {/* Right side - Date Navigation */}
+              {/* Right side - Date Selection */}
               <div className="flex items-center gap-3">
+                <DatePickerInput
+                  value={selectedDate}
+                  onChange={setSelectedDate}
+                  className="w-48"
+                />
                 <button
-                  onClick={() => navigateDate(-1)}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.05] rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.08] transition-colors"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Yesterday
-                </button>
-
-                <button
-                  onClick={goToToday}
+                  onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.05] rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.08] transition-colors"
                 >
                   <Calendar className="h-4 w-4" />
                   Today
-                </button>
-
-                <button
-                  onClick={() => navigateDate(1)}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.05] rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.08] transition-colors"
-                >
-                  Tomorrow
-                  <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -509,7 +440,14 @@ export default function CalendarContainer() {
 
           {/* Date Display */}
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{formatDate(selectedDate)}</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {new Date(selectedDate).toLocaleDateString("en-US", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </h2>
           </div>
 
           {/* Gantt Chart */}
@@ -533,58 +471,66 @@ export default function CalendarContainer() {
 
                 {/* Gantt Rows */}
                 <div className="divide-y divide-gray-400 dark:divide-white/[0.05]">
-                  {filteredData.map((mixer) => (
-                    <div key={mixer.id} className="flex hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                      {/* Mixer Name */}
-                      <div className="w-32 px-5 py-1 text-gray-700 text-sm dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center">
-                        {mixer.name}
-                      </div>
-
-                      {/* Time Slots */}
-                      <div className="flex-1 flex relative">
-                        {timeSlots.map((time) => (
-                          <div
-                            key={time}
-                            className="w-20 h-6 border-r border-gray-300 dark:border-white/[0.05] relative"
-                          >
-                            {/* Render tasks that start at this time slot */}
-                            {mixer.tasks
-                              .filter((task) => task.start === time)
-                              .map((task) => (
-                                <div
-                                  key={task.id}
-                                  className={`absolute top-1 left-1 h-5 rounded ${task.color} opacity-80 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center`}
-                                  style={{
-                                    width: `${task.duration * 80 - 8}px`,
-                                    zIndex: 10,
-                                  }}
-                                  title={`${mixer.name} - ${task.client} - ${task.duration}h task`}
-                                >
-                                  <span className="text-white text-xs font-medium">{task.duration}h</span>
-                                </div>
-                              ))}
-                          </div>
-                        ))}
-                      </div>
+                  {filteredData.length === 0 ? (
+                    <div className="flex items-center justify-center py-8 text-gray-500 dark:text-gray-400">
+                      No mixers found for the selected criteria
                     </div>
-                  ))}
+                  ) : (
+                    filteredData.map((mixer) => (
+                      <div key={mixer.id} className="flex hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                        {/* Mixer Name */}
+                        <div className="w-32 px-5 py-1 text-gray-700 text-sm dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center">
+                          {mixer.name}
+                        </div>
+
+                        {/* Time Slots */}
+                        <div className="flex-1 flex relative">
+                          {timeSlots.map((time) => (
+                            <div
+                              key={time}
+                              className="w-20 h-6 border-r border-gray-300 dark:border-white/[0.05] relative"
+                            >
+                              {/* Render tasks that start at this time slot */}
+                              {mixer.tasks
+                                .filter((task) => task.start === time)
+                                .map((task) => (
+                                  <div
+                                    key={task.id}
+                                    className={`absolute top-1 left-1 h-5 rounded ${task.color} opacity-80 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center`}
+                                    style={{
+                                      width: `${task.duration * 80 - 8}px`,
+                                      zIndex: 10,
+                                    }}
+                                    title={`${mixer.name} - ${task.client} - ${task.duration}h task`}
+                                  >
+                                    <span className="text-white text-xs font-medium">{task.duration}h</span>
+                                  </div>
+                                ))}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Legend */}
-          <div className="mt-6 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Clients</h3>
-            <div className="flex flex-wrap gap-4">
-              {clientLegend.map(({ name, color }) => (
-                <div key={name} className="flex items-center gap-2">
-                  <div className={`w-4 h-4 ${color} rounded`}></div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">{name}</span>
-                </div>
-              ))}
+          {clientLegend.length > 0 && (
+            <div className="mt-6 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Clients</h3>
+              <div className="flex flex-wrap gap-4">
+                {clientLegend.map(({ name, color }) => (
+                  <div key={name} className="flex items-center gap-2">
+                    <div className={`w-4 h-4 ${color} rounded`}></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">{name}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
