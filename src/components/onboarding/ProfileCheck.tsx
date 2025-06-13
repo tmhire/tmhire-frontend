@@ -6,12 +6,14 @@ import { useSession } from "next-auth/react";
 
 export default function ProfileCheck() {
   const { profile, loading } = useProfile();
-  const { status } = useSession();
+  const { status, data: session } = useSession();
 
   // Wait for both session and profile to load
   if (loading || status === "loading") return null;
 
-  // Only show welcome modal if user is authenticated but has no company info
+  // Show welcome modal if:
+  // 1. User is authenticated AND
+  // 2. Profile is loaded but company is missing
   if (status === "authenticated" && !profile?.company) {
     return (
       <>
@@ -24,4 +26,4 @@ export default function ProfileCheck() {
   }
 
   return null;
-} 
+}

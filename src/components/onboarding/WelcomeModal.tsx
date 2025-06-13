@@ -22,7 +22,7 @@ interface SessionUser {
 export default function WelcomeModal() {
   const { data: session, status, update } = useSession();
   const { fetchWithAuth } = useApiClient();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const [formData, setFormData] = useState({
     company: "",
     contact: "",
@@ -30,15 +30,15 @@ export default function WelcomeModal() {
   });
 
   // Handle session loading state
-  useEffect(() => {
-    if (status === "loading") {
-      setIsOpen(false);
-    } else if (status === "authenticated" && (session?.user as SessionUser)?.new_user) {
-      setIsOpen(true);
-    } else {
-      setIsOpen(false);
-    }
-  }, [status, session]);
+  // useEffect(() => {
+  //   if (status === "loading") {
+  //     setIsOpen(false);
+  //   } else if (status === "authenticated" && (session?.user as SessionUser)?.new_user) {
+  //     setIsOpen(true);
+  //   } else {
+  //     setIsOpen(false);
+  //   }
+  // }, [status, session]);
 
   const steps = [
     {

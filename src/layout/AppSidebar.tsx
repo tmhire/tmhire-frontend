@@ -303,7 +303,7 @@ const AppSidebar: React.FC = () => {
                 {loading ? (
                   <Truck className="text-white w-6 h-6" />
                 ) : profile?.company ? (
-                  <div>
+                  <div className="text-white">
                     {profile.company
                       .split(" ")
                       .map((word) => word[0])

@@ -1,7 +1,8 @@
 import { useApiClient } from "./useApiClient";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 
-interface ProfileData {
+export interface ProfileData {
   _id: string;
   email: string;
   name: string;
@@ -11,31 +12,25 @@ interface ProfileData {
   created_at: string;
 }
 
+async function fetchProfile(fetchWithAuth: ReturnType<typeof useApiClient>["fetchWithAuth"]) {
+  const response = await fetchWithAuth("/auth/profile");
+  const data = await response.json();
+  if (!data.success) {
+    throw new Error(data.message || "Failed to fetch profile");
+  }
+  return data.data;
+}
+
 export function useProfile() {
   const { fetchWithAuth } = useApiClient();
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { status } = useSession();
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await fetchWithAuth("/auth/profile");
-        const data = await response.json();
-        if (data.success) {
-          setProfile(data.data);
-        } else {
-          setError(data.message || "Failed to fetch profile");
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch profile");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [fetchWithAuth]);
+  const { data: profile, isLoading: loading, error } = useQuery<ProfileData>({
+    queryKey: ["profile"],
+    queryFn: () => fetchProfile(fetchWithAuth),
+    enabled: status === "authenticated", // Only fetch when user is authenticated    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    gcTime: 1000 * 60 * 30, // Keep cache for 30 minutes
+  });
 
   return { profile, loading, error };
 } 
