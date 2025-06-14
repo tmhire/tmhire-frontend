@@ -27,7 +27,7 @@ export default function SignInForm() {
     signIn("signin", {
       email: email,
       password: password,
-      redirect: false,
+      redirect: true,
     }).then((res) => {
       if (!res?.ok) {
         setError("Invalid credentials");

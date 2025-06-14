@@ -32,7 +32,7 @@ export default function SignUpForm() {
       email: email,
       password: password,
       name: firstName + " " + lastName,
-      redirect: false,
+      redirect: true,
     }).then((res) => {
       if (!res?.ok) {
         setError("Invalid credentials");
