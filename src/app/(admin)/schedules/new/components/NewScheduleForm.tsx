@@ -10,13 +10,7 @@ import { ArrowLeft, ArrowRight, Clock, CheckCircle2, GripVertical } from "lucide
 import { Reorder, motion } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
 
 interface Client {
@@ -35,7 +29,8 @@ interface Pump {
 }
 
 interface AvailableTM {
-  _id: string;
+  id: string;
+  // _id: string;
   identifier: string;
   capacity: number;
   is_plant_assigned: boolean;
@@ -44,6 +39,7 @@ interface AvailableTM {
 }
 
 interface CalculateTMResponse {
+  tm_count: number;
   schedule_id: string;
   required_tms: number;
   total_trips: number;
@@ -141,10 +137,10 @@ export default function NewScheduleForm() {
 
   useEffect(() => {
     setIsDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
-    
+
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
-    
+
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
@@ -158,8 +154,16 @@ export default function NewScheduleForm() {
   };
 
   const calculateRequiredTMs = async () => {
-    if (!selectedClient || !formData.scheduleDate || !formData.startTime || !formData.quantity || 
-        !formData.speed || !formData.onwardTime || !formData.returnTime || !formData.productionTime) {
+    if (
+      !selectedClient ||
+      !formData.scheduleDate ||
+      !formData.startTime ||
+      !formData.quantity ||
+      !formData.speed ||
+      !formData.onwardTime ||
+      !formData.returnTime ||
+      !formData.productionTime
+    ) {
       return false;
     }
 
@@ -373,15 +377,11 @@ export default function NewScheduleForm() {
               <div className="flex justify-start items-end">
                 {selectedClientDetails && (
                   <div className="flex flex-col gap-0">
-                    <label className="block text-sm font-medium text-gray-400 dark:text-gray-300">
-                      Client Details
-                    </label>
+                    <label className="block text-sm font-medium text-gray-400 dark:text-gray-300">Client Details</label>
                     <p className="mt-2 text-sm text-gray-400 dark:text-gray-400">
                       {selectedClientDetails.name} - {selectedClientDetails.phone}
                     </p>
-                    <p className="text-sm text-gray-400 dark:text-gray-400">
-                      {selectedClientDetails.address}
-                    </p>
+                    <p className="text-sm text-gray-400 dark:text-gray-400">{selectedClientDetails.address}</p>
                   </div>
                 )}
               </div>
@@ -393,7 +393,10 @@ export default function NewScheduleForm() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Pump</label>
                 <Select
-                  options={filteredPumps.map((p: Pump) => ({ value: p._id, label: `${p.identifier} (${p.capacity}m³)` }))}
+                  options={filteredPumps.map((p: Pump) => ({
+                    value: p._id,
+                    label: `${p.identifier} (${p.capacity}m³)`,
+                  }))}
                   defaultValue={selectedPump}
                   onChange={setSelectedPump}
                   placeholder="Select a pump"
@@ -547,11 +550,7 @@ export default function NewScheduleForm() {
             </div>
 
             <div className="flex justify-end mt-8">
-              <Button 
-                onClick={handleNext} 
-                className="flex items-center gap-2"
-                disabled={isCalculating}
-              >
+              <Button onClick={handleNext} className="flex items-center gap-2" disabled={isCalculating}>
                 {isCalculating ? "Calculating..." : "Next Step"}
                 {!isCalculating && <ArrowRight size={16} />}
               </Button>
@@ -565,62 +564,68 @@ export default function NewScheduleForm() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Required TMs</p>
-                    <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.required_tms}</p>
+                    <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.tm_count}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Total Trips</p>
                     <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.total_trips}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Trips per TM</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Avg Trips per TM</p>
                     <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.trips_per_tm}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Cycle Time (hours)</p>
-                    <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.cycle_time.toFixed(2)}</p>
+                    <p className="text-lg font-medium text-gray-900 dark:text-white">
+                      {calculatedTMs.cycle_time.toFixed(2)}
+                    </p>
                   </div>
                 </div>
               </div>
             )}
-            
+
             <div className="grid grid-cols-2 gap-6">
               {/* Left Column - TM Selection */}
               <div className="space-y-6">
                 <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select TMs</h3>
                 <div className="space-y-4">
                   {calculatedTMs && calculatedTMs.available_tms && calculatedTMs.available_tms.length > 0 ? (
-                    calculatedTMs.available_tms.map((tm) => (
-                      <label
-                        key={tm._id}
-                        className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
-                      >
-                        <div className="flex flex-row items-center space-x-4">
-                          <input
-                            type="checkbox"
-                            checked={tmSequence.includes(tm._id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setTMSequence(prev => [...prev, tm._id]);
-                              } else {
-                                setTMSequence(prev => prev.filter(id => id !== tm._id));
-                              }
-                            }}
-                            className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
-                          />
-                          <div className="flex flex-row justify-between w-full">
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">TM {tm.identifier}</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Capacity: {tm.capacity}m³</p>
+                    calculatedTMs.available_tms.map((tm) => {
+                      return (
+                        <label
+                          key={tm.id}
+                          className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
+                        >
+                          <div className="flex flex-row items-center space-x-4">
+                            <input
+                              type="checkbox"
+                              checked={tmSequence.includes(tm.id)}
+                              onChange={(e) => {
+                                setTMSequence((prev) => {
+                                  const updated = e.target.checked
+                                    ? [...prev, tm.id]
+                                    : prev.filter((id) => id !== tm.id);
+                                  console.log("Updated TM Sequence:", updated);
+                                  return updated;
+                                });
+                              }}
+                              className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
+                            />
+                            <div className="flex flex-row justify-between w-full">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">{tm.identifier}</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">Capacity: {tm.capacity}m³</p>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {tm.is_plant_assigned && (
-                            <span className="px-2 py-1 text-xs font-medium text-brand-600 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-400 rounded-full">
-                              Plant Assigned
-                            </span>
-                          )}
-                        </div>
-                      </label>
-                    ))
+                          <div className="flex items-center space-x-2">
+                            {tm.plant_id && (
+                              <span className="px-2 py-1 text-xs font-medium text-brand-600 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-400 rounded-full">
+                                Plant Assigned
+                              </span>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })
                   ) : (
                     <div className="text-center py-4 text-gray-500 dark:text-gray-400">
                       No TMs available for selection
@@ -636,7 +641,7 @@ export default function NewScheduleForm() {
                   {tmSequence.length > 0 ? (
                     <Reorder.Group axis="y" values={tmSequence} onReorder={setTMSequence} className="space-y-2">
                       {tmSequence.map((tmId) => {
-                        const tm = calculatedTMs?.available_tms.find((t) => t._id === tmId);
+                        const tm = calculatedTMs?.available_tms.find((t) => t.id === tmId);
                         return (
                           <Reorder.Item
                             key={tmId}
@@ -644,7 +649,7 @@ export default function NewScheduleForm() {
                             className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 cursor-grab active:cursor-grabbing"
                           >
                             <div className="flex items-center space-x-4">
-                              <span className="text-gray-700 dark:text-gray-300">TM {tm?.identifier}</span>
+                              <span className="text-gray-700 dark:text-gray-300">{tm?.identifier}</span>
                               <span className="text-sm text-gray-500 dark:text-gray-400">({tm?.capacity}m³)</span>
                             </div>
                             <div className="flex items-center">
@@ -678,7 +683,7 @@ export default function NewScheduleForm() {
           <div className="space-y-6">
             {/* Step 3 - Review */}
             <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Review Schedule</h3>
-            
+
             {generatedSchedule && (
               <>
                 <div className="grid grid-cols-2 gap-6">
@@ -703,14 +708,13 @@ export default function NewScheduleForm() {
                     </div>
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Pumping Speed</h4>
-                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.input_params.pumping_speed} m³/hr</p>
+                      <p className="text-gray-800 dark:text-white/90">
+                        {generatedSchedule.input_params.pumping_speed} m³/hr
+                      </p>
                     </div>
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</h4>
-                      <Badge
-                        size="sm"
-                        color={generatedSchedule.status === "generated" ? "success" : "warning"}
-                      >
+                      <Badge size="sm" color={generatedSchedule.status === "generated" ? "success" : "warning"}>
                         {generatedSchedule.status}
                       </Badge>
                     </div>
@@ -724,25 +728,46 @@ export default function NewScheduleForm() {
                       <Table>
                         <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                           <TableRow>
-                            <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                            <TableCell
+                              isHeader
+                              className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                            >
                               Trip No
                             </TableCell>
-                            <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                            <TableCell
+                              isHeader
+                              className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                            >
                               TM No
                             </TableCell>
-                            <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                            <TableCell
+                              isHeader
+                              className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                            >
                               Plant Start
                             </TableCell>
-                            <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                            <TableCell
+                              isHeader
+                              className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                            >
                               Pump Start
                             </TableCell>
-                            <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                            <TableCell
+                              isHeader
+                              className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                            >
                               Unloading Time
                             </TableCell>
-                            <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                            <TableCell
+                              isHeader
+                              className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                            >
                               Return Time
                             </TableCell>
-                            <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                            <TableCell
+                              isHeader
+                              className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                            >
                               Completed Capacity
                             </TableCell>
                           </TableRow>
@@ -795,7 +820,7 @@ export default function NewScheduleForm() {
                 Back
               </Button>
               <Button onClick={handleSubmit} disabled={isGenerating}>
-                {isGenerating ? "Generating Schedule..." : "Create Schedule"}
+                {isGenerating ? "Generating Schedule..." : generatedSchedule ? "View Schedule" : "Create Schedule"}
               </Button>
             </div>
           </div>

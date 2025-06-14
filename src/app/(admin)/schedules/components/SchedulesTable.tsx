@@ -1,7 +1,8 @@
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import React from "react";
 import Button from "@/components/ui/button/Button";
-import { Edit, Trash } from "lucide-react";
+import { Eye, Trash } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface Schedule {
   _id: string;
@@ -34,11 +35,16 @@ interface Schedule {
 
 interface SchedulesTableProps {
   data: Schedule[];
-  onEdit: (schedule: Schedule) => void;
   onDelete: (schedule: Schedule) => void;
 }
 
-export default function SchedulesTable({ data, onEdit, onDelete }: SchedulesTableProps) {
+export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) {
+  const router = useRouter();
+
+  const handleView = (schedule: Schedule) => {
+    router.push(`/schedules/${schedule._id}`);
+  };
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto">
@@ -133,9 +139,9 @@ export default function SchedulesTable({ data, onEdit, onDelete }: SchedulesTabl
                   </TableCell>
                   <TableCell className="px-5 py-4">
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => onEdit(schedule)}>
-                        <Edit size={"12px"} />
-                        Edit
+                      <Button size="sm" variant="outline" onClick={() => handleView(schedule)}>
+                        <Eye size={"12px"} />
+                        View
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => onDelete(schedule)}>
                         <Trash size={"12px"} />

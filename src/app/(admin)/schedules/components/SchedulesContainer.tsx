@@ -95,10 +95,6 @@ export default function SchedulesContainer() {
     router.push("/schedules/new");
   };
 
-  const handleEdit = (schedule: Schedule) => {
-    router.push(`/schedules/edit/${schedule._id}`);
-  };
-
   const handleDelete = (schedule: Schedule) => {
     setSelectedSchedule(schedule);
     setIsDeleteModalOpen(true);
@@ -351,7 +347,6 @@ export default function SchedulesContainer() {
             ) : (
               <SchedulesTable
                 data={filteredSchedules}
-                onEdit={handleEdit}
                 onDelete={handleDelete}
               />
             )}
