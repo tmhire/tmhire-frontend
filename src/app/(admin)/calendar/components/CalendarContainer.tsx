@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { Search, Filter, Calendar } from "lucide-react";
 import { useApiClient } from "@/hooks/useApiClient";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
+import { useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // Types for better type safety and backend integration
 type ApiTask = {
@@ -43,21 +45,90 @@ type ApiResponse = {
   };
 };
 
-// Client color mapping for consistent colors
-const clientColors: Record<string, string> = {
-  "XYZ Client": "bg-orange-500",
-  "ABC Construction": "bg-blue-500",
-  "City Projects": "bg-green-500",
-  "Metro Construction": "bg-purple-500",
-  "Highway Builders": "bg-red-500",
-  "Skyline Projects": "bg-yellow-600",
-  "Urban Developers": "bg-pink-500",
-  "Coastal Construction": "bg-indigo-500",
-  "Bridge Builders": "bg-teal-500",
-  "Tunnel Projects": "bg-cyan-500",
+// Add color generation utilities
+const generateHSLColor = (index: number): string => {
+  // Use golden ratio to ensure good distribution of colors
+  const goldenRatio = 0.618033988749895;
+  const hue = (index * goldenRatio * 360) % 360;
+  
+  // Fixed saturation and lightness for consistent appearance
+  const saturation = 70; // 70% saturation
+  const lightness = 45; // 45% lightness for good contrast
+  
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 };
 
-const defaultClientColor = "bg-gray-500";
+const generateTailwindColor = (hslColor: string): string => {
+  // Convert HSL to RGB
+  const [h, s, l] = hslColor.match(/\d+/g)?.map(Number) || [0, 0, 0];
+  const s1 = s / 100;
+  const l1 = l / 100;
+  
+  const c = (1 - Math.abs(2 * l1 - 1)) * s1;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = l1 - c / 2;
+  
+  let r = 0, g = 0, b = 0;
+  
+  if (h >= 0 && h < 60) {
+    [r, g, b] = [c, x, 0];
+  } else if (h >= 60 && h < 120) {
+    [r, g, b] = [x, c, 0];
+  } else if (h >= 120 && h < 180) {
+    [r, g, b] = [0, c, x];
+  } else if (h >= 180 && h < 240) {
+    [r, g, b] = [0, x, c];
+  } else if (h >= 240 && h < 300) {
+    [r, g, b] = [x, 0, c];
+  } else {
+    [r, g, b] = [c, 0, x];
+  }
+  
+  const rgb = [
+    Math.round((r + m) * 255),
+    Math.round((g + m) * 255),
+    Math.round((b + m) * 255)
+  ];
+  
+  // Map to closest Tailwind color
+  const tailwindColors = {
+    'bg-red-500': [239, 68, 68],
+    'bg-orange-500': [249, 115, 22],
+    'bg-yellow-500': [234, 179, 8],
+    'bg-green-500': [34, 197, 94],
+    'bg-teal-500': [20, 184, 166],
+    'bg-blue-500': [59, 130, 246],
+    'bg-indigo-500': [99, 102, 241],
+    'bg-purple-500': [168, 85, 247],
+    'bg-pink-500': [236, 72, 153],
+    'bg-cyan-500': [6, 182, 212],
+    'bg-emerald-500': [16, 185, 129],
+    'bg-violet-500': [139, 92, 246],
+    'bg-fuchsia-500': [217, 70, 239],
+    'bg-rose-500': [244, 63, 94],
+    'bg-amber-500': [245, 158, 11],
+    'bg-lime-500': [132, 204, 22],
+  };
+  
+  // Find closest Tailwind color
+  let minDistance = Infinity;
+  let closestColor = 'bg-gray-500';
+  
+  for (const [color, [tr, tg, tb]] of Object.entries(tailwindColors)) {
+    const distance = Math.sqrt(
+      Math.pow(rgb[0] - tr, 2) +
+      Math.pow(rgb[1] - tg, 2) +
+      Math.pow(rgb[2] - tb, 2)
+    );
+    
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestColor = color;
+    }
+  }
+  
+  return closestColor;
+};
 
 const timeSlots = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 
@@ -76,12 +147,28 @@ const calculateDuration = (start: string, end: string): number => {
 
 // Helper function to transform API data to component format
 const transformApiData = (apiData: ApiResponse): Mixer[] => {
+  // Create a map of unique clients
+  const uniqueClients = new Set<string>();
+  apiData.data.mixers.forEach(mixer => {
+    mixer.tasks.forEach(task => {
+      if (task.client) uniqueClients.add(task.client);
+    });
+  });
+  
+  // Generate colors for each unique client
+  const clientColors = new Map<string, string>();
+  Array.from(uniqueClients).forEach((client, index) => {
+    const hslColor = generateHSLColor(index);
+    const tailwindColor = generateTailwindColor(hslColor);
+    clientColors.set(client, tailwindColor);
+  });
+
   return apiData.data.mixers.map(mixer => {
     const transformedTasks: Task[] = mixer.tasks.map(task => {
       const startHour = Math.floor(timeStringToHour(task.start));
       const duration = calculateDuration(task.start, task.end);
-      const color = clientColors[task.client] || defaultClientColor;
-      
+      const color = clientColors.get(task.client) || 'bg-gray-500';
+
       return {
         id: task.id,
         start: startHour,
@@ -106,8 +193,15 @@ const transformApiData = (apiData: ApiResponse): Mixer[] => {
 };
 
 export default function CalendarContainer() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Get initial date from URL or use current date
+  const initialDate = searchParams.get('date') || new Date().toISOString().split('T')[0];
+  
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(initialDate);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPlant, setSelectedPlant] = useState("all");
   const [selectedMixer, setSelectedMixer] = useState("all");
@@ -116,7 +210,7 @@ export default function CalendarContainer() {
   const [ganttData, setGanttData] = useState<Mixer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Dropdown states
   const [isPlantFilterOpen, setIsPlantFilterOpen] = useState(false);
   const [isMixerFilterOpen, setIsMixerFilterOpen] = useState(false);
@@ -125,12 +219,20 @@ export default function CalendarContainer() {
 
   const { fetchWithAuth } = useApiClient();
 
+  // Update URL when date changes
+  const handleDateChange = (newDate: string) => {
+    setSelectedDate(newDate);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('date', newDate);
+    router.push(`?${params.toString()}`);
+  };
+
   // Fetch gantt data from API
   const fetchGanttData = async (date: string) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetchWithAuth('/calendar/gantt', {
         method: 'POST',
         body: JSON.stringify({
@@ -139,7 +241,7 @@ export default function CalendarContainer() {
       });
 
       const data: ApiResponse = await response.json();
-      
+
       if (data.success) {
         const transformedData = transformApiData(data);
         setGanttData(transformedData);
@@ -154,10 +256,16 @@ export default function CalendarContainer() {
     }
   };
 
-  // Fetch data when component mounts or date changes
+  // Fetch data when component mounts, date changes, or session status changes
   useEffect(() => {
-    fetchGanttData(selectedDate);
-  }, [selectedDate]);
+    if (status === "loading") {
+      return; // Don't fetch while session is loading
+    }
+    
+    if (status === "authenticated" && session) {
+      fetchGanttData(selectedDate);
+    }
+  }, [selectedDate, status, session]);
 
   // Filter data based on search term and selected filters
   const filteredData = ganttData.filter((item) => {
@@ -186,18 +294,235 @@ export default function CalendarContainer() {
   );
 
   // Get unique clients with their colors for the legend
-  const clientLegend = Array.from(
-    new Set(
-      ganttData
-        .flatMap((mixer) => mixer.tasks)
-        .map((task) => ({ name: task.client, color: task.color }))
-    )
+  const clientLegend = Object.values(
+    ganttData
+      .flatMap((mixer) => mixer.tasks)
+      .reduce((acc, task) => {
+        if (task.client && !acc[task.client]) {
+          acc[task.client] = { name: task.client, color: task.color };
+        }
+        return acc;
+      }, {} as Record<string, { name: string; color: string }>)
   );
+
 
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-center h-64">
+        {/* Header */}
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Production Schedule</h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            Manage and monitor mixer schedules across all production lines
+          </p>
+        </div>
+
+        {/* Controls Bar */}
+        <div className="bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4 mb-6">
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+            {/* Left side - Search and Filters */}
+            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <input
+                  type="text"
+                  placeholder="Search mixers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none w-full sm:w-64"
+                />
+              </div>
+
+              {/* Filter Toggle */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
+                    ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
+                    : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
+                  } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
+              >
+                <Filter className="h-4 w-4" />
+                Filters
+              </button>
+            </div>
+
+            {/* Right side - Date Selection */}
+            <div className="flex items-center gap-3">
+              <DatePickerInput
+                value={selectedDate}
+                onChange={handleDateChange}
+                className="w-48"
+              />
+              <button
+                onClick={() => handleDateChange(new Date().toISOString().split('T')[0])}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.05] rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.08] transition-colors"
+              >
+                <Calendar className="h-4 w-4" />
+                Today
+              </button>
+            </div>
+          </div>
+
+          {/* Expandable Filters */}
+          {showFilters && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.05]">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Plant Filter */}
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plant</label>
+                  <button
+                    onClick={() => setIsPlantFilterOpen(!isPlantFilterOpen)}
+                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  >
+                    {selectedPlant === "all" ? "All Plants" : selectedPlant}
+                  </button>
+                  {isPlantFilterOpen && (
+                    <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                      <div className="p-2 text-gray-800 dark:text-white/90">
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setSelectedPlant("all");
+                            setIsPlantFilterOpen(false);
+                          }}
+                        >
+                          All Plants
+                        </button>
+                        {plants.map((plant) => (
+                          <button
+                            key={plant}
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setSelectedPlant(plant);
+                              setIsPlantFilterOpen(false);
+                            }}
+                          >
+                            {plant}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Mixer Filter */}
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Transit Mixer</label>
+                  <button
+                    onClick={() => setIsMixerFilterOpen(!isMixerFilterOpen)}
+                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  >
+                    {selectedMixer === "all" ? "All Mixers" : selectedMixer}
+                  </button>
+                  {isMixerFilterOpen && (
+                    <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                      <div className="p-2 text-gray-800 dark:text-white/90">
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setSelectedMixer("all");
+                            setIsMixerFilterOpen(false);
+                          }}
+                        >
+                          All Mixers
+                        </button>
+                        {mixers.map((mixer) => (
+                          <button
+                            key={mixer}
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setSelectedMixer(mixer);
+                              setIsMixerFilterOpen(false);
+                            }}
+                          >
+                            {mixer}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Client Filter */}
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client</label>
+                  <button
+                    onClick={() => setIsClientFilterOpen(!isClientFilterOpen)}
+                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  >
+                    {selectedClient === "all" ? "All Clients" : selectedClient}
+                  </button>
+                  {isClientFilterOpen && (
+                    <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                      <div className="p-2 text-gray-800 dark:text-white/90">
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setSelectedClient("all");
+                            setIsClientFilterOpen(false);
+                          }}
+                        >
+                          All Clients
+                        </button>
+                        {clients.map((client) => (
+                          <button
+                            key={client}
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setSelectedClient(client);
+                              setIsClientFilterOpen(false);
+                            }}
+                          >
+                            {client}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Time Format Filter */}
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Time Format</label>
+                  <button
+                    onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
+                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  >
+                    {timeFormat === "24h" ? "24-Hour Format" : "12-Hour Format"}
+                  </button>
+                  {isTimeFormatOpen && (
+                    <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                      <div className="p-2 text-gray-800 dark:text-white/90">
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setTimeFormat("24h");
+                            setIsTimeFormatOpen(false);
+                          }}
+                        >
+                          24-Hour Format
+                        </button>
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setTimeFormat("12h");
+                            setIsTimeFormatOpen(false);
+                          }}
+                        >
+                          12-Hour Format
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Loading State */}
+        <div className="flex items-center justify-center h-64 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05]">
           <div className="text-gray-500 dark:text-gray-400">Loading calendar data...</div>
         </div>
       </div>
@@ -253,11 +578,10 @@ export default function CalendarContainer() {
                 {/* Filter Toggle */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                    showFilters
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
                       ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
                       : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
-                  } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
+                    } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
                 >
                   <Filter className="h-4 w-4" />
                   Filters
@@ -268,11 +592,11 @@ export default function CalendarContainer() {
               <div className="flex items-center gap-3">
                 <DatePickerInput
                   value={selectedDate}
-                  onChange={setSelectedDate}
+                  onChange={handleDateChange}
                   className="w-48"
                 />
                 <button
-                  onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+                  onClick={() => handleDateChange(new Date().toISOString().split('T')[0])}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.05] rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.08] transition-colors"
                 >
                   <Calendar className="h-4 w-4" />

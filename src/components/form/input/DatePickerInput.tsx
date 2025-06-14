@@ -30,7 +30,11 @@ export default function DatePickerInput({
         defaultDate: value,
         onChange: ([selectedDate]) => {
           if (selectedDate) {
-            onChange(selectedDate.toISOString().split('T')[0]);
+            // Use local date string to avoid timezone issues
+            const year = selectedDate.getFullYear();
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const day = String(selectedDate.getDate()).padStart(2, '0');
+            onChange(`${year}-${month}-${day}`);
           }
         },
         onClose: () => {
