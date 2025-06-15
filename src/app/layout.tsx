@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import ProfileCheck from "@/components/onboarding/ProfileCheck";
 import { Analytics } from "@vercel/analytics/next";
 import { Metadata } from "next";
+import { SearchProvider } from "@/context/SearchContext";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -61,17 +62,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <body className={`${outfit.className} dark:bg-gray-900`}>
-        <Providers>
-          <AuthProvider>
-            <ThemeProvider>
-              <SidebarProvider>
-                <Analytics />
-                <ProfileCheck />
-                {children}
-              </SidebarProvider>
-            </ThemeProvider>
-          </AuthProvider>
-        </Providers>
+        <SearchProvider>
+          <Providers>
+            <AuthProvider>
+              <ThemeProvider>
+                <SidebarProvider>
+                  <Analytics />
+                  <ProfileCheck />
+                  {children}
+                </SidebarProvider>
+              </ThemeProvider>
+            </AuthProvider>
+          </Providers>
+        </SearchProvider>
       </body>
     </html>
   );

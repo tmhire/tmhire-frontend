@@ -50,11 +50,11 @@ const generateHSLColor = (index: number): string => {
   // Use golden ratio to ensure good distribution of colors
   const goldenRatio = 0.618033988749895;
   const hue = (index * goldenRatio * 360) % 360;
-  
+
   // Fixed saturation and lightness for consistent appearance
   const saturation = 70; // 70% saturation
   const lightness = 45; // 45% lightness for good contrast
-  
+
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 };
 
@@ -63,13 +63,15 @@ const generateTailwindColor = (hslColor: string): string => {
   const [h, s, l] = hslColor.match(/\d+/g)?.map(Number) || [0, 0, 0];
   const s1 = s / 100;
   const l1 = l / 100;
-  
+
   const c = (1 - Math.abs(2 * l1 - 1)) * s1;
-  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
   const m = l1 - c / 2;
-  
-  let r = 0, g = 0, b = 0;
-  
+
+  let r = 0,
+    g = 0,
+    b = 0;
+
   if (h >= 0 && h < 60) {
     [r, g, b] = [c, x, 0];
   } else if (h >= 60 && h < 120) {
@@ -83,78 +85,76 @@ const generateTailwindColor = (hslColor: string): string => {
   } else {
     [r, g, b] = [c, 0, x];
   }
-  
-  const rgb = [
-    Math.round((r + m) * 255),
-    Math.round((g + m) * 255),
-    Math.round((b + m) * 255)
-  ];
-  
+
+  const rgb = [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+
   // Map to closest Tailwind color
   const tailwindColors = {
-    'bg-red-500': [239, 68, 68],
-    'bg-orange-500': [249, 115, 22],
-    'bg-yellow-500': [234, 179, 8],
-    'bg-green-500': [34, 197, 94],
-    'bg-teal-500': [20, 184, 166],
-    'bg-blue-500': [59, 130, 246],
-    'bg-indigo-500': [99, 102, 241],
-    'bg-purple-500': [168, 85, 247],
-    'bg-pink-500': [236, 72, 153],
-    'bg-cyan-500': [6, 182, 212],
-    'bg-emerald-500': [16, 185, 129],
-    'bg-violet-500': [139, 92, 246],
-    'bg-fuchsia-500': [217, 70, 239],
-    'bg-rose-500': [244, 63, 94],
-    'bg-amber-500': [245, 158, 11],
-    'bg-lime-500': [132, 204, 22],
+    "bg-red-500": [239, 68, 68],
+    "bg-orange-500": [249, 115, 22],
+    "bg-yellow-500": [234, 179, 8],
+    "bg-green-500": [34, 197, 94],
+    "bg-teal-500": [20, 184, 166],
+    "bg-blue-500": [59, 130, 246],
+    "bg-indigo-500": [99, 102, 241],
+    "bg-purple-500": [168, 85, 247],
+    "bg-pink-500": [236, 72, 153],
+    "bg-cyan-500": [6, 182, 212],
+    "bg-emerald-500": [16, 185, 129],
+    "bg-violet-500": [139, 92, 246],
+    "bg-fuchsia-500": [217, 70, 239],
+    "bg-rose-500": [244, 63, 94],
+    "bg-amber-500": [245, 158, 11],
+    "bg-lime-500": [132, 204, 22],
   };
-  
+
   // Find closest Tailwind color
   let minDistance = Infinity;
-  let closestColor = 'bg-gray-500';
-  
+  let closestColor = "bg-gray-500";
+
   for (const [color, [tr, tg, tb]] of Object.entries(tailwindColors)) {
-    const distance = Math.sqrt(
-      Math.pow(rgb[0] - tr, 2) +
-      Math.pow(rgb[1] - tg, 2) +
-      Math.pow(rgb[2] - tb, 2)
-    );
-    
+    const distance = Math.sqrt(Math.pow(rgb[0] - tr, 2) + Math.pow(rgb[1] - tg, 2) + Math.pow(rgb[2] - tb, 2));
+
     if (distance < minDistance) {
       minDistance = distance;
       closestColor = color;
     }
   }
-  
+
   return closestColor;
 };
 
-const timeSlots = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+const timeSlots = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
 
 // Helper function to convert time string to hour number
 const timeStringToHour = (timeStr: string): number => {
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  return hours + (minutes / 60);
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  return hours + minutes / 60;
 };
 
 // Helper function to calculate duration between two times
 const calculateDuration = (start: string, end: string): number => {
-  const startHour = timeStringToHour(start);
-  const endHour = timeStringToHour(end);
-  return Math.max(0.5, endHour - startHour); // Minimum 30 minutes
+  const startFloat = timeStringToHour(start); // e.g. 2.18
+  const endFloat = timeStringToHour(end); // e.g. 3.26
+
+  const rawDuration = endFloat - startFloat;
+
+  // Round to nearest 0.5
+  const roundedDuration = Math.round(rawDuration * 2) / 2;
+
+  return roundedDuration;
 };
 
 // Helper function to transform API data to component format
 const transformApiData = (apiData: ApiResponse): Mixer[] => {
   // Create a map of unique clients
   const uniqueClients = new Set<string>();
-  apiData.data.mixers.forEach(mixer => {
-    mixer.tasks.forEach(task => {
+  apiData.data.mixers.forEach((mixer) => {
+    mixer.tasks.forEach((task) => {
       if (task.client) uniqueClients.add(task.client);
     });
   });
-  
+
   // Generate colors for each unique client
   const clientColors = new Map<string, string>();
   Array.from(uniqueClients).forEach((client, index) => {
@@ -163,19 +163,19 @@ const transformApiData = (apiData: ApiResponse): Mixer[] => {
     clientColors.set(client, tailwindColor);
   });
 
-  return apiData.data.mixers.map(mixer => {
-    const transformedTasks: Task[] = mixer.tasks.map(task => {
+  return apiData.data.mixers.map((mixer) => {
+    const transformedTasks: Task[] = mixer.tasks.map((task) => {
       const startHour = Math.floor(timeStringToHour(task.start));
       const duration = calculateDuration(task.start, task.end);
-      const color = clientColors.get(task.client) || 'bg-gray-500';
+      const color = clientColors.get(task.client) || "bg-gray-500";
 
       return {
         id: task.id,
         start: startHour,
-        duration: Math.ceil(duration), // Round up for display
+        duration: duration, // Round up for display
         color,
         client: task.client,
-        type: "production" // Default type since API doesn't provide this
+        type: "production", // Default type since API doesn't provide this
       };
     });
 
@@ -187,7 +187,7 @@ const transformApiData = (apiData: ApiResponse): Mixer[] => {
       name: mixer.name,
       plant: mixer.plant,
       client: currentClient,
-      tasks: transformedTasks
+      tasks: transformedTasks,
     };
   });
 };
@@ -196,10 +196,10 @@ export default function CalendarContainer() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   // Get initial date from URL or use current date
-  const initialDate = searchParams.get('date') || new Date().toISOString().split('T')[0];
-  
+  const initialDate = searchParams.get("date") || new Date().toISOString().split("T")[0];
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [showFilters, setShowFilters] = useState(false);
@@ -223,7 +223,7 @@ export default function CalendarContainer() {
   const handleDateChange = (newDate: string) => {
     setSelectedDate(newDate);
     const params = new URLSearchParams(searchParams.toString());
-    params.set('date', newDate);
+    params.set("date", newDate);
     router.push(`?${params.toString()}`);
   };
 
@@ -233,24 +233,24 @@ export default function CalendarContainer() {
       setLoading(true);
       setError(null);
 
-      const response = await fetchWithAuth('/calendar/gantt', {
-        method: 'POST',
+      const response = await fetchWithAuth("/calendar/gantt", {
+        method: "POST",
         body: JSON.stringify({
-          query_date: date
-        })
+          query_date: date,
+        }),
       });
 
       const data: ApiResponse = await response.json();
-
+      console.log("data", data);
       if (data.success) {
         const transformedData = transformApiData(data);
         setGanttData(transformedData);
       } else {
-        setError(data.message || 'Failed to fetch gantt data');
+        setError(data.message || "Failed to fetch gantt data");
       }
     } catch (err) {
-      console.error('Error fetching gantt data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch gantt data');
+      console.error("Error fetching gantt data:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch gantt data");
     } finally {
       setLoading(false);
     }
@@ -261,7 +261,7 @@ export default function CalendarContainer() {
     if (status === "loading") {
       return; // Don't fetch while session is loading
     }
-    
+
     if (status === "authenticated" && session) {
       fetchGanttData(selectedDate);
     }
@@ -305,7 +305,6 @@ export default function CalendarContainer() {
       }, {} as Record<string, { name: string; color: string }>)
   );
 
-
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto">
@@ -337,10 +336,11 @@ export default function CalendarContainer() {
               {/* Filter Toggle */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  showFilters
                     ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
                     : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
-                  } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
+                } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
               >
                 <Filter className="h-4 w-4" />
                 Filters
@@ -349,13 +349,9 @@ export default function CalendarContainer() {
 
             {/* Right side - Date Selection */}
             <div className="flex items-center gap-3">
-              <DatePickerInput
-                value={selectedDate}
-                onChange={handleDateChange}
-                className="w-48"
-              />
+              <DatePickerInput value={selectedDate} onChange={handleDateChange} className="w-48" />
               <button
-                onClick={() => handleDateChange(new Date().toISOString().split('T')[0])}
+                onClick={() => handleDateChange(new Date().toISOString().split("T")[0])}
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.05] rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.08] transition-colors"
               >
                 <Calendar className="h-4 w-4" />
@@ -408,7 +404,9 @@ export default function CalendarContainer() {
 
                 {/* Mixer Filter */}
                 <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Transit Mixer</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Transit Mixer
+                  </label>
                   <button
                     onClick={() => setIsMixerFilterOpen(!isMixerFilterOpen)}
                     className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -578,10 +576,11 @@ export default function CalendarContainer() {
                 {/* Filter Toggle */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                    showFilters
                       ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
                       : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
-                    } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
+                  } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
                 >
                   <Filter className="h-4 w-4" />
                   Filters
@@ -590,13 +589,9 @@ export default function CalendarContainer() {
 
               {/* Right side - Date Selection */}
               <div className="flex items-center gap-3">
-                <DatePickerInput
-                  value={selectedDate}
-                  onChange={handleDateChange}
-                  className="w-48"
-                />
+                <DatePickerInput value={selectedDate} onChange={handleDateChange} className="w-48" />
                 <button
-                  onClick={() => handleDateChange(new Date().toISOString().split('T')[0])}
+                  onClick={() => handleDateChange(new Date().toISOString().split("T")[0])}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.05] rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.08] transition-colors"
                 >
                   <Calendar className="h-4 w-4" />
@@ -649,7 +644,9 @@ export default function CalendarContainer() {
 
                   {/* Mixer Filter */}
                   <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Transit Mixer</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Transit Mixer
+                    </label>
                     <button
                       onClick={() => setIsMixerFilterOpen(!isMixerFilterOpen)}
                       className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -725,7 +722,9 @@ export default function CalendarContainer() {
 
                   {/* Time Format Filter */}
                   <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Time Format</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Time Format
+                    </label>
                     <button
                       onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
                       className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -786,7 +785,7 @@ export default function CalendarContainer() {
                   {timeSlots.map((time) => (
                     <div
                       key={time}
-                      className="w-20 px-2 py-3 text-center font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05]"
+                      className="w-10 px-2 py-3 text-center font-medium text-gray-500 text-[9px] dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05]"
                     >
                       {formatTime(time)}
                     </div>
@@ -801,9 +800,12 @@ export default function CalendarContainer() {
                     </div>
                   ) : (
                     filteredData.map((mixer) => (
-                      <div key={mixer.id} className="flex hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                      <div
+                        key={mixer.id}
+                        className="flex hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
+                      >
                         {/* Mixer Name */}
-                        <div className="w-32 px-5 py-1 text-gray-700 text-sm dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center">
+                        <div className="w-32 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center">
                           {mixer.name}
                         </div>
 
@@ -812,9 +814,8 @@ export default function CalendarContainer() {
                           {timeSlots.map((time) => (
                             <div
                               key={time}
-                              className="w-20 h-6 border-r border-gray-300 dark:border-white/[0.05] relative"
+                              className="w-10 h-6 border-r border-gray-300 dark:border-white/[0.05] relative"
                             >
-                              {/* Render tasks that start at this time slot */}
                               {mixer.tasks
                                 .filter((task) => task.start === time)
                                 .map((task) => (
@@ -822,7 +823,7 @@ export default function CalendarContainer() {
                                     key={task.id}
                                     className={`absolute top-1 left-1 h-5 rounded ${task.color} opacity-80 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center`}
                                     style={{
-                                      width: `${task.duration * 80 - 8}px`,
+                                      width: `${task.duration * 40 - 8}px`,
                                       zIndex: 10,
                                     }}
                                     title={`${mixer.name} - ${task.client} - ${task.duration}h task`}

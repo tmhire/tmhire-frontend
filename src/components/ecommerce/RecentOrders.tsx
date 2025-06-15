@@ -134,9 +134,9 @@ export default function RecentSchedules({ orders }: RecentSchedulesProps) {
                   <Badge
                     size="sm"
                     color={
-                      order.status === "Delivered"
+                      order.status === "generated"
                         ? "success"
-                        : order.status === "Pending"
+                        : order.status === "draft"
                         ? "warning"
                         : "error"
                     }
