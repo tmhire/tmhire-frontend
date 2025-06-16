@@ -1,7 +1,7 @@
 import ThemeTogglerTwo from "@/components/common/ThemeTogglerTwo";
 
 import { ThemeProvider } from "@/context/ThemeContext";
-import Image from "next/image";
+// import Image from "next/image";
 import React from "react";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -13,7 +13,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <div className="lg:w-1/2 w-full h-full bg-brand-950 dark:bg-white/5 lg:grid items-center hidden">
             <div className="relative items-center justify-center  flex z-1">
               <div className="flex flex-col items-center max-w-xs">
-                <Image
+                {/* <Image
                   src="/images/illustration.png"
                   width={500}
                   height={300}
@@ -21,7 +21,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                   alt="Illustration"
                   unoptimized
                   priority
-                />
+                /> */}
                 <p className="text-center text-gray-400 dark:text-white/60">TM Hire</p>
               </div>
             </div>

@@ -779,7 +779,7 @@ export default function CalendarContainer() {
               <div className="min-w-[1000px]">
                 {/* Time Header */}
                 <div className="flex border-b border-gray-300 dark:border-white/[0.05]">
-                  <div className="w-32 px-5 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05]">
+                  <div className="w-30 px-5 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05]">
                     Mixer ID
                   </div>
                   {timeSlots.map((time) => (
@@ -805,8 +805,8 @@ export default function CalendarContainer() {
                         className="flex hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
                       >
                         {/* Mixer Name */}
-                        <div className="w-32 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center">
-                          {mixer.name}
+                        <div className="w-30 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center">
+                          {mixer.name.length > 6 ? ".." + mixer.name.slice(4) : mixer.name}
                         </div>
 
                         {/* Time Slots */}
