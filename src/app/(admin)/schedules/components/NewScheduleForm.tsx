@@ -12,6 +12,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useQuery } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
+import { useRouter } from "next/navigation";
 
 interface Client {
   _id: string;
@@ -33,7 +34,7 @@ interface AvailableTM {
   // _id: string;
   identifier: string;
   capacity: number;
-  is_plant_assigned: boolean;
+  availability: boolean;
   plant_id: string;
   plant_name: string;
 }
@@ -88,7 +89,8 @@ const steps = [
   { id: 3, name: "Review" },
 ];
 
-export default function NewScheduleForm() {
+export default function NewScheduleForm({ schedule_id }: { schedule_id?: string }) {
+  const router = useRouter();
   const { fetchWithAuth } = useApiClient();
   const [step, setStep] = useState(1);
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -99,6 +101,7 @@ export default function NewScheduleForm() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [generatedSchedule, setGeneratedSchedule] = useState<GeneratedSchedule | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [scheduleId, setScheduleId] = useState<string | undefined>(schedule_id || "");
   const [formData, setFormData] = useState({
     scheduleDate: "",
     startTime: "",
@@ -110,6 +113,7 @@ export default function NewScheduleForm() {
     concreteGrade: "",
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [formDataRetrieved, setFormDataRetrieved] = useState(true);
 
   const { data: clientsData } = useQuery<Client[]>({
     queryKey: ["clients"],
@@ -134,6 +138,49 @@ export default function NewScheduleForm() {
       return [];
     },
   });
+
+  useEffect(() => {
+    if (scheduleId && clientsData && pumpsData) {
+      const fetchSchedule = async () => {
+        try {
+          const response = await fetchWithAuth(`/schedules/${scheduleId}`);
+          const data = await response.json();
+          if (data.success) {
+            setGeneratedSchedule(data.data);
+            setSelectedClient(data.data.client_id);
+            console.log(selectedClient, "selectedClient");
+            setFormData({
+              scheduleDate: data.data.input_params.schedule_date,
+              startTime: data.data.input_params.pump_start.split("T")[1],
+              quantity: data.data.input_params.quantity.toString(),
+              speed: data.data.input_params.pumping_speed.toString(),
+              onwardTime: data.data.input_params.onward_time.toString(),
+              returnTime: data.data.input_params.return_time.toString(),
+              productionTime: data.data.input_params.buffer_time.toString(),
+              concreteGrade: "", // Assuming this is not part of the schedule
+            });
+            setTMSequence(data?.data?.output_table?.map((trip: any) => trip.tm_id));
+          }
+        } catch (error) {
+          setFormDataRetrieved(false);
+          console.error("Error fetching schedule:", error);
+        }
+      };
+      fetchSchedule();
+    }
+  }, [scheduleId, clientsData, pumpsData]);
+
+  if (formDataRetrieved === false) {
+    return (
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+          <p className="text-sm">
+            Error retrieving schedule data. Please ensure the schedule ID is correct or try again later.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     setIsDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -188,7 +235,9 @@ export default function NewScheduleForm() {
 
       const data = await response.json();
       if (data.success) {
-        setCalculatedTMs(data.data);
+        setCalculatedTMs(data?.data);
+        setScheduleId(data?.data?.schedule_id);
+        router.push(`/schedules/${data?.data?.schedule_id}`);
         return true;
       }
       return false;
@@ -600,6 +649,7 @@ export default function NewScheduleForm() {
                             <input
                               type="checkbox"
                               checked={tmSequence.includes(tm.id)}
+                              disabled={!tm.availability}
                               onChange={(e) => {
                                 setTMSequence((prev) => {
                                   const updated = e.target.checked

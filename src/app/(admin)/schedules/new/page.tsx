@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import NewScheduleForm from "./components/NewScheduleForm";
+import NewScheduleForm from "../components/NewScheduleForm";
 
 export const metadata: Metadata = {
   title: "New Schedule | TM Hire - Concrete Calculator",
@@ -12,4 +12,4 @@ export default function NewSchedulePage() {
       <NewScheduleForm />
     </div>
   );
-} 
+}
