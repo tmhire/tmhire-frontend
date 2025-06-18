@@ -16,9 +16,10 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: {
     default: "TM Hire - Concrete Calculator",
-    template: "%s | TM Hire - Concrete Calculator"
+    template: "%s | TM Hire - Concrete Calculator",
   },
-  description: "Streamline your concrete operations with TM Hire's comprehensive concrete calculator and management platform",
+  description:
+    "Streamline your concrete operations with TM Hire's comprehensive concrete calculator and management platform",
   keywords: ["concrete calculator", "concrete management", "construction", "concrete operations", "TM Hire"],
   authors: [{ name: "TM Hire" }],
   creator: "TM Hire",
@@ -34,7 +35,8 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://tmhire.com",
     title: "TM Hire - Concrete Calculator",
-    description: "Streamline your concrete operations with TM Hire's comprehensive concrete calculator and management platform",
+    description:
+      "Streamline your concrete operations with TM Hire's comprehensive concrete calculator and management platform",
     siteName: "TM Hire",
     images: [
       {
@@ -48,7 +50,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "TM Hire - Concrete Calculator",
-    description: "Streamline your concrete operations with TM Hire's comprehensive concrete calculator and management platform",
+    description:
+      "Streamline your concrete operations with TM Hire's comprehensive concrete calculator and management platform",
     images: ["https://i.ibb.co/BV0jYxcR/image.png"],
   },
   icons: {

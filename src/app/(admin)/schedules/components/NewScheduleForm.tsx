@@ -92,7 +92,7 @@ const steps = [
 export default function NewScheduleForm({ schedule_id }: { schedule_id?: string }) {
   const router = useRouter();
   const { fetchWithAuth } = useApiClient();
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(schedule_id ? 2 : 1);
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [pumpType, setPumpType] = useState<"line" | "boom">("line");
   const [selectedPump, setSelectedPump] = useState<string>("");
@@ -101,7 +101,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [isCalculating, setIsCalculating] = useState(false);
   const [generatedSchedule, setGeneratedSchedule] = useState<GeneratedSchedule | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [scheduleId, setScheduleId] = useState<string | undefined>(schedule_id || "");
+  const [hasChanged, setHasChanged] = useState(false);
   const [formData, setFormData] = useState({
     scheduleDate: "",
     startTime: "",
@@ -139,36 +139,89 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     },
   });
 
+  const fetchSchedule = async () => {
+    try {
+      const response = await fetchWithAuth(`/schedules/${schedule_id}`);
+      const data = await response.json();
+      if (data.success) {
+        setGeneratedSchedule(data.data);
+        setSelectedClient(data.data.client_id);
+        setSelectedPump(data.data.pump);
+        setPumpType(data.data.pump_type);
+        setFormData({
+          scheduleDate: data.data.input_params.schedule_date,
+          startTime: data.data.input_params.pump_start.split("T")[1],
+          quantity: data.data.input_params.quantity.toString(),
+          speed: data.data.input_params.pumping_speed.toString(),
+          onwardTime: data.data.input_params.onward_time.toString(),
+          returnTime: data.data.input_params.return_time.toString(),
+          productionTime: data.data.input_params.buffer_time.toString(),
+          concreteGrade: data.data.concreteGrade, // Assuming this is not part of the schedule
+        });
+        setTMSequence(data?.data?.output_table?.map((trip: any) => trip.tm_id));
+        const tm_suggestions = {
+          tm_count: data?.data?.tm_count,
+          schedule_id: data?.data?.id,
+          required_tms: data?.data?.required_tms,
+          total_trips: data?.data?.total_trips,
+          trips_per_tm: data?.data?.trips_per_tm,
+          cycle_time: data?.data?.cycle_time,
+          available_tms: data?.data?.available_tms,
+        };
+        setCalculatedTMs(tm_suggestions || null);
+        console.log("TM suggestion", tm_suggestions);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      setFormDataRetrieved(false);
+      console.error("Error fetching schedule:", error);
+      return false;
+    }
+  };
+
+  const updateSchedule = async () => {
+    if (!schedule_id) return false;
+    try {
+      const response = await fetchWithAuth(`/schedules/${schedule_id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          client_id: selectedClient,
+          pump: selectedPump,
+          concreteGrade: formData.concreteGrade,
+          pumping_speed: formData.speed,
+          pump_type: pumpType,
+          input_params: {
+            quantity: parseFloat(formData.quantity),
+            pumping_speed: parseFloat(formData.speed),
+            onward_time: parseFloat(formData.onwardTime),
+            return_time: parseFloat(formData.returnTime),
+            buffer_time: parseFloat(formData.productionTime),
+            pump_start: `${formData.scheduleDate}T${formData.startTime}`,
+            schedule_date: formData.scheduleDate,
+          },
+          site_location: "Site Location", // You might want to add this as a form field
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setGeneratedSchedule(data.data);
+        setHasChanged(false);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error updating schedule:", error);
+      return false;
+    }
+  };
+
   useEffect(() => {
-    if (scheduleId && clientsData && pumpsData) {
-      const fetchSchedule = async () => {
-        try {
-          const response = await fetchWithAuth(`/schedules/${scheduleId}`);
-          const data = await response.json();
-          if (data.success) {
-            setGeneratedSchedule(data.data);
-            setSelectedClient(data.data.client_id);
-            console.log(selectedClient, "selectedClient");
-            setFormData({
-              scheduleDate: data.data.input_params.schedule_date,
-              startTime: data.data.input_params.pump_start.split("T")[1],
-              quantity: data.data.input_params.quantity.toString(),
-              speed: data.data.input_params.pumping_speed.toString(),
-              onwardTime: data.data.input_params.onward_time.toString(),
-              returnTime: data.data.input_params.return_time.toString(),
-              productionTime: data.data.input_params.buffer_time.toString(),
-              concreteGrade: "", // Assuming this is not part of the schedule
-            });
-            setTMSequence(data?.data?.output_table?.map((trip: any) => trip.tm_id));
-          }
-        } catch (error) {
-          setFormDataRetrieved(false);
-          console.error("Error fetching schedule:", error);
-        }
-      };
+    if (schedule_id && clientsData && pumpsData) {
       fetchSchedule();
     }
-  }, [scheduleId, clientsData, pumpsData]);
+  }, [schedule_id, clientsData, pumpsData]);
 
   if (formDataRetrieved === false) {
     return (
@@ -198,9 +251,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       ...prev,
       [name]: value,
     }));
+    setHasChanged(true);
   };
 
   const calculateRequiredTMs = async () => {
+    if (!hasChanged) return true;
     if (
       !selectedClient ||
       !formData.scheduleDate ||
@@ -213,39 +268,51 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     ) {
       return false;
     }
+    if (!schedule_id) {
+      setIsCalculating(true);
+      try {
+        const response = await fetchWithAuth("/schedules", {
+          method: "POST",
+          body: JSON.stringify({
+            client_id: selectedClient,
+            pump: selectedPump,
+            concreteGrade: formData.concreteGrade,
+            pumping_speed: formData.speed,
+            pump_type: pumpType,
+            input_params: {
+              quantity: parseFloat(formData.quantity),
+              pumping_speed: parseFloat(formData.speed),
+              onward_time: parseFloat(formData.onwardTime),
+              return_time: parseFloat(formData.returnTime),
+              buffer_time: parseFloat(formData.productionTime),
+              pump_start: `${formData.scheduleDate}T${formData.startTime}`,
+              schedule_date: formData.scheduleDate,
+            },
+            site_location: "Site Location", // You might want to add this as a form field
+          }),
+        });
 
-    setIsCalculating(true);
-    try {
-      const response = await fetchWithAuth("/schedules/calculate-tm", {
-        method: "POST",
-        body: JSON.stringify({
-          client_id: selectedClient,
-          input_params: {
-            quantity: parseFloat(formData.quantity),
-            pumping_speed: parseFloat(formData.speed),
-            onward_time: parseFloat(formData.onwardTime),
-            return_time: parseFloat(formData.returnTime),
-            buffer_time: parseFloat(formData.productionTime),
-            pump_start: `${formData.scheduleDate}T${formData.startTime}`,
-            schedule_date: formData.scheduleDate,
-          },
-          site_location: "Site Location", // You might want to add this as a form field
-        }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setCalculatedTMs(data?.data);
-        setScheduleId(data?.data?.schedule_id);
-        router.push(`/schedules/${data?.data?.schedule_id}`);
-        return true;
+        const data = await response.json();
+        if (data.success) {
+          setCalculatedTMs(data?.data);
+          if (!schedule_id) router.push(`/schedules/${data?.data?._id}`);
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error("Error calculating TMs:", error);
+        return false;
+      } finally {
+        return setIsCalculating(false);
       }
-      return false;
-    } catch (error) {
-      console.error("Error calculating TMs:", error);
-      return false;
-    } finally {
-      setIsCalculating(false);
+    }
+    if (schedule_id && clientsData && pumpsData) {
+      if (hasChanged) {
+        console.log("Updating schedule");
+        return updateSchedule();
+      }
+      console.log("Fetchign schedule");
+      return fetchSchedule();
     }
   };
 
@@ -418,7 +485,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 <Select
                   options={clientsData?.map((c: Client) => ({ value: c._id, label: c.name })) || []}
                   defaultValue={selectedClient}
-                  onChange={setSelectedClient}
+                  onChange={(clientId) => {
+                    setSelectedClient(clientId);
+                    setHasChanged(true);
+                  }}
                   placeholder="Select a client"
                   className="dark:bg-dark-900"
                 />
@@ -447,7 +517,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     label: `${p.identifier} (${p.capacity}m³)`,
                   }))}
                   defaultValue={selectedPump}
-                  onChange={setSelectedPump}
+                  onChange={(pumpId) => {
+                    setSelectedPump(pumpId);
+                    setHasChanged(true);
+                  }}
                   placeholder="Select a pump"
                   className="dark:bg-dark-900"
                 />
@@ -464,6 +537,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     onChange={(value) => {
                       setPumpType(value as "line" | "boom");
                       setSelectedPump("");
+                      setHasChanged(true);
                     }}
                     label="Line Pump"
                   />
@@ -475,6 +549,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     onChange={(value) => {
                       setPumpType(value as "line" | "boom");
                       setSelectedPump("");
+                      setHasChanged(true);
                     }}
                     label="Boom Pump"
                   />
@@ -495,6 +570,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       ...prev,
                       scheduleDate: date,
                     }));
+                    setHasChanged(true);
                   }}
                   placeholder="Select a date"
                 />
@@ -658,6 +734,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                   console.log("Updated TM Sequence:", updated);
                                   return updated;
                                 });
+                                setHasChanged(true);
                               }}
                               className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
                             />
