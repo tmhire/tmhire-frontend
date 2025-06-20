@@ -156,7 +156,7 @@ export default function TransitMixersContainer() {
       }
     };
     if (status === "authenticated") fetchPlants();
-  }, [fetchWithAuth, status]);
+  }, [status]);
 
   const handleAddMixer = () => {
     setIsCreateModalOpen(true);
