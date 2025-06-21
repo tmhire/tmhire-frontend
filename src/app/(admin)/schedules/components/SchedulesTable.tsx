@@ -64,7 +64,8 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Client Name
-                </TableCell>                <TableCell
+                </TableCell>
+                <TableCell
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
@@ -110,7 +111,7 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
                   <TableCell className="px-5 py-4 text-start">
                     <div className="flex items-center gap-3">
                       <div>
-                         <span
+                        <span
                           className="block text-gray-500 text-start text-theme-xs dark:text-gray-400"
                           title={schedule._id}
                         >
@@ -157,4 +158,4 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
       </div>
     </div>
   );
-} 
+}

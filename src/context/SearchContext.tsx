@@ -160,7 +160,7 @@ const navItems: NavItem[] = [
     name: "Schedules",
     path: "/schedules",
     subItems: [
-      { name: "New Schedule", path: "/schedules/new", pro: false },
+      { name: "New Pumping Schedule", path: "/schedules/new", pro: false },
     ],
   },
   {

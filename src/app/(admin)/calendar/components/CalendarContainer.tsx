@@ -192,6 +192,14 @@ const transformApiData = (apiData: ApiResponse): Mixer[] => {
   });
 };
 
+// Helper to format a time (hour or half-hour) as HH:mm
+const formatTooltipTime = (value: number) => {
+  // If value is integer, it's an hour; if .5, it's half past
+  const hour = Math.floor(value);
+  const min = Math.round((value - hour) * 60);
+  return `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+};
+
 export default function CalendarContainer() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -207,6 +215,7 @@ export default function CalendarContainer() {
   const [selectedMixer, setSelectedMixer] = useState("all");
   const [selectedClient, setSelectedClient] = useState("all");
   const [timeFormat, setTimeFormat] = useState("24h");
+  const [customStartHour, setCustomStartHour] = useState(6); // default 6:00
   const [ganttData, setGanttData] = useState<Mixer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -304,6 +313,15 @@ export default function CalendarContainer() {
         return acc;
       }, {} as Record<string, { name: string; color: string }>)
   );
+
+  // Helper to generate time slots based on custom start hour
+  const getTimeSlots = () => {
+    if (timeFormat === "24h-custom") {
+      // Generate 24 slots starting from customStartHour
+      return Array.from({ length: 24 }, (_, i) => (customStartHour + i) % 24);
+    }
+    return timeSlots;
+  };
 
   if (loading) {
     return (
@@ -487,7 +505,11 @@ export default function CalendarContainer() {
                     onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
                     className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   >
-                    {timeFormat === "24h" ? "24-Hour Format" : "12-Hour Format"}
+                    {timeFormat === "24h"
+                      ? "24-Hour Format"
+                      : timeFormat === "12h"
+                      ? "12-Hour Format"
+                      : "24h (Custom)"}
                   </button>
                   {isTimeFormatOpen && (
                     <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
@@ -510,7 +532,31 @@ export default function CalendarContainer() {
                         >
                           12-Hour Format
                         </button>
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setTimeFormat("24h-custom");
+                            setIsTimeFormatOpen(false);
+                          }}
+                        >
+                          24h (Custom)
+                        </button>
                       </div>
+                    </div>
+                  )}
+                  {/* Show custom start hour selector if 24h-custom is selected */}
+                  {timeFormat === "24h-custom" && (
+                    <div className="mt-2">
+                      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Start Hour</label>
+                      <select
+                        className="w-full px-2 py-1 border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white"
+                        value={customStartHour}
+                        onChange={e => setCustomStartHour(Number(e.target.value))}
+                      >
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <option key={i} value={i}>{`${String(i).padStart(2, "0")}:00`}</option>
+                        ))}
+                      </select>
                     </div>
                   )}
                 </div>
@@ -722,14 +768,16 @@ export default function CalendarContainer() {
 
                   {/* Time Format Filter */}
                   <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Time Format
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Time Format</label>
                     <button
                       onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
                       className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     >
-                      {timeFormat === "24h" ? "24-Hour Format" : "12-Hour Format"}
+                      {timeFormat === "24h"
+                        ? "24-Hour Format"
+                        : timeFormat === "12h"
+                        ? "12-Hour Format"
+                        : "24h (Custom)"}
                     </button>
                     {isTimeFormatOpen && (
                       <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
@@ -752,7 +800,31 @@ export default function CalendarContainer() {
                           >
                             12-Hour Format
                           </button>
+                          <button
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setTimeFormat("24h-custom");
+                              setIsTimeFormatOpen(false);
+                            }}
+                          >
+                            24h (Custom)
+                          </button>
                         </div>
+                      </div>
+                    )}
+                    {/* Show custom start hour selector if 24h-custom is selected */}
+                    {timeFormat === "24h-custom" && (
+                      <div className="mt-2">
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Start Hour</label>
+                        <select
+                          className="w-full px-2 py-1 border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white"
+                          value={customStartHour}
+                          onChange={e => setCustomStartHour(Number(e.target.value))}
+                        >
+                          {Array.from({ length: 24 }, (_, i) => (
+                            <option key={i} value={i}>{`${String(i).padStart(2, "0")}:00`}</option>
+                          ))}
+                        </select>
                       </div>
                     )}
                   </div>
@@ -782,7 +854,7 @@ export default function CalendarContainer() {
                   <div className="w-30 px-5 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05]">
                     Mixer ID
                   </div>
-                  {timeSlots.map((time) => (
+                  {getTimeSlots().map((time) => (
                     <div
                       key={time}
                       className="w-10 px-2 py-3 text-center font-medium text-gray-500 text-[9px] dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05]"
@@ -799,43 +871,116 @@ export default function CalendarContainer() {
                       No mixers found for the selected criteria
                     </div>
                   ) : (
-                    filteredData.map((mixer) => (
-                      <div
-                        key={mixer.id}
-                        className="flex hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
-                      >
-                        {/* Mixer Name */}
-                        <div className="w-30 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center">
-                          {mixer.name.length > 6 ? ".." + mixer.name.slice(4) : mixer.name}
-                        </div>
+                    filteredData.map((mixer) => {
+                      // Group tasks by client for this mixer
+                      const clientTaskMap: Record<string, { start: number; end: number; duration: number; color: string; client: string }> = {};
+                      mixer.tasks.forEach((task) => {
+                        if (!clientTaskMap[task.client]) {
+                          clientTaskMap[task.client] = {
+                            start: task.start,
+                            end: task.start + task.duration,
+                            duration: task.duration,
+                            color: task.color,
+                            client: task.client,
+                          };
+                        } else {
+                          clientTaskMap[task.client].start = Math.min(clientTaskMap[task.client].start, task.start);
+                          clientTaskMap[task.client].end = Math.max(clientTaskMap[task.client].end, task.start + task.duration);
+                          clientTaskMap[task.client].duration += task.duration;
+                        }
+                      });
+                      const clientTasks = Object.values(clientTaskMap);
 
-                        {/* Time Slots */}
-                        <div className="flex-1 flex relative">
-                          {timeSlots.map((time) => (
-                            <div
-                              key={time}
-                              className="w-10 h-6 border-r border-gray-300 dark:border-white/[0.05] relative"
-                            >
-                              {mixer.tasks
-                                .filter((task) => task.start === time)
-                                .map((task) => (
-                                  <div
-                                    key={task.id}
-                                    className={`absolute top-1 left-1 h-5 rounded ${task.color} opacity-80 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center`}
-                                    style={{
-                                      width: `${task.duration * 40 - 8}px`,
-                                      zIndex: 10,
-                                    }}
-                                    title={`${mixer.name} - ${task.client} - ${task.duration}h task`}
-                                  >
-                                    <span className="text-white text-xs font-medium">{task.duration}h</span>
-                                  </div>
-                                ))}
-                            </div>
-                          ))}
+                      // --- NEW LOGIC FOR DYNAMIC TIMESLOTS ---
+                      const slots = getTimeSlots();
+                      const windowStart = slots[0];
+                      const windowEnd = slots[slots.length - 1];
+                      // Helper to check if a time is within the window, considering wrap-around
+                      const isInWindow = (start: number, end: number) => {
+                        if (windowStart < windowEnd) {
+                          return end > windowStart && start < windowEnd + 1;
+                        } else {
+                          // Wraps around midnight
+                          return end > windowStart || start < windowEnd + 1;
+                        }
+                      };
+                      // Helper to get offset and width in the current window
+                      const getBarProps = (start: number, end: number) => {
+                        let barStart = start;
+                        let barEnd = end;
+                        if (windowStart < windowEnd) {
+                          barStart = Math.max(start, windowStart);
+                          barEnd = Math.min(end, windowEnd + 1);
+                        } else {
+                          // Wraps around midnight
+                          if (start < windowStart && end <= windowStart) {
+                            // Task is in the early part of the window (after midnight)
+                            barStart = start;
+                            barEnd = Math.min(end, windowEnd + 1);
+                          } else if (start >= windowStart) {
+                            // Task is in the late part of the window (before midnight)
+                            barStart = Math.max(start, windowStart);
+                            barEnd = end;
+                          } else {
+                            // Task spans the wrap
+                            barStart = start;
+                            barEnd = end;
+                          }
+                        }
+                        // Calculate offset and width in slots
+                        const offset = (barStart - windowStart + 24) % 24;
+                        let width = (barEnd - barStart);
+                        // Clamp width to not exceed window
+                        if (width < 0) width = 0;
+                        // Clamp width so bar does not extend past the last visible slot
+                        if (offset + width > slots.length) {
+                          width = slots.length - offset;
+                          if (width < 0) width = 0;
+                        }
+                        return { offset, width };
+                      };
+                      return (
+                        <div
+                          key={mixer.id}
+                          className="flex hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
+                        >
+                          {/* Mixer Name */}
+                          <div className="w-30 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center">
+                            {mixer.name.length > 6 ? ".." + mixer.name.slice(4) : mixer.name}
+                          </div>
+                          {/* Time Slots */}
+                          <div className="flex-1 flex relative">
+                            {/* Render bars for each client task that overlaps the window */}
+                            {clientTasks.map((ct) => {
+                              if (!isInWindow(ct.start, ct.end)) return null;
+                              const { offset, width } = getBarProps(ct.start, ct.end);
+                              if (width <= 0) return null;
+                              return (
+                                <div
+                                  key={ct.client}
+                                  className={`absolute top-1 h-4 rounded ${ct.color} opacity-80 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center`}
+                                  style={{
+                                    left: `${offset * 40 + 1}px`,
+                                    width: `${width * 40 - 8}px`,
+                                    zIndex: 10,
+                                  }}
+                                  title={`${mixer.name} - ${ct.client} - ${formatTooltipTime(ct.start)} to ${formatTooltipTime(ct.end)} (${ct.duration}h total)`}
+                                >
+                                  <span className="text-white text-xs font-medium">{ct.duration}h</span>
+                                </div>
+                              );
+                            })}
+                            {/* Render slot borders */}
+                            {slots.map((time) => (
+                              <div
+                                key={time}
+                                className="w-10 h-6 border-r border-gray-300 dark:border-white/[0.05] relative"
+                              />
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>

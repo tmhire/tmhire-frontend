@@ -33,19 +33,19 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  ID
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
                   Identifier
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Capacity
+                  Type
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Capacity (m3)
                 </TableCell>
                 <TableCell
                   isHeader
@@ -69,12 +69,6 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Type
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
                   Actions
                 </TableCell>
               </TableRow>
@@ -84,20 +78,14 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
               {data.map((pump) => (
                 <TableRow key={pump._id}>
-                  <TableCell className="px-5 py-4 text-start">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                          {pump._id.slice(0, 4)}...{pump._id.slice(-4)}
-                        </span>
-                      </div>
-                    </div>
-                  </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {pump.identifier}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {pump.capacity}
+                    {pump.type}
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {pump.capacity} m3
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {plantMap.get(pump.plant_id)}
@@ -107,9 +95,6 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {new Date(pump.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {pump.type}
                   </TableCell>
                   <TableCell className="px-5 py-4">
                     <div className="flex items-center gap-2">

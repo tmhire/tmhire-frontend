@@ -12,7 +12,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
-import DatePickerInput from "@/components/form/input/DatePickerInput";
+// import DatePickerInput from "@/components/form/input/DatePickerInput";
 
 interface Schedule {
   _id: string;
@@ -52,13 +52,16 @@ export default function SchedulesContainer() {
   const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
   const [isClientFilterOpen, setIsClientFilterOpen] = useState(false);
   const [isSiteFilterOpen, setIsSiteFilterOpen] = useState(false);
-  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
+  // const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [selectedSite, setSelectedSite] = useState<string>("");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
+  const [timeStatusFilter, setTimeStatusFilter] = useState<string>("All");
+  const [isTimeStatusFilterOpen, setIsTimeStatusFilterOpen] = useState(false);
 
   // Fetch schedules
   const { data: schedulesData, isLoading: isLoadingSchedules } = useQuery({
@@ -128,6 +131,17 @@ export default function SchedulesContainer() {
   const filteredSchedules = useMemo(() => {
     if (!schedulesData) return [];
 
+    const now = new Date();
+    // Helper to parse schedule date (assume input_params.schedule_date is ISO or yyyy-mm-dd)
+    const parseScheduleDate = (dateStr: string) => {
+      // Try to parse as ISO, fallback to yyyy-mm-dd
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) return d;
+      // fallback: yyyy-mm-dd
+      const [year, month, day] = dateStr.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    };
+
     return schedulesData.filter((schedule) => {
       const matchesSearch =
         searchQuery === "" ||
@@ -141,12 +155,30 @@ export default function SchedulesContainer() {
         selectedClient === "" || schedule.client_name === selectedClient;
 
       const matchesSite =
-        selectedSite === "" || schedule.site_location === selectedSite; const matchesDate = !selectedDate ||
-          schedule.input_params.schedule_date === selectedDate;
+        selectedSite === "" || schedule.site_location === selectedSite;
 
-      return matchesSearch && matchesStatus && matchesClient && matchesSite && matchesDate;
+      const matchesDate = !selectedDate ||
+        schedule.input_params.schedule_date === selectedDate;
+
+      // Time-based status filter
+      let matchesTimeStatus = true;
+      if (timeStatusFilter !== "All") {
+        const scheduleDate = parseScheduleDate(schedule.input_params.schedule_date);
+        // Remove time for comparison (treat as local date)
+        const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const schedDate = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate());
+        if (timeStatusFilter === "Upcoming") {
+          matchesTimeStatus = schedDate > nowDate;
+        } else if (timeStatusFilter === "Past") {
+          matchesTimeStatus = schedDate < nowDate;
+        } else if (timeStatusFilter === "Ongoing") {
+          matchesTimeStatus = schedDate.getTime() === nowDate.getTime();
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesClient && matchesSite && matchesDate && matchesTimeStatus;
     });
-  }, [schedulesData, searchQuery, selectedStatus, selectedClient, selectedSite, selectedDate]);
+  }, [schedulesData, searchQuery, selectedStatus, selectedClient, selectedSite, selectedDate, timeStatusFilter]);
 
   if (isLoadingSchedules) {
     return (
@@ -294,8 +326,9 @@ export default function SchedulesContainer() {
                   ))}
                 </div>
               </Dropdown>
-            </div>            {/* Date Filter */}
-            <div className="relative text-sm">
+            </div>
+
+            {/* <div className="relative text-sm">
               <Button
                 variant="outline"
                 size="sm"
@@ -325,6 +358,34 @@ export default function SchedulesContainer() {
                   >
                     Clear Date
                   </button>
+                </div>
+              </Dropdown>
+            </div> */}
+
+            {/* Time Status Filter */}
+            <div className="relative text-sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsTimeStatusFilterOpen(!isTimeStatusFilterOpen)}
+                className="dropdown-toggle"
+              >
+                Time Status: {timeStatusFilter}
+              </Button>
+              <Dropdown isOpen={isTimeStatusFilterOpen} onClose={() => setIsTimeStatusFilterOpen(false)} className="w-48">
+                <div className="p-2 text-gray-800 dark:text-white/90">
+                  {['All', 'Upcoming', 'Ongoing', 'Past'].map((status) => (
+                    <button
+                      key={status}
+                      className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                      onClick={() => {
+                        setTimeStatusFilter(status);
+                        setIsTimeStatusFilterOpen(false);
+                      }}
+                    >
+                      {status}
+                    </button>
+                  ))}
                 </div>
               </Dropdown>
             </div>
