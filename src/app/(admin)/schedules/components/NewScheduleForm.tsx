@@ -65,7 +65,7 @@ interface GeneratedSchedule {
   user_id: string;
   client_id: string;
   client_name: string;
-  site_location: string;
+  site_address: string;
   created_at: string;
   last_updated: string;
   input_params: {
@@ -111,6 +111,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     returnTime: "",
     productionTime: "",
     concreteGrade: "",
+    siteAddress: "",
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [formDataRetrieved, setFormDataRetrieved] = useState(true);
@@ -156,7 +157,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
           productionTime: data.data.input_params.buffer_time.toString(),
-          concreteGrade: data.data.concreteGrade, // Assuming this is not part of the schedule
+          concreteGrade: data.data.concreteGrade,
+          siteAddress: data.data.site_address || "",
         });
         setTMSequence(data?.data?.output_table?.map((trip: any) => trip.tm_id));
         const tm_suggestions = {
@@ -200,7 +202,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             pump_start: `${formData.scheduleDate}T${formData.startTime}`,
             schedule_date: formData.scheduleDate,
           },
-          site_location: "Site Location", // You might want to add this as a form field
+          site_address: formData.siteAddress, // You might want to add this as a form field
         }),
       });
 
@@ -288,7 +290,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               pump_start: `${formData.scheduleDate}T${formData.startTime}`,
               schedule_date: formData.scheduleDate,
             },
-            site_location: "Site Location", // You might want to add this as a form field
+            site_address: formData.siteAddress, // You might want to add this as a form field
           }),
         });
 
@@ -821,7 +823,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </div>
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Site Location</h4>
-                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.site_location}</p>
+                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.site_address}</p>
                     </div>
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Schedule Date</h4>
