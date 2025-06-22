@@ -433,7 +433,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       !!formData.returnTime &&
       !!formData.productionTime &&
       !!formData.pumpOnwardTime &&
-      !!formData.speed
+      !!formData.speed &&
+      !!formData.pumpFixingTime
     );
   };
 
@@ -734,7 +735,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="pumpOnwardTime"
-                    value={formData.pumpOnwardTime}
+                    value={parseFloat(formData.pumpOnwardTime || "0")}
                     onChange={handleInputChange}
                     placeholder="Enter pump onward time"
                   />
@@ -747,7 +748,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="pumpFixingTime"
-                    value={formData.pumpFixingTime}
+                    value={parseFloat(formData.pumpFixingTime || "0")}
                     onChange={handleInputChange}
                     placeholder="Enter pump onward time"
                   />
@@ -797,7 +798,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="speed"
-                    value={formData.speed}
+                    value={parseFloat(formData.speed || "0")}
                     onChange={handleInputChange}
                     placeholder="Enter speed"
                   />
@@ -811,7 +812,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     type="number"
                     name="unloadingTime"
                     disabled
-                    value={unloadingTime}
+                    value={parseFloat(unloadingTime || "0")}
                     placeholder={
                       avgTMCap !== null ? "Auto-calculated from pumping speed" : "Enter pumping speed to calculate"
                     }
@@ -832,7 +833,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="onwardTime"
-                    value={formData.onwardTime}
+                    value={parseFloat(formData.onwardTime || "0")}
                     onChange={handleInputChange}
                     placeholder="Enter onward time"
                   />
@@ -844,7 +845,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="returnTime"
-                    value={formData.returnTime}
+                    value={parseFloat(formData.returnTime || "0")}
                     onChange={handleInputChange}
                     placeholder="Enter return time"
                   />
@@ -856,7 +857,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="productionTime"
-                    value={formData.productionTime}
+                    value={parseFloat(formData.productionTime || "0")}
                     onChange={handleInputChange}
                     placeholder="Enter production time"
                   />
@@ -871,7 +872,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="quantity"
-                    value={formData.quantity}
+                    value={parseFloat(formData.quantity || "0")}
                     onChange={handleInputChange}
                     placeholder="Enter quantity"
                   />
@@ -883,7 +884,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="concreteGrade"
-                    value={formData.concreteGrade}
+                    value={parseFloat(formData.concreteGrade || "0")}
                     onChange={handleInputChange}
                     placeholder="Enter concrete grade"
                   />
