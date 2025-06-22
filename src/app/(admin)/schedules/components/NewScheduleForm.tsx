@@ -81,6 +81,7 @@ interface GeneratedSchedule {
     pump_start: string;
     schedule_date: string;
     pump_onward_time: number;
+    pump_fixing_time: number;
   };
   output_table: ScheduleTrip[];
   tm_count: number;
@@ -118,6 +119,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     concreteGrade: "",
     siteAddress: "",
     pumpOnwardTime: "",
+    pumpFixingTime: "",
     unloadingTime: "",
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -185,7 +187,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         setGeneratedSchedule(data.data);
         setSelectedClient(data.data.client_id);
         setSelectedPump(data.data.pump);
-        setPumpType(data.data.pump_type);
+        setPumpType(data.data.pump_type || "line");
         setFormData({
           scheduleDate: data.data.input_params.schedule_date,
           startTime: data.data.input_params.pump_start.split("T")[1],
@@ -200,6 +202,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             ? data.data.input_params.pump_onward_time.toString()
             : "",
           unloadingTime: "",
+          pumpFixingTime: data.data.input_params.pump_fixing_time
+            ? data.data.input_params.pump_fixing_time.toString()
+            : "",
         });
         setTMSequence(
           Array.isArray(data?.data?.output_table)
@@ -246,6 +251,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             pump_start: `${formData.scheduleDate}T${formData.startTime}`,
             schedule_date: formData.scheduleDate,
             pump_onward_time: parseFloat(formData.pumpOnwardTime),
+            pump_fixing_time: parseFloat(formData.pumpFixingTime),
           },
           site_address: formData.siteAddress, // You might want to add this as a form field
         }),
@@ -350,8 +356,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       return fetchSchedule();
     }
   };
-
-  console.log("tmSequence", tmSequence);
 
   const generateSchedule = async () => {
     if (!calculatedTMs?.schedule_id || tmSequence.length === 0) {
@@ -555,299 +559,335 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
         {step === 1 ? (
           <div className="space-y-6">
-            <div className="grid grid-cols-3 gap-6">
-              {/* Client Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Choose Client</label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
-                      selectedClient ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
-                    }`}
-                    onClick={() => setIsClientDropdownOpen((open) => !open)}
-                    aria-haspopup="listbox"
-                    aria-expanded={isClientDropdownOpen}
-                  >
-                    {clientsData?.find((c: Client) => c._id === selectedClient)?.name || "Select a client"}
-                  </button>
-                  <Dropdown
-                    isOpen={isClientDropdownOpen}
-                    onClose={() => setIsClientDropdownOpen(false)}
-                    className="w-full mt-1"
-                  >
-                    <DropdownItem
-                      className="text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      onClick={() => {
-                        setSelectedClient("");
-                        setHasChanged(true);
-                        setIsClientDropdownOpen(false);
-                      }}
+            <div>
+              <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">Client:</label>
+              <div className="grid grid-cols-[1fr_2fr_1fr] gap-6">
+                {/* Client Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Choose Client
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
+                        selectedClient ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
+                      }`}
+                      onClick={() => setIsClientDropdownOpen((open) => !open)}
+                      aria-haspopup="listbox"
+                      aria-expanded={isClientDropdownOpen}
                     >
-                      Select a client
-                    </DropdownItem>
-                    {(clientsData || []).map((option: Client) => (
+                      {clientsData?.find((c: Client) => c._id === selectedClient)?.name || "Select a client"}
+                    </button>
+                    <Dropdown
+                      isOpen={isClientDropdownOpen}
+                      onClose={() => setIsClientDropdownOpen(false)}
+                      className="w-full mt-1"
+                    >
                       <DropdownItem
-                        key={option._id}
-                        className="text-gray-800 dark:text-white/90 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                         onClick={() => {
-                          setSelectedClient(option._id);
+                          setSelectedClient("");
                           setHasChanged(true);
                           setIsClientDropdownOpen(false);
                         }}
                       >
-                        {option.name}
+                        Select a client
                       </DropdownItem>
-                    ))}
-                  </Dropdown>
-                </div>
-              </div>
-              {/* Site Address */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Site Address</label>
-                <Input
-                  type="text"
-                  name="siteAddress"
-                  value={formData.siteAddress}
-                  onChange={handleInputChange}
-                  placeholder="Enter site address"
-                />
-              </div>
-              {/* Client Details */}
-              <div className="flex justify-start items-end">
-                {selectedClientDetails && (
-                  <div className="flex flex-col gap-0">
-                    <label className="block text-sm font-medium text-gray-400 dark:text-gray-300">Client Details</label>
-                    <p className="mt-2 text-sm text-gray-400 dark:text-gray-400">
-                      {selectedClientDetails.name} - {selectedClientDetails.contact_phone}
-                    </p>
-                    <p className="text-sm text-gray-400 dark:text-gray-400">{selectedClientDetails.address}</p>
+                      {(clientsData || []).map((option: Client) => (
+                        <DropdownItem
+                          key={option._id}
+                          className="text-gray-800 dark:text-white/90 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          onClick={() => {
+                            setSelectedClient(option._id);
+                            setHasChanged(true);
+                            setIsClientDropdownOpen(false);
+                          }}
+                        >
+                          {option.name}
+                        </DropdownItem>
+                      ))}
+                    </Dropdown>
                   </div>
-                )}
+                </div>
+                {/* Site Address */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Site Address
+                  </label>
+                  <Input
+                    type="text"
+                    name="siteAddress"
+                    value={formData.siteAddress}
+                    onChange={handleInputChange}
+                    placeholder="Enter site address"
+                  />
+                </div>
+                {/* Client Details */}
+                <div className="flex justify-start items-end">
+                  {selectedClientDetails && (
+                    <div className="flex flex-col gap-0">
+                      <label className="block text-sm font-medium text-gray-400 dark:text-gray-300">
+                        Client Details
+                      </label>
+                      <p className="mt-2 text-sm text-gray-400 dark:text-gray-400">
+                        {selectedClientDetails.name} - {selectedClientDetails.contact_phone}
+                      </p>
+                      <p className="text-sm text-gray-400 dark:text-gray-400">{selectedClientDetails.address}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Pump Details Row */}
-            <div className="grid grid-cols-3 gap-6">
-              {/* Pump Type Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Pump Type</label>
-                <div className="flex flex-wrap items-center gap-8">
-                  <Radio
-                    id="line-pump"
-                    name="pump-type"
-                    value="line"
-                    checked={pumpType === "line"}
-                    onChange={(value) => {
-                      setPumpType(value as "line" | "boom");
-                      setSelectedPump("");
-                      setHasChanged(true);
-                    }}
-                    label="Line Pump"
-                  />
-                  <Radio
-                    id="boom-pump"
-                    name="pump-type"
-                    value="boom"
-                    checked={pumpType === "boom"}
-                    onChange={(value) => {
-                      setPumpType(value as "line" | "boom");
-                      setSelectedPump("");
-                      setHasChanged(true);
-                    }}
-                    label="Boom Pump"
-                  />
-                </div>
-              </div>
-              {/* Pump Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Pump</label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
-                      selectedPump ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
-                    }`}
-                    onClick={() => setIsPumpDropdownOpen((open) => !open)}
-                    aria-haspopup="listbox"
-                    aria-expanded={isPumpDropdownOpen}
-                  >
-                    {filteredPumps.find((p: Pump) => p._id === selectedPump)?.identifier
-                      ? `${filteredPumps.find((p: Pump) => p._id === selectedPump)?.identifier} (${
-                          filteredPumps.find((p: Pump) => p._id === selectedPump)?.capacity
-                        }m³)`
-                      : "Select a pump"}
-                  </button>
-                  <Dropdown
-                    isOpen={isPumpDropdownOpen}
-                    onClose={() => setIsPumpDropdownOpen(false)}
-                    className="w-full mt-1"
-                  >
-                    <DropdownItem
-                      className="text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      onClick={() => {
+            <div className="space-y-6">
+              <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">Pump:</label>
+              <div className="grid grid-cols-[1fr_2fr] gap-6">
+                {/* Pump Type Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Pump Type</label>
+                  <div className="flex flex-wrap items-center gap-8">
+                    <Radio
+                      id="line-pump"
+                      name="pump-type"
+                      value="line"
+                      checked={pumpType === "line"}
+                      onChange={(value) => {
+                        setPumpType(value as "line" | "boom");
                         setSelectedPump("");
                         setHasChanged(true);
-                        setIsPumpDropdownOpen(false);
                       }}
+                      label="Line Pump"
+                    />
+                    <Radio
+                      id="boom-pump"
+                      name="pump-type"
+                      value="boom"
+                      checked={pumpType === "boom"}
+                      onChange={(value) => {
+                        setPumpType(value as "line" | "boom");
+                        setSelectedPump("");
+                        setHasChanged(true);
+                      }}
+                      label="Boom Pump"
+                    />
+                  </div>
+                </div>
+                {/* Pump Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Pump</label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
+                        selectedPump ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
+                      }`}
+                      onClick={() => setIsPumpDropdownOpen((open) => !open)}
+                      aria-haspopup="listbox"
+                      aria-expanded={isPumpDropdownOpen}
                     >
-                      Select a pump
-                    </DropdownItem>
-                    {filteredPumps.map((option: Pump) => (
+                      {filteredPumps.find((p: Pump) => p._id === selectedPump)?.identifier
+                        ? `${filteredPumps.find((p: Pump) => p._id === selectedPump)?.identifier} (${
+                            filteredPumps.find((p: Pump) => p._id === selectedPump)?.capacity
+                          }m³)`
+                        : "Select a pump"}
+                    </button>
+                    <Dropdown
+                      isOpen={isPumpDropdownOpen}
+                      onClose={() => setIsPumpDropdownOpen(false)}
+                      className="w-full mt-1"
+                    >
                       <DropdownItem
-                        key={option._id}
-                        className="text-gray-800 dark:text-white/90 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                         onClick={() => {
-                          setSelectedPump(option._id);
+                          setSelectedPump("");
                           setHasChanged(true);
                           setIsPumpDropdownOpen(false);
                         }}
                       >
-                        {option.identifier} ({option.capacity}m³)
+                        Select a pump
                       </DropdownItem>
-                    ))}
-                  </Dropdown>
+                      {filteredPumps.map((option: Pump) => (
+                        <DropdownItem
+                          key={option._id}
+                          className="text-gray-800 dark:text-white/90 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          onClick={() => {
+                            setSelectedPump(option._id);
+                            setHasChanged(true);
+                            setIsPumpDropdownOpen(false);
+                          }}
+                        >
+                          {option.identifier} ({option.capacity}m³)
+                        </DropdownItem>
+                      ))}
+                    </Dropdown>
+                  </div>
                 </div>
               </div>
-              {/* Pump Onward Time */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Pump Onward Time (min)
-                </label>
-                <Input
-                  type="number"
-                  name="pumpOnwardTime"
-                  value={formData.pumpOnwardTime}
-                  onChange={handleInputChange}
-                  placeholder="Enter pump onward time"
-                />
+              <div className="grid grid-cols-2 gap-6">
+                {/* Pump Onward Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pump Onward Time (min)
+                  </label>
+                  <Input
+                    type="number"
+                    name="pumpOnwardTime"
+                    value={formData.pumpOnwardTime}
+                    onChange={handleInputChange}
+                    placeholder="Enter pump onward time"
+                  />
+                </div>
+                {/* Pump Fixing Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pump Fixing Time (min)
+                  </label>
+                  <Input
+                    type="number"
+                    name="pumpFixingTime"
+                    value={formData.pumpFixingTime}
+                    onChange={handleInputChange}
+                    placeholder="Enter pump onward time"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Other Inputs: 3 columns */}
-            <div className="grid grid-cols-3 gap-6">
-              {/* First row: Schedule Date, Pumping Quantity, Grade of Concrete */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Schedule Date of Pumping
-                </label>
-                <DatePickerInput
-                  value={formData.scheduleDate}
-                  onChange={(date) => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      scheduleDate: date,
-                    }));
-                    setHasChanged(true);
-                  }}
-                  placeholder="Select a date"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Pumping Quantity (m³)
-                </label>
-                <Input
-                  type="number"
-                  name="quantity"
-                  value={formData.quantity}
-                  onChange={handleInputChange}
-                  placeholder="Enter quantity"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Grade of Concrete
-                </label>
-                <Input
-                  type="number"
-                  name="concreteGrade"
-                  value={formData.concreteGrade}
-                  onChange={handleInputChange}
-                  placeholder="Enter concrete grade"
-                />
-              </div>
-              {/* Second row: Onward Time, Return Time, Production/Buffer Time */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Onward Time (min)
-                </label>
-                <Input
-                  type="number"
-                  name="onwardTime"
-                  value={formData.onwardTime}
-                  onChange={handleInputChange}
-                  placeholder="Enter onward time"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Return Time (min)
-                </label>
-                <Input
-                  type="number"
-                  name="returnTime"
-                  value={formData.returnTime}
-                  onChange={handleInputChange}
-                  placeholder="Enter return time"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Production and Buffer Time (min)
-                </label>
-                <Input
-                  type="number"
-                  name="productionTime"
-                  value={formData.productionTime}
-                  onChange={handleInputChange}
-                  placeholder="Enter production time"
-                />
-              </div>
-              {/* Third row: Pump Start Time, Pumping Speed, empty */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Pump Start Time
-                </label>
-                <div className="relative">
-                  <Input type="time" name="startTime" value={formData.startTime} onChange={handleInputChange} />
-                  <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-                    <Clock className="size-5" />
-                  </span>
+            <div className="space-y-6">
+              <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Other Metrics:
+              </label>
+              {/* Other metrics: */}
+              <div className="grid grid-cols-2 gap-6">
+                {/* First row: Schedule Date, Pump Start Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Schedule Date of Pumping
+                  </label>
+                  <DatePickerInput
+                    value={formData.scheduleDate}
+                    onChange={(date) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        scheduleDate: date,
+                      }));
+                      setHasChanged(true);
+                    }}
+                    placeholder="Select a date"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pump Start Time
+                  </label>
+                  <div className="relative">
+                    <Input type="time" name="startTime" value={formData.startTime} onChange={handleInputChange} />
+                    <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
+                      <Clock className="size-5" />
+                    </span>
+                  </div>
+                </div>
+                {/* Second row: Pumping Speed, Unloading Time (calculated) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pumping Speed (m³/hr)
+                  </label>
+                  <Input
+                    type="number"
+                    name="speed"
+                    value={formData.speed}
+                    onChange={handleInputChange}
+                    placeholder="Enter speed"
+                  />
+                </div>
+                {/* Unloading Time (calculated) */}
+                <div className="">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Unloading Time (min)
+                  </label>
+                  <Input
+                    type="number"
+                    name="unloadingTime"
+                    disabled
+                    value={unloadingTime}
+                    placeholder={
+                      avgTMCap !== null ? "Auto-calculated from pumping speed" : "Enter pumping speed to calculate"
+                    }
+                  />
+                  {avgTMCap !== null && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Auto-calculated based on avg. TM capacity: {avgTMCap?.toFixed(2)} m³
+                    </p>
+                  )}
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Pumping Speed (m³/hr)
-                </label>
-                <Input
-                  type="number"
-                  name="speed"
-                  value={formData.speed}
-                  onChange={handleInputChange}
-                  placeholder="Enter speed"
-                />
+              <div className="grid grid-cols-3 gap-6">
+                {/* Third row: Onward Time, Return Time, Production/Buffer Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Transit Mixer Onward Time (min)
+                  </label>
+                  <Input
+                    type="number"
+                    name="onwardTime"
+                    value={formData.onwardTime}
+                    onChange={handleInputChange}
+                    placeholder="Enter onward time"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Transit Mixer Return Time (min)
+                  </label>
+                  <Input
+                    type="number"
+                    name="returnTime"
+                    value={formData.returnTime}
+                    onChange={handleInputChange}
+                    placeholder="Enter return time"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Production and Buffer Time (min)
+                  </label>
+                  <Input
+                    type="number"
+                    name="productionTime"
+                    value={formData.productionTime}
+                    onChange={handleInputChange}
+                    placeholder="Enter production time"
+                  />
+                </div>
               </div>
-              {/* <div></div> */}
-              {/* Unloading Time (calculated) */}
-              <div className="">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Unloading Time (min)
-                </label>
-                <Input
-                  type="number"
-                  name="unloadingTime"
-                  disabled
-                  value={unloadingTime}
-                  placeholder={
-                    avgTMCap !== null ? "Auto-calculated from pumping speed" : "Enter pumping speed to calculate"
-                  }
-                />
-                {avgTMCap !== null && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Auto-calculated based on avg. TM capacity: {avgTMCap?.toFixed(2)} m³
-                  </p>
-                )}
+              <div className="grid grid-cols-2 gap-6">
+                {/* Forth row: Pumping Quantity, Grade of Concrete */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pumping Quantity (m³)
+                  </label>
+                  <Input
+                    type="number"
+                    name="quantity"
+                    value={formData.quantity}
+                    onChange={handleInputChange}
+                    placeholder="Enter quantity"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Grade of Concrete
+                  </label>
+                  <Input
+                    type="number"
+                    name="concreteGrade"
+                    value={formData.concreteGrade}
+                    onChange={handleInputChange}
+                    placeholder="Enter concrete grade"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1214,36 +1254,58 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               <TableCell className="px-5 py-4 text-start">
                                 <span className="text-gray-800 dark:text-white/90">
                                   {trip.tm_no}
-                                  {typeof trip.trip_no_for_tm !== 'undefined' && (
+                                  {typeof trip.trip_no_for_tm !== "undefined" && (
                                     <span className="text-xs text-gray-500 ml-1">({trip.trip_no_for_tm})</span>
                                   )}
                                 </span>
                               </TableCell>
                               <TableCell className="px-5 py-4 text-start">
                                 <span className="text-gray-500 dark:text-gray-400">
-                                  {trip.plant_start ? new Date(trip.plant_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                                  {trip.plant_start
+                                    ? new Date(trip.plant_start).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
+                                    : "-"}
                                 </span>
                               </TableCell>
                               <TableCell className="px-5 py-4 text-start">
                                 <span className="text-gray-500 dark:text-gray-400">
-                                  {trip.pump_start ? new Date(trip.pump_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                                  {trip.pump_start
+                                    ? new Date(trip.pump_start).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
+                                    : "-"}
                                 </span>
                               </TableCell>
                               <TableCell className="px-5 py-4 text-start">
                                 <span className="text-gray-500 dark:text-gray-400">
-                                  {trip.unloading_time ? new Date(trip.unloading_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                                  {trip.unloading_time
+                                    ? new Date(trip.unloading_time).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
+                                    : "-"}
                                 </span>
                               </TableCell>
                               <TableCell className="px-5 py-4 text-start">
                                 <span className="text-gray-500 dark:text-gray-400">
-                                  {trip.return ? new Date(trip.return).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                                  {trip.return
+                                    ? new Date(trip.return).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
+                                    : "-"}
                                 </span>
                               </TableCell>
                               <TableCell className="px-5 py-4 text-start">
                                 <span className="text-gray-800 dark:text-white/90">{trip.completed_capacity} m³</span>
                               </TableCell>
                               <TableCell className="px-5 py-4 text-start">
-                                <span className="text-gray-800 dark:text-white/90">{typeof trip.cycle_time !== 'undefined' ? (trip.cycle_time / 60).toFixed(2) : '-'}</span>
+                                <span className="text-gray-800 dark:text-white/90">
+                                  {typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-"}
+                                </span>
                               </TableCell>
                             </TableRow>
                           ))}
