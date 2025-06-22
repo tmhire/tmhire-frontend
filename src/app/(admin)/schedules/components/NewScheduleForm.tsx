@@ -192,7 +192,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         );
         const tm_suggestions = {
           tm_count: data?.data?.tm_count,
-          schedule_id: data?.data?.id,
+          schedule_id: data?.data?._id,
           required_tms: data?.data?.required_tms,
           total_trips: data?.data?.total_trips,
           trips_per_tm: data?.data?.trips_per_tm,
@@ -390,6 +390,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       tmSequence,
       ...formData,
     });
+    router.push(`/schedules/${schedule_id}/view-schedule`);
   };
 
   const selectedClientDetails = clientsData?.find((c: Client) => c._id === selectedClient);
