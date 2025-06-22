@@ -406,7 +406,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       tmSequence,
       ...formData,
     });
-    router.push(`/schedules/${schedule_id}/view-schedule`);
+    router.push(`/schedules/${schedule_id}/view`);
   };
 
   const selectedClientDetails = clientsData?.find((c: Client) => c._id === selectedClient);

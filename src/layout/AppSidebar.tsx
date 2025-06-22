@@ -51,6 +51,11 @@ const navItems: NavItem[] = [
     name: "TM Calendar",
     path: "/tm-calendar",
   },
+  {
+    icon: <Calendar />,
+    name: "Pump Calendar",
+    path: "/pump-calendar",
+  },
   // {
   //   name: "Tables",
   //   icon: <SquareChartGantt />,
