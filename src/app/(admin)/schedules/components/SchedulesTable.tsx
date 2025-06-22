@@ -28,6 +28,8 @@ interface Schedule {
     unloading_time: string;
     return: string;
     completed_capacity: number;
+    cycle_time?: number;
+    trip_no_for_tm?: number;
   }>;
   tm_count: number;
   created_at: string;
@@ -114,50 +116,94 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
             {/* Table Body */}
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
               {data.map((schedule) => (
-                <TableRow key={schedule._id}>
-                  <TableCell className="px-5 py-4 text-start">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <span
-                          className="block text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                          title={schedule._id}
-                        >
-                          {schedule._id.slice(0, 4)}...{schedule._id.slice(-4)}
-                        </span>
+                <React.Fragment key={schedule._id}>
+                  <TableRow>
+                    <TableCell className="px-5 py-4 text-start">
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <span
+                            className="block text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                            title={schedule._id}
+                          >
+                            {schedule._id.slice(0, 4)}...{schedule._id.slice(-4)}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {schedule.client_name}
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {schedule.site_location}
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {schedule.input_params.quantity}
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {schedule.input_params.schedule_date}
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {schedule.tm_count}
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {schedule.status}
-                  </TableCell>
-                  <TableCell className="px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => handleView(schedule)}>
-                        <Eye size={"12px"} />
-                        View
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => onDelete(schedule)}>
-                        <Trash size={"12px"} />
-                        Delete
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                    </TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                      {schedule.client_name}
+                    </TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                      {schedule.site_location}
+                    </TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                      {schedule.input_params.quantity}
+                    </TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                      {schedule.input_params.schedule_date}
+                    </TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                      {schedule.tm_count}
+                    </TableCell>
+                    <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                      {schedule.status}
+                    </TableCell>
+                    <TableCell className="px-5 py-4">
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleView(schedule)}>
+                          <Eye size={"12px"} />
+                          View
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => onDelete(schedule)}>
+                          <Trash size={"12px"} />
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  {/* Details Table for output_table */}
+                  {Array.isArray(schedule.output_table) && schedule.output_table.length > 0 && (
+                    <TableRow>
+                      <td colSpan={8} className="bg-gray-50 dark:bg-gray-900/30 p-0">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableCell isHeader>Trip No</TableCell>
+                                <TableCell isHeader>TM No</TableCell>
+                                <TableCell isHeader>Plant Start</TableCell>
+                                <TableCell isHeader>Pump Start</TableCell>
+                                <TableCell isHeader>Unloading Time</TableCell>
+                                <TableCell isHeader>Return Time</TableCell>
+                                <TableCell isHeader>Completed Capacity</TableCell>
+                                <TableCell isHeader>Cycle Time (min)</TableCell>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {schedule.output_table.map((trip) => (
+                                <TableRow key={trip.trip_no}>
+                                  <TableCell>{trip.trip_no}</TableCell>
+                                  <TableCell>
+                                    {trip.tm_no}
+                                    {typeof trip.trip_no_for_tm !== 'undefined' && (
+                                      <span className="text-xs text-gray-500 ml-1">({trip.trip_no_for_tm})</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>{trip.plant_start ? new Date(trip.plant_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
+                                  <TableCell>{trip.pump_start ? new Date(trip.pump_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
+                                  <TableCell>{trip.unloading_time ? new Date(trip.unloading_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
+                                  <TableCell>{trip.return ? new Date(trip.return).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
+                                  <TableCell>{trip.completed_capacity} m³</TableCell>
+                                  <TableCell>{typeof trip.cycle_time !== 'undefined' ? (trip.cycle_time / 60).toFixed(2) : '-'}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </td>
+                    </TableRow>
+                  )}
+                </React.Fragment>
               ))}
             </TableBody>
           </Table>

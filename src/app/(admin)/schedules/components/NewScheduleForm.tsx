@@ -60,6 +60,8 @@ interface ScheduleTrip {
   unloading_time: string;
   return: string;
   completed_capacity: number;
+  cycle_time?: number;
+  trip_no_for_tm?: number;
 }
 
 interface GeneratedSchedule {
@@ -1195,6 +1197,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             >
                               Completed Capacity
                             </TableCell>
+                            <TableCell
+                              isHeader
+                              className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                            >
+                              Cycle Time (min)
+                            </TableCell>
                           </TableRow>
                         </TableHeader>
                         <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
@@ -1204,30 +1212,38 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="text-gray-800 dark:text-white/90">{trip.trip_no}</span>
                               </TableCell>
                               <TableCell className="px-5 py-4 text-start">
-                                <span className="text-gray-800 dark:text-white/90">{trip.tm_no}</span>
-                              </TableCell>
-                              <TableCell className="px-5 py-4 text-start">
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  {new Date(trip.plant_start).toLocaleTimeString()}
+                                <span className="text-gray-800 dark:text-white/90">
+                                  {trip.tm_no}
+                                  {typeof trip.trip_no_for_tm !== 'undefined' && (
+                                    <span className="text-xs text-gray-500 ml-1">({trip.trip_no_for_tm})</span>
+                                  )}
                                 </span>
                               </TableCell>
                               <TableCell className="px-5 py-4 text-start">
                                 <span className="text-gray-500 dark:text-gray-400">
-                                  {new Date(trip.pump_start).toLocaleTimeString()}
+                                  {trip.plant_start ? new Date(trip.plant_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
                                 </span>
                               </TableCell>
                               <TableCell className="px-5 py-4 text-start">
                                 <span className="text-gray-500 dark:text-gray-400">
-                                  {new Date(trip.unloading_time).toLocaleTimeString()}
+                                  {trip.pump_start ? new Date(trip.pump_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
                                 </span>
                               </TableCell>
                               <TableCell className="px-5 py-4 text-start">
                                 <span className="text-gray-500 dark:text-gray-400">
-                                  {new Date(trip.return).toLocaleTimeString()}
+                                  {trip.unloading_time ? new Date(trip.unloading_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                                </span>
+                              </TableCell>
+                              <TableCell className="px-5 py-4 text-start">
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {trip.return ? new Date(trip.return).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
                                 </span>
                               </TableCell>
                               <TableCell className="px-5 py-4 text-start">
                                 <span className="text-gray-800 dark:text-white/90">{trip.completed_capacity} m³</span>
+                              </TableCell>
+                              <TableCell className="px-5 py-4 text-start">
+                                <span className="text-gray-800 dark:text-white/90">{typeof trip.cycle_time !== 'undefined' ? (trip.cycle_time / 60).toFixed(2) : '-'}</span>
                               </TableCell>
                             </TableRow>
                           ))}
