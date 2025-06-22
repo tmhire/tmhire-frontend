@@ -200,7 +200,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           available_tms: data?.data?.available_tms,
         };
         setCalculatedTMs(tm_suggestions || null);
-        console.log("TM suggestion", tm_suggestions);
         return true;
       }
       return false;
@@ -253,7 +252,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     if (schedule_id && clientsData && pumpsData) {
       fetchSchedule();
     }
-  }, [schedule_id, clientsData, pumpsData, fetchSchedule]);
+  }, [schedule_id, clientsData, pumpsData]);
 
   useEffect(() => {
     setIsDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -330,10 +329,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     }
     if (schedule_id && clientsData && pumpsData) {
       if (hasChanged) {
-        console.log("Updating schedule");
         return updateSchedule();
       }
-      console.log("Fetchign schedule");
       return fetchSchedule();
     }
   };
