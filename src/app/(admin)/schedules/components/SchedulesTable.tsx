@@ -161,48 +161,6 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
                       </div>
                     </TableCell>
                   </TableRow>
-                  {/* Details Table for output_table */}
-                  {Array.isArray(schedule.output_table) && schedule.output_table.length > 0 && (
-                    <TableRow>
-                      <td colSpan={8} className="bg-gray-50 dark:bg-gray-900/30 p-0">
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableCell isHeader>Trip No</TableCell>
-                                <TableCell isHeader>TM No</TableCell>
-                                <TableCell isHeader>Plant Start</TableCell>
-                                <TableCell isHeader>Pump Start</TableCell>
-                                <TableCell isHeader>Unloading Time</TableCell>
-                                <TableCell isHeader>Return Time</TableCell>
-                                <TableCell isHeader>Completed Capacity</TableCell>
-                                <TableCell isHeader>Cycle Time (min)</TableCell>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {schedule.output_table.map((trip) => (
-                                <TableRow key={trip.trip_no}>
-                                  <TableCell>{trip.trip_no}</TableCell>
-                                  <TableCell>
-                                    {trip.tm_no}
-                                    {typeof trip.trip_no_for_tm !== 'undefined' && (
-                                      <span className="text-xs text-gray-500 ml-1">({trip.trip_no_for_tm})</span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>{trip.plant_start ? new Date(trip.plant_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
-                                  <TableCell>{trip.pump_start ? new Date(trip.pump_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
-                                  <TableCell>{trip.unloading_time ? new Date(trip.unloading_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
-                                  <TableCell>{trip.return ? new Date(trip.return).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
-                                  <TableCell>{trip.completed_capacity} m³</TableCell>
-                                  <TableCell>{typeof trip.cycle_time !== 'undefined' ? (trip.cycle_time / 60).toFixed(2) : '-'}</TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </td>
-                    </TableRow>
-                  )}
                 </React.Fragment>
               ))}
             </TableBody>
