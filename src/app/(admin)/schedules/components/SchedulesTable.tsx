@@ -42,7 +42,10 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
   const router = useRouter();
 
   const handleView = (schedule: Schedule) => {
-    router.push(`/schedules/${schedule._id}`);
+    if (schedule.status === "draft") {
+      return router.push(`/schedules/${schedule._id}`);
+    }
+    return router.push(`/schedules/${schedule._id}/view-schedule`);
   };
 
   return (
