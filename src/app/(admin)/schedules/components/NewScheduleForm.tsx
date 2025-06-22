@@ -7,8 +7,8 @@ import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import Radio from "@/components/form/input/Radio";
 import Input from "@/components/form/input/InputField";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
-import { ArrowLeft, ArrowRight, Clock, CheckCircle2, GripVertical } from "lucide-react";
-import { Reorder, motion } from "framer-motion";
+import { ArrowLeft, ArrowRight, Clock, CheckCircle2, GripVertical, ChevronDown, ChevronRight } from "lucide-react";
+import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useQuery } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
@@ -123,6 +123,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   // Dropdown open state for custom dropdowns
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
   const [isPumpDropdownOpen, setIsPumpDropdownOpen] = useState(false);
+  // Add state for open/closed plant groups
+  const [openPlantGroups, setOpenPlantGroups] = useState<Record<string, boolean>>({});
 
   const { data: clientsData } = useQuery<Client[]>({
     queryKey: ["clients"],
@@ -140,6 +142,18 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     queryKey: ["pumps"],
     queryFn: async () => {
       const response = await fetchWithAuth("/pumps/");
+      const data = await response.json();
+      if (data.success) {
+        return data.data;
+      }
+      return [];
+    },
+  });
+
+  const { data: plantsData } = useQuery<{ _id: string; name: string }[]>({
+    queryKey: ["plants"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/plants");
       const data = await response.json();
       if (data.success) {
         return data.data;
@@ -334,6 +348,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       return fetchSchedule();
     }
   };
+
+  console.log("tmSequence", tmSequence);
 
   const generateSchedule = async () => {
     if (!calculatedTMs?.schedule_id || tmSequence.length === 0) {
@@ -848,27 +864,45 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             {calculatedTMs && (
               <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Calculation Results</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Required TMs</p>
-                    <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.tm_count}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Total Trips</p>
-                    <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.total_trips}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Avg Trips per TM</p>
-                    <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.trips_per_tm}</p>
-                  </div>
+                <div className="grid grid-cols-4 gap-4">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Cycle Time (hours)</p>
                     <p className="text-lg font-medium text-gray-900 dark:text-white">
                       {calculatedTMs.cycle_time.toFixed(2)}
                     </p>
                   </div>
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Total Trips</p>
+                    <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.total_trips}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Required TMs</p>
+                    <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.tm_count}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Avg Trips per TM</p>
+                    <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.trips_per_tm}</p>
+                  </div>
                 </div>
               </div>
+            )}
+
+            {calculatedTMs && calculatedTMs.available_tms && (
+              <>
+                {calculatedTMs.available_tms.length < calculatedTMs.tm_count ? (
+                  <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center justify-between">
+                    <span>Not enough available TMs to fulfill the requirement. Please add more TMs.</span>
+                    <a
+                      href="/transit-mixers"
+                      className="ml-4 px-3 py-1 bg-brand-500 text-white rounded hover:bg-brand-600 transition-colors text-sm font-medium"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Add TMs
+                    </a>
+                  </div>
+                ) : null}
+              </>
             )}
 
             <div className="grid grid-cols-2 gap-6">
@@ -877,44 +911,96 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select TMs</h3>
                 <div className="space-y-4">
                   {calculatedTMs && calculatedTMs.available_tms && calculatedTMs.available_tms.length > 0 ? (
-                    calculatedTMs.available_tms.map((tm) => {
-                      return (
-                        <label
-                          key={tm.id}
-                          className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
-                        >
-                          <div className="flex flex-row items-center space-x-4">
-                            <input
-                              type="checkbox"
-                              checked={tmSequence.includes(tm.id)}
-                              disabled={!tm.availability}
-                              onChange={(e) => {
-                                setTMSequence((prev) => {
-                                  const updated = e.target.checked
-                                    ? [...prev, tm.id]
-                                    : prev.filter((id) => id !== tm.id);
-                                  console.log("Updated TM Sequence:", updated);
-                                  return updated;
-                                });
-                                setHasChanged(true);
-                              }}
-                              className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
-                            />
-                            <div className="flex flex-row justify-between w-full">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">{tm.identifier}</p>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">Capacity: {tm.capacity}m³</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            {tm.plant_id && (
-                              <span className="px-2 py-1 text-xs font-medium text-brand-600 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-400 rounded-full">
-                                Plant Assigned
+                    (() => {
+                      // Build plantId to name map
+                      const plantIdToName = (plantsData || []).reduce((acc, plant) => {
+                        acc[plant._id] = plant.name;
+                        return acc;
+                      }, {} as Record<string, string>);
+                      // Group TMs
+                      const grouped: Record<string, typeof calculatedTMs.available_tms> = {};
+                      calculatedTMs.available_tms.forEach((tm) => {
+                        const group = tm.plant_id ? plantIdToName[tm.plant_id] || "Unassigned" : "Unassigned";
+                        if (!grouped[group]) grouped[group] = [];
+                        grouped[group].push(tm);
+                      });
+                      // Sort group names: all except 'Unassigned' alphabetically, then 'Unassigned' last
+                      const groupOrder = Object.keys(grouped)
+                        .filter((g) => g !== "Unassigned")
+                        .sort((a, b) => a.localeCompare(b))
+                        .concat(Object.keys(grouped).includes("Unassigned") ? ["Unassigned"] : []);
+                      return groupOrder.map((plant) => {
+                        const tms = grouped[plant];
+                        const isOpen = openPlantGroups[plant] ?? true;
+                        return (
+                          <div key={plant} className="mb-4">
+                            <button
+                              type="button"
+                              className={`flex items-center w-full px-4 py-2 bg-brand-50 dark:bg-brand-900/30 border-l-4 border-brand-500 dark:border-brand-400 font-semibold text-brand-700 dark:text-brand-300 text-base focus:outline-none transition-all duration-200
+                                ${isOpen ? "rounded-t-lg rounded-b-none" : "rounded-lg"}`}
+                              onClick={() => setOpenPlantGroups((prev) => ({ ...prev, [plant]: !isOpen }))}
+                              aria-expanded={isOpen}
+                            >
+                              <span className="mr-2">
+                                {isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                               </span>
-                            )}
+                              <span className="flex-1 text-left">{plant}</span>
+                              <span className="ml-2 text-xs font-semibold text-brand-500 dark:text-brand-300 bg-brand-100 dark:bg-brand-900/40 px-2 py-0.5 rounded-full">
+                                {tms.length}
+                              </span>
+                            </button>
+                            <AnimatePresence initial={false}>
+                              {isOpen && (
+                                <motion.div
+                                  key="content"
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="bg-gray-50 dark:bg-gray-900/30 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-lg p-2 pl-6">
+                                    {tms.map((tm, idx) => (
+                                      <label
+                                        key={tm.id}
+                                        className="flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800/50 cursor-pointer"
+                                      >
+                                        <div className="flex flex-row items-center space-x-4 w-full">
+                                          <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
+                                          <input
+                                            type="checkbox"
+                                            checked={tmSequence.includes(tm.id)}
+                                            disabled={!tm.availability}
+                                            onChange={(e) => {
+                                              setTMSequence((prev) => {
+                                                const updated = e.target.checked
+                                                  ? [...prev, tm.id]
+                                                  : prev.filter((id) => id !== tm.id);
+                                                return updated;
+                                              });
+                                              setHasChanged(true);
+                                            }}
+                                            className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
+                                          />
+                                          <div className="flex flex-row w-full justify-between">
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                              {tm.identifier}
+                                            </p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                              {tm.capacity}m³
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
-                        </label>
-                      );
-                    })
+                        );
+                      });
+                    })()
                   ) : (
                     <div className="text-center py-4 text-gray-500 dark:text-gray-400">
                       No TMs available for selection
@@ -927,27 +1013,61 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               <div className="space-y-6">
                 <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Arrange TM Sequence</h3>
                 <div className="space-y-2">
-                  {tmSequence.length > 0 ? (
-                    <Reorder.Group axis="y" values={tmSequence} onReorder={setTMSequence} className="space-y-2">
-                      {tmSequence.map((tmId) => {
-                        const tm = calculatedTMs?.available_tms.find((t) => t.id === tmId);
-                        return (
-                          <Reorder.Item
-                            key={tmId}
-                            value={tmId}
-                            className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 cursor-grab active:cursor-grabbing"
-                          >
-                            <div className="flex items-center space-x-4">
-                              <span className="text-gray-700 dark:text-gray-300">{tm?.identifier}</span>
-                              <span className="text-sm text-gray-500 dark:text-gray-400">({tm?.capacity}m³)</span>
-                            </div>
-                            <div className="flex items-center">
-                              <GripVertical className="text-black/50" size={"18px"} />
-                            </div>
-                          </Reorder.Item>
-                        );
-                      })}
-                    </Reorder.Group>
+                  {tmSequence.length > 0 && calculatedTMs ? (
+                    (() => {
+                      // Build plantId to name map
+                      const plantIdToName = (plantsData || []).reduce((acc, plant) => {
+                        acc[plant._id] = plant.name;
+                        return acc;
+                      }, {} as Record<string, string>);
+                      // Build a map of plant to ordered selected TMs
+                      const tmIdToPlant = Object.fromEntries(
+                        calculatedTMs.available_tms.map((tm) => [
+                          tm.id,
+                          tm.plant_id ? plantIdToName[tm.plant_id] || "Unassigned" : "Unassigned",
+                        ])
+                      );
+                      const plantToTms: Record<string, string[]> = {};
+                      tmSequence.forEach((tmId) => {
+                        const plant = tmIdToPlant[tmId] || "Unassigned";
+                        if (!plantToTms[plant]) plantToTms[plant] = [];
+                        plantToTms[plant].push(tmId);
+                      });
+                      // For each TM in sequence, show its number and plant badge
+                      return (
+                        <Reorder.Group axis="y" values={tmSequence} onReorder={setTMSequence} className="space-y-2">
+                          {tmSequence.map((tmId, idx) => {
+                            const tm = calculatedTMs.available_tms.find((t) => t.id === tmId);
+                            const plant = tmIdToPlant[tmId] || "Unassigned";
+                            return (
+                              <Reorder.Item
+                                key={tmId}
+                                value={tmId}
+                                className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 cursor-grab active:cursor-grabbing"
+                              >
+                                <div className="flex items-center space-x-4">
+                                  <span className="text-xs text-brand-600 dark:text-brand-400 font-semibold">
+                                    {idx + 1}
+                                  </span>
+                                  <span className="text-gray-700 dark:text-gray-300">{tm?.identifier}</span>
+                                  <span className="text-sm text-gray-500 dark:text-gray-400">({tm?.capacity}m³)</span>
+                                </div>
+                                <div className="flex items-center flex-1 justify-end space-x-2">
+                                  {plant && (
+                                    <span className="px-2 py-1 text-xs font-medium text-brand-600 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-400 rounded-full ml-2">
+                                      {plant}
+                                    </span>
+                                  )}
+                                  <div className="flex items-center">
+                                    <GripVertical className="text-black/50" size={"18px"} />
+                                  </div>
+                                </div>
+                              </Reorder.Item>
+                            );
+                          })}
+                        </Reorder.Group>
+                      );
+                    })()
                   ) : (
                     <div className="text-center py-4 text-gray-500 dark:text-gray-400">
                       No TMs selected for sequencing
@@ -957,15 +1077,30 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               </div>
             </div>
 
-            <div className="flex justify-between mt-8">
+            <div className="flex justify-between items-center mt-8">
               <Button variant="outline" onClick={handleBack} className="flex items-center gap-2">
                 <ArrowLeft size={16} />
                 Back
               </Button>
-              <Button onClick={handleNext} className="flex items-center gap-2">
-                Next Step
-                <ArrowRight size={16} />
-              </Button>
+              <div className="flex items-end gap-4">
+                {tmSequence.length !== calculatedTMs?.tm_count && (
+                  <div className="p-2 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg text-xs">
+                    Please select exactly <span className="font-semibold">{calculatedTMs?.tm_count}</span> TMs to
+                    proceed.
+                  </div>
+                )}
+                <Button
+                  onClick={handleNext}
+                  className="flex items-center gap-2"
+                  disabled={
+                    tmSequence.length !== calculatedTMs?.tm_count ||
+                    calculatedTMs?.available_tms.length < calculatedTMs?.tm_count
+                  }
+                >
+                  Next Step
+                  <ArrowRight size={16} />
+                </Button>
+              </div>
             </div>
           </div>
         ) : (
