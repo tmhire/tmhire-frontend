@@ -28,6 +28,7 @@ interface Pump {
   capacity: number;
   plant_id: string;
   status: string;
+  make: string;
   created_at: string;
 }
 
@@ -36,6 +37,7 @@ interface CreatePumpData {
   type: "line" | "boom";
   capacity: number;
   plant_id: string;
+  make: string;
 }
 
 export default function PumpsContainer() {
@@ -58,16 +60,22 @@ export default function PumpsContainer() {
     type: "line",
     capacity: 0,
     plant_id: "",
+    make: "",
   });
   const [newPump, setNewPump] = useState<CreatePumpData>({
     identifier: "",
     type: "line",
     capacity: 0,
     plant_id: "",
+    make: "",
   });
 
   // Fetch pumps query
-  const { data: pumpsData, isLoading: isLoadingPumps } = useQuery({
+  const {
+    data: pumpsData,
+    isLoading: isLoadingPumps,
+    isError: isPumpError,
+  } = useQuery({
     queryKey: ["pumps"],
     queryFn: async () => {
       const response = await fetchWithAuth("/pumps/");
@@ -118,6 +126,7 @@ export default function PumpsContainer() {
         type: "line",
         capacity: 0,
         plant_id: "",
+        make: "",
       });
     },
   });
@@ -178,6 +187,7 @@ export default function PumpsContainer() {
       type: pump.type,
       capacity: pump.capacity,
       plant_id: pump.plant_id,
+      make: pump.make || "", // Assuming 'make' is a field in the Pump model
     });
     setIsEditModalOpen(true);
   };
@@ -210,10 +220,11 @@ export default function PumpsContainer() {
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     const newValue = name === "capacity" ? Number(value) : value;
-    const pumpUpdate = name === "type" ? { ...editedPump, [name]: value as "line" | "boom" } : { ...editedPump, [name]: newValue };
-    
+    const pumpUpdate =
+      name === "type" ? { ...editedPump, [name]: value as "line" | "boom" } : { ...editedPump, [name]: newValue };
+
     setEditedPump(pumpUpdate);
   };
 
@@ -294,7 +305,7 @@ export default function PumpsContainer() {
                   className="dropdown-toggle"
                   size="sm"
                 >
-                  Plant: {selectedPlant ? (plantMap.get(selectedPlant) || "Unknown") : "All"}
+                  Plant: {selectedPlant ? plantMap.get(selectedPlant) || "Unknown" : "All"}
                 </Button>
                 <Dropdown isOpen={isPlantFilterOpen} onClose={() => setIsPlantFilterOpen(false)} className="w-48">
                   <div className="p-2 text-gray-800 dark:text-white/90">
@@ -306,7 +317,8 @@ export default function PumpsContainer() {
                       }}
                     >
                       All
-                    </button>                    {plantsData?.map((plant) => (
+                    </button>{" "}
+                    {plantsData?.map((plant) => (
                       <button
                         key={plant._id}
                         className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -411,13 +423,14 @@ export default function PumpsContainer() {
                 <div className="flex justify-center py-4">
                   <Spinner text="Loading pumps..." />
                 </div>
+              ) : isPumpError ? (
+                <div className="flex justify-center py-4">
+                  <div className="text-center py-4 text-gray-800 dark:text-white/90">
+                    There was an error while retriving pumps
+                  </div>
+                </div>
               ) : (
-                <PumpsTable 
-                  data={filteredData} 
-                  onEdit={handleEdit} 
-                  onDelete={handleDelete} 
-                  plantMap={plantMap}
-                />
+                <PumpsTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} plantMap={plantMap} />
               )}
             </div>
           </div>
@@ -425,7 +438,11 @@ export default function PumpsContainer() {
       </div>
 
       {/* Create Modal */}
-      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} className="max-w-[600px] p-5 lg:p-10">
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        className="max-w-[600px] p-5 lg:p-10"
+      >
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Pump</h4>
         <div className="space-y-4">
           <div>
@@ -447,7 +464,8 @@ export default function PumpsContainer() {
               value={newPump.capacity}
               onChange={handleInputChange}
             />
-          </div>          <div>
+          </div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plant</label>
             <select
               name="plant_id"
@@ -478,20 +496,23 @@ export default function PumpsContainer() {
               ))}
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Make</label>
+            <Input type="text" name="make" placeholder="Enter make" value={newPump.make} onChange={handleInputChange} />
+          </div>
           <div className="flex justify-end gap-3 mt-6">
             <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleCreatePump}
-              disabled={createPumpMutation.isPending}
-            >
+            <Button onClick={handleCreatePump} disabled={createPumpMutation.isPending || !newPump.identifier}>
               {createPumpMutation.isPending ? (
                 <div className="flex items-center gap-2">
                   <Spinner size="sm" />
                   <span>Creating...</span>
                 </div>
-              ) : 'Create'}
+              ) : (
+                "Create"
+              )}
             </Button>
           </div>
         </div>
@@ -504,21 +525,11 @@ export default function PumpsContainer() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Identifier</label>
-              <Input
-                type="text"
-                name="identifier"
-                value={editedPump.identifier}
-                onChange={handleEditInputChange}
-              />
+              <Input type="text" name="identifier" value={editedPump.identifier} onChange={handleEditInputChange} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity</label>
-              <Input
-                type="number"
-                name="capacity"
-                value={editedPump.capacity}
-                onChange={handleEditInputChange}
-              />
+              <Input type="number" name="capacity" value={editedPump.capacity} onChange={handleEditInputChange} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plant</label>
@@ -551,20 +562,23 @@ export default function PumpsContainer() {
                 ))}
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Make</label>
+              <Input type="text" name="make" value={editedPump.make} onChange={handleEditInputChange} />
+            </div>
             <div className="flex justify-end gap-3 mt-6">
               <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
                 Cancel
               </Button>
-              <Button 
-                onClick={handleSaveEdit}
-                disabled={editPumpMutation.isPending}
-              >
+              <Button onClick={handleSaveEdit} disabled={editPumpMutation.isPending}>
                 {editPumpMutation.isPending ? (
                   <div className="flex items-center gap-2">
                     <Spinner size="sm" />
                     <span>Saving...</span>
                   </div>
-                ) : 'Save Changes'}
+                ) : (
+                  "Save Changes"
+                )}
               </Button>
             </div>
           </div>
@@ -572,7 +586,11 @@ export default function PumpsContainer() {
       </Modal>
 
       {/* Delete Modal */}
-      <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} className="max-w-[400px] p-5 lg:p-10">
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        className="max-w-[400px] p-5 lg:p-10"
+      >
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Delete Pump</h4>
         <p className="text-gray-600 dark:text-gray-400 mb-6">
           Are you sure you want to delete this pump? This action cannot be undone.
@@ -581,17 +599,15 @@ export default function PumpsContainer() {
           <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
             Cancel
           </Button>
-          <Button 
-            variant="warning" 
-            onClick={handleConfirmDelete}
-            disabled={deletePumpMutation.isPending}
-          >
+          <Button variant="warning" onClick={handleConfirmDelete} disabled={deletePumpMutation.isPending}>
             {deletePumpMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />
                 <span>Deleting...</span>
               </div>
-            ) : 'Delete'}
+            ) : (
+              "Delete"
+            )}
           </Button>
         </div>
       </Modal>
