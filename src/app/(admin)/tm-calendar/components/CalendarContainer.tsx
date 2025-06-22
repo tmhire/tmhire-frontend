@@ -6,6 +6,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { time } from "console";
 
 // Types for better type safety and backend integration
 type ApiTask = {
@@ -22,6 +23,8 @@ type Task = {
   color: string;
   client: string;
   type: string;
+  actualStart: string;
+  actualEnd: string;
 };
 
 type Mixer = {
@@ -165,7 +168,7 @@ const transformApiData = (apiData: ApiResponse): Mixer[] => {
 
   return apiData.data.mixers.map((mixer) => {
     const transformedTasks: Task[] = mixer.tasks.map((task) => {
-      const startHour = Math.floor(timeStringToHour(task.start));
+      const startHour = Math.round(timeStringToHour(task.start));
       const duration = calculateDuration(task.start, task.end);
       const color = clientColors.get(task.client) || "bg-gray-500";
 
@@ -176,6 +179,8 @@ const transformApiData = (apiData: ApiResponse): Mixer[] => {
         color,
         client: task.client,
         type: "production", // Default type since API doesn't provide this
+        actualStart: task.start,
+        actualEnd: task.end,
       };
     });
 
@@ -505,11 +510,7 @@ export default function CalendarContainer() {
                     onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
                     className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   >
-                    {timeFormat === "24h"
-                      ? "24-Hour Format"
-                      : timeFormat === "12h"
-                      ? "12-Hour Format"
-                      : "24h (Custom)"}
+                    {timeFormat === "24h" ? "24-Hour Format" : timeFormat === "12h" ? "12-Hour Format" : "24h (Custom)"}
                   </button>
                   {isTimeFormatOpen && (
                     <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
@@ -551,7 +552,7 @@ export default function CalendarContainer() {
                       <select
                         className="w-full px-2 py-1 border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white"
                         value={customStartHour}
-                        onChange={e => setCustomStartHour(Number(e.target.value))}
+                        onChange={(e) => setCustomStartHour(Number(e.target.value))}
                       >
                         {Array.from({ length: 24 }, (_, i) => (
                           <option key={i} value={i}>{`${String(i).padStart(2, "0")}:00`}</option>
@@ -768,7 +769,9 @@ export default function CalendarContainer() {
 
                   {/* Time Format Filter */}
                   <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Time Format</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Time Format
+                    </label>
                     <button
                       onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
                       className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -819,7 +822,7 @@ export default function CalendarContainer() {
                         <select
                           className="w-full px-2 py-1 border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white"
                           value={customStartHour}
-                          onChange={e => setCustomStartHour(Number(e.target.value))}
+                          onChange={(e) => setCustomStartHour(Number(e.target.value))}
                         >
                           {Array.from({ length: 24 }, (_, i) => (
                             <option key={i} value={i}>{`${String(i).padStart(2, "0")}:00`}</option>
@@ -873,7 +876,18 @@ export default function CalendarContainer() {
                   ) : (
                     filteredData.map((mixer) => {
                       // Group tasks by client for this mixer
-                      const clientTaskMap: Record<string, { start: number; end: number; duration: number; color: string; client: string }> = {};
+                      const clientTaskMap: Record<
+                        string,
+                        {
+                          start: number;
+                          end: number;
+                          duration: number;
+                          color: string;
+                          client: string;
+                          actualStart: string;
+                          actualEnd: string;
+                        }
+                      > = {};
                       mixer.tasks.forEach((task) => {
                         if (!clientTaskMap[task.client]) {
                           clientTaskMap[task.client] = {
@@ -882,11 +896,29 @@ export default function CalendarContainer() {
                             duration: task.duration,
                             color: task.color,
                             client: task.client,
+                            actualStart: task.actualStart,
+                            actualEnd: task.actualEnd,
                           };
                         } else {
-                          clientTaskMap[task.client].start = Math.min(clientTaskMap[task.client].start, task.start);
-                          clientTaskMap[task.client].end = Math.max(clientTaskMap[task.client].end, task.start + task.duration);
-                          clientTaskMap[task.client].duration += task.duration;
+                          if (
+                            timeStringToHour(task.actualStart) <
+                            timeStringToHour(clientTaskMap[task.client].actualStart)
+                          ) {
+                            clientTaskMap[task.client].actualStart = task.actualStart;
+                          }
+                          if (
+                            timeStringToHour(task.actualEnd) > timeStringToHour(clientTaskMap[task.client].actualEnd)
+                          ) {
+                            clientTaskMap[task.client].actualEnd = task.actualEnd;
+                          }
+                          clientTaskMap[task.client].start = Math.floor(
+                            timeStringToHour(clientTaskMap[task.client].actualStart)
+                          );
+                          clientTaskMap[task.client].end = Math.round(
+                            timeStringToHour(clientTaskMap[task.client].actualEnd)
+                          );
+                          clientTaskMap[task.client].duration =
+                            clientTaskMap[task.client].end - clientTaskMap[task.client].start;
                         }
                       });
                       const clientTasks = Object.values(clientTaskMap);
@@ -929,7 +961,7 @@ export default function CalendarContainer() {
                         }
                         // Calculate offset and width in slots
                         const offset = (barStart - windowStart + 24) % 24;
-                        let width = (barEnd - barStart);
+                        let width = barEnd - barStart;
                         // Clamp width to not exceed window
                         if (width < 0) width = 0;
                         // Clamp width so bar does not extend past the last visible slot
@@ -964,7 +996,7 @@ export default function CalendarContainer() {
                                     width: `${width * 40 - 8}px`,
                                     zIndex: 10,
                                   }}
-                                  title={`${mixer.name} - ${ct.client} - ${formatTooltipTime(ct.start)} to ${formatTooltipTime(ct.end)} (${ct.duration}h total)`}
+                                  title={`${mixer.name} - ${ct.client} - ${ct.actualStart} to ${ct.actualEnd} (${ct.duration}h total)`}
                                 >
                                   <span className="text-white text-xs font-medium">{ct.duration}h</span>
                                 </div>
