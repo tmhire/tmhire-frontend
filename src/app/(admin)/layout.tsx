@@ -1,10 +1,12 @@
 "use client";
 
+import React, { useContext } from "react";
 import { useSidebar } from "@/context/SidebarContext";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
-import React from "react";
+import { Spinner } from "@/components/ui/spinner";
+import { ThemeContext } from "@/context/ThemeContext";
 
 export default function AdminLayout({
   children,
@@ -12,6 +14,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
+  const themeContext = useContext(ThemeContext);
 
   // Dynamic class for main content margin based on sidebar state
   const mainContentMargin = isMobileOpen
@@ -20,6 +23,14 @@ export default function AdminLayout({
     ? "lg:ml-[290px]"
     : "lg:ml-[90px]";
 
+  if (!themeContext || !themeContext.isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Spinner size="lg" text="Loading..." />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen xl:flex">
       {/* Sidebar and Backdrop */}
@@ -27,7 +38,7 @@ export default function AdminLayout({
       <Backdrop />
       {/* Main Content Area */}
       <div
-        className={`flex-1 flex-col transition-all  duration-300 ease-in-out ${mainContentMargin}`}
+        className={`flex-1 before:flex-col after:flex-col flex-col transition-all  duration-300 ease-in-out ${mainContentMargin}`}
       >
         {/* Header */}
         <AppHeader />
