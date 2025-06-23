@@ -6,7 +6,6 @@ import { useApiClient } from "@/hooks/useApiClient";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { time } from "console";
 
 // Types for better type safety and backend integration
 type ApiTask = {
@@ -195,14 +194,6 @@ const transformApiData = (apiData: ApiResponse): Mixer[] => {
       tasks: transformedTasks,
     };
   });
-};
-
-// Helper to format a time (hour or half-hour) as HH:mm
-const formatTooltipTime = (value: number) => {
-  // If value is integer, it's an hour; if .5, it's half past
-  const hour = Math.floor(value);
-  const min = Math.round((value - hour) * 60);
-  return `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
 };
 
 export default function CalendarContainer() {

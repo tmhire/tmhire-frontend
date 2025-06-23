@@ -217,11 +217,6 @@ export default function PumpCalendarContainer() {
         return acc;
       }, {} as Record<string, { name: string; color: string }>)
   );
-  const formatTooltipTime = (value: number) => {
-    const hour = Math.floor(value);
-    const min = Math.round((value - hour) * 60);
-    return `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-  };
   const handleDateChange = (newDate: string) => {
     setSelectedDate(newDate);
     const params = new URLSearchParams(searchParams.toString());
