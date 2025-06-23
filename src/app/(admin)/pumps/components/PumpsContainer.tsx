@@ -446,11 +446,11 @@ export default function PumpsContainer() {
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Pump</h4>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Identifier</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Number</label>
             <Input
               type="text"
               name="identifier"
-              placeholder="Enter identifier"
+              placeholder="Enter number"
               value={newPump.identifier}
               onChange={handleInputChange}
             />
@@ -524,7 +524,7 @@ export default function PumpsContainer() {
         {selectedPump && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Identifier</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Number</label>
               <Input type="text" name="identifier" value={editedPump.identifier} onChange={handleEditInputChange} />
             </div>
             <div>

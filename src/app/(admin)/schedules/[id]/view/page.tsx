@@ -62,13 +62,13 @@ export default function ScheduleViewPage() {
   }
 
   if (!schedule) {
-    return <div className="text-center py-4 text-gray-800 dark:text-white/90">Schedule not found</div>;
+    return <div className="text-center py-4 text-gray-800 dark:text-white/90">Pumping Schedule not found</div>;
   }
 
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-black dark:text-white">Schedule Details</h2>
+        <h2 className="text-xl font-semibold text-black dark:text-white">Pumping Schedule Details</h2>
       </div>
 
       <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
@@ -114,7 +114,7 @@ export default function ScheduleViewPage() {
         </div>
 
         <div className="mt-8">
-          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Schedule Details</h4>
+          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Pumping Schedule Details</h4>
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
             <div className="max-w-full overflow-x-auto">
               <Table>
@@ -179,36 +179,49 @@ export default function ScheduleViewPage() {
                       <TableCell className="px-5 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">
                           {trip.tm_no}
-                          {typeof trip.trip_no_for_tm !== 'undefined' && (
+                          {typeof trip.trip_no_for_tm !== "undefined" && (
                             <span className="text-xs text-gray-500 ml-1">({trip.trip_no_for_tm})</span>
                           )}
                         </span>
                       </TableCell>
                       <TableCell className="px-5 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
-                          {trip.plant_start ? new Date(trip.plant_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                          {trip.plant_start
+                            ? new Date(trip.plant_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                            : "-"}
                         </span>
                       </TableCell>
                       <TableCell className="px-5 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
-                          {trip.pump_start ? new Date(trip.pump_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                          {trip.pump_start
+                            ? new Date(trip.pump_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                            : "-"}
                         </span>
                       </TableCell>
                       <TableCell className="px-5 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
-                          {trip.unloading_time ? new Date(trip.unloading_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                          {trip.unloading_time
+                            ? new Date(trip.unloading_time).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "-"}
                         </span>
                       </TableCell>
                       <TableCell className="px-5 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
-                          {trip.return ? new Date(trip.return).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                          {trip.return
+                            ? new Date(trip.return).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                            : "-"}
                         </span>
                       </TableCell>
                       <TableCell className="px-5 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">{trip.completed_capacity} m³</span>
                       </TableCell>
                       <TableCell className="px-5 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">{typeof trip.cycle_time !== 'undefined' ? (trip.cycle_time / 60).toFixed(2) : '-'}</span>
+                        <span className="text-gray-800 dark:text-white/90">
+                          {typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-"}
+                        </span>
                       </TableCell>
                     </TableRow>
                   ))}

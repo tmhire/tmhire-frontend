@@ -17,8 +17,6 @@ type ApiTask = {
 
 type Task = {
   id: string;
-  start: number;
-  duration: number;
   color: string;
   client: string;
   type: string;
@@ -167,14 +165,10 @@ const transformApiData = (apiData: ApiResponse): Mixer[] => {
 
   return apiData.data.mixers.map((mixer) => {
     const transformedTasks: Task[] = mixer.tasks.map((task) => {
-      const startHour = Math.round(timeStringToHour(task.start));
-      const duration = calculateDuration(task.start, task.end);
       const color = clientColors.get(task.client) || "bg-gray-500";
 
       return {
         id: task.id,
-        start: startHour,
-        duration: duration, // Round up for display
         color,
         client: task.client,
         type: "production", // Default type since API doesn't provide this
@@ -388,7 +382,7 @@ export default function CalendarContainer() {
                     {selectedPlant === "all" ? "All Plants" : selectedPlant}
                   </button>
                   {isPlantFilterOpen && (
-                    <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
                       <div className="p-2 text-gray-800 dark:text-white/90">
                         <button
                           className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -428,7 +422,7 @@ export default function CalendarContainer() {
                     {selectedMixer === "all" ? "All Mixers" : selectedMixer}
                   </button>
                   {isMixerFilterOpen && (
-                    <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
                       <div className="p-2 text-gray-800 dark:text-white/90">
                         <button
                           className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -466,7 +460,7 @@ export default function CalendarContainer() {
                     {selectedClient === "all" ? "All Clients" : selectedClient}
                   </button>
                   {isClientFilterOpen && (
-                    <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
                       <div className="p-2 text-gray-800 dark:text-white/90">
                         <button
                           className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -504,7 +498,7 @@ export default function CalendarContainer() {
                     {timeFormat === "24h" ? "24-Hour Format" : timeFormat === "12h" ? "12-Hour Format" : "24h (Custom)"}
                   </button>
                   {isTimeFormatOpen && (
-                    <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
                       <div className="p-2 text-gray-800 dark:text-white/90">
                         <button
                           className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -652,7 +646,7 @@ export default function CalendarContainer() {
                       {selectedPlant === "all" ? "All Plants" : selectedPlant}
                     </button>
                     {isPlantFilterOpen && (
-                      <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
                         <div className="p-2 text-gray-800 dark:text-white/90">
                           <button
                             className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -692,7 +686,7 @@ export default function CalendarContainer() {
                       {selectedMixer === "all" ? "All Mixers" : selectedMixer}
                     </button>
                     {isMixerFilterOpen && (
-                      <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
                         <div className="p-2 text-gray-800 dark:text-white/90">
                           <button
                             className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -730,7 +724,7 @@ export default function CalendarContainer() {
                       {selectedClient === "all" ? "All Clients" : selectedClient}
                     </button>
                     {isClientFilterOpen && (
-                      <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
                         <div className="p-2 text-gray-800 dark:text-white/90">
                           <button
                             className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -774,7 +768,7 @@ export default function CalendarContainer() {
                         : "24h (Custom)"}
                     </button>
                     {isTimeFormatOpen && (
-                      <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
                         <div className="p-2 text-gray-800 dark:text-white/90">
                           <button
                             className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -881,10 +875,12 @@ export default function CalendarContainer() {
                       > = {};
                       mixer.tasks.forEach((task) => {
                         if (!clientTaskMap[task.client]) {
+                          const start = Math.floor(timeStringToHour(task.actualStart));
+                          const end = Math.round(timeStringToHour(task.actualEnd));
                           clientTaskMap[task.client] = {
-                            start: task.start,
-                            end: task.start + task.duration,
-                            duration: task.duration,
+                            start: start,
+                            end: end,
+                            duration: end - start,
                             color: task.color,
                             client: task.client,
                             actualStart: task.actualStart,
@@ -981,7 +977,7 @@ export default function CalendarContainer() {
                               return (
                                 <div
                                   key={ct.client}
-                                  className={`absolute top-1 h-4 rounded ${ct.color} opacity-80 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center`}
+                                  className={`absolute top-1 h-4 rounded ${ct.color} opacity-80 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
                                   style={{
                                     left: `${offset * 40 + 1}px`,
                                     width: `${width * 40 - 8}px`,

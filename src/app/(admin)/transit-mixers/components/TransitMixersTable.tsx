@@ -11,7 +11,7 @@ interface TransitMixer {
   capacity: number;
   driver_name: string | null;
   driver_contact: string | null;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   created_at: string;
 }
 
@@ -24,8 +24,8 @@ interface TransitMixersTableProps {
 
 export default function TransitMixersTable({ data, onEdit, onDelete, plants = [] }: TransitMixersTableProps) {
   const getPlantName = (plant_id: string | null) => {
-    if (!plant_id) return 'Not Assigned';
-    const plant = plants.find(p => p._id === plant_id);
+    if (!plant_id) return "Not Assigned";
+    const plant = plants.find((p) => p._id === plant_id);
     return plant ? plant.name : plant_id;
   };
 
@@ -37,14 +37,49 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
             {/* Table Header */}
             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
               <TableRow>
-                <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Identifier</TableCell>
-                <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Capacity</TableCell>
-                <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Plant</TableCell>
-                <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Driver Name</TableCell>
-                <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Driver Contact</TableCell>
-                <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Status</TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Number
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Capacity (m³)
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Plant
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Driver Name
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Driver Contact
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Status
+                </TableCell>
                 {/* <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Created At</TableCell> */}
-                <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Actions</TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Actions
+                </TableCell>
               </TableRow>
             </TableHeader>
             {/* Table Body */}
@@ -52,10 +87,12 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
               {data.map((mixer) => (
                 <TableRow key={mixer._id}>
                   <TableCell className="px-5 py-4 text-start">
-                    <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">{mixer.identifier}</span>
+                    <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                      {mixer.identifier}
+                    </span>
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {mixer.capacity}m³
+                    {mixer.capacity}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {getPlantName(mixer.plant_id)}
@@ -67,11 +104,13 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                     {mixer.driver_contact || "-"}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-start">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      mixer.status === 'active' 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
-                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                    }`}>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        mixer.status === "active"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                      }`}
+                    >
                       {mixer.status.charAt(0).toUpperCase() + mixer.status.slice(1)}
                     </span>
                   </TableCell>

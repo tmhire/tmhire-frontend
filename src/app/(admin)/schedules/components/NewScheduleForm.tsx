@@ -1007,7 +1007,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                     {tms.map((tm, idx) => (
                                       <label
                                         key={tm.id}
-                                        className="flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800/50 cursor-pointer"
+                                        className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
+                                          !tm.availability
+                                            ? "opacity-50 cursor-not-allowed"
+                                            : "cursor-pointer hover:bg-gray-100"
+                                        } `}
                                       >
                                         <div className="flex flex-row items-center space-x-4 w-full">
                                           <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
@@ -1030,9 +1034,16 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                             <p className="text-sm font-medium text-gray-900 dark:text-white">
                                               {tm.identifier}
                                             </p>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
-                                              {tm.capacity}m³
-                                            </p>
+                                            <div className="flex flex-row items-end gap-2">
+                                              {!tm.availability && (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                                  Unavailable -
+                                                </p>
+                                              )}
+                                              <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                                {tm.capacity}m³
+                                              </p>
+                                            </div>
                                           </div>
                                         </div>
                                       </label>

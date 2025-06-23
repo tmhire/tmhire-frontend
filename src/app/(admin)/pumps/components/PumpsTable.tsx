@@ -34,7 +34,7 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Identifier
+                  Number
                 </TableCell>
                 <TableCell
                   isHeader
@@ -92,7 +92,7 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                     {pump.type}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {pump.capacity} m3
+                    {pump.capacity}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {plantMap.get(pump.plant_id) || "N/A"}

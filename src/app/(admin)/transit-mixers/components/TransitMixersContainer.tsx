@@ -436,11 +436,11 @@ export default function TransitMixersContainer() {
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Transit Mixer</h4>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Identifier</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Number</label>
             <Input
               type="text"
               name="identifier"
-              placeholder="Enter identifier"
+              placeholder="Enter number"
               value={newMixer.identifier}
               onChange={handleInputChange}
             />
@@ -527,7 +527,7 @@ export default function TransitMixersContainer() {
         {selectedMixer && (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Identifier</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Number</label>
               <Input type="text" name="identifier" value={selectedMixer.identifier} onChange={handleEditInputChange} />
             </div>
             <div>

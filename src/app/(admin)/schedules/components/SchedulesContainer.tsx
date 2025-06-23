@@ -18,7 +18,7 @@ interface Schedule {
   _id: string;
   client_name: string;
   client_id: string;
-  site_location: string;
+  site_address: string;
   status: string;
   input_params: {
     quantity: number;
@@ -65,12 +65,12 @@ export default function SchedulesContainer() {
 
   // Fetch schedules
   const { data: schedulesData, isLoading: isLoadingSchedules } = useQuery({
-    queryKey: ['schedules'],
+    queryKey: ["schedules"],
     queryFn: async () => {
-      const response = await fetchWithAuth('/schedules');
-      if (!response) throw new Error('No response from server');
+      const response = await fetchWithAuth("/schedules");
+      if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to fetch schedules');
+      if (!data.success) throw new Error(data.message || "Failed to fetch schedules");
       return data.data as Schedule[];
     },
     enabled: status === "authenticated",
@@ -80,15 +80,15 @@ export default function SchedulesContainer() {
   const deleteScheduleMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await fetchWithAuth(`/schedules/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
-      if (!response) throw new Error('No response from server');
+      if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to delete schedule');
+      if (!data.success) throw new Error(data.message || "Failed to delete schedule");
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ["schedules"] });
       setIsDeleteModalOpen(false);
       setSelectedSchedule(null);
     },
@@ -108,7 +108,7 @@ export default function SchedulesContainer() {
     try {
       await deleteScheduleMutation.mutateAsync(selectedSchedule._id);
     } catch (error) {
-      console.error('Error deleting schedule:', error);
+      console.error("Error deleting schedule:", error);
     }
   };
 
@@ -116,14 +116,14 @@ export default function SchedulesContainer() {
   const { clients, sites, statuses } = useMemo(() => {
     if (!schedulesData) return { clients: [], sites: [], statuses: [] };
 
-    const uniqueClients = Array.from(new Set(schedulesData.map(schedule => schedule.client_name)));
-    const uniqueSites = Array.from(new Set(schedulesData.map(schedule => schedule.site_location)));
-    const uniqueStatuses = Array.from(new Set(schedulesData.map(schedule => schedule.status)));
+    const uniqueClients = Array.from(new Set(schedulesData.map((schedule) => schedule.client_name)));
+    const uniqueSites = Array.from(new Set(schedulesData.map((schedule) => schedule.site_address)));
+    const uniqueStatuses = Array.from(new Set(schedulesData.map((schedule) => schedule.status)));
 
     return {
       clients: uniqueClients.sort(),
       sites: uniqueSites.sort(),
-      statuses: uniqueStatuses.sort()
+      statuses: uniqueStatuses.sort(),
     };
   }, [schedulesData]);
 
@@ -146,19 +146,15 @@ export default function SchedulesContainer() {
       const matchesSearch =
         searchQuery === "" ||
         schedule.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        schedule.site_location.toLowerCase().includes(searchQuery.toLowerCase());
+        schedule.site_address.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesStatus =
-        selectedStatus === "" || schedule.status === selectedStatus;
+      const matchesStatus = selectedStatus === "" || schedule.status === selectedStatus;
 
-      const matchesClient =
-        selectedClient === "" || schedule.client_name === selectedClient;
+      const matchesClient = selectedClient === "" || schedule.client_name === selectedClient;
 
-      const matchesSite =
-        selectedSite === "" || schedule.site_location === selectedSite;
+      const matchesSite = selectedSite === "" || schedule.site_address === selectedSite;
 
-      const matchesDate = !selectedDate ||
-        schedule.input_params.schedule_date === selectedDate;
+      const matchesDate = !selectedDate || schedule.input_params.schedule_date === selectedDate;
 
       // Time-based status filter
       let matchesTimeStatus = true;
@@ -191,9 +187,7 @@ export default function SchedulesContainer() {
   return (
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-semibold text-black dark:text-white">
-          Schedules Management
-        </h2>
+        <h2 className="text-xl font-semibold text-black dark:text-white">Pumping Schedules Management</h2>
         <Button onClick={handleAddSchedule} className="flex items-center gap-2" size="sm">
           <PlusIcon className="w-4 h-4" />
           Add Schedule
@@ -372,9 +366,13 @@ export default function SchedulesContainer() {
               >
                 Time Status: {timeStatusFilter}
               </Button>
-              <Dropdown isOpen={isTimeStatusFilterOpen} onClose={() => setIsTimeStatusFilterOpen(false)} className="w-48">
+              <Dropdown
+                isOpen={isTimeStatusFilterOpen}
+                onClose={() => setIsTimeStatusFilterOpen(false)}
+                className="w-48"
+              >
                 <div className="p-2 text-gray-800 dark:text-white/90">
-                  {['All', 'Upcoming', 'Ongoing', 'Past'].map((status) => (
+                  {["All", "Upcoming", "Ongoing", "Past"].map((status) => (
                     <button
                       key={status}
                       className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -406,44 +404,30 @@ export default function SchedulesContainer() {
                 <Spinner text="Loading schedules..." />
               </div>
             ) : (
-              <SchedulesTable
-                data={filteredSchedules}
-                onDelete={handleDelete}
-              />
+              <SchedulesTable data={filteredSchedules} onDelete={handleDelete} />
             )}
           </div>
         </div>
       </div>
 
       {/* Delete Modal */}
-      <Modal
-        className="max-w-[500px] p-5" 
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-      >
+      <Modal className="max-w-[500px] p-5" isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
         <div className="p-6">
           <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Delete Schedule</h4>
-          <p className="mb-6">
-            Are you sure you want to delete this schedule? This action cannot be undone.
-          </p>
+          <p className="mb-6">Are you sure you want to delete this schedule? This action cannot be undone.</p>
           <div className="flex justify-end gap-4">
-            <Button
-              onClick={() => setIsDeleteModalOpen(false)}
-              variant="outline"
-            >
+            <Button onClick={() => setIsDeleteModalOpen(false)} variant="outline">
               Cancel
             </Button>
-            <Button
-              onClick={handleConfirmDelete}
-              variant="warning"
-              disabled={deleteScheduleMutation.isPending}
-            >
+            <Button onClick={handleConfirmDelete} variant="warning" disabled={deleteScheduleMutation.isPending}>
               {deleteScheduleMutation.isPending ? (
                 <div className="flex items-center gap-2">
                   <Spinner size="sm" />
                   <span>Deleting...</span>
                 </div>
-              ) : 'Delete'}
+              ) : (
+                "Delete"
+              )}
             </Button>
           </div>
         </div>

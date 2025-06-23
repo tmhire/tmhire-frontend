@@ -8,7 +8,7 @@ interface Schedule {
   _id: string;
   client_name: string;
   client_id: string;
-  site_location: string;
+  site_address: string;
   status: string;
   input_params: {
     quantity: number;
@@ -134,7 +134,7 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
                       {schedule.client_name}
                     </TableCell>
                     <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                      {schedule.site_location}
+                      {schedule.site_address}
                     </TableCell>
                     <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                       {schedule.input_params.quantity}
