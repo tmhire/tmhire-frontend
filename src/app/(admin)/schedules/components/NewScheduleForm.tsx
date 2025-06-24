@@ -778,7 +778,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 {/* First row: Schedule Date, Pump Start Time */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pump Fixing Time (min)
+                    Pipeline Fixing Time (min)
                   </label>
                   <Input
                     type="number"
