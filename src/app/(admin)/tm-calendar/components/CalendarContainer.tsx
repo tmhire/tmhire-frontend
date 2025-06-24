@@ -133,17 +133,17 @@ const timeStringToHour = (timeStr: string): number => {
 };
 
 // Helper function to calculate duration between two times
-const calculateDuration = (start: string, end: string): number => {
-  const startFloat = timeStringToHour(start); // e.g. 2.18
-  const endFloat = timeStringToHour(end); // e.g. 3.26
+// const calculateDuration = (start: string, end: string): number => {
+//   const startFloat = timeStringToHour(start); // e.g. 2.18
+//   const endFloat = timeStringToHour(end); // e.g. 3.26
 
-  const rawDuration = endFloat - startFloat;
+//   const rawDuration = endFloat - startFloat;
 
-  // Round to nearest 0.5
-  const roundedDuration = Math.round(rawDuration * 2) / 2;
+//   // Round to nearest 0.5
+//   const roundedDuration = Math.round(rawDuration * 2) / 2;
 
-  return roundedDuration;
-};
+//   return roundedDuration;
+// };
 
 // Helper function to transform API data to component format
 const transformApiData = (apiData: ApiResponse): Mixer[] => {
@@ -839,7 +839,11 @@ export default function CalendarContainer() {
               <div className="min-w-[1000px]">
                 {/* Time Header */}
                 <div className="flex border-b border-gray-300 dark:border-white/[0.05]">
-                  <div className="w-30 px-5 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05]">
+                  {/* Serial Number Column */}
+                  <div className="w-10 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] text-center">
+                    SNo
+                  </div>
+                  <div className="w-24 px-5 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05]">
                     Mixer ID
                   </div>
                   {getTimeSlots().map((time) => (
@@ -850,6 +854,10 @@ export default function CalendarContainer() {
                       {formatTime(time)}
                     </div>
                   ))}
+                  {/* Free Time Column */}
+                  <div className="w-14 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center">
+                    Unused
+                  </div>
                 </div>
 
                 {/* Gantt Rows */}
@@ -859,7 +867,7 @@ export default function CalendarContainer() {
                       No mixers found for the selected criteria
                     </div>
                   ) : (
-                    filteredData.map((mixer) => {
+                    filteredData.map((mixer, idx) => {
                       // Group tasks by client for this mixer
                       const clientTaskMap: Record<
                         string,
@@ -958,14 +966,81 @@ export default function CalendarContainer() {
                         }
                         return { offset, width };
                       };
+
+                      // --- Calculate Free Time ---
+                      // 1. Collect all busy intervals for this mixer in the current window
+                      const busyIntervals: { start: number; end: number }[] = clientTasks
+                        .map((ct) => {
+                          // Clamp to window
+                          let s = ct.start;
+                          let e = ct.end;
+                          if (windowStart < windowEnd) {
+                            s = Math.max(ct.start, windowStart);
+                            e = Math.min(ct.end, windowEnd + 1);
+                            if (e <= s) return null;
+                          } else {
+                            // Wraps around midnight
+                            if (ct.start < windowStart && ct.end <= windowStart) {
+                              // Early part
+                              s = ct.start;
+                              e = Math.min(ct.end, windowEnd + 1);
+                              if (e <= s) return null;
+                            } else if (ct.start >= windowStart) {
+                              // Late part
+                              s = Math.max(ct.start, windowStart);
+                              e = ct.end;
+                              if (e <= s) return null;
+                            } else {
+                              // Spans wrap
+                              s = ct.start;
+                              e = ct.end;
+                            }
+                          }
+                          return { start: s, end: e };
+                        })
+                        .filter(Boolean) as { start: number; end: number }[];
+                      // 2. Merge overlapping intervals
+                      busyIntervals.sort((a, b) => a.start - b.start);
+                      const merged: { start: number; end: number }[] = [];
+                      for (const interval of busyIntervals) {
+                        if (!merged.length || merged[merged.length - 1].end < interval.start) {
+                          merged.push({ ...interval });
+                        } else {
+                          merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, interval.end);
+                        }
+                      }
+                      // 3. Calculate free time
+                      let freeTime = 0;
+                      let prev = windowStart;
+                      for (const interval of merged) {
+                        if (interval.start > prev) {
+                          freeTime += interval.start - prev;
+                        }
+                        prev = Math.max(prev, interval.end);
+                      }
+                      // Add free time after last busy interval
+                      let windowEndPlus = windowEnd + 1;
+                      if (windowEnd < windowStart) windowEndPlus += 24;
+                      if (prev < windowEndPlus) {
+                        freeTime += windowEndPlus - prev;
+                      }
+                      // If wrap-around, adjust freeTime to not exceed window size
+                      if (windowEnd < windowStart) {
+                        freeTime = Math.min(freeTime, slots.length);
+                      }
+
                       return (
                         <div
                           key={mixer.id}
                           className="flex hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
                         >
+                          {/* Serial Number */}
+                          <div className="w-10 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
+                            {idx + 1}
+                          </div>
                           {/* Mixer Name */}
-                          <div className="w-30 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center">
-                            {mixer.name.length > 6 ? ".." + mixer.name.slice(4) : mixer.name}
+                          <div className="w-24 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center">
+                            {mixer.name.length > 6 ? ".." + mixer.name.slice(6) : mixer.name}
                           </div>
                           {/* Time Slots */}
                           <div className="flex-1 flex relative">
@@ -996,6 +1071,10 @@ export default function CalendarContainer() {
                                 className="w-10 h-6 border-r border-gray-300 dark:border-white/[0.05] relative"
                               />
                             ))}
+                          </div>
+                          {/* Free Time */}
+                          <div className="w-14 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
+                            {freeTime}
                           </div>
                         </div>
                       );

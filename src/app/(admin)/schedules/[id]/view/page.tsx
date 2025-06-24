@@ -5,13 +5,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useApiClient } from "@/hooks/useApiClient";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import Badge from "@/components/ui/badge/Badge";
+import { User, MapPin, Calendar, CheckCircle2, AlertCircle, Package, Gauge, Truck, Clock } from "lucide-react";
 
 interface Schedule {
   _id: string;
   client_name: string;
   client_id: string;
-  site_location: string;
+  site_address: string;
   status: string;
   input_params: {
     quantity: number;
@@ -72,43 +72,87 @@ export default function ScheduleViewPage() {
       </div>
 
       <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
-        <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Client</h4>
-              <p className="text-gray-800 dark:text-white/90">{schedule.client_name}</p>
+        <div className="space-y-6">
+          {/* Row 1 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-white/5">
+              <User className="w-6 h-6 text-brand-500 dark:text-brand-400" />
+              <div>
+                <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400">Client</h4>
+                <p className="text-gray-800 dark:text-white/90 text-sm font-semibold">{schedule.client_name}</p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Site Location</h4>
-              <p className="text-gray-800 dark:text-white/90">{schedule.site_location}</p>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-white/5">
+              <MapPin className="w-6 h-6 text-brand-500 dark:text-brand-400" />
+              <div>
+                <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400">Site Location</h4>
+                <p className="text-gray-800 dark:text-white/90 text-sm font-semibold">{schedule.site_address}</p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Schedule Date</h4>
-              <p className="text-gray-800 dark:text-white/90">{schedule.input_params.schedule_date}</p>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-white/5">
+              <Calendar className="w-6 h-6 text-brand-500 dark:text-brand-400" />
+              <div>
+                <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400">Schedule Date</h4>
+                <p className="text-gray-800 dark:text-white/90 text-sm font-semibold">
+                  {schedule.input_params.schedule_date}
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</h4>
-              <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
-                {schedule.status}
-              </Badge>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-white/5">
+              {schedule.status === "generated" ? (
+                <CheckCircle2 className="w-6 h-6 text-success-500" />
+              ) : (
+                <AlertCircle className="w-6 h-6 text-warning-500" />
+              )}
+              <div>
+                <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400">Status</h4>
+                <p
+                  className={`text-gray-800 dark:text-white/90 text-sm font-semibold ${
+                    schedule.status === "generated"
+                      ? "text-success-600 dark:text-success-400"
+                      : "text-warning-600 dark:text-warning-400"
+                  }`}
+                >
+                  {schedule.status}
+                </p>
+              </div>
             </div>
           </div>
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Quantity</h4>
-              <p className="text-gray-800 dark:text-white/90">{schedule.input_params.quantity} m³</p>
+          {/* Row 2 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-white/5">
+              <Package className="w-6 h-6 text-brand-500 dark:text-brand-400" />
+              <div>
+                <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400">Total Quantity</h4>
+                <p className="text-gray-800 dark:text-white/90 text-sm font-semibold">
+                  {schedule.input_params.quantity} m³
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Pumping Speed</h4>
-              <p className="text-gray-800 dark:text-white/90">{schedule.input_params.pumping_speed} m³/hr</p>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-white/5">
+              <Gauge className="w-6 h-6 text-brand-500 dark:text-brand-400" />
+              <div>
+                <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400">Pumping Speed</h4>
+                <p className="text-gray-800 dark:text-white/90 text-sm font-semibold">
+                  {schedule.input_params.pumping_speed} m³/hr
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">TM Count</h4>
-              <p className="text-gray-800 dark:text-white/90">{schedule.tm_count}</p>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-white/5">
+              <Truck className="w-6 h-6 text-brand-500 dark:text-brand-400" />
+              <div>
+                <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400">TM Count</h4>
+                <p className="text-gray-800 dark:text-white/90 text-sm font-semibold">{schedule.tm_count}</p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Updated</h4>
-              <p className="text-gray-800 dark:text-white/90">{new Date(schedule.last_updated).toLocaleString()}</p>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-white/5">
+              <Clock className="w-6 h-6 text-brand-500 dark:text-brand-400" />
+              <div>
+                <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400">Last Updated</h4>
+                <p className="text-gray-800 dark:text-white/90 text-sm font-semibold">
+                  {new Date(schedule.last_updated).toLocaleString()}
+                </p>
+              </div>
             </div>
           </div>
         </div>

@@ -561,7 +561,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         {step === 1 ? (
           <div className="space-y-6">
             <div>
-              <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">Client:</label>
+              {/* <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">Client:</label> */}
               <div className="grid grid-cols-[1fr_2fr_1fr] gap-6">
                 {/* Client Selection */}
                 <div>
@@ -643,7 +643,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
             {/* Pump Details Row */}
             <div className="space-y-6">
-              <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">Pump:</label>
+              {/* <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">Pump:</label> */}
               <div className="grid grid-cols-[1fr_2fr] gap-6">
                 {/* Pump Type Selection */}
                 <div>
@@ -676,6 +676,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   </div>
                 </div>
                 {/* Pump Selection */}
+                {/* Forth row: Pumping Quantity, Grade of Concrete */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pumping Quantity (m³)
+                  </label>
+                  <Input
+                    type="number"
+                    name="quantity"
+                    value={parseFloat(formData.quantity || "0")}
+                    onChange={handleInputChange}
+                    placeholder="Enter quantity"
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Pump</label>
                   <div className="relative">
@@ -730,41 +743,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 {/* Pump Onward Time */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pump Onward Time (min)
-                  </label>
-                  <Input
-                    type="number"
-                    name="pumpOnwardTime"
-                    value={parseFloat(formData.pumpOnwardTime || "0")}
-                    onChange={handleInputChange}
-                    placeholder="Enter pump onward time"
-                  />
-                </div>
-                {/* Pump Fixing Time */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pump Fixing Time (min)
-                  </label>
-                  <Input
-                    type="number"
-                    name="pumpFixingTime"
-                    value={parseFloat(formData.pumpFixingTime || "0")}
-                    onChange={handleInputChange}
-                    placeholder="Enter pump onward time"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Other Metrics:
-              </label>
-              {/* Other metrics: */}
-              <div className="grid grid-cols-2 gap-6">
-                {/* First row: Schedule Date, Pump Start Time */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Schedule Date of Pumping
                   </label>
                   <DatePickerInput
@@ -777,6 +755,37 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       setHasChanged(true);
                     }}
                     placeholder="Select a date"
+                  />
+                </div>
+                {/* Pump Fixing Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pump Onward Time (min)
+                  </label>
+                  <Input
+                    type="number"
+                    name="pumpOnwardTime"
+                    value={parseFloat(formData.pumpOnwardTime || "0")}
+                    onChange={handleInputChange}
+                    placeholder="Enter pump onward time"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                {/* First row: Schedule Date, Pump Start Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pump Fixing Time (min)
+                  </label>
+                  <Input
+                    type="number"
+                    name="pumpFixingTime"
+                    value={parseFloat(formData.pumpFixingTime || "0")}
+                    onChange={handleInputChange}
+                    placeholder="Enter pump onward time"
                   />
                 </div>
                 <div>
@@ -825,6 +834,18 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Production and Buffer Time (min)
+                  </label>
+                  <Input
+                    type="number"
+                    name="productionTime"
+                    value={parseFloat(formData.productionTime || "0")}
+                    onChange={handleInputChange}
+                    placeholder="Enter production time"
+                  />
+                </div>
                 {/* Third row: Onward Time, Return Time, Production/Buffer Time */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -850,36 +871,35 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     placeholder="Enter return time"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Production and Buffer Time (min)
-                  </label>
-                  <Input
-                    type="number"
-                    name="productionTime"
-                    value={parseFloat(formData.productionTime || "0")}
-                    onChange={handleInputChange}
-                    placeholder="Enter production time"
-                  />
-                </div>
               </div>
-              <div className="grid grid-cols-2 gap-6">
-                {/* Forth row: Pumping Quantity, Grade of Concrete */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pumping Quantity (m³)
-                  </label>
-                  <Input
-                    type="number"
-                    name="quantity"
-                    value={parseFloat(formData.quantity || "0")}
-                    onChange={handleInputChange}
-                    placeholder="Enter quantity"
-                  />
-                </div>
+              <div className="grid grid-cols-4 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Grade of Concrete
+                  </label>
+                  <Input
+                    type="number"
+                    name="concreteGrade"
+                    value={parseFloat(formData.concreteGrade || "0")}
+                    onChange={handleInputChange}
+                    placeholder="Enter concrete grade"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Type of Pumping Job
+                  </label>
+                  <Input
+                    type="number"
+                    name="concreteGrade"
+                    value={parseFloat(formData.concreteGrade || "0")}
+                    onChange={handleInputChange}
+                    placeholder="Enter concrete grade"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Floor Height (Pumping)
                   </label>
                   <Input
                     type="number"
