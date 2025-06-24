@@ -121,6 +121,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     pumpOnwardTime: "",
     pumpFixingTime: "",
     unloadingTime: "",
+    pumpingJob: "",
+    floorHeight: "",
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [formDataRetrieved, setFormDataRetrieved] = useState(true);
@@ -188,11 +190,18 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         setSelectedClient(data.data.client_id);
         setSelectedPump(data.data.pump);
         setPumpType(data.data.pump_type || "line");
+        const pumping_speed = data.data.input_params.pumping_speed;
         setFormData({
           scheduleDate: data.data.input_params.schedule_date,
           startTime: data.data.input_params.pump_start.split("T")[1],
           quantity: data.data.input_params.quantity.toString(),
-          speed: data.data.input_params.pumping_speed.toString(),
+          speed: pumping_speed.toString(),
+          unloadingTime:
+            data.data.input_params.unloading_time && data.data.input_params.unloading_time !== 0
+              ? data.data.input_params.unloading_time.toString()
+              : pumping_speed && avgTMCap
+              ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
+              : "",
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
           productionTime: data.data.input_params.buffer_time.toString(),
@@ -201,16 +210,23 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           pumpOnwardTime: data.data.input_params.pump_onward_time
             ? data.data.input_params.pump_onward_time.toString()
             : "",
-          unloadingTime: "",
           pumpFixingTime: data.data.input_params.pump_fixing_time
             ? data.data.input_params.pump_fixing_time.toString()
             : "",
+          pumpingJob: data.data.pumping_job ? data.data.pumping_job.toString() : "",
+          floorHeight: data.data.floor_height ? data.data.floor_height.toString() : "",
         });
-        setTMSequence(
-          Array.isArray(data?.data?.output_table)
-            ? data.data.output_table.map((trip: { tm_id: string }) => trip.tm_id)
-            : []
-        );
+        let tm_ids = new Set();
+        let tmSequence: string[] = [];
+        if (Array.isArray(data?.data?.output_table)) {
+          data.data.output_table.forEach((trip: { tm_id: string }) => {
+            if (!tm_ids.has(trip.tm_id)) {
+              tmSequence.push(trip.tm_id);
+            }
+            tm_ids.add(trip.tm_id);
+          });
+        }
+        setTMSequence(tmSequence);
         const tm_suggestions = {
           tm_count: data?.data?.tm_count,
           schedule_id: data?.data?._id,
@@ -245,6 +261,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           input_params: {
             quantity: parseFloat(formData.quantity),
             pumping_speed: parseFloat(formData.speed),
+            unloading_time: Math.round(parseFloat(formData.unloadingTime)),
             onward_time: parseFloat(formData.onwardTime),
             return_time: parseFloat(formData.returnTime),
             buffer_time: parseFloat(formData.productionTime),
@@ -254,6 +271,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             pump_fixing_time: parseFloat(formData.pumpFixingTime),
           },
           site_address: formData.siteAddress, // You might want to add this as a form field
+          pumping_job: parseFloat(formData.pumpingJob),
+          floor_height: parseFloat(formData.floorHeight),
         }),
       });
 
@@ -330,8 +349,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               pump_start: `${formData.scheduleDate}T${formData.startTime}`,
               schedule_date: formData.scheduleDate,
               pump_onward_time: parseFloat(formData.pumpOnwardTime),
+              pump_fixing_time: parseFloat(formData.pumpFixingTime),
+              unloading_time: parseFloat(formData.unloadingTime),
             },
             site_address: formData.siteAddress, // You might want to add this as a form field
+            pumping_job: parseFloat(formData.pumpingJob),
+            floor_height: parseFloat(formData.floorHeight),
           }),
         });
 
@@ -434,18 +457,36 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       !!formData.productionTime &&
       !!formData.pumpOnwardTime &&
       !!formData.speed &&
-      !!formData.pumpFixingTime
+      !!formData.pumpFixingTime &&
+      !!formData.unloadingTime &&
+      !!formData.pumpingJob &&
+      !!formData.floorHeight
     );
   };
 
-  const unloadingTime = (() => {
-    if (!avgTMCap || !formData.speed) return "";
-    const speed = parseFloat(formData.speed);
-    if (!isNaN(speed) && speed > 0) {
-      return ((avgTMCap / speed) * 60).toFixed(2);
+  const setPumpingSpeedAndUnloadingTime = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleInputChange(e);
+    const { name, value } = e.target;
+    if (!avgTMCap || !value) return;
+    if (name === "speed") {
+      const speed = parseFloat(value);
+      if (!isNaN(speed) && speed > 0) {
+        return setFormData((prev) => ({
+          ...prev,
+          unloadingTime: ((avgTMCap / speed) * 60).toFixed(0),
+        }));
+      }
     }
-    return "";
-  })();
+    if (name === "unloadingTime") {
+      const unloading_time = parseFloat(value);
+      if (!isNaN(unloading_time) && unloading_time > 0) {
+        return setFormData((prev) => ({
+          ...prev,
+          speed: ((avgTMCap * 60) / unloading_time).toFixed(0),
+        }));
+      }
+    }
+  };
 
   if (formDataRetrieved === false) {
     return (
@@ -808,7 +849,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     type="number"
                     name="speed"
                     value={parseFloat(formData.speed || "0")}
-                    onChange={handleInputChange}
+                    onChange={setPumpingSpeedAndUnloadingTime}
                     placeholder="Enter speed"
                   />
                 </div>
@@ -820,15 +861,15 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="unloadingTime"
-                    disabled
-                    value={parseFloat(unloadingTime || "0")}
+                    value={parseFloat(formData.unloadingTime || "0")}
+                    onChange={setPumpingSpeedAndUnloadingTime}
                     placeholder={
                       avgTMCap !== null ? "Auto-calculated from pumping speed" : "Enter pumping speed to calculate"
                     }
                   />
                   {avgTMCap !== null && (
                     <p className="text-xs text-gray-500 mt-1">
-                      Auto-calculated based on avg. TM capacity: {avgTMCap?.toFixed(2)} m³
+                      Auto-calculated based on avg. TM capacity: {avgTMCap?.toFixed(0)} m³
                     </p>
                   )}
                 </div>
@@ -891,10 +932,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   </label>
                   <Input
                     type="number"
-                    name="concreteGrade"
-                    value={parseFloat(formData.concreteGrade || "0")}
+                    name="pumpingJob"
+                    value={parseFloat(formData.pumpingJob || "0")}
                     onChange={handleInputChange}
-                    placeholder="Enter concrete grade"
+                    placeholder="Enter type of pumping job"
                   />
                 </div>
                 <div>
@@ -903,10 +944,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   </label>
                   <Input
                     type="number"
-                    name="concreteGrade"
-                    value={parseFloat(formData.concreteGrade || "0")}
+                    name="floorHeight"
+                    value={parseFloat(formData.floorHeight || "0")}
                     onChange={handleInputChange}
-                    placeholder="Enter concrete grade"
+                    placeholder="Enter floor height"
                   />
                 </div>
               </div>
@@ -932,7 +973,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Cycle Time (hours)</p>
                     <p className="text-lg font-medium text-gray-900 dark:text-white">
-                      {calculatedTMs.cycle_time.toFixed(2)}
+                      {calculatedTMs.cycle_time.toFixed(0)}
                     </p>
                   </div>
                   <div>
@@ -1160,16 +1201,16 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               <div className="flex items-end gap-4">
                 {tmSequence.length !== calculatedTMs?.tm_count && (
                   <div className="p-2 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg text-xs">
-                    Please select exactly <span className="font-semibold">{calculatedTMs?.tm_count}</span> TMs to
-                    proceed.
+                    Select <span className="font-semibold">{calculatedTMs?.tm_count}</span> TMs to get optimum schedule.
                   </div>
                 )}
                 <Button
                   onClick={handleNext}
                   className="flex items-center gap-2"
                   disabled={
-                    tmSequence.length !== calculatedTMs?.tm_count ||
-                    calculatedTMs?.available_tms.length < calculatedTMs?.tm_count
+                    // tmSequence.length !== calculatedTMs?.tm_count ||
+                    // calculatedTMs?.available_tms.length < calculatedTMs?.tm_count
+                    tmSequence.length === 0
                   }
                 >
                   Next Step
@@ -1336,7 +1377,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               </TableCell>
                               <TableCell className="px-5 py-4 text-start">
                                 <span className="text-gray-800 dark:text-white/90">
-                                  {typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-"}
+                                  {typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(0) : "-"}
                                 </span>
                               </TableCell>
                             </TableRow>
