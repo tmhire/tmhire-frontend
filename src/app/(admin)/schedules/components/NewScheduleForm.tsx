@@ -63,6 +63,7 @@ interface ScheduleTrip {
   cycle_time?: number;
   trip_no_for_tm?: number;
   cushion_time?: number;
+  plant_name?: string;
 }
 
 interface GeneratedSchedule {
@@ -1285,6 +1286,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               isHeader
                               className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                             >
+                              Plant Name
+                            </TableCell>
+                            <TableCell
+                              isHeader
+                              className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                            >
                               Plant Start
                             </TableCell>
                             <TableCell
@@ -1337,6 +1344,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                   {typeof trip.trip_no_for_tm !== "undefined" && (
                                     <span className="text-xs text-gray-500 ml-1">({trip.trip_no_for_tm})</span>
                                   )}
+                                </span>
+                              </TableCell>
+                              <TableCell className="px-5 py-4 text-start">
+                                <span className="text-gray-800 dark:text-white/90">
+                                  {trip.plant_name ? trip.plant_name : "N / A"}
                                 </span>
                               </TableCell>
                               <TableCell className="px-5 py-4 text-start">
