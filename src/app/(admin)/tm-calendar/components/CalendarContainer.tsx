@@ -133,17 +133,14 @@ const timeStringToHour = (timeStr: string): number => {
 };
 
 // Helper function to calculate duration between two times
-// const calculateDuration = (start: string, end: string): number => {
-//   const startFloat = timeStringToHour(start); // e.g. 2.18
-//   const endFloat = timeStringToHour(end); // e.g. 3.26
-
-//   const rawDuration = endFloat - startFloat;
-
-//   // Round to nearest 0.5
-//   const roundedDuration = Math.round(rawDuration * 2) / 2;
-
-//   return roundedDuration;
-// };
+const calculateDuration = (start: string, end: string): number => {
+  const startFloat = timeStringToHour(start); // e.g. 2.18
+  const endFloat = timeStringToHour(end); // e.g. 3.26
+  const rawDuration = endFloat - startFloat;
+  // Round to nearest 0.5
+  const roundedDuration = Math.round(rawDuration * 60);
+  return roundedDuration;
+};
 
 // Helper function to transform API data to component format
 const transformApiData = (apiData: ApiResponse): Mixer[] => {
@@ -888,7 +885,7 @@ export default function CalendarContainer() {
                           clientTaskMap[task.client] = {
                             start: start,
                             end: end,
-                            duration: end - start,
+                            duration: calculateDuration(task.actualStart, task.actualEnd),
                             color: task.color,
                             client: task.client,
                             actualStart: task.actualStart,
@@ -906,14 +903,11 @@ export default function CalendarContainer() {
                           ) {
                             clientTaskMap[task.client].actualEnd = task.actualEnd;
                           }
-                          clientTaskMap[task.client].start = Math.floor(
-                            timeStringToHour(clientTaskMap[task.client].actualStart)
-                          );
-                          clientTaskMap[task.client].end = Math.round(
-                            timeStringToHour(clientTaskMap[task.client].actualEnd)
-                          );
-                          clientTaskMap[task.client].duration =
-                            clientTaskMap[task.client].end - clientTaskMap[task.client].start;
+                          const start = clientTaskMap[task.client].actualStart;
+                          const end = clientTaskMap[task.client].actualEnd;
+                          clientTaskMap[task.client].start = Math.floor(timeStringToHour(start));
+                          clientTaskMap[task.client].end = Math.round(timeStringToHour(end));
+                          clientTaskMap[task.client].duration = calculateDuration(start, end);
                         }
                       });
                       const clientTasks = Object.values(clientTaskMap);
@@ -1058,9 +1052,9 @@ export default function CalendarContainer() {
                                     width: `${width * 40 - 8}px`,
                                     zIndex: 10,
                                   }}
-                                  title={`${mixer.name} - ${ct.client} - ${ct.actualStart} to ${ct.actualEnd} (${ct.duration}h total)`}
+                                  title={`${mixer.name} - ${ct.client} - ${ct.actualStart} to ${ct.actualEnd} (${ct.duration}m total)`}
                                 >
-                                  <span className="text-white text-xs font-medium">{ct.duration}h</span>
+                                  <span className="text-white text-xs font-medium">{ct.duration}m</span>
                                 </div>
                               );
                             })}

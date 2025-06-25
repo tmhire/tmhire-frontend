@@ -19,8 +19,6 @@ type ApiTask = {
 
 type Task = {
   id: string;
-  start: number;
-  duration: number;
   color: string;
   client: string;
   type: string;
@@ -121,7 +119,7 @@ const calculateDuration = (start: string, end: string): number => {
   const startFloat = timeStringToHour(start);
   const endFloat = timeStringToHour(end);
   const rawDuration = endFloat - startFloat;
-  const roundedDuration = Math.round(rawDuration * 2) / 2;
+  const roundedDuration = Math.round(rawDuration * 60);
   return roundedDuration;
 };
 
@@ -140,13 +138,9 @@ const transformApiData = (apiData: ApiResponse): Pump[] => {
   });
   return apiData.data.mixers.map((pump) => {
     const transformedTasks: Task[] = pump.tasks.map((task) => {
-      const startHour = Math.round(timeStringToHour(task.start));
-      const duration = calculateDuration(task.start, task.end);
       const color = clientColors.get(task.client) || "bg-gray-500";
       return {
         id: task.id,
-        start: startHour,
-        duration: duration,
         color,
         client: task.client,
         type: "production",
@@ -761,10 +755,12 @@ export default function PumpCalendarContainer() {
                       > = {};
                       pump.tasks.forEach((task) => {
                         if (!clientTaskMap[task.client]) {
+                          const start = Math.floor(timeStringToHour(task.actualStart));
+                          const end = Math.round(timeStringToHour(task.actualEnd));
                           clientTaskMap[task.client] = {
-                            start: task.start,
-                            end: task.start + task.duration,
-                            duration: task.duration,
+                            start: start,
+                            end: end,
+                            duration: calculateDuration(task.actualStart, task.actualEnd),
                             color: task.color,
                             client: task.client,
                             actualStart: task.actualStart,
@@ -782,14 +778,11 @@ export default function PumpCalendarContainer() {
                           ) {
                             clientTaskMap[task.client].actualEnd = task.actualEnd;
                           }
-                          clientTaskMap[task.client].start = Math.floor(
-                            timeStringToHour(clientTaskMap[task.client].actualStart)
-                          );
-                          clientTaskMap[task.client].end = Math.round(
-                            timeStringToHour(clientTaskMap[task.client].actualEnd)
-                          );
-                          clientTaskMap[task.client].duration =
-                            clientTaskMap[task.client].end - clientTaskMap[task.client].start;
+                          const start = clientTaskMap[task.client].actualStart;
+                          const end = clientTaskMap[task.client].actualEnd;
+                          clientTaskMap[task.client].start = Math.floor(timeStringToHour(start));
+                          clientTaskMap[task.client].end = Math.round(timeStringToHour(end));
+                          clientTaskMap[task.client].duration = calculateDuration(start, end);
                         }
                       });
                       const clientTasks = Object.values(clientTaskMap);
@@ -866,9 +859,9 @@ export default function PumpCalendarContainer() {
                                     width: `${width * 40 - 8}px`,
                                     zIndex: 10,
                                   }}
-                                  title={`${pump.name} - ${ct.client} - ${ct.actualStart} to ${ct.actualEnd} (${ct.duration}h total)`}
+                                  title={`${pump.name} - ${ct.client} - ${ct.actualStart} to ${ct.actualEnd} (${ct.duration}m total)`}
                                 >
-                                  <span className="text-white text-xs font-medium">{ct.duration}h</span>
+                                  <span className="text-white text-xs font-medium">{ct.duration}m</span>
                                 </div>
                               );
                             })}
