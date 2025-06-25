@@ -218,8 +218,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           pumpingJob: data.data.pumping_job ? data.data.pumping_job.toString() : "",
           floorHeight: data.data.floor_height ? data.data.floor_height.toString() : "",
         });
-        let tm_ids = new Set();
-        let tmSequence: string[] = [];
+        const tm_ids = new Set();
+        const tmSequence: string[] = [];
         if (Array.isArray(data?.data?.output_table)) {
           data.data.output_table.forEach((trip: { tm_id: string }) => {
             if (!tm_ids.has(trip.tm_id)) {
