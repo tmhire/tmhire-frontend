@@ -62,6 +62,7 @@ interface ScheduleTrip {
   completed_capacity: number;
   cycle_time?: number;
   trip_no_for_tm?: number;
+  cushion_time?: number;
 }
 
 interface GeneratedSchedule {
@@ -1316,6 +1317,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             >
                               Cycle Time (min)
                             </TableCell>
+                            <TableCell
+                              isHeader
+                              className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                            >
+                              Cushion Time (min)
+                            </TableCell>
                           </TableRow>
                         </TableHeader>
                         <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
@@ -1378,6 +1385,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               <TableCell className="px-5 py-4 text-start">
                                 <span className="text-gray-800 dark:text-white/90">
                                   {typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(0) : "-"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="px-5 py-4 text-start">
+                                <span className="text-gray-800 dark:text-white/90">
+                                  {typeof trip.cushion_time !== "undefined" ? (trip.cushion_time / 60).toFixed(0) : "-"}
                                 </span>
                               </TableCell>
                             </TableRow>
