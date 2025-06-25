@@ -261,7 +261,7 @@ export default function CalendarContainer() {
     if (status === "authenticated" && session) {
       fetchGanttData(selectedDate);
     }
-  }, [selectedDate, status, session]);
+  }, [selectedDate, status]);
 
   // Filter data based on search term and selected filters
   const filteredData = ganttData.filter((item) => {
@@ -879,10 +879,10 @@ export default function CalendarContainer() {
                         }
                       > = {};
                       mixer.tasks.forEach((task) => {
-                        if (!clientTaskMap[task.client]) {
+                        if (!clientTaskMap[task.id]) {
                           const start = Math.floor(timeStringToHour(task.actualStart));
                           const end = Math.round(timeStringToHour(task.actualEnd));
-                          clientTaskMap[task.client] = {
+                          clientTaskMap[task.id] = {
                             start: start,
                             end: end,
                             duration: calculateDuration(task.actualStart, task.actualEnd),
@@ -893,21 +893,18 @@ export default function CalendarContainer() {
                           };
                         } else {
                           if (
-                            timeStringToHour(task.actualStart) <
-                            timeStringToHour(clientTaskMap[task.client].actualStart)
+                            timeStringToHour(task.actualStart) < timeStringToHour(clientTaskMap[task.id].actualStart)
                           ) {
-                            clientTaskMap[task.client].actualStart = task.actualStart;
+                            clientTaskMap[task.id].actualStart = task.actualStart;
                           }
-                          if (
-                            timeStringToHour(task.actualEnd) > timeStringToHour(clientTaskMap[task.client].actualEnd)
-                          ) {
-                            clientTaskMap[task.client].actualEnd = task.actualEnd;
+                          if (timeStringToHour(task.actualEnd) > timeStringToHour(clientTaskMap[task.id].actualEnd)) {
+                            clientTaskMap[task.id].actualEnd = task.actualEnd;
                           }
-                          const start = clientTaskMap[task.client].actualStart;
-                          const end = clientTaskMap[task.client].actualEnd;
-                          clientTaskMap[task.client].start = Math.floor(timeStringToHour(start));
-                          clientTaskMap[task.client].end = Math.round(timeStringToHour(end));
-                          clientTaskMap[task.client].duration = calculateDuration(start, end);
+                          const start = clientTaskMap[task.id].actualStart;
+                          const end = clientTaskMap[task.id].actualEnd;
+                          clientTaskMap[task.id].start = timeStringToHour(start);
+                          clientTaskMap[task.id].end = timeStringToHour(end);
+                          clientTaskMap[task.id].duration = calculateDuration(start, end);
                         }
                       });
                       const clientTasks = Object.values(clientTaskMap);
@@ -1004,24 +1001,10 @@ export default function CalendarContainer() {
                         }
                       }
                       // 3. Calculate free time
-                      let freeTime = 0;
-                      let prev = windowStart;
-                      for (const interval of merged) {
-                        if (interval.start > prev) {
-                          freeTime += interval.start - prev;
-                        }
-                        prev = Math.max(prev, interval.end);
-                      }
-                      // Add free time after last busy interval
-                      let windowEndPlus = windowEnd + 1;
-                      if (windowEnd < windowStart) windowEndPlus += 24;
-                      if (prev < windowEndPlus) {
-                        freeTime += windowEndPlus - prev;
-                      }
-                      // If wrap-around, adjust freeTime to not exceed window size
-                      if (windowEnd < windowStart) {
-                        freeTime = Math.min(freeTime, slots.length);
-                      }
+                      let freeTime = 24;
+                      console.log("Checking", clientTasks);
+                      clientTasks.forEach((task) => (freeTime -= task.duration / 60));
+                      freeTime = Math.round(freeTime);
 
                       return (
                         <div
@@ -1049,7 +1032,7 @@ export default function CalendarContainer() {
                                   className={`absolute top-1 h-4 rounded ${ct.color} opacity-80 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
                                   style={{
                                     left: `${offset * 40 + 1}px`,
-                                    width: `${width * 40 - 8}px`,
+                                    width: `${width * 40 - 1}px`,
                                     zIndex: 10,
                                   }}
                                   title={`${mixer.name} - ${ct.client} - ${ct.actualStart} to ${ct.actualEnd} (${ct.duration}m total)`}

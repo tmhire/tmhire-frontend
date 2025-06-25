@@ -244,7 +244,7 @@ export default function PumpCalendarContainer() {
     if (status === "authenticated" && session) {
       fetchGanttData(selectedDate);
     }
-  }, [selectedDate, status, session]);
+  }, [selectedDate, status]);
   const plants = Array.from(new Set(ganttData.map((item) => item.plant)));
   const pumps = Array.from(new Set(ganttData.map((item) => item.name)));
   const clients = Array.from(
