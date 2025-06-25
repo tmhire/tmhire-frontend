@@ -1002,7 +1002,6 @@ export default function CalendarContainer() {
                       }
                       // 3. Calculate free time
                       let freeTime = 24;
-                      console.log("Checking", clientTasks);
                       clientTasks.forEach((task) => (freeTime -= task.duration / 60));
                       freeTime = Math.round(freeTime);
 
