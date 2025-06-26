@@ -124,61 +124,61 @@ export default function ScheduleViewPage() {
                   <TableRow>
                     <TableCell
                       isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Trip No
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       TM No
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Plant Name
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Plant Start
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Pump Start
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Unloading Time
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Return Time
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
-                      Completed Capacity
+                      Cum. Volume
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Cycle Time (min)
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Cushion Time (min)
                     </TableCell>
@@ -187,10 +187,10 @@ export default function ScheduleViewPage() {
                 <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                   {schedule.output_table.map((trip) => (
                     <TableRow key={trip.trip_no}>
-                      <TableCell className="px-5 py-4 text-start">
+                      <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">{trip.trip_no}</span>
                       </TableCell>
-                      <TableCell className="px-5 py-4 text-start">
+                      <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">
                           {trip.tm_no}
                           {typeof trip.trip_no_for_tm !== "undefined" && (
@@ -198,26 +198,26 @@ export default function ScheduleViewPage() {
                           )}
                         </span>
                       </TableCell>
-                      <TableCell className="px-5 py-4 text-start">
+                      <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">
                           {trip.plant_name ? trip.plant_name : "N / A"}
                         </span>
                       </TableCell>
-                      <TableCell className="px-5 py-4 text-start">
+                      <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
                           {trip.plant_start
                             ? new Date(trip.plant_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                             : "-"}
                         </span>
                       </TableCell>
-                      <TableCell className="px-5 py-4 text-start">
+                      <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
                           {trip.pump_start
                             ? new Date(trip.pump_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                             : "-"}
                         </span>
                       </TableCell>
-                      <TableCell className="px-5 py-4 text-start">
+                      <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
                           {trip.unloading_time
                             ? new Date(trip.unloading_time).toLocaleTimeString([], {
@@ -227,24 +227,24 @@ export default function ScheduleViewPage() {
                             : "-"}
                         </span>
                       </TableCell>
-                      <TableCell className="px-5 py-4 text-start">
+                      <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
                           {trip.return
                             ? new Date(trip.return).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                             : "-"}
                         </span>
                       </TableCell>
-                      <TableCell className="px-5 py-4 text-start">
+                      <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">{trip.completed_capacity} m³</span>
                       </TableCell>
-                      <TableCell className="px-5 py-4 text-start">
+                      <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">
                           {typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-"}
                         </span>
                       </TableCell>
-                      <TableCell className="px-5 py-4 text-start">
+                      <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">
-                          {typeof trip.cushion_time !== "undefined" ? (trip.cushion_time / 60).toFixed(2) : "-"}
+                          {typeof trip.cushion_time !== "undefined" ? (trip.cushion_time / 60).toFixed(0) : "-"}
                         </span>
                       </TableCell>
                     </TableRow>
