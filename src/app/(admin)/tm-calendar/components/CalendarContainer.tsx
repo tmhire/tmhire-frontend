@@ -6,7 +6,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Tooltip from '@/components/ui/tooltip';
+import Tooltip from "@/components/ui/tooltip";
 
 // Types for better type safety and backend integration
 type ApiTask = {
@@ -926,8 +926,8 @@ export default function CalendarContainer() {
                       > = {};
                       mixer.tasks.forEach((task) => {
                         if (!clientTaskMap[task.id]) {
-                          const start = Math.floor(timeStringToHour(task.actualStart));
-                          const end = Math.round(timeStringToHour(task.actualEnd));
+                          const start = timeStringToHour(task.actualStart);
+                          const end = timeStringToHour(task.actualEnd);
                           clientTaskMap[task.id] = {
                             start: start,
                             end: end,
@@ -1130,9 +1130,15 @@ export default function CalendarContainer() {
                         <span className="text-sm text-gray-600 dark:text-gray-400">{name}</span>
                       </div>
                       <div className="ml-6 text-xs text-gray-500 dark:text-gray-400">
-                        <div>Total Scheduled: <span className="font-medium">{stats ? timeString : "0m"}</span></div>
-                        <div>Mixers Used: <span className="font-medium">{stats ? stats.mixers.size : 0}</span></div>
-                        <div>Schedules: <span className="font-medium">{stats ? stats.schedules : 0}</span></div>
+                        <div>
+                          Total Scheduled: <span className="font-medium">{stats ? timeString : "0m"}</span>
+                        </div>
+                        <div>
+                          Mixers Used: <span className="font-medium">{stats ? stats.mixers.size : 0}</span>
+                        </div>
+                        <div>
+                          Schedules: <span className="font-medium">{stats ? stats.schedules : 0}</span>
+                        </div>
                       </div>
                     </div>
                   );

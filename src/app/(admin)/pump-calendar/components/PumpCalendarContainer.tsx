@@ -6,7 +6,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Tooltip from '@/components/ui/tooltip';
+import Tooltip from "@/components/ui/tooltip";
 
 // Types for better type safety and backend integration
 // Adapted from CalendarContainer for pumps
@@ -40,7 +40,7 @@ type ApiResponse = {
   success: boolean;
   message: string;
   data: {
-    mixers: {
+    pumps: {
       id: string;
       name: string;
       plant: string;
@@ -128,7 +128,7 @@ const calculateDuration = (start: string, end: string): number => {
 
 const transformApiData = (apiData: ApiResponse): Pump[] => {
   const uniqueClients = new Set<string>();
-  apiData.data.mixers.forEach((pump) => {
+  apiData.data.pumps.forEach((pump) => {
     pump.tasks.forEach((task) => {
       if (task.client) uniqueClients.add(task.client);
     });
@@ -139,7 +139,7 @@ const transformApiData = (apiData: ApiResponse): Pump[] => {
     const tailwindColor = generateTailwindColor(hslColor);
     clientColors.set(client, tailwindColor);
   });
-  return apiData.data.mixers.map((pump) => {
+  return apiData.data.pumps.map((pump) => {
     const transformedTasks: Task[] = pump.tasks.map((task) => {
       const color = clientColors.get(task.client) || "bg-gray-500";
       return {
@@ -165,8 +165,8 @@ const transformApiData = (apiData: ApiResponse): Pump[] => {
 
 // Type color mapping
 const typeRowColors: Record<string, string> = {
-  line: 'bg-blue-100 dark:bg-blue-300/30', // light blue
-  boom: 'bg-green-100 dark:bg-green-300/30', // light green
+  line: "bg-blue-100 dark:bg-blue-300/30", // light blue
+  boom: "bg-green-100 dark:bg-green-300/30", // light green
 };
 
 export default function PumpCalendarContainer() {
@@ -864,8 +864,8 @@ export default function PumpCalendarContainer() {
                       > = {};
                       pump.tasks.forEach((task) => {
                         if (!clientTaskMap[task.client]) {
-                          const start = Math.floor(timeStringToHour(task.actualStart));
-                          const end = Math.round(timeStringToHour(task.actualEnd));
+                          const start = timeStringToHour(task.actualStart);
+                          const end = timeStringToHour(task.actualEnd);
                           clientTaskMap[task.client] = {
                             start: start,
                             end: end,
@@ -950,7 +950,9 @@ export default function PumpCalendarContainer() {
                       return (
                         <div
                           key={pump.id}
-                          className={`flex transition-colors ${typeRowColors[pump.type] || ''} hover:bg-gray-100 dark:hover:bg-white/[0.04]`}
+                          className={`flex transition-colors ${
+                            typeRowColors[pump.type] || ""
+                          } hover:bg-gray-100 dark:hover:bg-white/[0.04]`}
                         >
                           {/* Serial Number */}
                           <div className="w-10 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
@@ -992,9 +994,9 @@ export default function PumpCalendarContainer() {
                                 className="w-10 h-6 border-r border-gray-300 dark:border-white/[0.05] relative"
                               />
                             ))}
-                          <div className="w-14 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
-                            {freeTime}
-                          </div>
+                            <div className="w-14 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
+                              {freeTime}
+                            </div>
                           </div>
                           {/* Free Time */}
                         </div>
@@ -1028,9 +1030,15 @@ export default function PumpCalendarContainer() {
                               <span className="text-sm text-gray-600 dark:text-gray-400">{name}</span>
                             </div>
                             <div className="ml-6 text-xs text-gray-500 dark:text-gray-400">
-                              <div>Total Scheduled: <span className="font-medium">{stats ? timeString : "0m"}</span></div>
-                              <div>Pumps Used: <span className="font-medium">{stats ? stats.pumps.size : 0}</span></div>
-                              <div>Schedules: <span className="font-medium">{stats ? stats.schedules : 0}</span></div>
+                              <div>
+                                Total Scheduled: <span className="font-medium">{stats ? timeString : "0m"}</span>
+                              </div>
+                              <div>
+                                Pumps Used: <span className="font-medium">{stats ? stats.pumps.size : 0}</span>
+                              </div>
+                              <div>
+                                Schedules: <span className="font-medium">{stats ? stats.schedules : 0}</span>
+                              </div>
                             </div>
                           </div>
                         );
@@ -1044,8 +1052,10 @@ export default function PumpCalendarContainer() {
                     <div className="flex flex-wrap gap-4">
                       {types.map((type) => (
                         <div key={type} className="flex items-center gap-2">
-                          <div className={`w-4 h-4 ${typeRowColors[type] || 'bg-gray-200'} rounded`}></div>
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                          <div className={`w-4 h-4 ${typeRowColors[type] || "bg-gray-200"} rounded`}></div>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </span>
                         </div>
                       ))}
                     </div>
