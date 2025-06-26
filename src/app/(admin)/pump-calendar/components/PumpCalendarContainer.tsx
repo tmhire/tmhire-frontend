@@ -780,8 +780,8 @@ export default function PumpCalendarContainer() {
                           }
                           const start = clientTaskMap[task.client].actualStart;
                           const end = clientTaskMap[task.client].actualEnd;
-                          clientTaskMap[task.client].start = Math.floor(timeStringToHour(start));
-                          clientTaskMap[task.client].end = Math.round(timeStringToHour(end));
+                          clientTaskMap[task.client].start = timeStringToHour(start);
+                          clientTaskMap[task.client].end = timeStringToHour(end);
                           clientTaskMap[task.client].duration = calculateDuration(start, end);
                         }
                       });
