@@ -14,7 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
 import { useRouter } from "next/navigation";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio";
+import { RadioGroup } from "@/components/ui/radio";
 
 interface Client {
   contact_phone: number;
