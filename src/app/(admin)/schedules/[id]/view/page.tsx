@@ -11,7 +11,7 @@ interface Schedule {
   _id: string;
   client_name: string;
   client_id: string;
-  site_location: string;
+  site_address: string;
   status: string;
   input_params: {
     quantity: number;
@@ -73,51 +73,47 @@ export default function ScheduleViewPage() {
         <h2 className="text-xl font-semibold text-black dark:text-white">Pumping Schedule Details</h2>
       </div>
 
-      <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
-        <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Client</h4>
-              <p className="text-gray-800 dark:text-white/90">{schedule.client_name}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Site Location</h4>
-              <p className="text-gray-800 dark:text-white/90">{schedule.site_location}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Schedule Date</h4>
-              <p className="text-gray-800 dark:text-white/90">{schedule.input_params.schedule_date}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</h4>
-              <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
-                {schedule.status}
-              </Badge>
-            </div>
+      <div className="bg-gray-50 dark:bg-white/[0.01] border border-gray-200 dark:border-gray-800 rounded-xl p-4 mb-4">
+        <div className="grid grid-cols-4 grid-rows-2 gap-x-6 gap-y-2">
+          <div>
+            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Client</h4>
+            <p className="text-sm text-gray-800 dark:text-white/90">{schedule.client_name}</p>
           </div>
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Quantity</h4>
-              <p className="text-gray-800 dark:text-white/90">{schedule.input_params.quantity} m³</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Pumping Speed</h4>
-              <p className="text-gray-800 dark:text-white/90">{schedule.input_params.pumping_speed} m³/hr</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">TM Count</h4>
-              <p className="text-gray-800 dark:text-white/90">{schedule.tm_count}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Updated</h4>
-              <p className="text-gray-800 dark:text-white/90">{new Date(schedule.last_updated).toLocaleString()}</p>
-            </div>
+          <div>
+            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Site Location</h4>
+            <p className="text-sm text-gray-800 dark:text-white/90">{schedule.site_address}</p>
+          </div>
+          <div>
+            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Schedule Date</h4>
+            <p className="text-sm text-gray-800 dark:text-white/90">{schedule.input_params.schedule_date}</p>
+          </div>
+          <div>
+            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</h4>
+            <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>{schedule.status}</Badge>
+          </div>
+          <div>
+            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total Quantity</h4>
+            <p className="text-sm text-gray-800 dark:text-white/90">{schedule.input_params.quantity} m³</p>
+          </div>
+          <div>
+            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Pumping Speed</h4>
+            <p className="text-sm text-gray-800 dark:text-white/90">{schedule.input_params.pumping_speed} m³/hr</p>
+          </div>
+          <div>
+            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">TM Count</h4>
+            <p className="text-sm text-gray-800 dark:text-white/90">{schedule.tm_count}</p>
+          </div>
+          <div>
+            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Last Updated</h4>
+            <p className="text-sm text-gray-800 dark:text-white/90">{new Date(schedule.last_updated).toLocaleString()}</p>
           </div>
         </div>
+      </div>
 
-        <div className="mt-8">
+      <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+        <div className="">
           <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Pumping Schedule Details</h4>
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-100/20 dark:border-white/[0.05] dark:bg-white/[0.03]">
             <div className="max-w-full overflow-x-auto">
               <Table>
                 <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">

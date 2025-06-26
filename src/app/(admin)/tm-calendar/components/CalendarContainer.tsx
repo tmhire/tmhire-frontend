@@ -6,6 +6,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Tooltip from '@/components/ui/tooltip';
 
 // Types for better type safety and backend integration
 type ApiTask = {
@@ -300,6 +301,51 @@ export default function CalendarContainer() {
         return acc;
       }, {} as Record<string, { name: string; color: string }>)
   );
+
+  // Compute client stats for the filtered data
+  type ClientStat = {
+    totalMinutes: number;
+    mixers: Set<string>;
+    schedules: number;
+    firstStart: string;
+    lastEnd: string;
+  };
+  const clientStats: Record<string, ClientStat> = {};
+  filteredData.forEach((mixer) => {
+    mixer.tasks.forEach((task) => {
+      if (!task.client) return;
+      if (!clientStats[task.client]) {
+        clientStats[task.client] = {
+          totalMinutes: 0,
+          mixers: new Set(),
+          schedules: 0,
+          firstStart: task.actualStart,
+          lastEnd: task.actualEnd,
+        };
+      } else {
+        // Update firstStart and lastEnd
+        if (task.actualStart < clientStats[task.client].firstStart) {
+          clientStats[task.client].firstStart = task.actualStart;
+        }
+        if (task.actualEnd > clientStats[task.client].lastEnd) {
+          clientStats[task.client].lastEnd = task.actualEnd;
+        }
+      }
+      clientStats[task.client].mixers.add(mixer.name);
+      clientStats[task.client].schedules += 1;
+    });
+  });
+  // Calculate totalMinutes as the difference between firstStart and lastEnd
+  Object.values(clientStats).forEach((stat) => {
+    if (stat.firstStart && stat.lastEnd) {
+      const [startH, startM] = stat.firstStart.split(":").map(Number);
+      const [endH, endM] = stat.lastEnd.split(":").map(Number);
+      const startTotal = startH * 60 + startM;
+      const endTotal = endH * 60 + endM;
+      stat.totalMinutes = endTotal - startTotal;
+      if (stat.totalMinutes < 0) stat.totalMinutes = 0;
+    }
+  });
 
   // Helper to generate time slots based on custom start hour
   const getTimeSlots = () => {
@@ -1016,7 +1062,7 @@ export default function CalendarContainer() {
                           </div>
                           {/* Mixer Name */}
                           <div className="w-24 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center">
-                            {mixer.name.length > 6 ? ".." + mixer.name.slice(6) : mixer.name}
+                            {mixer.name.length > 7 ? ".." + mixer.name.slice(-7) : mixer.name}
                           </div>
                           {/* Time Slots */}
                           <div className="flex-1 flex relative">
@@ -1026,18 +1072,21 @@ export default function CalendarContainer() {
                               const { offset, width } = getBarProps(ct.start, ct.end);
                               if (width <= 0) return null;
                               return (
-                                <div
+                                <Tooltip
                                   key={ct.client}
-                                  className={`absolute top-1 h-4 rounded ${ct.color} opacity-80 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
-                                  style={{
-                                    left: `${offset * 40 + 1}px`,
-                                    width: `${width * 40 - 1}px`,
-                                    zIndex: 10,
-                                  }}
-                                  title={`${mixer.name} - ${ct.client} - ${ct.actualStart} to ${ct.actualEnd} (${ct.duration}m total)`}
+                                  content={`Mixer: ${mixer.name}\nClient: ${ct.client}\n${ct.actualStart} to ${ct.actualEnd}\nDuration: ${ct.duration}m`}
                                 >
-                                  <span className="text-white text-xs font-medium">{ct.duration}m</span>
-                                </div>
+                                  <div
+                                    className={`absolute top-1 h-4 rounded ${ct.color} opacity-80 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
+                                    style={{
+                                      left: `${offset * 40 + 1}px`,
+                                      width: `${width * 40 - 1}px`,
+                                      zIndex: 10,
+                                    }}
+                                  >
+                                    <span className="text-white text-xs ">{ct.duration} mins</span>
+                                  </div>
+                                </Tooltip>
                               );
                             })}
                             {/* Render slot borders */}
@@ -1066,12 +1115,28 @@ export default function CalendarContainer() {
             <div className="mt-6 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4">
               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Clients</h3>
               <div className="flex flex-wrap gap-4">
-                {clientLegend.map(({ name, color }) => (
-                  <div key={name} className="flex items-center gap-2">
-                    <div className={`w-4 h-4 ${color} rounded`}></div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">{name}</span>
-                  </div>
-                ))}
+                {clientLegend.map(({ name, color }) => {
+                  const stats = clientStats[name];
+                  let timeString = "0m";
+                  if (stats) {
+                    const hours = Math.floor(stats.totalMinutes / 60);
+                    const minutes = stats.totalMinutes % 60;
+                    timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                  }
+                  return (
+                    <div key={name} className="flex flex-col items-start gap-1 min-w-[160px]">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-4 h-4 ${color} rounded`}></div>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">{name}</span>
+                      </div>
+                      <div className="ml-6 text-xs text-gray-500 dark:text-gray-400">
+                        <div>Total Scheduled: <span className="font-medium">{stats ? timeString : "0m"}</span></div>
+                        <div>Mixers Used: <span className="font-medium">{stats ? stats.mixers.size : 0}</span></div>
+                        <div>Schedules: <span className="font-medium">{stats ? stats.schedules : 0}</span></div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

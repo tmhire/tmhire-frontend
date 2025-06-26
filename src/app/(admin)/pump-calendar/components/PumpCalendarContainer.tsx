@@ -6,6 +6,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Tooltip from '@/components/ui/tooltip';
 
 // Types for better type safety and backend integration
 // Adapted from CalendarContainer for pumps
@@ -30,6 +31,7 @@ type Pump = {
   id: string;
   name: string;
   plant: string;
+  type: string;
   client: string | null;
   tasks: Task[];
 };
@@ -42,6 +44,7 @@ type ApiResponse = {
       id: string;
       name: string;
       plant: string;
+      type: string;
       tasks: ApiTask[];
     }[];
   };
@@ -143,7 +146,7 @@ const transformApiData = (apiData: ApiResponse): Pump[] => {
         id: task.id,
         color,
         client: task.client,
-        type: "production",
+        type: pump.type,
         actualStart: task.start,
         actualEnd: task.end,
       };
@@ -153,10 +156,17 @@ const transformApiData = (apiData: ApiResponse): Pump[] => {
       id: pump.id,
       name: pump.name,
       plant: pump.plant,
+      type: pump.type,
       client: currentClient,
       tasks: transformedTasks,
     };
   });
+};
+
+// Type color mapping
+const typeRowColors: Record<string, string> = {
+  line: 'bg-blue-100 dark:bg-blue-300/30', // light blue
+  boom: 'bg-green-100 dark:bg-green-300/30', // light green
 };
 
 export default function PumpCalendarContainer() {
@@ -170,12 +180,14 @@ export default function PumpCalendarContainer() {
   const [selectedPlant, setSelectedPlant] = useState("all");
   const [selectedPump, setSelectedPump] = useState("all");
   const [selectedClient, setSelectedClient] = useState("all");
+  const [selectedType, setSelectedType] = useState("all");
   const [ganttData, setGanttData] = useState<Pump[]>([]);
   const [loading, setLoading] = useState(true);
   const { fetchWithAuth } = useApiClient();
   const [isPlantFilterOpen, setIsPlantFilterOpen] = useState(false);
   const [isPumpFilterOpen, setIsPumpFilterOpen] = useState(false);
   const [isClientFilterOpen, setIsClientFilterOpen] = useState(false);
+  const [isTypeFilterOpen, setIsTypeFilterOpen] = useState(false);
   const [timeFormat, setTimeFormat] = useState("24h");
   const [customStartHour, setCustomStartHour] = useState(6);
   const [isTimeFormatOpen, setIsTimeFormatOpen] = useState(false);
@@ -199,7 +211,8 @@ export default function PumpCalendarContainer() {
     const matchesPlant = selectedPlant === "all" || item.plant === selectedPlant;
     const matchesPump = selectedPump === "all" || item.name === selectedPump;
     const matchesClient = selectedClient === "all" || item.client === selectedClient;
-    return matchesSearch && matchesPlant && matchesPump && matchesClient;
+    const matchesType = selectedType === "all" || item.type === selectedType;
+    return matchesSearch && matchesPlant && matchesPump && matchesClient && matchesType;
   });
   const clientLegend = Object.values(
     ganttData
@@ -250,6 +263,7 @@ export default function PumpCalendarContainer() {
   const clients = Array.from(
     new Set(ganttData.map((item) => item.client).filter((client): client is string => client !== null))
   );
+  const types = Array.from(new Set(ganttData.map((item) => item.type)));
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto">
@@ -297,7 +311,7 @@ export default function PumpCalendarContainer() {
           </div>
           {showFilters && (
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.05]">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plant</label>
                   <button
@@ -407,6 +421,42 @@ export default function PumpCalendarContainer() {
                   )}
                 </div>
                 <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
+                  <button
+                    onClick={() => setIsTypeFilterOpen(!isTypeFilterOpen)}
+                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  >
+                    {selectedType === "all" ? "All Types" : selectedType}
+                  </button>
+                  {isTypeFilterOpen && (
+                    <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                      <div className="p-2 text-gray-800 dark:text-white/90">
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setSelectedType("all");
+                            setIsTypeFilterOpen(false);
+                          }}
+                        >
+                          All Types
+                        </button>
+                        {types.map((type) => (
+                          <button
+                            key={type}
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setSelectedType(type);
+                              setIsTypeFilterOpen(false);
+                            }}
+                          >
+                            {type}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Time Format</label>
                   <button
                     onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
@@ -470,6 +520,20 @@ export default function PumpCalendarContainer() {
     );
   }
   if (!loading) {
+    // Compute client stats for the filtered data
+    const clientStats: Record<string, { totalMinutes: number; pumps: Set<string>; schedules: number }> = {};
+    filteredData.forEach((pump) => {
+      pump.tasks.forEach((task) => {
+        if (!task.client) return;
+        if (!clientStats[task.client]) {
+          clientStats[task.client] = { totalMinutes: 0, pumps: new Set(), schedules: 0 };
+        }
+        const duration = calculateDuration(task.actualStart, task.actualEnd);
+        clientStats[task.client].totalMinutes += duration;
+        clientStats[task.client].pumps.add(pump.name);
+        clientStats[task.client].schedules += 1;
+      });
+    });
     return (
       <div>
         <div className="max-w-7xl mx-auto">
@@ -524,7 +588,7 @@ export default function PumpCalendarContainer() {
             {/* Expandable Filters */}
             {showFilters && (
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.05]">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   {/* Plant Filter */}
                   <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plant</label>
@@ -636,6 +700,43 @@ export default function PumpCalendarContainer() {
                       </div>
                     )}
                   </div>
+                  {/* Type Filter */}
+                  <div className="relative">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
+                    <button
+                      onClick={() => setIsTypeFilterOpen(!isTypeFilterOpen)}
+                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    >
+                      {selectedType === "all" ? "All Types" : selectedType}
+                    </button>
+                    {isTypeFilterOpen && (
+                      <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                        <div className="p-2 text-gray-800 dark:text-white/90">
+                          <button
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setSelectedType("all");
+                              setIsTypeFilterOpen(false);
+                            }}
+                          >
+                            All Types
+                          </button>
+                          {types.map((type) => (
+                            <button
+                              key={type}
+                              className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                              onClick={() => {
+                                setSelectedType(type);
+                                setIsTypeFilterOpen(false);
+                              }}
+                            >
+                              {type}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   {/* Time Format Filter */}
                   <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -720,6 +821,10 @@ export default function PumpCalendarContainer() {
               <div className="min-w-[1000px]">
                 {/* Time Header */}
                 <div className="flex border-b border-gray-300 dark:border-white/[0.05]">
+                  {/* Serial Number Column */}
+                  <div className="w-10 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] text-center">
+                    SNo
+                  </div>
                   <div className="w-30 px-5 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05]">
                     Pump ID
                   </div>
@@ -731,6 +836,10 @@ export default function PumpCalendarContainer() {
                       {formatTime(time)}
                     </div>
                   ))}
+                  {/* Free Time Column */}
+                  <div className="w-14 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center">
+                    Unused
+                  </div>
                 </div>
                 {/* Gantt Rows */}
                 <div className="divide-y divide-gray-400 dark:divide-white/[0.05]">
@@ -739,7 +848,7 @@ export default function PumpCalendarContainer() {
                       No pumps found for the selected criteria
                     </div>
                   ) : (
-                    filteredData.map((pump) => {
+                    filteredData.map((pump, idx) => {
                       // Group tasks by client for this pump
                       const clientTaskMap: Record<
                         string,
@@ -786,6 +895,10 @@ export default function PumpCalendarContainer() {
                         }
                       });
                       const clientTasks = Object.values(clientTaskMap);
+                      // --- Calculate Free Time (like CalendarContainer) ---
+                      let freeTime = 24;
+                      clientTasks.forEach((task) => (freeTime -= task.duration / 60));
+                      freeTime = Math.round(freeTime);
                       // --- NEW LOGIC FOR DYNAMIC TIMESLOTS ---
                       const slots = getTimeSlots();
                       const windowStart = slots[0];
@@ -837,8 +950,12 @@ export default function PumpCalendarContainer() {
                       return (
                         <div
                           key={pump.id}
-                          className="flex hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
+                          className={`flex transition-colors ${typeRowColors[pump.type] || ''} hover:bg-gray-100 dark:hover:bg-white/[0.04]`}
                         >
+                          {/* Serial Number */}
+                          <div className="w-10 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
+                            {idx + 1}
+                          </div>
                           {/* Pump Name */}
                           <div className="w-30 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center">
                             {pump.name.length > 6 ? ".." + pump.name.slice(4) : pump.name}
@@ -851,18 +968,21 @@ export default function PumpCalendarContainer() {
                               const { offset, width } = getBarProps(ct.start, ct.end);
                               if (width <= 0) return null;
                               return (
-                                <div
+                                <Tooltip
                                   key={ct.client}
-                                  className={`absolute top-1 h-4 rounded ${ct.color} opacity-80 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center`}
-                                  style={{
-                                    left: `${offset * 40 + 1}px`,
-                                    width: `${width * 40 - 8}px`,
-                                    zIndex: 10,
-                                  }}
-                                  title={`${pump.name} - ${ct.client} - ${ct.actualStart} to ${ct.actualEnd} (${ct.duration}m total)`}
+                                  content={`Pump: ${pump.name}\nClient: ${ct.client}\n${ct.actualStart} to ${ct.actualEnd}\nDuration: ${ct.duration}m`}
                                 >
-                                  <span className="text-white text-xs font-medium">{ct.duration}m</span>
-                                </div>
+                                  <div
+                                    className={`absolute top-1 h-4 rounded ${ct.color} opacity-80 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center`}
+                                    style={{
+                                      left: `${offset * 40 + 1}px`,
+                                      width: `${width * 40 - 8}px`,
+                                      zIndex: 10,
+                                    }}
+                                  >
+                                    <span className="text-white text-xs font-medium">{ct.duration}m</span>
+                                  </div>
+                                </Tooltip>
                               );
                             })}
                             {/* Render slot borders */}
@@ -872,7 +992,11 @@ export default function PumpCalendarContainer() {
                                 className="w-10 h-6 border-r border-gray-300 dark:border-white/[0.05] relative"
                               />
                             ))}
+                          <div className="w-14 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
+                            {freeTime}
                           </div>
+                          </div>
+                          {/* Free Time */}
                         </div>
                       );
                     })
@@ -882,16 +1006,51 @@ export default function PumpCalendarContainer() {
             </div>
           </div>
           {/* Legend */}
-          {clientLegend.length > 0 && (
+          {(clientLegend.length > 0 || types.length > 0) && (
             <div className="mt-6 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Clients</h3>
-              <div className="flex flex-wrap gap-4">
-                {clientLegend.map(({ name, color }) => (
-                  <div key={name} className="flex items-center gap-2">
-                    <div className={`w-4 h-4 ${color} rounded`}></div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">{name}</span>
-                  </div>
-                ))}
+              <div className="flex flex-col gap-2">
+                {clientLegend.length > 0 && (
+                  <>
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Clients</h3>
+                    <div className="flex flex-wrap gap-4 mb-2">
+                      {clientLegend.map(({ name, color }) => {
+                        const stats = clientStats[name];
+                        let timeString = "0m";
+                        if (stats) {
+                          const hours = Math.floor(stats.totalMinutes / 60);
+                          const minutes = stats.totalMinutes % 60;
+                          timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                        }
+                        return (
+                          <div key={name} className="flex flex-col items-start gap-1 min-w-[160px]">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 ${color} rounded`}></div>
+                              <span className="text-sm text-gray-600 dark:text-gray-400">{name}</span>
+                            </div>
+                            <div className="ml-6 text-xs text-gray-500 dark:text-gray-400">
+                              <div>Total Scheduled: <span className="font-medium">{stats ? timeString : "0m"}</span></div>
+                              <div>Pumps Used: <span className="font-medium">{stats ? stats.pumps.size : 0}</span></div>
+                              <div>Schedules: <span className="font-medium">{stats ? stats.schedules : 0}</span></div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+                {types.length > 0 && (
+                  <>
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pump Types</h3>
+                    <div className="flex flex-wrap gap-4">
+                      {types.map((type) => (
+                        <div key={type} className="flex items-center gap-2">
+                          <div className={`w-4 h-4 ${typeRowColors[type] || 'bg-gray-200'} rounded`}></div>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
