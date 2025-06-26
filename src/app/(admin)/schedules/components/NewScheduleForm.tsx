@@ -1076,7 +1076,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                             checked={selectedPump === pump.id}
                                             disabled={!pump.availability}
                                             onChange={(e) => {
-                                              e.target.checked ? setSelectedPump(pump.id) : setSelectedPump("");
+                                              if (e.target.checked) {
+                                                setSelectedPump(pump.id);
+                                              } else {
+                                                setSelectedPump("");
+                                              }
                                               setHasChanged(true);
                                             }}
                                             className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
