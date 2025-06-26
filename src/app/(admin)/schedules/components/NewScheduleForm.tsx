@@ -981,7 +981,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               </Button>
             </div>
           </div>
-        ) : step == 2 ? (
+        ) : step === 2 ? (
           <div className="space-y-6">
             {calculatedTMs && calculatedTMs.available_pumps && (
               <>
@@ -1060,22 +1060,44 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                   className="overflow-hidden"
                                 >
                                   <div className="bg-gray-50 dark:bg-gray-900/30 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-lg p-2 pl-6">
-                                    {pumps.map((pump) => (
-                                      <div key={pump.id} className="flex items-center space-x-3 mb-2">
-                                        <RadioGroupItem
-                                          value={pump.id}
-                                          id={pump.id}
-                                          disabled={!pump.availability}
-                                        />
-                                        <span className="font-medium text-gray-900 dark:text-white">{pump.identifier}</span>
-                                        <span className="text-xs text-gray-500">{pump.capacity}m³</span>
-                                        <span className="text-xs px-2 py-1 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full">
-                                          {plant}
-                                        </span>
-                                        {!pump.availability && (
-                                          <span className="text-xs text-red-500 ml-2">Unavailable</span>
-                                        )}
-                                      </div>
+                                    {pumps.map((pump, idx) => (
+                                      <label
+                                        key={pump.id}
+                                        className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
+                                          !pump.availability
+                                            ? "opacity-50 cursor-not-allowed"
+                                            : "cursor-pointer hover:bg-gray-100"
+                                        } `}
+                                      >
+                                        <div className="flex flex-row items-center space-x-4 w-full">
+                                          <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
+                                          <input
+                                            type="checkbox"
+                                            checked={selectedPump === pump.id}
+                                            disabled={!pump.availability}
+                                            onChange={(e) => {
+                                              e.target.checked ? setSelectedPump(pump.id) : setSelectedPump("");
+                                              setHasChanged(true);
+                                            }}
+                                            className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
+                                          />
+                                          <div className="flex flex-row w-full justify-between">
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                              {pump.identifier}
+                                            </p>
+                                            <div className="flex flex-row items-end gap-2">
+                                              {!pump.availability && (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                                  Unavailable -
+                                                </p>
+                                              )}
+                                              {/* <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                                {pump.capacity}m³
+                                              </p> */}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </label>
                                     ))}
                                   </div>
                                 </motion.div>
@@ -1107,18 +1129,20 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           <div className="flex flex-col gap-2">
                             <div className="flex items-center gap-2">
                               <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
-                              <span className="text-xs px-2 py-1 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full">{plantName}</span>
+                              <span className="text-xs px-2 py-1 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full">
+                                {plantName}
+                              </span>
                             </div>
                             <div className="text-sm text-gray-500 dark:text-gray-400">Capacity: {pump.capacity} m³</div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">Availability: {pump.availability ? "Available" : "Unavailable"}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              Availability: {pump.availability ? "Available" : "Unavailable"}
+                            </div>
                           </div>
                         </div>
                       );
                     })()
                   ) : (
-                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                      No pump selected
-                    </div>
+                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">No pump selected</div>
                   )}
                 </div>
               </div>
@@ -1130,11 +1154,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 Back
               </Button>
               <div className="flex items-end gap-4">
-                <Button
-                  onClick={handleNext}
-                  className="flex items-center gap-2"
-                  disabled={!selectedPump}
-                >
+                <Button onClick={handleNext} className="flex items-center gap-2" disabled={!selectedPump}>
                   Next Step
                   <ArrowRight size={16} />
                 </Button>
