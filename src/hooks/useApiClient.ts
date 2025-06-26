@@ -1,7 +1,7 @@
 import { useSession, signOut } from "next-auth/react";
 import { jwtDecode } from "jwt-decode";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://tmhire-backend.onrender.com";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export function useApiClient() {
   const { data: session, status, update } = useSession();

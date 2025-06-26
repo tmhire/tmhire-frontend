@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
 import { useRouter } from "next/navigation";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio";
 
 interface Client {
   contact_phone: number;
@@ -41,6 +42,15 @@ interface AvailableTM {
   plant_name: string;
 }
 
+interface AvailablePump {
+  id: string;
+  // _id: string;
+  identifier: string;
+  capacity: number;
+  availability: boolean;
+  plant_id: string;
+  plant_name: string;
+}
 interface CalculateTMResponse {
   tm_count: number;
   schedule_id: string;
@@ -49,6 +59,7 @@ interface CalculateTMResponse {
   trips_per_tm: number;
   cycle_time: number;
   available_tms: AvailableTM[];
+  available_pumps: AvailablePump[];
 }
 
 interface ScheduleTrip {
@@ -93,8 +104,9 @@ interface GeneratedSchedule {
 
 const steps = [
   { id: 1, name: "Schedule Details" },
-  { id: 2, name: "TM Selection" },
-  { id: 3, name: "Review" },
+  { id: 2, name: "Pump Selection" },
+  { id: 3, name: "TM Selection" },
+  { id: 4, name: "Review" },
 ];
 
 export default function NewScheduleForm({ schedule_id }: { schedule_id?: string }) {
@@ -130,7 +142,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [formDataRetrieved, setFormDataRetrieved] = useState(true);
   // Dropdown open state for custom dropdowns
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
-  const [isPumpDropdownOpen, setIsPumpDropdownOpen] = useState(false);
+  // const [isPumpDropdownOpen, setIsPumpDropdownOpen] = useState(false);
   // Add state for open/closed plant groups
   const [openPlantGroups, setOpenPlantGroups] = useState<Record<string, boolean>>({});
 
@@ -237,6 +249,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           trips_per_tm: data?.data?.trips_per_tm,
           cycle_time: data?.data?.cycle_time,
           available_tms: data?.data?.available_tms,
+          available_pumps: data?.data?.available_pumps,
         };
         setCalculatedTMs(tm_suggestions || null);
         return true;
@@ -415,6 +428,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         setStep(step + 1);
       }
     } else if (step === 2) {
+      setStep(step + 1);
+    } else if (step === 3) {
       const success = await generateSchedule();
       if (success) {
         setStep(step + 1);
@@ -441,14 +456,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   };
 
   const selectedClientDetails = clientsData?.find((c: Client) => c._id === selectedClient);
-  const filteredPumps = pumpsData?.filter((p: Pump) => p.type === pumpType) || [];
+  // const filteredPumps = pumpsData?.filter((p: Pump) => p.type === pumpType) || [];
   const progressPercentage = ((step - 1) / (steps.length - 1)) * 100;
 
   // Helper to check if all required fields are filled
   const isStep1FormValid = () => {
     return (
       !!selectedClient &&
-      !!selectedPump &&
+      // !!selectedPump &&
       !!formData.siteAddress &&
       !!formData.scheduleDate &&
       !!formData.startTime &&
@@ -507,7 +522,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       <div className="flex flex-row w-full mb-4 items-center">
         <div className="w-1/3">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">New Pumping Schedule</h2>
-          <p className="text-gray-500 dark:text-gray-400">Step {step} of 3</p>
+          <p className="text-gray-500 dark:text-gray-400">Step {step} of 4</p>
         </div>
         <div className="w-full">
           <div className="relative">
@@ -727,12 +742,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="quantity"
-                    value={parseFloat(formData.quantity || "0")}
+                    value={parseFloat(formData.quantity)}
                     onChange={handleInputChange}
                     placeholder="Enter quantity"
                   />
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Pump</label>
                   <div className="relative">
                     <button
@@ -780,7 +795,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       ))}
                     </Dropdown>
                   </div>
-                </div>
+                </div> */}
               </div>
               <div className="grid grid-cols-2 gap-6">
                 {/* Pump Onward Time */}
@@ -808,7 +823,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="pumpOnwardTime"
-                    value={parseFloat(formData.pumpOnwardTime || "0")}
+                    value={parseFloat(formData.pumpOnwardTime)}
                     onChange={handleInputChange}
                     placeholder="Enter pump onward time"
                   />
@@ -826,7 +841,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="pumpFixingTime"
-                    value={parseFloat(formData.pumpFixingTime || "0")}
+                    value={parseFloat(formData.pumpFixingTime)}
                     onChange={handleInputChange}
                     placeholder="Enter pump onward time"
                   />
@@ -850,7 +865,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="speed"
-                    value={parseFloat(formData.speed || "0")}
+                    value={parseFloat(formData.speed)}
                     onChange={setPumpingSpeedAndUnloadingTime}
                     placeholder="Enter speed"
                   />
@@ -863,7 +878,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="unloadingTime"
-                    value={parseFloat(formData.unloadingTime || "0")}
+                    value={parseFloat(formData.unloadingTime)}
                     onChange={setPumpingSpeedAndUnloadingTime}
                     placeholder={
                       avgTMCap !== null ? "Auto-calculated from pumping speed" : "Enter pumping speed to calculate"
@@ -884,7 +899,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="productionTime"
-                    value={parseFloat(formData.productionTime || "0")}
+                    value={parseFloat(formData.productionTime)}
                     onChange={handleInputChange}
                     placeholder="Enter production time"
                   />
@@ -897,7 +912,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="onwardTime"
-                    value={parseFloat(formData.onwardTime || "0")}
+                    value={parseFloat(formData.onwardTime)}
                     onChange={handleInputChange}
                     placeholder="Enter onward time"
                   />
@@ -909,7 +924,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="returnTime"
-                    value={parseFloat(formData.returnTime || "0")}
+                    value={parseFloat(formData.returnTime)}
                     onChange={handleInputChange}
                     placeholder="Enter return time"
                   />
@@ -923,7 +938,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="concreteGrade"
-                    value={parseFloat(formData.concreteGrade || "0")}
+                    value={parseFloat(formData.concreteGrade)}
                     onChange={handleInputChange}
                     placeholder="Enter concrete grade"
                   />
@@ -935,7 +950,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="pumpingJob"
-                    value={parseFloat(formData.pumpingJob || "0")}
+                    value={parseFloat(formData.pumpingJob)}
                     onChange={handleInputChange}
                     placeholder="Enter type of pumping job"
                   />
@@ -947,7 +962,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="floorHeight"
-                    value={parseFloat(formData.floorHeight || "0")}
+                    value={parseFloat(formData.floorHeight)}
                     onChange={handleInputChange}
                     placeholder="Enter floor height"
                   />
@@ -966,7 +981,167 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               </Button>
             </div>
           </div>
-        ) : step === 2 ? (
+        ) : step == 2 ? (
+          <div className="space-y-6">
+            {calculatedTMs && calculatedTMs.available_pumps && (
+              <>
+                {calculatedTMs.available_pumps.length < 1 ? (
+                  <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center justify-between">
+                    <span>Not enough available Pumps to fulfill the requirement. Please add more Pumps.</span>
+                    <a
+                      href="/pumps"
+                      className="ml-4 px-3 py-1 bg-brand-500 text-white rounded hover:bg-brand-600 transition-colors text-sm font-medium"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Add Pumps
+                    </a>
+                  </div>
+                ) : null}
+              </>
+            )}
+
+            <div className="grid grid-cols-2 gap-6">
+              {/* Left Column - Pump Selection */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select Pump</h3>
+                <RadioGroup
+                  value={selectedPump}
+                  onValueChange={(val) => {
+                    setSelectedPump(val);
+                    setHasChanged(true);
+                  }}
+                  className="space-y-4"
+                >
+                  {calculatedTMs && calculatedTMs.available_pumps && calculatedTMs.available_pumps.length > 0 ? (
+                    (() => {
+                      const plantIdToName = (plantsData || []).reduce((acc, plant) => {
+                        acc[plant._id] = plant.name;
+                        return acc;
+                      }, {} as Record<string, string>);
+                      const grouped: Record<string, typeof calculatedTMs.available_pumps> = {};
+                      calculatedTMs.available_pumps.forEach((pump) => {
+                        const group = pump.plant_id ? plantIdToName[pump.plant_id] || "Unassigned" : "Unassigned";
+                        if (!grouped[group]) grouped[group] = [];
+                        grouped[group].push(pump);
+                      });
+                      const groupOrder = Object.keys(grouped)
+                        .filter((g) => g !== "Unassigned")
+                        .sort((a, b) => a.localeCompare(b))
+                        .concat(Object.keys(grouped).includes("Unassigned") ? ["Unassigned"] : []);
+                      return groupOrder.map((plant) => {
+                        const pumps = grouped[plant];
+                        const isOpen = openPlantGroups[plant] ?? true;
+                        return (
+                          <div key={plant} className="mb-4">
+                            <button
+                              type="button"
+                              className={`flex items-center w-full px-4 py-2 bg-brand-50 dark:bg-brand-900/30 border-l-4 border-brand-500 dark:border-brand-400 font-semibold text-brand-700 dark:text-brand-300 text-base focus:outline-none transition-all duration-200
+                                ${isOpen ? "rounded-t-lg rounded-b-none" : "rounded-lg"}`}
+                              onClick={() => setOpenPlantGroups((prev) => ({ ...prev, [plant]: !isOpen }))}
+                              aria-expanded={isOpen}
+                            >
+                              <span className="mr-2">
+                                {isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                              </span>
+                              <span className="flex-1 text-left">{plant}</span>
+                              <span className="ml-2 text-xs font-semibold text-brand-500 dark:text-brand-300 bg-brand-100 dark:bg-brand-900/40 px-2 py-0.5 rounded-full">
+                                {pumps.length}
+                              </span>
+                            </button>
+                            <AnimatePresence initial={false}>
+                              {isOpen && (
+                                <motion.div
+                                  key="content"
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="bg-gray-50 dark:bg-gray-900/30 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-lg p-2 pl-6">
+                                    {pumps.map((pump) => (
+                                      <div key={pump.id} className="flex items-center space-x-3 mb-2">
+                                        <RadioGroupItem
+                                          value={pump.id}
+                                          id={pump.id}
+                                          disabled={!pump.availability}
+                                        />
+                                        <span className="font-medium text-gray-900 dark:text-white">{pump.identifier}</span>
+                                        <span className="text-xs text-gray-500">{pump.capacity}m³</span>
+                                        <span className="text-xs px-2 py-1 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full">
+                                          {plant}
+                                        </span>
+                                        {!pump.availability && (
+                                          <span className="text-xs text-red-500 ml-2">Unavailable</span>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        );
+                      });
+                    })()
+                  ) : (
+                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                      No pumps available for selection
+                    </div>
+                  )}
+                </RadioGroup>
+              </div>
+
+              {/* Right Column - Chosen Pump */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Chosen Pump</h3>
+                <div className="space-y-2">
+                  {selectedPump && calculatedTMs && calculatedTMs.available_pumps ? (
+                    (() => {
+                      const pump = calculatedTMs.available_pumps.find((p) => p.id.toString() === selectedPump);
+                      if (!pump) return <div className="text-gray-500 dark:text-gray-400">Pump not found</div>;
+                      const plantName = (plantsData || []).find((pl) => pl._id === pump.plant_id)?.name || "Unassigned";
+                      return (
+                        <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
+                              <span className="text-xs px-2 py-1 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full">{plantName}</span>
+                            </div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">Capacity: {pump.capacity} m³</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">Availability: {pump.availability ? "Available" : "Unavailable"}</div>
+                          </div>
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                      No pump selected
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center mt-8">
+              <Button variant="outline" onClick={handleBack} className="flex items-center gap-2">
+                <ArrowLeft size={16} />
+                Back
+              </Button>
+              <div className="flex items-end gap-4">
+                <Button
+                  onClick={handleNext}
+                  className="flex items-center gap-2"
+                  disabled={!selectedPump}
+                >
+                  Next Step
+                  <ArrowRight size={16} />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : step === 3 ? (
           <div className="space-y-6">
             {calculatedTMs && (
               <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
@@ -1168,7 +1343,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                     {idx + 1}
                                   </span>
                                   <span className="text-gray-700 dark:text-gray-300">{tm?.identifier}</span>
-                                  <span className="text-sm text-gray-500 dark:text-gray-400">({tm?.capacity}m³)</span>
+                                  {/* <span className="text-sm text-gray-500 dark:text-gray-400">({tm?.capacity}m³)</span> */}
                                 </div>
                                 <div className="flex items-center flex-1 justify-end space-x-2">
                                   {plant && (
