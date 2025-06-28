@@ -7,7 +7,7 @@ import type { Account, Session, User } from "next-auth";
 import type { AdapterUser } from "next-auth/adapters";
 
 // Configure backend API URL from environment or use default
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 /**
  * Safely sends the Google token to the backend and gets an access token
@@ -44,7 +44,7 @@ async function handleEmailPassword(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Accept: "applicat",
+        Accept: "application/json"
       },
       body: JSON.stringify(user),
     });
