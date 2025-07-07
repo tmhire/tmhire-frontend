@@ -46,85 +46,6 @@ type ApiResponse = {
   };
 };
 
-// Add color generation utilities
-const generateHSLColor = (index: number): string => {
-  // Use golden ratio to ensure good distribution of colors
-  const goldenRatio = 0.618033988749895;
-  const hue = (index * goldenRatio * 360) % 360;
-
-  // Fixed saturation and lightness for consistent appearance
-  const saturation = 70; // 70% saturation
-  const lightness = 45; // 45% lightness for good contrast
-
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-};
-
-const generateTailwindColor = (hslColor: string): string => {
-  // Convert HSL to RGB
-  const [h, s, l] = hslColor.match(/\d+/g)?.map(Number) || [0, 0, 0];
-  const s1 = s / 100;
-  const l1 = l / 100;
-
-  const c = (1 - Math.abs(2 * l1 - 1)) * s1;
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = l1 - c / 2;
-
-  let r = 0,
-    g = 0,
-    b = 0;
-
-  if (h >= 0 && h < 60) {
-    [r, g, b] = [c, x, 0];
-  } else if (h >= 60 && h < 120) {
-    [r, g, b] = [x, c, 0];
-  } else if (h >= 120 && h < 180) {
-    [r, g, b] = [0, c, x];
-  } else if (h >= 180 && h < 240) {
-    [r, g, b] = [0, x, c];
-  } else if (h >= 240 && h < 300) {
-    [r, g, b] = [x, 0, c];
-  } else {
-    [r, g, b] = [c, 0, x];
-  }
-
-  const rgb = [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
-
-  // Map to closest Tailwind color
-  const tailwindColors = {
-    "bg-red-500": [239, 68, 68],
-    "bg-orange-500": [249, 115, 22],
-    "bg-yellow-500": [234, 179, 8],
-    "bg-green-500": [34, 197, 94],
-    "bg-teal-500": [20, 184, 166],
-    "bg-blue-500": [59, 130, 246],
-    "bg-indigo-500": [99, 102, 241],
-    "bg-purple-500": [168, 85, 247],
-    "bg-pink-500": [236, 72, 153],
-    "bg-cyan-500": [6, 182, 212],
-    "bg-emerald-500": [16, 185, 129],
-    "bg-violet-500": [139, 92, 246],
-    "bg-fuchsia-500": [217, 70, 239],
-    "bg-rose-500": [244, 63, 94],
-    "bg-amber-500": [245, 158, 11],
-    "bg-lime-500": [132, 204, 22],
-  };
-
-  // Find closest Tailwind color
-  let minDistance = Infinity;
-  let closestColor = "bg-gray-500";
-
-  for (const [color, [tr, tg, tb]] of Object.entries(tailwindColors)) {
-    const distance = Math.sqrt(Math.pow(rgb[0] - tr, 2) + Math.pow(rgb[1] - tg, 2) + Math.pow(rgb[2] - tb, 2));
-
-    if (distance < minDistance) {
-      minDistance = distance;
-      closestColor = color;
-    }
-  }
-
-  return closestColor;
-};
-
 const timeSlots = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
 
 // Helper function to convert time string to hour number
@@ -143,6 +64,32 @@ const calculateDuration = (start: string, end: string): number => {
   return roundedDuration;
 };
 
+// Task type color map
+const TASK_TYPE_COLORS: Record<string, string> = {
+  onward: "bg-blue-500",
+  work: "bg-green-500",
+  cushion: "bg-yellow-500",
+  return: "bg-purple-500",
+};
+
+// Client color palette (no overlap with task type colors)
+const CLIENT_TAILWIND_COLORS = [
+  "bg-red-500",
+  "bg-orange-500",
+  "bg-pink-500",
+  "bg-cyan-500",
+  "bg-emerald-500",
+  "bg-indigo-500",
+  "bg-fuchsia-500",
+  "bg-rose-500",
+  "bg-amber-500",
+  "bg-lime-500",
+  // Add more if needed, but exclude blue, green, yellow, purple
+];
+
+// Helper to extract task type from id
+const getTaskType = (id: string) => id.split("-")[0];
+
 // Helper function to transform API data to component format
 const transformApiData = (apiData: ApiResponse): Mixer[] => {
   // Create a map of unique clients
@@ -153,23 +100,21 @@ const transformApiData = (apiData: ApiResponse): Mixer[] => {
     });
   });
 
-  // Generate colors for each unique client
+  // Assign colors for each unique client from CLIENT_TAILWIND_COLORS
   const clientColors = new Map<string, string>();
   Array.from(uniqueClients).forEach((client, index) => {
-    const hslColor = generateHSLColor(index);
-    const tailwindColor = generateTailwindColor(hslColor);
-    clientColors.set(client, tailwindColor);
+    const color = CLIENT_TAILWIND_COLORS[index % CLIENT_TAILWIND_COLORS.length];
+    clientColors.set(client, color);
   });
 
   return apiData.data.mixers.map((mixer) => {
     const transformedTasks: Task[] = mixer.tasks.map((task) => {
-      const color = clientColors.get(task.client) || "bg-gray-500";
-
+      const type = getTaskType(task.id);
       return {
         id: task.id,
-        color,
+        color: TASK_TYPE_COLORS[type] || "bg-gray-500",
         client: task.client,
-        type: "production", // Default type since API doesn't provide this
+        type,
         actualStart: task.start,
         actualEnd: task.end,
       };
@@ -215,6 +160,20 @@ export default function CalendarContainer() {
   const [isTimeFormatOpen, setIsTimeFormatOpen] = useState(false);
 
   const { fetchWithAuth } = useApiClient();
+
+  // Memoized clientColors map for use in rendering
+  const clientColors = React.useMemo(() => {
+    // Gather all unique clients from ganttData
+    const uniqueClients = Array.from(
+      new Set(ganttData.flatMap((mixer) => mixer.tasks.map((task) => task.client)).filter(Boolean))
+    );
+    const map = new Map();
+    uniqueClients.forEach((client, index) => {
+      const color = CLIENT_TAILWIND_COLORS[index % CLIENT_TAILWIND_COLORS.length];
+      map.set(client, color);
+    });
+    return map;
+  }, [ganttData]);
 
   // Update URL when date changes
   const handleDateChange = (newDate: string) => {
@@ -911,50 +870,6 @@ export default function CalendarContainer() {
                     </div>
                   ) : (
                     filteredData.map((mixer, idx) => {
-                      // Group tasks by client for this mixer
-                      const clientTaskMap: Record<
-                        string,
-                        {
-                          start: number;
-                          end: number;
-                          duration: number;
-                          color: string;
-                          client: string;
-                          actualStart: string;
-                          actualEnd: string;
-                        }
-                      > = {};
-                      mixer.tasks.forEach((task) => {
-                        if (!clientTaskMap[task.id]) {
-                          const start = timeStringToHour(task.actualStart);
-                          const end = timeStringToHour(task.actualEnd);
-                          clientTaskMap[task.id] = {
-                            start: start,
-                            end: end,
-                            duration: calculateDuration(task.actualStart, task.actualEnd),
-                            color: task.color,
-                            client: task.client,
-                            actualStart: task.actualStart,
-                            actualEnd: task.actualEnd,
-                          };
-                        } else {
-                          if (
-                            timeStringToHour(task.actualStart) < timeStringToHour(clientTaskMap[task.id].actualStart)
-                          ) {
-                            clientTaskMap[task.id].actualStart = task.actualStart;
-                          }
-                          if (timeStringToHour(task.actualEnd) > timeStringToHour(clientTaskMap[task.id].actualEnd)) {
-                            clientTaskMap[task.id].actualEnd = task.actualEnd;
-                          }
-                          const start = clientTaskMap[task.id].actualStart;
-                          const end = clientTaskMap[task.id].actualEnd;
-                          clientTaskMap[task.id].start = timeStringToHour(start);
-                          clientTaskMap[task.id].end = timeStringToHour(end);
-                          clientTaskMap[task.id].duration = calculateDuration(start, end);
-                        }
-                      });
-                      const clientTasks = Object.values(clientTaskMap);
-
                       // --- NEW LOGIC FOR DYNAMIC TIMESLOTS ---
                       const slots = getTimeSlots();
                       const windowStart = slots[0];
@@ -1004,39 +919,39 @@ export default function CalendarContainer() {
                         return { offset, width };
                       };
 
+                      // --- Group tasks by client for background pills ---
+                      const clientTaskGroups: Record<string, Task[]> = {};
+                      mixer.tasks.forEach((task) => {
+                        if (!clientTaskGroups[task.client]) clientTaskGroups[task.client] = [];
+                        clientTaskGroups[task.client].push(task);
+                      });
+
                       // --- Calculate Free Time ---
-                      // 1. Collect all busy intervals for this mixer in the current window
-                      const busyIntervals: { start: number; end: number }[] = clientTasks
-                        .map((ct) => {
-                          // Clamp to window
-                          let s = ct.start;
-                          let e = ct.end;
+                      const busyIntervals: { start: number; end: number }[] = mixer.tasks
+                        .map((task) => {
+                          let s = timeStringToHour(task.actualStart);
+                          let e = timeStringToHour(task.actualEnd);
                           if (windowStart < windowEnd) {
-                            s = Math.max(ct.start, windowStart);
-                            e = Math.min(ct.end, windowEnd + 1);
+                            s = Math.max(s, windowStart);
+                            e = Math.min(e, windowEnd + 1);
                             if (e <= s) return null;
                           } else {
-                            // Wraps around midnight
-                            if (ct.start < windowStart && ct.end <= windowStart) {
-                              // Early part
-                              s = ct.start;
-                              e = Math.min(ct.end, windowEnd + 1);
+                            if (s < windowStart && e <= windowStart) {
+                              s = s;
+                              e = Math.min(e, windowEnd + 1);
                               if (e <= s) return null;
-                            } else if (ct.start >= windowStart) {
-                              // Late part
-                              s = Math.max(ct.start, windowStart);
-                              e = ct.end;
+                            } else if (s >= windowStart) {
+                              s = Math.max(s, windowStart);
+                              e = e;
                               if (e <= s) return null;
                             } else {
-                              // Spans wrap
-                              s = ct.start;
-                              e = ct.end;
+                              s = s;
+                              e = e;
                             }
                           }
                           return { start: s, end: e };
                         })
                         .filter(Boolean) as { start: number; end: number }[];
-                      // 2. Merge overlapping intervals
                       busyIntervals.sort((a, b) => a.start - b.start);
                       const merged: { start: number; end: number }[] = [];
                       for (const interval of busyIntervals) {
@@ -1046,9 +961,10 @@ export default function CalendarContainer() {
                           merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, interval.end);
                         }
                       }
-                      // 3. Calculate free time
                       let freeTime = 24;
-                      clientTasks.forEach((task) => (freeTime -= task.duration / 60));
+                      mixer.tasks.forEach((task) => {
+                        freeTime -= calculateDuration(task.actualStart, task.actualEnd) / 60;
+                      });
                       freeTime = Math.round(freeTime);
 
                       return (
@@ -1066,25 +982,56 @@ export default function CalendarContainer() {
                           </div>
                           {/* Time Slots */}
                           <div className="flex-1 flex relative">
-                            {/* Render bars for each client task that overlaps the window */}
-                            {clientTasks.map((ct) => {
-                              if (!isInWindow(ct.start, ct.end)) return null;
-                              const { offset, width } = getBarProps(ct.start, ct.end);
+                            {/* Render background pills for each client */}
+                            {Object.entries(clientTaskGroups).map(([client, tasks], i) => {
+                              // Find earliest start and latest end for this client
+                              const starts = tasks.map((t) => timeStringToHour(t.actualStart));
+                              const ends = tasks.map((t) => timeStringToHour(t.actualEnd));
+                              const minStart = Math.min(...starts);
+                              const maxEnd = Math.max(...ends);
+                              if (!isInWindow(minStart, maxEnd)) return null;
+                              const { offset, width } = getBarProps(minStart, maxEnd);
                               if (width <= 0) return null;
+                              // Get client color from clientColors map
+                              const clientColor = clientColors.get(client) || "bg-gray-300";
+                              return (
+                                <div
+                                  key={client + i}
+                                  className={`absolute - h-6 rounded ${clientColor} opacity-90 z-0`}
+                                  style={{
+                                    left: `${offset * 40 - 3}px`,
+                                    width: `${width * 40 + 7}px`,
+                                    zIndex: 1,
+                                  }}
+                                />
+                              );
+                            })}
+                            {/* Render bars for each task by type that overlaps the window */}
+                            {mixer.tasks.map((task, i) => {
+                              const start = timeStringToHour(task.actualStart);
+                              const end = timeStringToHour(task.actualEnd);
+                              if (!isInWindow(start, end)) return null;
+                              const { offset, width } = getBarProps(start, end);
+                              if (width <= 0) return null;
+                              const duration = calculateDuration(task.actualStart, task.actualEnd);
                               return (
                                 <Tooltip
-                                  key={ct.client}
-                                  content={`Mixer: ${mixer.name}\nClient: ${ct.client}\n${ct.actualStart} to ${ct.actualEnd}\nDuration: ${ct.duration}m`}
+                                  key={task.id + i}
+                                  content={`Type: ${task.type}\nClient: ${task.client}\n${task.actualStart} to ${task.actualEnd}\nDuration: ${duration}m`}
                                 >
                                   <div
-                                    className={`absolute top-1 h-4 rounded ${ct.color} opacity-80 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
+                                    className={`absolute top-1 h-4 rounded ${TASK_TYPE_COLORS[task.type] || "bg-gray-500"} opacity-90 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
                                     style={{
                                       left: `${offset * 40 + 1}px`,
                                       width: `${width * 40 - 1}px`,
-                                      zIndex: 10,
+                                      zIndex: 5,
                                     }}
                                   >
-                                    <span className="text-white text-xs ">{ct.duration} mins</span>
+                                    <span
+                                      className={`text-white ${task.type === "work" ? "text-[3px]" : "text-[6px]"}`}
+                                    >
+                                      {task.type === "work" ? null : duration}
+                                    </span>
                                   </div>
                                 </Tooltip>
                               );
@@ -1110,42 +1057,61 @@ export default function CalendarContainer() {
             </div>
           </div>
 
-          {/* Legend */}
-          {clientLegend.length > 0 && (
-            <div className="mt-6 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Clients</h3>
-              <div className="flex flex-wrap gap-4">
-                {clientLegend.map(({ name, color }) => {
-                  const stats = clientStats[name];
-                  let timeString = "0m";
-                  if (stats) {
-                    const hours = Math.floor(stats.totalMinutes / 60);
-                    const minutes = stats.totalMinutes % 60;
-                    timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-                  }
-                  return (
-                    <div key={name} className="flex flex-col items-start gap-1 min-w-[160px]">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-4 h-4 ${color} rounded`}></div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">{name}</span>
+          {/* Legends: Client and Task Types side by side */}
+          <div className="mt-6 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4">
+            <div className="flex flex-wrap md:flex-nowrap gap-4 w-full">
+              {/* Client Legend - left half */}
+              <div className="flex-1 min-w-[200px] md:border-r md:pr-6 border-gray-200 dark:border-white/[0.05]">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Clients</h3>
+                <div className="flex flex-wrap gap-4">
+                  {clientLegend.map(({ name }) => {
+                    const stats = clientStats[name];
+                    let timeString = "0m";
+                    if (stats) {
+                      const hours = Math.floor(stats.totalMinutes / 60);
+                      const minutes = stats.totalMinutes % 60;
+                      timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                    }
+                    // Get client color from clientColors map
+                    const color = clientColors.get(name) || "bg-gray-300";
+                    return (
+                      <div key={name} className="flex flex-col items-start gap-1 min-w-[160px]">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 ${color} rounded`}></div>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{name}</span>
+                        </div>
+                        <div className="ml-6 text-xs text-gray-500 dark:text-gray-400">
+                          <div>
+                            Total Scheduled: <span className="font-medium">{stats ? timeString : "0m"}</span>
+                          </div>
+                          <div>
+                            Mixers Used: <span className="font-medium">{stats ? stats.mixers.size : 0}</span>
+                          </div>
+                          <div>
+                            Schedules: <span className="font-medium">{stats ? stats.schedules : 0}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="ml-6 text-xs text-gray-500 dark:text-gray-400">
-                        <div>
-                          Total Scheduled: <span className="font-medium">{stats ? timeString : "0m"}</span>
-                        </div>
-                        <div>
-                          Mixers Used: <span className="font-medium">{stats ? stats.mixers.size : 0}</span>
-                        </div>
-                        <div>
-                          Schedules: <span className="font-medium">{stats ? stats.schedules : 0}</span>
-                        </div>
-                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Task Type Legend - right half */}
+              <div className="flex-1 min-w-[200px] md:pl-6">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Task Types</h3>
+                <div className="flex flex-wrap gap-4">
+                  {Object.entries(TASK_TYPE_COLORS).map(([type, color]) => (
+                    <div key={type} className="flex items-center gap-2">
+                      <div className={`w-4 h-4 rounded ${color}`}></div>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </span>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
