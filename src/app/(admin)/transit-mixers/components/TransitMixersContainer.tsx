@@ -278,6 +278,14 @@ export default function TransitMixersContainer() {
         {/* Add Button */}
         <nav className="flex flex-row gap-2">
           <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm dark:border-gray-800 dark:bg-white/[0.03]">
+            {/* Use a group/users icon for total count */}
+            {/* <Truck className="text-gray-800 size-4 dark:text-white/90" /> */}
+            <div className="flex flex-col">
+              <span className="text-xs text-gray-500 dark:text-gray-400">Total Count</span>
+              <span className="font-semibold text-gray-800 dark:text-white/90">{filteredData.length}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm dark:border-gray-800 dark:bg-white/[0.03]">
             <Truck className="text-gray-800 size-4 dark:text-white/90" />
             <div className="flex flex-col">
               <span className="text-xs text-gray-500 dark:text-gray-400">Avg Capacity</span>
@@ -436,7 +444,7 @@ export default function TransitMixersContainer() {
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Transit Mixer</h4>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Number</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">TM No.</label>
             <Input
               type="text"
               name="identifier"
@@ -527,7 +535,7 @@ export default function TransitMixersContainer() {
         {selectedMixer && (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Number</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">TM No.</label>
               <Input type="text" name="identifier" value={selectedMixer.identifier} onChange={handleEditInputChange} />
             </div>
             <div>

@@ -34,7 +34,7 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Number
+                  Pump No.
                 </TableCell>
                 <TableCell
                   isHeader
@@ -52,6 +52,12 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
+                  Make
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
                   Plant
                 </TableCell>
                 <TableCell
@@ -59,18 +65,6 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Status
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
-                  Make
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
-                  Created
                 </TableCell>
                 <TableCell
                   isHeader
@@ -89,22 +83,27 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                     {pump.identifier}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {pump.type}
+                    <span
+                      className={
+                        pump.type === "line"
+                          ? "inline-block px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs font-semibold"
+                          : "inline-block px-2 py-1 rounded bg-green-100 text-green-700 text-xs font-semibold"
+                      }
+                    >
+                      {pump.type}
+                    </span>
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {pump.capacity}
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {pump.make || "N/A"}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {plantMap.get(pump.plant_id) || "N/A"}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {pump.status}
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {pump.make || "N/A"}
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {new Date(pump.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="px-5 py-4">
                     <div className="flex items-center gap-2">

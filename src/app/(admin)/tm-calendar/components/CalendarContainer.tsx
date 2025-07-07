@@ -898,8 +898,8 @@ export default function CalendarContainer() {
                     </div>
                   ))}
                   {/* Free Time Column */}
-                  <div className="w-14 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center">
-                    Unused
+                  <div className="w-20 px-1 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center">
+                    Unused Hrs
                   </div>
                 </div>
 
@@ -1098,7 +1098,7 @@ export default function CalendarContainer() {
                             ))}
                           </div>
                           {/* Free Time */}
-                          <div className="w-14 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
+                          <div className="w-20 px-1 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
                             {freeTime}
                           </div>
                         </div>

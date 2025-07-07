@@ -837,8 +837,8 @@ export default function PumpCalendarContainer() {
                     </div>
                   ))}
                   {/* Free Time Column */}
-                  <div className="w-14 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center">
-                    Unused
+                  <div className="w-20 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center">
+                    Unused Hrs
                   </div>
                 </div>
                 {/* Gantt Rows */}
@@ -994,7 +994,7 @@ export default function PumpCalendarContainer() {
                                 className="w-10 h-6 border-r border-gray-300 dark:border-white/[0.05] relative"
                               />
                             ))}
-                            <div className="w-14 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
+                            <div className="w-20 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
                               {freeTime}
                             </div>
                           </div>

@@ -41,7 +41,7 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Number
+                  TM No.
                 </TableCell>
                 <TableCell
                   isHeader

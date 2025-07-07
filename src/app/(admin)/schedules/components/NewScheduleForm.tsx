@@ -618,10 +618,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
       <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
         {step === 1 ? (
-          <div className="space-y-6">
-            <div>
-              {/* <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">Client:</label> */}
-              <div className="grid grid-cols-[1fr_2fr_1fr] gap-6">
+          <div className="space-y-8">
+            {/* Client Details Section */}
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-gray-50 dark:bg-gray-900/30">
+              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Client Details</h3>
+              <div className="grid grid-cols-3 gap-6">
                 {/* Client Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -700,12 +701,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               </div>
             </div>
 
-            {/* Pump Details Row */}
-            <div className="space-y-6">
-              {/* <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">Pump:</label> */}
-              <div className="grid grid-cols-[1fr_2fr] gap-6">
+            {/* Pump Details Section */}
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-gray-50 dark:bg-gray-900/30">
+              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Pump Details</h3>
+              <div className="grid grid-cols-4 gap-6 mb-6">
                 {/* Pump Type Selection */}
-                <div>
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Pump Type</label>
                   <div className="flex flex-wrap items-center gap-8">
                     <Radio
@@ -734,9 +735,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     />
                   </div>
                 </div>
-                {/* Pump Selection */}
-                {/* Forth row: Pumping Quantity, Grade of Concrete */}
-                <div>
+                {/* Pumping Quantity */}
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Pumping Quantity (m³)
                   </label>
@@ -748,59 +748,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     placeholder="Enter quantity"
                   />
                 </div>
-                {/* <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Pump</label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
-                        selectedPump ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
-                      }`}
-                      onClick={() => setIsPumpDropdownOpen((open) => !open)}
-                      aria-haspopup="listbox"
-                      aria-expanded={isPumpDropdownOpen}
-                    >
-                      {filteredPumps.find((p: Pump) => p._id === selectedPump)?.identifier
-                        ? `${filteredPumps.find((p: Pump) => p._id === selectedPump)?.identifier} (${
-                            filteredPumps.find((p: Pump) => p._id === selectedPump)?.capacity
-                          }m³)`
-                        : "Select a pump"}
-                    </button>
-                    <Dropdown
-                      isOpen={isPumpDropdownOpen}
-                      onClose={() => setIsPumpDropdownOpen(false)}
-                      className="w-full mt-1"
-                    >
-                      <DropdownItem
-                        className="text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        onClick={() => {
-                          setSelectedPump("");
-                          setHasChanged(true);
-                          setIsPumpDropdownOpen(false);
-                        }}
-                      >
-                        Select a pump
-                      </DropdownItem>
-                      {filteredPumps.map((option: Pump) => (
-                        <DropdownItem
-                          key={option._id}
-                          className="text-gray-800 dark:text-white/90 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          onClick={() => {
-                            setSelectedPump(option._id);
-                            setHasChanged(true);
-                            setIsPumpDropdownOpen(false);
-                          }}
-                        >
-                          {option.identifier} ({option.capacity}m³)
-                        </DropdownItem>
-                      ))}
-                    </Dropdown>
-                  </div>
-                </div> */}
-              </div>
-              <div className="grid grid-cols-2 gap-6">
-                {/* Pump Onward Time */}
-                <div>
+                {/* Schedule Date of Pumping */}
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Schedule Date of Pumping
                   </label>
@@ -816,8 +765,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     placeholder="Select a date"
                   />
                 </div>
-                {/* Pump Fixing Time */}
-                <div>
+                {/* Pump Onward Time */}
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Pump Onward Time (min)
                   </label>
@@ -830,12 +779,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   />
                 </div>
               </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-6">
-                {/* First row: Schedule Date, Pump Start Time */}
-                <div>
+              <div className="grid grid-cols-4 gap-6">
+                {/* Pipeline Fixing Time */}
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Pipeline Fixing Time (min)
                   </label>
@@ -844,10 +790,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     name="pumpFixingTime"
                     value={parseFloat(formData.pumpFixingTime)}
                     onChange={handleInputChange}
-                    placeholder="Enter pump onward time"
+                    placeholder="Enter pump fixing time"
                   />
                 </div>
-                <div>
+                {/* Pump Start Time */}
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Pump Start Time
                   </label>
@@ -858,8 +805,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </span>
                   </div>
                 </div>
-                {/* Second row: Pumping Speed, Unloading Time (calculated) */}
-                <div>
+                {/* Pumping Speed */}
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Pumping Speed (m³/hr)
                   </label>
@@ -871,8 +818,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     placeholder="Enter speed"
                   />
                 </div>
-                {/* Unloading Time (calculated) */}
-                <div className="">
+                {/* Unloading Time */}
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Unloading Time (min)
                   </label>
@@ -887,12 +834,18 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   />
                   {avgTMCap !== null && (
                     <p className="text-xs text-gray-500 mt-1">
-                      Auto-calculated based on avg. TM capacity: {avgTMCap?.toFixed(0)} m³
+                      Auto-calculated based on avg. TM cpty: {avgTMCap?.toFixed(0)} m³
                     </p>
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Transit Mixer Details Section */}
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-gray-50 dark:bg-gray-900/30">
+              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Transit Mixer Details</h3>
               <div className="grid grid-cols-3 gap-6">
+                {/* Production and Buffer Time */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Production and Buffer Time (min)
@@ -905,7 +858,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     placeholder="Enter production time"
                   />
                 </div>
-                {/* Third row: Onward Time, Return Time, Production/Buffer Time */}
+                {/* Transit Mixer Onward Time */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Transit Mixer Onward Time (min)
@@ -918,6 +871,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     placeholder="Enter onward time"
                   />
                 </div>
+                {/* Transit Mixer Return Time */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Transit Mixer Return Time (min)
@@ -930,8 +884,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     placeholder="Enter return time"
                   />
                 </div>
-              </div>
-              <div className="grid grid-cols-4 gap-6">
+                {/* Grade of Concrete */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Grade of Concrete
@@ -944,6 +897,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     placeholder="Enter concrete grade"
                   />
                 </div>
+                {/* Type of Pumping Job */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Type of Pumping Job
@@ -956,6 +910,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     placeholder="Enter type of pumping job"
                   />
                 </div>
+                {/* Floor Height (Pumping) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Floor Height (Pumping)

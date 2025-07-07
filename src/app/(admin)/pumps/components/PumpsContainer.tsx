@@ -69,6 +69,8 @@ export default function PumpsContainer() {
     plant_id: "",
     make: "",
   });
+  const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<string>("");
 
   // Fetch pumps query
   const {
@@ -86,6 +88,12 @@ export default function PumpsContainer() {
     },
     enabled: status === "authenticated",
   });
+
+  // Status options (move after pumpsData is declared)
+  const statusOptions = useMemo(() => {
+    if (!pumpsData) return [];
+    return Array.from(new Set(pumpsData.map((pump) => pump.status))).filter(Boolean);
+  }, [pumpsData]);
 
   // Fetch plants for dropdowns
   const { data: plantsData } = useQuery({
@@ -257,16 +265,16 @@ export default function PumpsContainer() {
   // Filter pumps based on search, plant, and type
   const filteredData = useMemo(() => {
     if (!pumpsData) return [];
-
     return pumpsData.filter((pump) => {
       const matchesSearch =
         pump.identifier.toLowerCase().includes(searchQuery.toLowerCase()) ||
         pump.type.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesPlant = !selectedPlant || pump.plant_id === selectedPlant;
       const matchesPumpType = !selectedPumpType || pump.type === selectedPumpType.toLowerCase();
-      return matchesSearch && matchesPlant && matchesPumpType;
+      const matchesStatus = !selectedStatus || pump.status === selectedStatus;
+      return matchesSearch && matchesPlant && matchesPumpType && matchesStatus;
     });
-  }, [pumpsData, searchQuery, selectedPlant, selectedPumpType]);
+  }, [pumpsData, searchQuery, selectedPlant, selectedPumpType, selectedStatus]);
 
   return (
     <div>
@@ -371,6 +379,43 @@ export default function PumpsContainer() {
                 </Dropdown>
               </div>
 
+              {/* Status Filter */}
+              <div className="relative text-sm">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsStatusFilterOpen(!isStatusFilterOpen)}
+                  className="dropdown-toggle"
+                  size="sm"
+                >
+                  Status: {selectedStatus || "All"}
+                </Button>
+                <Dropdown isOpen={isStatusFilterOpen} onClose={() => setIsStatusFilterOpen(false)} className="w-48">
+                  <div className="p-2 text-gray-800 dark:text-white/90">
+                    <button
+                      className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                      onClick={() => {
+                        setSelectedStatus("");
+                        setIsStatusFilterOpen(false);
+                      }}
+                    >
+                      All
+                    </button>
+                    {statusOptions.map((status) => (
+                      <button
+                        key={status}
+                        className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                        onClick={() => {
+                          setSelectedStatus(status);
+                          setIsStatusFilterOpen(false);
+                        }}
+                      >
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+                </Dropdown>
+              </div>
+
               {/* Date Filter */}
               <div className="relative text-sm">
                 <Button
@@ -446,7 +491,7 @@ export default function PumpsContainer() {
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Pump</h4>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Number</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pump No.</label>
             <Input
               type="text"
               name="identifier"
@@ -524,7 +569,7 @@ export default function PumpsContainer() {
         {selectedPump && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Number</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pump No.</label>
               <Input type="text" name="identifier" value={editedPump.identifier} onChange={handleEditInputChange} />
             </div>
             <div>
