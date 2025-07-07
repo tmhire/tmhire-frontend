@@ -48,14 +48,14 @@ const navItems: NavItem[] = [
   },
   {
     icon: <Calendar />,
-    name: "TM Calendar",
+    name: "Calendar",
     path: "/tm-calendar",
   },
-  {
-    icon: <Calendar />,
-    name: "Pump Calendar",
-    path: "/pump-calendar",
-  },
+  // {
+  //   icon: <Calendar />,
+  //   name: "Pump Calendar",
+  //   path: "/pump-calendar",
+  // },
   // {
   //   name: "Tables",
   //   icon: <SquareChartGantt />,

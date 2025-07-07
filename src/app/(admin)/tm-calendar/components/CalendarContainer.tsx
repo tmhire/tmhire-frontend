@@ -25,24 +25,30 @@ type Task = {
   actualEnd: string;
 };
 
-type Mixer = {
+type Item = {
   id: string;
   name: string;
   plant: string;
+  item: "mixer" | "pump";
+  type: "line" | "boom" | null;
   client: string | null;
   tasks: Task[];
+};
+
+type ApiItem = {
+  id: string;
+  name: string;
+  plant: string;
+  type: "line" | "boom" | null;
+  tasks: ApiTask[];
 };
 
 type ApiResponse = {
   success: boolean;
   message: string;
   data: {
-    mixers: {
-      id: string;
-      name: string;
-      plant: string;
-      tasks: ApiTask[];
-    }[];
+    mixers: ApiItem[];
+    pumps: ApiItem[];
   };
 };
 
@@ -66,6 +72,7 @@ const calculateDuration = (start: string, end: string): number => {
 
 // Task type color map
 const TASK_TYPE_COLORS: Record<string, string> = {
+  fixing: "bg-pink-500",
   onward: "bg-blue-500",
   work: "bg-green-500",
   cushion: "bg-yellow-500",
@@ -91,7 +98,7 @@ const CLIENT_TAILWIND_COLORS = [
 const getTaskType = (id: string) => id.split("-")[0];
 
 // Helper function to transform API data to component format
-const transformApiData = (apiData: ApiResponse): Mixer[] => {
+const transformApiData = (apiData: ApiResponse): Item[] => {
   // Create a map of unique clients
   const uniqueClients = new Set<string>();
   apiData.data.mixers.forEach((mixer) => {
@@ -107,8 +114,8 @@ const transformApiData = (apiData: ApiResponse): Mixer[] => {
     clientColors.set(client, color);
   });
 
-  return apiData.data.mixers.map((mixer) => {
-    const transformedTasks: Task[] = mixer.tasks.map((task) => {
+  const getMixerOrPump = (item: ApiItem, itemType: "mixer" | "pump"): Item => {
+    const transformedTasks: Task[] = item.tasks.map((task) => {
       const type = getTaskType(task.id);
       return {
         id: task.id,
@@ -124,13 +131,33 @@ const transformApiData = (apiData: ApiResponse): Mixer[] => {
     const currentClient = transformedTasks.length > 0 ? transformedTasks[0].client : null;
 
     return {
-      id: mixer.id,
-      name: mixer.name,
-      plant: mixer.plant,
+      id: item.id,
+      name: item.name,
+      plant: item.plant,
       client: currentClient,
+      item: itemType,
+      type: item.type || null,
       tasks: transformedTasks,
     };
-  });
+  };
+
+  const mixers = apiData.data.mixers
+    .map((mixer) => {
+      return getMixerOrPump(mixer, "mixer");
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const pumps = apiData.data.pumps
+    .map((pump) => {
+      return getMixerOrPump(pump, "pump");
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return [...mixers, ...pumps];
+};
+
+// Type color mapping
+const typeRowColors: Record<string, string> = {
+  line: "bg-blue-100 dark:bg-blue-300/30", // light blue
+  boom: "bg-green-100 dark:bg-green-300/30", // light green
 };
 
 export default function CalendarContainer() {
@@ -144,16 +171,18 @@ export default function CalendarContainer() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<"all" | "mixer" | "pump">("all");
   const [selectedPlant, setSelectedPlant] = useState("all");
   const [selectedMixer, setSelectedMixer] = useState("all");
   const [selectedClient, setSelectedClient] = useState("all");
   const [timeFormat, setTimeFormat] = useState("24h");
   const [customStartHour, setCustomStartHour] = useState(6); // default 6:00
-  const [ganttData, setGanttData] = useState<Mixer[]>([]);
+  const [ganttData, setGanttData] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Dropdown states
+  const [isItemFilterOpen, setIsItemFilterOpen] = useState(false);
   const [isPlantFilterOpen, setIsPlantFilterOpen] = useState(false);
   const [isMixerFilterOpen, setIsMixerFilterOpen] = useState(false);
   const [isClientFilterOpen, setIsClientFilterOpen] = useState(false);
@@ -229,8 +258,9 @@ export default function CalendarContainer() {
     const matchesPlant = selectedPlant === "all" || item.plant === selectedPlant;
     const matchesMixer = selectedMixer === "all" || item.name === selectedMixer;
     const matchesClient = selectedClient === "all" || item.client === selectedClient;
+    const matchesItem = selectedItem === "all" || item.item === selectedItem;
 
-    return matchesSearch && matchesPlant && matchesMixer && matchesClient;
+    return matchesSearch && matchesPlant && matchesMixer && matchesClient && matchesItem;
   });
 
   const formatTime = (hour: number) => {
@@ -373,7 +403,51 @@ export default function CalendarContainer() {
           {/* Expandable Filters */}
           {showFilters && (
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.05]">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                {/* Item Filter */}
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TM or Pump</label>
+                  <button
+                    onClick={() => setIsItemFilterOpen(!isItemFilterOpen)}
+                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  >
+                    {selectedItem === "all" ? "All Vehicles" : selectedItem === "mixer" ? "TMs" : "Pumps"}
+                  </button>
+                  {isItemFilterOpen && (
+                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                      <div className="p-2 text-gray-800 dark:text-white/90">
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setSelectedItem("all");
+                            setIsItemFilterOpen(false);
+                          }}
+                        >
+                          All Vehicles
+                        </button>
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setSelectedItem("mixer");
+                            setIsItemFilterOpen(false);
+                          }}
+                        >
+                          TMs
+                        </button>
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setSelectedItem("pump");
+                            setIsItemFilterOpen(false);
+                          }}
+                        >
+                          Pumps
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Plant Filter */}
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plant</label>
@@ -637,7 +711,53 @@ export default function CalendarContainer() {
             {/* Expandable Filters */}
             {showFilters && (
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.05]">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  {/* Item Filter */}
+                  <div className="relative">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      TM or Pump
+                    </label>
+                    <button
+                      onClick={() => setIsItemFilterOpen(!isItemFilterOpen)}
+                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    >
+                      {selectedItem === "all" ? "All Vehicles" : selectedItem === "mixer" ? "TMs" : "Pumps"}
+                    </button>
+                    {isItemFilterOpen && (
+                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                        <div className="p-2 text-gray-800 dark:text-white/90">
+                          <button
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setSelectedItem("all");
+                              setIsItemFilterOpen(false);
+                            }}
+                          >
+                            All Vehicles
+                          </button>
+                          <button
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setSelectedItem("mixer");
+                              setIsItemFilterOpen(false);
+                            }}
+                          >
+                            TMs
+                          </button>
+                          <button
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setSelectedItem("pump");
+                              setIsItemFilterOpen(false);
+                            }}
+                          >
+                            Pumps
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Plant Filter */}
                   <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plant</label>
@@ -869,8 +989,9 @@ export default function CalendarContainer() {
                       No mixers found for the selected criteria
                     </div>
                   ) : (
-                    filteredData.map((mixer, idx) => {
+                    filteredData.map((item, idx) => {
                       // --- NEW LOGIC FOR DYNAMIC TIMESLOTS ---
+
                       const slots = getTimeSlots();
                       const windowStart = slots[0];
                       const windowEnd = slots[slots.length - 1];
@@ -921,13 +1042,13 @@ export default function CalendarContainer() {
 
                       // --- Group tasks by client for background pills ---
                       const clientTaskGroups: Record<string, Task[]> = {};
-                      mixer.tasks.forEach((task) => {
+                      item.tasks.forEach((task) => {
                         if (!clientTaskGroups[task.client]) clientTaskGroups[task.client] = [];
                         clientTaskGroups[task.client].push(task);
                       });
 
                       // --- Calculate Free Time ---
-                      const busyIntervals: { start: number; end: number }[] = mixer.tasks
+                      const busyIntervals: { start: number; end: number }[] = item.tasks
                         .map((task) => {
                           let s = timeStringToHour(task.actualStart);
                           let e = timeStringToHour(task.actualEnd);
@@ -962,15 +1083,17 @@ export default function CalendarContainer() {
                         }
                       }
                       let freeTime = 24;
-                      mixer.tasks.forEach((task) => {
+                      item.tasks.forEach((task) => {
                         freeTime -= calculateDuration(task.actualStart, task.actualEnd) / 60;
                       });
                       freeTime = Math.round(freeTime);
 
                       return (
                         <div
-                          key={mixer.id}
-                          className="flex hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
+                          key={item.id}
+                          className={`flex hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors  ${
+                            (item.item === "pump" && item.type && typeRowColors[item.type]) || ""
+                          }`}
                         >
                           {/* Serial Number */}
                           <div className="w-10 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
@@ -978,7 +1101,7 @@ export default function CalendarContainer() {
                           </div>
                           {/* Mixer Name */}
                           <div className="w-24 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center">
-                            {mixer.name.length > 7 ? ".." + mixer.name.slice(-7) : mixer.name}
+                            {item.name.length > 7 ? ".." + item.name.slice(-7) : item.name}
                           </div>
                           {/* Time Slots */}
                           <div className="flex-1 flex relative">
@@ -1007,7 +1130,7 @@ export default function CalendarContainer() {
                               );
                             })}
                             {/* Render bars for each task by type that overlaps the window */}
-                            {mixer.tasks.map((task, i) => {
+                            {item.tasks.map((task, i) => {
                               const start = timeStringToHour(task.actualStart);
                               const end = timeStringToHour(task.actualEnd);
                               if (!isInWindow(start, end)) return null;
@@ -1020,7 +1143,9 @@ export default function CalendarContainer() {
                                   content={`Type: ${task.type}\nClient: ${task.client}\n${task.actualStart} to ${task.actualEnd}\nDuration: ${duration}m`}
                                 >
                                   <div
-                                    className={`absolute top-1 h-4 rounded ${TASK_TYPE_COLORS[task.type] || "bg-gray-500"} opacity-90 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
+                                    className={`absolute top-1 h-4 rounded ${
+                                      TASK_TYPE_COLORS[task.type] || "bg-gray-500"
+                                    } opacity-90 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
                                     style={{
                                       left: `${offset * 40 + 1}px`,
                                       width: `${width * 40 - 1}px`,

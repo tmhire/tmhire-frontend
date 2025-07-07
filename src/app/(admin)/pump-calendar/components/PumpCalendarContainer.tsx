@@ -31,7 +31,7 @@ type Pump = {
   id: string;
   name: string;
   plant: string;
-  type: string;
+  type: "line" | "boom";
   client: string | null;
   tasks: Task[];
 };
@@ -44,7 +44,7 @@ type ApiResponse = {
       id: string;
       name: string;
       plant: string;
-      type: string;
+      type: "line" | "boom";
       tasks: ApiTask[];
     }[];
   };

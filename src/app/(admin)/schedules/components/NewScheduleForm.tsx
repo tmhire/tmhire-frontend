@@ -409,7 +409,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     try {
       const response = await fetchWithAuth(`/schedules/${calculatedTMs.schedule_id}/generate-schedule`, {
         method: "POST",
-        body: JSON.stringify(tmSequence),
+        body: JSON.stringify({ selected_tms: tmSequence, pump: selectedPump }),
       });
 
       const data = await response.json();
