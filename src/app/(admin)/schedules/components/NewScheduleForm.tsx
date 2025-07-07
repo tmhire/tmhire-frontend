@@ -137,6 +137,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     unloadingTime: "",
     pumpingJob: "",
     floorHeight: "",
+    pumpSiteReachTime: "",
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [formDataRetrieved, setFormDataRetrieved] = useState(true);
@@ -230,6 +231,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             : "",
           pumpingJob: data.data.pumping_job ? data.data.pumping_job.toString() : "",
           floorHeight: data.data.floor_height ? data.data.floor_height.toString() : "",
+          pumpSiteReachTime: data.data.pump_site_reach_time ? data.data.pump_site_reach_time.toString() : "",
         });
         const tm_ids = new Set();
         const tmSequence: string[] = [];
@@ -289,6 +291,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           site_address: formData.siteAddress, // You might want to add this as a form field
           pumping_job: parseFloat(formData.pumpingJob),
           floor_height: parseFloat(formData.floorHeight),
+          pump_site_reach_time: formData.pumpSiteReachTime,
         }),
       });
 
@@ -371,6 +374,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             site_address: formData.siteAddress, // You might want to add this as a form field
             pumping_job: parseFloat(formData.pumpingJob),
             floor_height: parseFloat(formData.floorHeight),
+            pump_site_reach_time: formData.pumpSiteReachTime,
           }),
         });
 
@@ -478,7 +482,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       !!formData.pumpFixingTime &&
       !!formData.unloadingTime &&
       !!formData.pumpingJob &&
-      !!formData.floorHeight
+      !!formData.floorHeight &&
+      !!formData.pumpSiteReachTime
     );
   };
 
@@ -779,7 +784,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-4 gap-6">
+              <div className="grid grid-cols-3 gap-6 mb-6">
                 {/* Pipeline Fixing Time */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -805,6 +810,25 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </span>
                   </div>
                 </div>
+                {/* Pump Site Reach Time */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pump Site Reach Time
+                  </label>
+                  <div className="relative">
+                    <Input
+                      type="time"
+                      name="pumpSiteReachTime"
+                      value={formData.pumpSiteReachTime}
+                      onChange={handleInputChange}
+                    />
+                    <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
+                      <Clock className="size-5" />
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-[1fr_auto_1fr] gap-6">
                 {/* Pumping Speed */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -818,6 +842,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     placeholder="Enter speed"
                   />
                 </div>
+                <div className="col-span-1 flex items-center justify-center text-sm text-gray-600">or</div>
                 {/* Unloading Time */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
