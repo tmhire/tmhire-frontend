@@ -142,15 +142,15 @@ const transformApiData = (apiData: ApiResponse): Item[] => {
   };
 
   const mixers = apiData?.data?.mixers
-    .map((mixer) => {
+    ?.map((mixer) => {
       return getMixerOrPump(mixer, "mixer");
     })
-    .sort((a, b) => a.name.localeCompare(b.name));
+    ?.sort((a, b) => a.name.localeCompare(b.name));
   const pumps = apiData?.data?.pumps
-    .map((pump) => {
+    ?.map((pump) => {
       return getMixerOrPump(pump, "pump");
     })
-    .sort((a, b) => a.name.localeCompare(b.name));
+    ?.sort((a, b) => a.name.localeCompare(b.name));
   return [...mixers, ...pumps];
 };
 
