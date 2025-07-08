@@ -115,7 +115,7 @@ const transformApiData = (apiData: ApiResponse): Item[] => {
   });
 
   const getMixerOrPump = (item: ApiItem, itemType: "mixer" | "pump"): Item => {
-    const transformedTasks: Task[] = item.tasks.map((task) => {
+    const transformedTasks: Task[] = item?.tasks?.map((task) => {
       const type = getTaskType(task.id);
       return {
         id: task.id,
@@ -141,12 +141,12 @@ const transformApiData = (apiData: ApiResponse): Item[] => {
     };
   };
 
-  const mixers = apiData.data.mixers
+  const mixers = apiData?.data?.mixers
     .map((mixer) => {
       return getMixerOrPump(mixer, "mixer");
     })
     .sort((a, b) => a.name.localeCompare(b.name));
-  const pumps = apiData.data.pumps
+  const pumps = apiData?.data?.pumps
     .map((pump) => {
       return getMixerOrPump(pump, "pump");
     })
