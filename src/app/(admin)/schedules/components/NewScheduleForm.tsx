@@ -147,6 +147,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   // Add state for open/closed plant groups
   const [openPlantGroups, setOpenPlantGroups] = useState<Record<string, boolean>>({});
   const [overruleTMCount, setOverruleTMCount] = useState(false);
+  const [customTMCount, setCustomTMCount] = useState(1);
 
   const { data: clientsData } = useQuery<Client[]>({
     queryKey: ["clients"],
@@ -1157,7 +1158,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               {calculatedTMs && (
                 <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Calculation Results</h4>
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-5 gap-4">
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Cycle Time (hours)</p>
                       <p className="text-lg font-medium text-gray-900 dark:text-white">
@@ -1169,8 +1170,41 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.total_trips}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Required TMs</p>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.tm_count}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Opt Required TMs</p>
+                      <p className="text-lg font-medium text-gray-900 dark:text-white">
+                        {overruleTMCount ? customTMCount : calculatedTMs.tm_count}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-start rounded-lg bg-gray-100 dark:bg-gray-800 px-4 py-2 mr-2">
+                      <div className="flex items-center mb-1">
+                        <input
+                          type="checkbox"
+                          id="overrule-tm-count"
+                          checked={overruleTMCount}
+                          onChange={() => setOverruleTMCount((prev) => !prev)}
+                          className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500 mr-2"
+                        />
+                        <label
+                          htmlFor="overrule-tm-count"
+                          className="text-sm text-gray-700 dark:text-gray-300 select-none"
+                        >
+                          Overrule recommended TM count
+                        </label>
+                      </div>
+                      {overruleTMCount && (
+                        <input
+                          type="number"
+                          min={1}
+                          value={customTMCount}
+                          onChange={e => {
+                            const val = parseInt(e.target.value, 10);
+                            setCustomTMCount(isNaN(val) ? 1 : val);
+                            setHasChanged(true);
+                          }}
+                          className="mt-1 w-20 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                          placeholder="TM count"
+                        />
+                      )}
                     </div>
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Avg Trips per TM</p>
@@ -1388,31 +1422,21 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 </Button>
                 <div className="flex items-center gap-4 justify-end flex-1">
                   {/* Warning message */}
-                  {tmSequence.length !== calculatedTMs?.tm_count && (
+                  {(tmSequence.length !== (overruleTMCount ? customTMCount : calculatedTMs?.tm_count)) && (
                     <div className="p-2 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg text-xs">
-                      Select <span className="font-semibold">{calculatedTMs?.tm_count}</span> TMs to get optimum
-                      schedule.
+                      Select <span className="font-semibold">{overruleTMCount ? customTMCount : calculatedTMs?.tm_count}</span> TMs to get optimum schedule.
                     </div>
                   )}
                   {/* Overrule Checkbox in a rounded box */}
-                  <div className="flex items-center rounded-lg bg-gray-100 dark:bg-gray-800 px-4 py-2 mr-2">
-                    <input
-                      type="checkbox"
-                      id="overrule-tm-count"
-                      checked={overruleTMCount}
-                      onChange={() => setOverruleTMCount((prev) => !prev)}
-                      className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500 mr-2"
-                    />
-                    <label htmlFor="overrule-tm-count" className="text-sm text-gray-700 dark:text-gray-300 select-none">
-                      Overrule recommended TM count
-                    </label>
-                  </div>
+
                   <Button
                     onClick={handleNext}
                     className="flex items-center gap-2 min-w-[140px]"
                     disabled={
                       isGenerating ||
-                      (!overruleTMCount ? tmSequence.length !== calculatedTMs?.tm_count : tmSequence.length === 0)
+                      (!overruleTMCount
+                        ? tmSequence.length !== calculatedTMs?.tm_count
+                        : tmSequence.length !== customTMCount || customTMCount < 1)
                     }
                   >
                     {isGenerating ? "Generating..." : "Next Step"}

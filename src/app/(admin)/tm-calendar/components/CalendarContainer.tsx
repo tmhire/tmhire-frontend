@@ -72,25 +72,25 @@ const calculateDuration = (start: string, end: string): number => {
 
 // Task type color map
 const TASK_TYPE_COLORS: Record<string, string> = {
-  fixing: "bg-pink-500",
+  fixing: "bg-blue-400",
   onward: "bg-blue-500",
-  work: "bg-green-500",
-  cushion: "bg-yellow-500",
-  return: "bg-purple-500",
+  work: "bg-blue-600",
+  cushion: "bg-blue-300",
+  return: "bg-blue-500",
 };
 
 // Client color palette (no overlap with task type colors)
 const CLIENT_TAILWIND_COLORS = [
   "bg-red-500",
+  "bg-lime-400",
+  "bg-fuchsia-400",
   "bg-orange-500",
-  "bg-pink-500",
-  "bg-cyan-500",
-  "bg-emerald-500",
-  "bg-indigo-500",
-  "bg-fuchsia-500",
-  "bg-rose-500",
-  "bg-amber-500",
-  "bg-lime-500",
+  "bg-pink-400",
+  "bg-indigo-400",
+  "bg-cyan-400",
+  "bg-emerald-400",
+  "bg-rose-400",
+  "bg-amber-400",
   // Add more if needed, but exclude blue, green, yellow, purple
 ];
 
@@ -1145,7 +1145,7 @@ export default function CalendarContainer() {
                                   <div
                                     className={`absolute top-1 h-4 rounded ${
                                       TASK_TYPE_COLORS[task.type] || "bg-gray-500"
-                                    } opacity-90 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
+                                    } opacity-100 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
                                     style={{
                                       left: `${offset * 40 + 1}px`,
                                       width: `${width * 40 - 1}px`,
@@ -1153,9 +1153,9 @@ export default function CalendarContainer() {
                                     }}
                                   >
                                     <span
-                                      className={`text-white ${task.type === "work" ? "text-[3px]" : "text-[6px]"}`}
+                                      className={`text-white ${task.type === "work" ? "text-[6px]" : "text-[6px]"}`}
                                     >
-                                      {task.type === "work" ? null : duration}
+                                      {task.type === "work" && item.item === "mixer" ? null : duration}
                                     </span>
                                   </div>
                                 </Tooltip>
