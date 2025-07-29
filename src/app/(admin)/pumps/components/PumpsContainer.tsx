@@ -69,6 +69,23 @@ export default function PumpsContainer() {
     plant_id: "",
     make: "",
   });
+    const [error, setError] = useState("");
+  
+    const handleIdentifierInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const raw = e.target.value.toUpperCase();
+      const sanitized = raw.replace(/[^A-Z0-9\s]/g, "");
+      setNewPump(prev => ({
+        ...prev,
+        identifier: sanitized,
+      }));
+  
+      if (sanitized && !/^[A-Z]{0,2}\s?\d{0,2}\s?[A-Z]{0,2}\s?\d{0,4}$/.test(sanitized)) {
+        setError("Invalid. Correct format: XX 00 AA 0000");
+      } else {
+        setError("");
+      }
+    };
+  
   const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>("");
 
@@ -301,7 +318,7 @@ export default function PumpsContainer() {
                   placeholder="Search by identifier or type"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]"
+                  className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]"
                 />
               </div>
 
@@ -492,13 +509,16 @@ export default function PumpsContainer() {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pump No.</label>
-            <Input
-              type="text"
-              name="identifier"
-              placeholder="Enter number"
-              value={newPump.identifier}
-              onChange={handleInputChange}
-            />
+              <div>
+              <Input
+                type="text"
+                name="identifier"
+                placeholder="e.g. TN 37 DS 5958"
+                value={newPump.identifier}
+                onChange={handleIdentifierInputChange}
+              />
+              {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity</label>
@@ -516,7 +536,7 @@ export default function PumpsContainer() {
               name="plant_id"
               value={newPump.plant_id}
               onChange={(e) => setNewPump({ ...newPump, plant_id: e.target.value })}
-              className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+              className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
             >
               <option value="">Select Plant</option>
               {plantsData?.map((plant) => (
@@ -532,7 +552,7 @@ export default function PumpsContainer() {
               name="type"
               value={newPump.type}
               onChange={(e) => setNewPump({ ...newPump, type: e.target.value as "line" | "boom" })}
-              className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+              className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
             >
               {pumpTypes.map((type) => (
                 <option key={type} value={type}>
@@ -582,7 +602,7 @@ export default function PumpsContainer() {
                 name="plant_id"
                 value={editedPump.plant_id}
                 onChange={handleEditInputChange}
-                className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
               >
                 <option value="">Select Plant</option>
                 {plantsData?.map((plant) => (
@@ -598,7 +618,7 @@ export default function PumpsContainer() {
                 name="type"
                 value={editedPump.type}
                 onChange={handleEditInputChange}
-                className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
               >
                 {pumpTypes.map((type) => (
                   <option key={type} value={type}>

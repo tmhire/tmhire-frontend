@@ -57,6 +57,24 @@ export default function TransitMixersContainer() {
     driver_contact: "",
     status: "active",
   });
+  const [error, setError] = useState("");
+
+  const handleIdentifierInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.toUpperCase();
+    const sanitized = raw.replace(/[^A-Z0-9\s]/g, "");
+    setNewMixer(prev => ({
+      ...prev,
+      identifier: sanitized,
+    }));
+
+    if (sanitized && !/^[A-Z]{0,2}\s?\d{0,2}\s?[A-Z]{0,2}\s?\d{0,4}$/.test(sanitized)) {
+      setError("Invalid. Correct format: XX 00 AA 0000");
+    } else {
+      setError("");
+    }
+  };
+
+
   const [plants, setPlants] = useState<{ _id: string; name: string }[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isPlantsLoading, setIsPlantsLoading] = useState(false);
@@ -445,13 +463,16 @@ export default function TransitMixersContainer() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">TM No.</label>
-            <Input
-              type="text"
-              name="identifier"
-              placeholder="Enter number"
-              value={newMixer.identifier}
-              onChange={handleInputChange}
-            />
+            <div>
+              <Input
+                type="text"
+                name="identifier"
+                placeholder="e.g. TN 37 DS 5958"
+                value={newMixer.identifier}
+                onChange={handleIdentifierInputChange}
+              />
+              {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity (m³)</label>

@@ -506,7 +506,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       if (!isNaN(unloading_time) && unloading_time > 0) {
         return setFormData((prev) => ({
           ...prev,
-          speed: ((avgTMCap * 60) / unloading_time).toFixed(0),
+          speed: ((avgTMCap) / (unloading_time / 60)).toFixed(0),
         }));
       }
     }

@@ -80,7 +80,13 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
               {data.map((pump) => (
                 <TableRow key={pump._id}>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {pump.identifier}
+                    <span
+                      className={`block font-medium w-fit px-3 py-2 rounded-lg border-2 border-gray-800 text-gray-800 text-theme-sm dark:text-white/90 ${pump.type === "line" ? "bg-blue-300" : "bg-green-300"
+                        }`}
+                    >
+                      {pump.identifier}
+                    </span>
+
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     <span

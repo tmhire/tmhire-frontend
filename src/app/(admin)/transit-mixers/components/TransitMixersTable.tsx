@@ -87,7 +87,7 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
               {data.map((mixer) => (
                 <TableRow key={mixer._id}>
                   <TableCell className="px-5 py-4 text-start">
-                    <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                    <span className="block font-medium bg-yellow-400 w-fit px-3 py-2 rounded-lg border-2 border-gray-800 text-gray-800 text-theme-sm dark:text-white/90">
                       {mixer.identifier}
                     </span>
                   </TableCell>
