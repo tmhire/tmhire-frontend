@@ -29,6 +29,8 @@ interface Pump {
   plant_id: string;
   status: string;
   make: string;
+  driver_name: string | null;
+  driver_contact: string | null;
   created_at: string;
 }
 
@@ -38,6 +40,8 @@ interface CreatePumpData {
   capacity: number;
   plant_id: string;
   make: string;
+  driver_name?: string;
+  driver_contact?: string;
 }
 
 export default function PumpsContainer() {
@@ -61,6 +65,8 @@ export default function PumpsContainer() {
     capacity: 0,
     plant_id: "",
     make: "",
+    driver_name: "",
+    driver_contact: "",
   });
   const [newPump, setNewPump] = useState<CreatePumpData>({
     identifier: "",
@@ -68,6 +74,8 @@ export default function PumpsContainer() {
     capacity: 0,
     plant_id: "",
     make: "",
+    driver_name: "",
+    driver_contact: "",
   });
     const [error, setError] = useState("");
   
@@ -152,6 +160,8 @@ export default function PumpsContainer() {
         capacity: 0,
         plant_id: "",
         make: "",
+        driver_name: "",
+        driver_contact: "",
       });
     },
   });
@@ -212,7 +222,9 @@ export default function PumpsContainer() {
       type: pump.type,
       capacity: pump.capacity,
       plant_id: pump.plant_id,
-      make: pump.make || "", // Assuming 'make' is a field in the Pump model
+      make: pump.make || "",
+      driver_name: pump.driver_name || "",
+      driver_contact: pump.driver_contact || "",
     });
     setIsEditModalOpen(true);
   };
@@ -247,25 +259,18 @@ export default function PumpsContainer() {
     const { name, value } = e.target;
 
     const newValue = name === "capacity" ? Number(value) : value;
-    const pumpUpdate =
-      name === "type" ? { ...editedPump, [name]: value as "line" | "boom" } : { ...editedPump, [name]: newValue };
-
-    setEditedPump(pumpUpdate);
+    setEditedPump((prev) => ({
+      ...prev,
+      [name]: newValue,
+    }));
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    if (name === "capacity") {
-      setNewPump((prev) => ({
-        ...prev,
-        [name]: Number(value),
-      }));
-    } else {
-      setNewPump((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
+    setNewPump((prev) => ({
+      ...prev,
+      [name]: name === "capacity" ? Number(value) : value,
+    }));
   };
 
   // Get unique plants from pumps data
@@ -503,22 +508,20 @@ export default function PumpsContainer() {
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        className="max-w-[600px] p-5 lg:p-10"
+        className="max-w-[800px] p-5 lg:p-10"
       >
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Pump</h4>
-        <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pump No.</label>
-              <div>
-              <Input
-                type="text"
-                name="identifier"
-                placeholder="e.g. TN 37 DS 5958"
-                value={newPump.identifier}
-                onChange={handleIdentifierInputChange}
-              />
-              {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-            </div>
+            <Input
+              type="text"
+              name="identifier"
+              placeholder="e.g. TN 37 DS 5958"
+              value={newPump.identifier}
+              onChange={handleIdentifierInputChange}
+            />
+            {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity</label>
@@ -535,7 +538,7 @@ export default function PumpsContainer() {
             <select
               name="plant_id"
               value={newPump.plant_id}
-              onChange={(e) => setNewPump({ ...newPump, plant_id: e.target.value })}
+              onChange={handleInputChange}
               className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
             >
               <option value="">Select Plant</option>
@@ -551,7 +554,7 @@ export default function PumpsContainer() {
             <select
               name="type"
               value={newPump.type}
-              onChange={(e) => setNewPump({ ...newPump, type: e.target.value as "line" | "boom" })}
+              onChange={handleInputChange}
               className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
             >
               {pumpTypes.map((type) => (
@@ -565,7 +568,15 @@ export default function PumpsContainer() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Make</label>
             <Input type="text" name="make" placeholder="Enter make" value={newPump.make} onChange={handleInputChange} />
           </div>
-          <div className="flex justify-end gap-3 mt-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Name</label>
+            <Input type="text" name="driver_name" placeholder="Enter driver name" value={newPump.driver_name || ""} onChange={handleInputChange} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Contact</label>
+            <Input type="text" name="driver_contact" placeholder="Enter driver contact" value={newPump.driver_contact || ""} onChange={handleInputChange} />
+          </div>
+          <div className="col-span-2 flex justify-end gap-3 mt-6">
             <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
               Cancel
             </Button>
@@ -584,10 +595,10 @@ export default function PumpsContainer() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-[600px] p-5 lg:p-10">
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-[800px] p-5 lg:p-10">
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Edit Pump</h4>
         {selectedPump && (
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pump No.</label>
               <Input type="text" name="identifier" value={editedPump.identifier} onChange={handleEditInputChange} />
@@ -631,7 +642,15 @@ export default function PumpsContainer() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Make</label>
               <Input type="text" name="make" value={editedPump.make} onChange={handleEditInputChange} />
             </div>
-            <div className="flex justify-end gap-3 mt-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Name</label>
+              <Input type="text" name="driver_name" value={editedPump.driver_name || ""} onChange={handleEditInputChange} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Contact</label>
+              <Input type="text" name="driver_contact" value={editedPump.driver_contact || ""} onChange={handleEditInputChange} />
+            </div>
+            <div className="col-span-2 flex justify-end gap-3 mt-6">
               <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
                 Cancel
               </Button>

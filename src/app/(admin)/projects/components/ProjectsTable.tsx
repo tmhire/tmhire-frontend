@@ -35,7 +35,7 @@ interface ProjectsTableProps {
 
 export default function ProjectsTable({ data, onEdit, onDelete, clients }: ProjectsTableProps) {
   const getClientName = (clientId: string) => {
-    const client = clients.find(c => c._id === clientId);
+    const client = clients.find((c) => c._id === clientId);
     return client ? client.name : "Unknown Client";
   };
 
@@ -69,13 +69,7 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients }: Proje
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Contact Name
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
-                  Contact Number
+                  Contact
                 </TableCell>
                 <TableCell
                   isHeader
@@ -112,11 +106,12 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients }: Proje
                     {project.address}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {project.contact_name}
+                    <div className="flex flex-col">
+                      <span className="font-medium"> {project.contact_name}</span>
+                      <span className="text-xs text-gray-400">{project.contact_number}</span>
+                    </div>
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {project.contact_number}
-                  </TableCell>
+
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {new Date(project.created_at).toLocaleDateString()}
                   </TableCell>
@@ -140,4 +135,4 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients }: Proje
       </div>
     </div>
   );
-} 
+}

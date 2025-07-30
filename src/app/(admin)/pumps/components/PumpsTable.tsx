@@ -11,6 +11,8 @@ interface Pump {
   plant_id: string;
   status: string;
   make: string;
+  driver_name: string | null;
+  driver_contact: string | null;
   created_at: string;
 }
 
@@ -64,6 +66,12 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
+                  Driver
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
                   Status
                 </TableCell>
                 <TableCell
@@ -81,12 +89,12 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                 <TableRow key={pump._id}>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     <span
-                      className={`block font-medium w-fit px-3 py-2 rounded-lg border-2 border-gray-800 text-gray-800 text-theme-sm dark:text-white/90 ${pump.type === "line" ? "bg-blue-300" : "bg-green-300"
-                        }`}
+                      className={`block font-medium w-fit px-3 py-2 rounded-md border border-gray-800 text-gray-800 text-theme-sm dark:text-white/90 ${
+                        pump.type === "line" ? "bg-blue-200" : "bg-green-200"
+                      }`}
                     >
                       {pump.identifier}
                     </span>
-
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     <span
@@ -107,6 +115,12 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {plantMap.get(pump.plant_id) || "N/A"}
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    <div className="flex flex-col">
+                      <span className="font-medium">{pump.driver_name || "-"}</span>
+                      <span className="text-xs text-gray-400">{pump.driver_contact || "-"}</span>
+                    </div>
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {pump.status}

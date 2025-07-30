@@ -59,13 +59,7 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Driver Name
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
-                  Driver Contact
+                  Driver
                 </TableCell>
                 <TableCell
                   isHeader
@@ -87,7 +81,7 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
               {data.map((mixer) => (
                 <TableRow key={mixer._id}>
                   <TableCell className="px-5 py-4 text-start">
-                    <span className="block font-medium bg-yellow-400 w-fit px-3 py-2 rounded-lg border-2 border-gray-800 text-gray-800 text-theme-sm dark:text-white/90">
+                    <span className="block font-medium bg-yellow-200 w-fit px-3 py-2 rounded-md border border-gray-800 text-gray-800 text-theme-sm dark:text-white/90">
                       {mixer.identifier}
                     </span>
                   </TableCell>
@@ -98,10 +92,10 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                     {getPlantName(mixer.plant_id)}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {mixer.driver_name || "-"}
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {mixer.driver_contact || "-"}
+                    <div className="flex flex-col">
+                      <span className="font-medium"> {mixer.driver_name || "-"}</span>
+                      <span className="text-xs text-gray-400">{mixer.driver_contact || "-"}</span>
+                    </div>
                   </TableCell>
                   <TableCell className="px-5 py-4 text-start">
                     <span

@@ -102,6 +102,12 @@ interface GeneratedSchedule {
   status: string;
 }
 
+interface Project {
+  _id: string;
+  name: string;
+  client_id: string;
+}
+
 const steps = [
   { id: 1, name: "Schedule Details" },
   { id: 2, name: "Pump Selection" },
@@ -148,6 +154,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [openPlantGroups, setOpenPlantGroups] = useState<Record<string, boolean>>({});
   const [overruleTMCount, setOverruleTMCount] = useState(false);
   const [customTMCount, setCustomTMCount] = useState(1);
+  // 1. Add state for selectedProject and projects
+  const [selectedProject, setSelectedProject] = useState<string>("");
+  // Add state for project dropdown open/close
+  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
 
   const { data: clientsData } = useQuery<Client[]>({
     queryKey: ["clients"],
@@ -197,6 +207,22 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     },
   });
   const avgTMCap = avgTMCapData?.average_capacity ?? null;
+
+  // Fix type inference for projects useQuery
+  const queryProjects = useQuery<Project[]>({
+    queryKey: ["projects", selectedClient],
+    queryFn: async () => {
+      if (!selectedClient) return [];
+      const response = await fetchWithAuth("/projects/");
+      const data = await response.json();
+      if (data.success && Array.isArray(data.data)) {
+        return data.data.filter((p: Project) => p.client_id === selectedClient);
+      }
+      return [];
+    },
+    enabled: !!selectedClient,
+  });
+  const projects: Project[] = queryProjects.data ?? [];
 
   const fetchSchedule = async () => {
     try {
@@ -273,6 +299,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         method: "PUT",
         body: JSON.stringify({
           client_id: selectedClient,
+          project_id: selectedProject,
           pump: selectedPump,
           concreteGrade: formData.concreteGrade,
           pumping_speed: formData.speed,
@@ -356,6 +383,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           method: "POST",
           body: JSON.stringify({
             client_id: selectedClient,
+            project_id: selectedProject,
             pump: selectedPump,
             concreteGrade: formData.concreteGrade,
             pumping_speed: formData.speed,
@@ -506,7 +534,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       if (!isNaN(unloading_time) && unloading_time > 0) {
         return setFormData((prev) => ({
           ...prev,
-          speed: ((avgTMCap) / (unloading_time / 60)).toFixed(0),
+          speed: (avgTMCap / (unloading_time / 60)).toFixed(0),
         }));
       }
     }
@@ -622,12 +650,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         </div>
       </div>
 
-      <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+      <div>
         {step === 1 ? (
-          <div className="space-y-8">
+          <div className="space-y-4">
             {/* Client Details Section */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-gray-50 dark:bg-gray-900/30">
-              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Client Details</h3>
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
+              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Project Details</h3>
               <div className="grid grid-cols-3 gap-6">
                 {/* Client Selection */}
                 <div>
@@ -677,6 +705,55 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </Dropdown>
                   </div>
                 </div>
+                {/* Project Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Choose Project
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
+                        selectedProject ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
+                      }`}
+                      onClick={() => setIsProjectDropdownOpen((open) => !open)}
+                      aria-haspopup="listbox"
+                      aria-expanded={isProjectDropdownOpen}
+                      disabled={!selectedClient || projects.length === 0}
+                    >
+                      {projects.find((p: Project) => p._id === selectedProject)?.name || "Select a project"}
+                    </button>
+                    <Dropdown
+                      isOpen={isProjectDropdownOpen}
+                      onClose={() => setIsProjectDropdownOpen(false)}
+                      className="w-full mt-1"
+                    >
+                      <DropdownItem
+                        className="text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => {
+                          setSelectedProject("");
+                          setHasChanged(true);
+                          setIsProjectDropdownOpen(false);
+                        }}
+                      >
+                        Select a project
+                      </DropdownItem>
+                      {(projects || []).map((option: Project) => (
+                        <DropdownItem
+                          key={option._id}
+                          className="text-gray-800 dark:text-white/90 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          onClick={() => {
+                            setSelectedProject(option._id);
+                            setHasChanged(true);
+                            setIsProjectDropdownOpen(false);
+                          }}
+                        >
+                          {option.name}
+                        </DropdownItem>
+                      ))}
+                    </Dropdown>
+                  </div>
+                </div>
                 {/* Site Address */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -691,8 +768,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   />
                 </div>
                 {/* Client Details */}
-                <div className="flex justify-start items-end">
-                  {selectedClientDetails && (
+                {selectedClientDetails && (
+                  <div className="flex justify-start items-end">
                     <div className="flex flex-col gap-0">
                       <label className="block text-sm font-medium text-gray-400 dark:text-gray-300">
                         Client Details
@@ -702,13 +779,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       </p>
                       <p className="text-sm text-gray-400 dark:text-gray-400">{selectedClientDetails.address}</p>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Pump Details Section */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-gray-50 dark:bg-gray-900/30">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
               <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Pump Details</h3>
               <div className="grid grid-cols-4 gap-6 mb-6">
                 {/* Pump Type Selection */}
@@ -829,7 +906,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-[1fr_auto_1fr] gap-6">
+              <div className="grid grid-cols-[1fr_auto_1fr] gap-6 mb-4 ">
                 {/* Pumping Speed */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -843,32 +920,79 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     placeholder="Enter speed"
                   />
                 </div>
-                <div className="col-span-1 flex items-center justify-center text-sm text-gray-600">or</div>
+                <div className="col-span-1 flex items-center justify-center text-sm text-gray-600 pt-6">or</div>
                 {/* Unloading Time */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Unloading Time (min)
                   </label>
+                  <div className="flex flex-row gap-2 w-full">
+                    <div className="w-3/4">
+                      <Input
+                        type="number"
+                        name="unloadingTime"
+                        value={parseFloat(formData.unloadingTime)}
+                        onChange={setPumpingSpeedAndUnloadingTime}
+                        placeholder={
+                          avgTMCap !== null ? "Auto-calculated from pumping speed" : "Enter pumping speed to calculate"
+                        }
+                      />
+                    </div>
+                    <div className="w-1/4 flex items-center">
+                      {avgTMCap !== null && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Auto-calculated based on avg. TM cpty: {avgTMCap?.toFixed(0)} m³
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-[auto_auto_auto] gap-6">
+                {/* Grade of Concrete */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Grade of Concrete
+                  </label>
                   <Input
                     type="number"
-                    name="unloadingTime"
-                    value={parseFloat(formData.unloadingTime)}
-                    onChange={setPumpingSpeedAndUnloadingTime}
-                    placeholder={
-                      avgTMCap !== null ? "Auto-calculated from pumping speed" : "Enter pumping speed to calculate"
-                    }
+                    name="concreteGrade"
+                    value={parseFloat(formData.concreteGrade)}
+                    onChange={handleInputChange}
+                    placeholder="Enter concrete grade"
                   />
-                  {avgTMCap !== null && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Auto-calculated based on avg. TM cpty: {avgTMCap?.toFixed(0)} m³
-                    </p>
-                  )}
+                </div>
+                {/* Type of Pumping Job */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Type of Pumping Job
+                  </label>
+                  <Input
+                    type="number"
+                    name="pumpingJob"
+                    value={parseFloat(formData.pumpingJob)}
+                    onChange={handleInputChange}
+                    placeholder="Enter type of pumping job"
+                  />
+                </div>
+                {/* Floor Height (Pumping) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Floor Height (Pumping)
+                  </label>
+                  <Input
+                    type="number"
+                    name="floorHeight"
+                    value={parseFloat(formData.floorHeight)}
+                    onChange={handleInputChange}
+                    placeholder="Enter floor height"
+                  />
                 </div>
               </div>
             </div>
 
             {/* Transit Mixer Details Section */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-gray-50 dark:bg-gray-900/30">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
               <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Transit Mixer Details</h3>
               <div className="grid grid-cols-3 gap-6">
                 {/* Production and Buffer Time */}
@@ -908,45 +1032,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     value={parseFloat(formData.returnTime)}
                     onChange={handleInputChange}
                     placeholder="Enter return time"
-                  />
-                </div>
-                {/* Grade of Concrete */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Grade of Concrete
-                  </label>
-                  <Input
-                    type="number"
-                    name="concreteGrade"
-                    value={parseFloat(formData.concreteGrade)}
-                    onChange={handleInputChange}
-                    placeholder="Enter concrete grade"
-                  />
-                </div>
-                {/* Type of Pumping Job */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Type of Pumping Job
-                  </label>
-                  <Input
-                    type="number"
-                    name="pumpingJob"
-                    value={parseFloat(formData.pumpingJob)}
-                    onChange={handleInputChange}
-                    placeholder="Enter type of pumping job"
-                  />
-                </div>
-                {/* Floor Height (Pumping) */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Floor Height (Pumping)
-                  </label>
-                  <Input
-                    type="number"
-                    name="floorHeight"
-                    value={parseFloat(formData.floorHeight)}
-                    onChange={handleInputChange}
-                    placeholder="Enter floor height"
                   />
                 </div>
               </div>
@@ -1041,7 +1126,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                   transition={{ duration: 0.3, ease: "easeInOut" }}
                                   className="overflow-hidden"
                                 >
-                                  <div className="bg-gray-50 dark:bg-gray-900/30 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-lg p-2 pl-6">
+                                  <div className="bg-white dark:bg-gray-900/30 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-lg p-2 pl-6">
                                     {pumps.map((pump, idx) => (
                                       <label
                                         key={pump.id}
@@ -1156,7 +1241,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           ) : (
             <div className="space-y-6">
               {calculatedTMs && (
-                <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                <div className="mb-6 p-4 bg-white dark:bg-gray-800/50 rounded-lg">
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Calculation Results</h4>
                   <div className="grid grid-cols-6 gap-4">
                     <div>
@@ -1171,9 +1256,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </div>
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Opt Required TMs</p>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">
-                        {calculatedTMs.tm_count}
-                      </p>
+                      <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.tm_count}</p>
                     </div>
                     <div>
                       <input
@@ -1284,7 +1367,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                     transition={{ duration: 0.3, ease: "easeInOut" }}
                                     className="overflow-hidden"
                                   >
-                                    <div className="bg-gray-50 dark:bg-gray-900/30 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-lg p-2 pl-6">
+                                    <div className="bg-white dark:bg-gray-900/30 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-lg p-2 pl-6">
                                       {tms.map((tm, idx) => (
                                         <label
                                           key={tm.id}
