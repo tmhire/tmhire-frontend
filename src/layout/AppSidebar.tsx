@@ -32,6 +32,11 @@ const navItems: NavItem[] = [
     path: "/clients",
   },
   {
+    icon: <SquareChartGantt />,
+    name: "Projects",
+    path: "/projects",
+  },
+  {
     icon: <TruckIcon />,
     name: "Transit Mixers",
     path: "/transit-mixers",

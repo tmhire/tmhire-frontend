@@ -16,28 +16,14 @@ interface Client {
   _id: string;
   user_id: string;
   name: string;
-  address: string;
-  city: string;
-  state: string;
-  postal_code: string;
-  contact_person: string;
-  contact_email: string;
-  contact_phone: string;
-  notes: string;
+  legal_entity: string | null;
   created_at: string;
   last_updated: string;
 }
 
 interface CreateClientData {
   name: string;
-  address: string;
-  city: string;
-  state: string;
-  postal_code: string;
-  contact_person: string;
-  contact_email: string;
-  contact_phone: string;
-  notes: string;
+  legal_entity: string;
 }
 
 export default function ClientsContainer() {
@@ -55,25 +41,11 @@ export default function ClientsContainer() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [editedClient, setEditedClient] = useState<CreateClientData>({
     name: "",
-    address: "",
-    city: "",
-    state: "",
-    postal_code: "",
-    contact_person: "",
-    contact_email: "",
-    contact_phone: "",
-    notes: "",
+    legal_entity: "",
   });
   const [newClient, setNewClient] = useState<CreateClientData>({
     name: "",
-    address: "",
-    city: "",
-    state: "",
-    postal_code: "",
-    contact_person: "",
-    contact_email: "",
-    contact_phone: "",
-    notes: "",
+    legal_entity: "",
   });
 
   const { data: clientsData, isLoading: isLoadingClients } = useQuery({
@@ -105,14 +77,7 @@ export default function ClientsContainer() {
       setIsCreateModalOpen(false);
       setNewClient({
         name: "",
-        address: "",
-        city: "",
-        state: "",
-        postal_code: "",
-        contact_person: "",
-        contact_email: "",
-        contact_phone: "",
-        notes: "",
+        legal_entity: "",
       });
     },
   });
@@ -170,14 +135,7 @@ export default function ClientsContainer() {
     setSelectedClient(client);
     setEditedClient({
       name: client.name,
-      address: client.address,
-      city: client.city,
-      state: client.state,
-      postal_code: client.postal_code,
-      contact_person: client.contact_person,
-      contact_email: client.contact_email,
-      contact_phone: client.contact_phone,
-      notes: client.notes,
+      legal_entity: client.legal_entity || "",
     });
     setIsEditModalOpen(true);
   };
@@ -224,11 +182,11 @@ export default function ClientsContainer() {
     }));
   };
 
-  // Get unique cities from clients data
-  const locations = useMemo(() => {
+  // Get unique legal entities from clients data
+  const legalEntities = useMemo(() => {
     if (!clientsData) return [];
-    const uniqueLocations = Array.from(new Set(clientsData.map(client => client.city)));
-    return uniqueLocations.sort();
+    const uniqueEntities = Array.from(new Set(clientsData.map(client => client.legal_entity).filter(Boolean)));
+    return uniqueEntities.sort();
   }, [clientsData]);
 
   // Date range options
@@ -249,11 +207,10 @@ export default function ClientsContainer() {
       // Search filter
       const matchesSearch =
         client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        client.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        client.city.toLowerCase().includes(searchQuery.toLowerCase());
+        (client.legal_entity && client.legal_entity.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      // Location filter
-      const matchesLocation = !selectedLocation || client.city === selectedLocation;
+      // Legal entity filter
+      const matchesLocation = !selectedLocation || client.legal_entity === selectedLocation;
 
       // Date filter
       const clientDate = new Date(client.created_at);
@@ -303,7 +260,7 @@ export default function ClientsContainer() {
                 />
               </div>
 
-              {/* Location Filter */}
+              {/* Legal Entity Filter */}
               <div className="relative text-sm">
                 <Button
                   variant="outline"
@@ -311,7 +268,7 @@ export default function ClientsContainer() {
                   className="dropdown-toggle"
                   size="sm"
                 >
-                  Location: {selectedLocation || "All"}
+                  Legal Entity: {selectedLocation || "All"}
                 </Button>
                 <Dropdown isOpen={isLocationFilterOpen} onClose={() => setIsLocationFilterOpen(false)} className="w-48">
                   <div className="p-2 text-gray-800 dark:text-white/90 ">
@@ -324,16 +281,16 @@ export default function ClientsContainer() {
                     >
                       All
                     </button>
-                    {locations.map((location) => (
+                    {legalEntities.map((entity) => (
                       <button
-                        key={location}
+                        key={entity}
                         className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                         onClick={() => {
-                          setSelectedLocation(location);
+                          setSelectedLocation(entity || "");
                           setIsLocationFilterOpen(false);
                         }}
                       >
-                        {location}
+                        {entity}
                       </button>
                     ))}
                   </div>
@@ -410,82 +367,12 @@ export default function ClientsContainer() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Legal Entity</label>
             <Input
               type="text"
-              name="address"
-              placeholder="Enter client address"
-              value={newClient.address}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">City</label>
-            <Input
-              type="text"
-              name="city"
-              placeholder="Enter city"
-              value={newClient.city}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">State</label>
-            <Input
-              type="text"
-              name="state"
-              placeholder="Enter state"
-              value={newClient.state}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Postal Code</label>
-            <Input
-              type="text"
-              name="postal_code"
-              placeholder="Enter postal code"
-              value={newClient.postal_code}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Person</label>
-            <Input
-              type="text"
-              name="contact_person"
-              placeholder="Enter contact person name"
-              value={newClient.contact_person}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Email</label>
-            <Input
-              type="email"
-              name="contact_email"
-              placeholder="Enter contact email"
-              value={newClient.contact_email}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Phone</label>
-            <Input
-              type="tel"
-              name="contact_phone"
-              placeholder="Enter contact phone"
-              value={newClient.contact_phone}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Notes</label>
-            <Input
-              type="text"
-              name="notes"
-              placeholder="Enter any additional notes"
-              value={newClient.notes}
+              name="legal_entity"
+              placeholder="Enter legal entity (e.g., PVT Ltd)"
+              value={newClient.legal_entity}
               onChange={handleInputChange}
             />
           </div>
@@ -524,74 +411,11 @@ export default function ClientsContainer() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Legal Entity</label>
               <Input
                 type="text"
-                name="address"
-                value={editedClient.address}
-                onChange={handleEditInputChange}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">City</label>
-              <Input
-                type="text"
-                name="city"
-                value={editedClient.city}
-                onChange={handleEditInputChange}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">State</label>
-              <Input
-                type="text"
-                name="state"
-                value={editedClient.state}
-                onChange={handleEditInputChange}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Postal Code</label>
-              <Input
-                type="text"
-                name="postal_code"
-                value={editedClient.postal_code}
-                onChange={handleEditInputChange}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Person</label>
-              <Input
-                type="text"
-                name="contact_person"
-                value={editedClient.contact_person}
-                onChange={handleEditInputChange}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Email</label>
-              <Input
-                type="email"
-                name="contact_email"
-                value={editedClient.contact_email}
-                onChange={handleEditInputChange}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Phone</label>
-              <Input
-                type="tel"
-                name="contact_phone"
-                value={editedClient.contact_phone}
-                onChange={handleEditInputChange}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Notes</label>
-              <Input
-                type="text"
-                name="notes"
-                value={editedClient.notes}
+                name="legal_entity"
+                value={editedClient.legal_entity}
                 onChange={handleEditInputChange}
               />
             </div>

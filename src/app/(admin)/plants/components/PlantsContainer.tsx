@@ -14,18 +14,29 @@ import { Spinner } from "@/components/ui/spinner";
 
 interface Plant {
   _id: string;
+  user_id: string;
   name: string;
-  address: string;
   location: string;
-  contact_number: string;
+  address: string;
+  coordinates: string | null;
+  contact_name1: string | null;
+  contact_number1: string | null;
+  contact_name2: string | null;
+  contact_number2: string | null;
+  remarks: string | null;
   created_at: string;
 }
 
 interface CreatePlantData {
   name: string;
-  address: string;
   location: string;
-  contact_number: string;
+  address: string;
+  coordinates?: string;
+  contact_name1: string;
+  contact_number1: string;
+  contact_name2?: string;
+  contact_number2?: string;
+  remarks?: string;
 }
 
 export default function PlantsContainer() {
@@ -34,8 +45,10 @@ export default function PlantsContainer() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [isLocationFilterOpen, setIsLocationFilterOpen] = useState(false);
+  const [isContactFilterOpen, setIsContactFilterOpen] = useState(false);
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
+  const [selectedContact, setSelectedContact] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -43,24 +56,26 @@ export default function PlantsContainer() {
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
   const [editedPlant, setEditedPlant] = useState<CreatePlantData>({
     name: "",
-    address: "",
     location: "",
-    contact_number: "",
+    address: "",
+    contact_name1: "",
+    contact_number1: "",
   });
   const [newPlant, setNewPlant] = useState<CreatePlantData>({
     name: "",
-    address: "",
     location: "",
-    contact_number: "",
+    address: "",
+    contact_name1: "",
+    contact_number1: "",
   });
 
   const { data: plantsData, isLoading: isLoadingPlants } = useQuery({
-    queryKey: ['plants'],
+    queryKey: ["plants"],
     queryFn: async () => {
-      const response = await fetchWithAuth('/plants');
-      if (!response) throw new Error('No response from server');
+      const response = await fetchWithAuth("/plants");
+      if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to fetch plants');
+      if (!data.success) throw new Error(data.message || "Failed to fetch plants");
       return data.data as Plant[];
     },
     enabled: status === "authenticated",
@@ -69,23 +84,24 @@ export default function PlantsContainer() {
   // Create plant mutation
   const createPlantMutation = useMutation({
     mutationFn: async (plantData: CreatePlantData) => {
-      const response = await fetchWithAuth('/plants', {
-        method: 'POST',
+      const response = await fetchWithAuth("/plants", {
+        method: "POST",
         body: JSON.stringify(plantData),
       });
-      if (!response) throw new Error('No response from server');
+      if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to create plant');
+      if (!data.success) throw new Error(data.message || "Failed to create plant");
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plants'] });
+      queryClient.invalidateQueries({ queryKey: ["plants"] });
       setIsCreateModalOpen(false);
       setNewPlant({
         name: "",
-        address: "",
         location: "",
-        contact_number: "",
+        address: "",
+        contact_name1: "",
+        contact_number1: "",
       });
     },
   });
@@ -94,16 +110,16 @@ export default function PlantsContainer() {
   const editPlantMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: CreatePlantData }) => {
       const response = await fetchWithAuth(`/plants/${id}`, {
-        method: 'PUT',
+        method: "PUT",
         body: JSON.stringify(data),
       });
-      if (!response) throw new Error('No response from server');
+      if (!response) throw new Error("No response from server");
       const responseData = await response.json();
-      if (!responseData.success) throw new Error(responseData.message || 'Failed to update plant');
+      if (!responseData.success) throw new Error(responseData.message || "Failed to update plant");
       return responseData.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plants'] });
+      queryClient.invalidateQueries({ queryKey: ["plants"] });
       setIsEditModalOpen(false);
       setSelectedPlant(null);
     },
@@ -113,15 +129,15 @@ export default function PlantsContainer() {
   const deletePlantMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await fetchWithAuth(`/plants/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
-      if (!response) throw new Error('No response from server');
+      if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to delete plant');
+      if (!data.success) throw new Error(data.message || "Failed to delete plant");
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plants'] });
+      queryClient.invalidateQueries({ queryKey: ["plants"] });
       setIsDeleteModalOpen(false);
       setSelectedPlant(null);
     },
@@ -135,7 +151,7 @@ export default function PlantsContainer() {
     try {
       await createPlantMutation.mutateAsync(newPlant);
     } catch (error) {
-      console.error('Error creating plant:', error);
+      console.error("Error creating plant:", error);
     }
   };
 
@@ -143,9 +159,14 @@ export default function PlantsContainer() {
     setSelectedPlant(plant);
     setEditedPlant({
       name: plant.name,
-      address: plant.address,
       location: plant.location,
-      contact_number: plant.contact_number,
+      address: plant.address,
+      coordinates: plant.coordinates || "",
+      contact_name1: plant.contact_name1 || "",
+      contact_number1: plant.contact_number1 || "",
+      contact_name2: plant.contact_name2 || "",
+      contact_number2: plant.contact_number2 || "",
+      remarks: plant.remarks || "",
     });
     setIsEditModalOpen(true);
   };
@@ -163,7 +184,7 @@ export default function PlantsContainer() {
         data: editedPlant,
       });
     } catch (error) {
-      console.error('Error updating plant:', error);
+      console.error("Error updating plant:", error);
     }
   };
 
@@ -172,7 +193,7 @@ export default function PlantsContainer() {
     try {
       await deletePlantMutation.mutateAsync(selectedPlant._id);
     } catch (error) {
-      console.error('Error deleting plant:', error);
+      console.error("Error deleting plant:", error);
     }
   };
 
@@ -195,8 +216,21 @@ export default function PlantsContainer() {
   // Get unique locations from plants data
   const locations = useMemo(() => {
     if (!plantsData) return [];
-    const uniqueLocations = Array.from(new Set(plantsData.map(plant => plant.location)));
+    const uniqueLocations = Array.from(new Set(plantsData.map((plant) => plant.location)));
     return uniqueLocations.sort();
+  }, [plantsData]);
+
+  // Get unique contact names for filtering
+  const contactNames = useMemo(() => {
+    if (!plantsData) return [];
+    const names = plantsData
+      .flatMap((plant) => [
+        plant.contact_name1,
+        plant.contact_name2
+      ])
+      .filter((name): name is string => name !== null && name !== "");
+    const uniqueNames = Array.from(new Set(names));
+    return uniqueNames.sort();
   }, [plantsData]);
 
   // Date range options
@@ -206,7 +240,7 @@ export default function PlantsContainer() {
       { label: "Last 7 days", days: 7 },
       { label: "Last 30 days", days: 30 },
       { label: "Last 90 days", days: 90 },
-      { label: "All time", days: Infinity }
+      { label: "All time", days: Infinity },
     ];
   }, []);
 
@@ -215,14 +249,27 @@ export default function PlantsContainer() {
     if (!plantsData) return [];
 
     return plantsData.filter((plant) => {
-      // Search filter
+      // Search filter - search across all columns
+      const searchLower = searchQuery.toLowerCase();
       const matchesSearch =
-        plant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        plant.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        plant.location.toLowerCase().includes(searchQuery.toLowerCase());
+        plant.name.toLowerCase().includes(searchLower) ||
+        plant.address.toLowerCase().includes(searchLower) ||
+        plant.location.toLowerCase().includes(searchLower) ||
+        (plant.coordinates && plant.coordinates.toLowerCase().includes(searchLower)) ||
+        (plant.contact_name1 && plant.contact_name1.toLowerCase().includes(searchLower)) ||
+        (plant.contact_number1 && plant.contact_number1.toLowerCase().includes(searchLower)) ||
+        (plant.contact_name2 && plant.contact_name2.toLowerCase().includes(searchLower)) ||
+        (plant.contact_number2 && plant.contact_number2.toLowerCase().includes(searchLower)) ||
+        (plant.remarks && plant.remarks.toLowerCase().includes(searchLower)) ||
+        plant._id.toLowerCase().includes(searchLower);
 
       // Location filter
       const matchesLocation = !selectedLocation || plant.location === selectedLocation;
+
+      // Contact filter
+      const matchesContact = !selectedContact || 
+        plant.contact_name1 === selectedContact || 
+        plant.contact_name2 === selectedContact;
 
       // Date filter
       const plantDate = new Date(plant.created_at);
@@ -230,7 +277,7 @@ export default function PlantsContainer() {
       let matchesDate = true;
 
       if (selectedDate) {
-        const selectedRange = dateRanges.find(range => range.label === selectedDate);
+        const selectedRange = dateRanges.find((range) => range.label === selectedDate);
         if (selectedRange) {
           if (selectedRange.days !== Infinity) {
             const cutoffDate = new Date(now.getTime() - selectedRange.days * 24 * 60 * 60 * 1000);
@@ -239,9 +286,9 @@ export default function PlantsContainer() {
         }
       }
 
-      return matchesSearch && matchesLocation && matchesDate;
+      return matchesSearch && matchesLocation && matchesContact && matchesDate;
     });
-  }, [plantsData, searchQuery, selectedLocation, selectedDate, dateRanges]);
+      }, [plantsData, searchQuery, selectedLocation, selectedContact, selectedDate, dateRanges]);
 
   return (
     <div>
@@ -309,6 +356,43 @@ export default function PlantsContainer() {
                 </Dropdown>
               </div>
 
+              {/* Contact Filter */}
+              <div className="relative text-sm">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsContactFilterOpen(!isContactFilterOpen)}
+                  className="dropdown-toggle"
+                  size="sm"
+                >
+                  Contact: {selectedContact || "All"}
+                </Button>
+                <Dropdown isOpen={isContactFilterOpen} onClose={() => setIsContactFilterOpen(false)} className="w-48">
+                  <div className="p-2 text-gray-800 dark:text-white/90 ">
+                    <button
+                      className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                      onClick={() => {
+                        setSelectedContact("");
+                        setIsContactFilterOpen(false);
+                      }}
+                    >
+                      All
+                    </button>
+                    {contactNames.map((name) => (
+                      <button
+                        key={name}
+                        className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                        onClick={() => {
+                          setSelectedContact(name);
+                          setIsContactFilterOpen(false);
+                        }}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                </Dropdown>
+              </div>
+
               {/* Date Filter */}
               <div className="relative text-sm">
                 <Button
@@ -353,11 +437,7 @@ export default function PlantsContainer() {
                   <Spinner text="Loading plants..." />
                 </div>
               ) : (
-                <PlantsTable 
-                  data={filteredData} 
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
+                <PlantsTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} />
               )}
             </div>
           </div>
@@ -365,7 +445,11 @@ export default function PlantsContainer() {
       </div>
 
       {/* Create Modal */}
-      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} className="max-w-[600px] p-5 lg:p-10">
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        className="max-w-[600px] p-5 lg:p-10"
+      >
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Plant</h4>
         <div className="space-y-4">
           <div>
@@ -373,10 +457,32 @@ export default function PlantsContainer() {
             <Input
               type="text"
               name="name"
-              placeholder="Enter plant name"
+              placeholder="Enter plant name (add prefix as your brand name)"
               value={newPlant.name}
               onChange={handleInputChange}
             />
+          </div>
+          <div className="flex flex-row w-full gap-2">
+            <div className="w-full">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location</label>
+              <Input
+                type="text"
+                name="location"
+                placeholder="Enter plant location"
+                value={newPlant.location}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="w-full">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Coordinates</label>
+              <Input
+                type="text"
+                name="coordinates"
+                placeholder="Enter coordinates (optional)"
+                value={newPlant.coordinates || ""}
+                onChange={handleInputChange}
+              />
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address</label>
@@ -388,23 +494,66 @@ export default function PlantsContainer() {
               onChange={handleInputChange}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location</label>
-            <Input
-              type="text"
-              name="location"
-              placeholder="Enter plant location"
-              value={newPlant.location}
-              onChange={handleInputChange}
-            />
+
+          <div className="flex flex-row w-full gap-2">
+            <div className="w-full">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 ">
+                Contact 1 Name
+              </label>
+              <Input
+                type="text"
+                name="contact_name1"
+                placeholder="Enter contact 1 name"
+                value={newPlant.contact_name1}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="w-full">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Contact 1 Number
+              </label>
+              <Input
+                type="text"
+                name="contact_number1"
+                placeholder="Enter contact 1 number"
+                value={newPlant.contact_number1}
+                onChange={handleInputChange}
+              />
+            </div>
+          </div>
+          <div className="flex flex-row w-full gap-2">
+            <div className="w-full">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Contact 2 Name
+              </label>
+              <Input
+                type="text"
+                name="contact_name2"
+                placeholder="Enter contact 2 name (optional)"
+                value={newPlant.contact_name2 || ""}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="w-full">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Contact 2 Number
+              </label>
+              <Input
+                type="text"
+                name="contact_number2"
+                placeholder="Enter contact 2 number (optional)"
+                value={newPlant.contact_number2 || ""}
+                onChange={handleInputChange}
+              />
+            </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
             <Input
               type="text"
-              name="contact_number"
-              placeholder="Enter contact number"
-              value={newPlant.contact_number}
+              name="remarks"
+              placeholder="Enter remarks (optional)"
+              value={newPlant.remarks || ""}
               onChange={handleInputChange}
             />
           </div>
@@ -413,17 +562,15 @@ export default function PlantsContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
             Cancel
           </Button>
-          <Button 
-            size="sm" 
-            onClick={handleCreatePlant}
-            disabled={createPlantMutation.isPending}
-          >
+          <Button size="sm" onClick={handleCreatePlant} disabled={createPlantMutation.isPending}>
             {createPlantMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />
                 <span>Creating...</span>
               </div>
-            ) : 'Create Plant'}
+            ) : (
+              "Create Plant"
+            )}
           </Button>
         </div>
       </Modal>
@@ -435,39 +582,79 @@ export default function PlantsContainer() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
-              <Input
-                type="text"
-                name="name"
-                value={editedPlant.name}
-                onChange={handleEditInputChange}
-              />
+              <Input type="text" name="name" value={editedPlant.name} onChange={handleEditInputChange} />
+            </div>
+            <div className="flex flex-row w-full gap-2">
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location</label>
+                <Input type="text" name="location" value={editedPlant.location} onChange={handleEditInputChange} />
+              </div>
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Coordinates</label>
+                <Input
+                  type="text"
+                  name="coordinates"
+                  value={editedPlant.coordinates || ""}
+                  onChange={handleEditInputChange}
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address</label>
-              <Input
-                type="text"
-                name="address"
-                value={editedPlant.address}
-                onChange={handleEditInputChange}
-              />
+              <Input type="text" name="address" value={editedPlant.address} onChange={handleEditInputChange} />
+            </div>
+
+            <div className="flex flex-row w-full gap-2">
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 ">
+                  Contact 1 Name
+                </label>
+                <Input
+                  type="text"
+                  name="contact_name1"
+                  value={editedPlant.contact_name1 || ""}
+                  onChange={handleEditInputChange}
+                />
+              </div>
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Contact 1 Number
+                </label>
+                <Input
+                  type="text"
+                  name="contact_number1"
+                  value={editedPlant.contact_number1 || ""}
+                  onChange={handleEditInputChange}
+                />
+              </div>
+            </div>
+            <div className="flex flex-row w-full gap-2">
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Contact 2 Name
+                </label>
+                <Input
+                  type="text"
+                  name="contact_name2"
+                  value={editedPlant.contact_name2 || ""}
+                  onChange={handleEditInputChange}
+                />
+              </div>
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Contact 2 Number
+                </label>
+                <Input
+                  type="text"
+                  name="contact_number2"
+                  value={editedPlant.contact_number2 || ""}
+                  onChange={handleEditInputChange}
+                />
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location</label>
-              <Input
-                type="text"
-                name="location"
-                value={editedPlant.location}
-                onChange={handleEditInputChange}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact</label>
-              <Input
-                type="text"
-                name="contact_number"
-                value={editedPlant.contact_number}
-                onChange={handleEditInputChange}
-              />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
+              <Input type="text" name="remarks" value={editedPlant.remarks || ""} onChange={handleEditInputChange} />
             </div>
           </div>
         )}
@@ -475,23 +662,25 @@ export default function PlantsContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsEditModalOpen(false)}>
             Cancel
           </Button>
-          <Button 
-            size="sm" 
-            onClick={handleSaveEdit}
-            disabled={editPlantMutation.isPending}
-          >
+          <Button size="sm" onClick={handleSaveEdit} disabled={editPlantMutation.isPending}>
             {editPlantMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />
                 <span>Saving...</span>
               </div>
-            ) : 'Save Changes'}
+            ) : (
+              "Save Changes"
+            )}
           </Button>
         </div>
       </Modal>
 
       {/* Delete Modal */}
-      <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} className="max-w-[500px] p-5 lg:p-10">
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        className="max-w-[500px] p-5 lg:p-10"
+      >
         <h4 className="font-semibold text-gray-800 mb-4 text-title-sm dark:text-white/90">Delete Plant</h4>
         {selectedPlant && (
           <div className="space-y-4">
@@ -502,9 +691,9 @@ export default function PlantsContainer() {
               <Button size="sm" variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
                 Cancel
               </Button>
-              <Button 
-                size="sm" 
-                variant="warning" 
+              <Button
+                size="sm"
+                variant="warning"
                 onClick={handleConfirmDelete}
                 disabled={deletePlantMutation.isPending}
               >
@@ -513,7 +702,9 @@ export default function PlantsContainer() {
                     <Spinner size="sm" />
                     <span>Deleting...</span>
                   </div>
-                ) : 'Delete'}
+                ) : (
+                  "Delete"
+                )}
               </Button>
             </div>
           </div>

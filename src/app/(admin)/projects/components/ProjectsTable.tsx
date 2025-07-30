@@ -12,13 +12,33 @@ interface Client {
   last_updated: string;
 }
 
-interface ClientsTableProps {
-  data: Client[];
-  onEdit: (client: Client) => void;
-  onDelete: (client: Client) => void;
+interface Project {
+  _id: string;
+  user_id: string;
+  name: string;
+  address: string;
+  client_id: string;
+  contact_name: string;
+  contact_number: string;
+  coordinates: string;
+  remarks: string;
+  created_at: string;
+  last_updated: string;
 }
 
-export default function ClientsTable({ data, onEdit, onDelete }: ClientsTableProps) {
+interface ProjectsTableProps {
+  data: Project[];
+  onEdit: (project: Project) => void;
+  onDelete: (project: Project) => void;
+  clients: Client[];
+}
+
+export default function ProjectsTable({ data, onEdit, onDelete, clients }: ProjectsTableProps) {
+  const getClientName = (clientId: string) => {
+    const client = clients.find(c => c._id === clientId);
+    return client ? client.name : "Unknown Client";
+  };
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto">
@@ -37,7 +57,25 @@ export default function ClientsTable({ data, onEdit, onDelete }: ClientsTablePro
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Legal Entity
+                  Client
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Address
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Contact Name
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Contact Number
                 </TableCell>
                 <TableCell
                   isHeader
@@ -56,30 +94,39 @@ export default function ClientsTable({ data, onEdit, onDelete }: ClientsTablePro
 
             {/* Table Body */}
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-              {data.map((client) => (
-                <TableRow key={client._id}>
+              {data.map((project) => (
+                <TableRow key={project._id}>
                   <TableCell className="px-5 py-4 text-start">
                     <div className="flex items-center gap-3">
                       <div>
                         <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                          {client.name}
+                          {project.name}
                         </span>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {client.legal_entity || "N/A"}
+                    {getClientName(project.client_id)}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {new Date(client.created_at).toLocaleDateString()}
+                    {project.address}
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {project.contact_name}
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {project.contact_number}
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {new Date(project.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="px-5 py-4">
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => onEdit(client)}>
+                      <Button size="sm" variant="outline" onClick={() => onEdit(project)}>
                         <Edit size={"12px"} />
                         Edit
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => onDelete(client)}>
+                      <Button size="sm" variant="outline" onClick={() => onDelete(project)}>
                         <Trash size={"12px"} />
                         Delete
                       </Button>
