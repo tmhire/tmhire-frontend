@@ -350,7 +350,7 @@ export default function CalendarContainer() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">TM Schedule Calendar</h2>
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Schedule Calendar</h2>
           <p className="text-gray-600 dark:text-gray-400">
             Manage and monitor mixer schedules across all production lines
           </p>
@@ -658,7 +658,7 @@ export default function CalendarContainer() {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">TM Schedule Calendar</h2>
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Schedule Calendar</h2>
             <p className="text-gray-600 dark:text-gray-400">
               Manage and monitor mixer schedules across all production lines
             </p>

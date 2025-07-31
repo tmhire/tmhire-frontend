@@ -21,6 +21,7 @@ interface TransitMixer {
   driver_name: string | null;
   driver_contact: string | null;
   status: "active" | "inactive";
+  remarks: string | null; // <-- Added
   created_at: string;
 }
 
@@ -32,6 +33,7 @@ interface CreateTransitMixerData {
   driver_name?: string | null;
   driver_contact?: string | null;
   status?: "active" | "inactive";
+  remarks?: string | null; // <-- Added
 }
 
 export default function TransitMixersContainer() {
@@ -56,13 +58,14 @@ export default function TransitMixersContainer() {
     driver_name: "",
     driver_contact: "",
     status: "active",
+    remarks: "", // <-- Added
   });
   const [error, setError] = useState("");
 
   const handleIdentifierInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.toUpperCase();
     const sanitized = raw.replace(/[^A-Z0-9\s]/g, "");
-    setNewMixer(prev => ({
+    setNewMixer((prev) => ({
       ...prev,
       identifier: sanitized,
     }));
@@ -73,7 +76,6 @@ export default function TransitMixersContainer() {
       setError("");
     }
   };
-
 
   const [plants, setPlants] = useState<{ _id: string; name: string }[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -114,6 +116,7 @@ export default function TransitMixersContainer() {
         driver_name: "",
         driver_contact: "",
         status: "active",
+        remarks: "", // <-- Added
       });
     },
   });
@@ -208,6 +211,7 @@ export default function TransitMixersContainer() {
           capacity: selectedMixer.capacity,
           plant_id: selectedMixer.plant_id,
           status: selectedMixer.status,
+          remarks: selectedMixer.remarks, // <-- Added
         },
       });
     } catch (error) {
@@ -298,14 +302,14 @@ export default function TransitMixersContainer() {
           <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm dark:border-gray-800 dark:bg-white/[0.03]">
             {/* Use a group/users icon for total count */}
             {/* <Truck className="text-gray-800 size-4 dark:text-white/90" /> */}
-            <div className="flex flex-col">
+            <div className="flex flex-row gap-8 items-center">
               <span className="text-xs text-gray-500 dark:text-gray-400">Total Count</span>
               <span className="font-semibold text-gray-800 dark:text-white/90">{filteredData.length}</span>
             </div>
           </div>
           <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm dark:border-gray-800 dark:bg-white/[0.03]">
             <Truck className="text-gray-800 size-4 dark:text-white/90" />
-            <div className="flex flex-col">
+            <div className="flex flex-row gap-8 items-center">
               <span className="text-xs text-gray-500 dark:text-gray-400">Avg Capacity</span>
               <span className="font-semibold text-gray-800 dark:text-white/90">{calculateAverageCapacity()}m³</span>
             </div>
@@ -532,6 +536,16 @@ export default function TransitMixersContainer() {
               <option value="inactive">Inactive</option>
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
+            <Input
+              type="text"
+              name="remarks"
+              placeholder="Enter remarks"
+              value={newMixer.remarks || ""}
+              onChange={handleInputChange}
+            />
+          </div>
         </div>
         <div className="flex justify-end gap-3 mt-6">
           <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
@@ -610,6 +624,10 @@ export default function TransitMixersContainer() {
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
+              <Input type="text" name="remarks" value={selectedMixer.remarks || ""} onChange={handleEditInputChange} />
             </div>
             <div className="col-span-2 flex justify-end gap-3 mt-6">
               <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>

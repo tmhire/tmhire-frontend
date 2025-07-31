@@ -31,6 +31,7 @@ interface Pump {
   make: string;
   driver_name: string | null;
   driver_contact: string | null;
+  remarks: string | null; // <-- Added
   created_at: string;
 }
 
@@ -42,6 +43,7 @@ interface CreatePumpData {
   make: string;
   driver_name?: string;
   driver_contact?: string;
+  remarks?: string | null; // <-- Added
 }
 
 export default function PumpsContainer() {
@@ -67,6 +69,7 @@ export default function PumpsContainer() {
     make: "",
     driver_name: "",
     driver_contact: "",
+    remarks: "", // <-- Added
   });
   const [newPump, setNewPump] = useState<CreatePumpData>({
     identifier: "",
@@ -76,24 +79,25 @@ export default function PumpsContainer() {
     make: "",
     driver_name: "",
     driver_contact: "",
+    remarks: "", // <-- Added
   });
-    const [error, setError] = useState("");
-  
-    const handleIdentifierInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const raw = e.target.value.toUpperCase();
-      const sanitized = raw.replace(/[^A-Z0-9\s]/g, "");
-      setNewPump(prev => ({
-        ...prev,
-        identifier: sanitized,
-      }));
-  
-      if (sanitized && !/^[A-Z]{0,2}\s?\d{0,2}\s?[A-Z]{0,2}\s?\d{0,4}$/.test(sanitized)) {
-        setError("Invalid. Correct format: XX 00 AA 0000");
-      } else {
-        setError("");
-      }
-    };
-  
+  const [error, setError] = useState("");
+
+  const handleIdentifierInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.toUpperCase();
+    const sanitized = raw.replace(/[^A-Z0-9\s]/g, "");
+    setNewPump((prev) => ({
+      ...prev,
+      identifier: sanitized,
+    }));
+
+    if (sanitized && !/^[A-Z]{0,2}\s?\d{0,2}\s?[A-Z]{0,2}\s?\d{0,4}$/.test(sanitized)) {
+      setError("Invalid. Correct format: XX 00 AA 0000");
+    } else {
+      setError("");
+    }
+  };
+
   const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>("");
 
@@ -162,6 +166,7 @@ export default function PumpsContainer() {
         make: "",
         driver_name: "",
         driver_contact: "",
+        remarks: "", // <-- Added
       });
     },
   });
@@ -225,6 +230,7 @@ export default function PumpsContainer() {
       make: pump.make || "",
       driver_name: pump.driver_name || "",
       driver_contact: pump.driver_contact || "",
+      remarks: pump.remarks || "", // <-- Added
     });
     setIsEditModalOpen(true);
   };
@@ -302,7 +308,15 @@ export default function PumpsContainer() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Pumps</h2>
-        <nav>
+        <nav className="flex flex-row gap-2">
+          <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm dark:border-gray-800 dark:bg-white/[0.03]">
+            {/* Use a group/users icon for total count */}
+            {/* <Truck className="text-gray-800 size-4 dark:text-white/90" /> */}
+            <div className="flex flex-row gap-8 items-center">
+              <span className="text-xs text-gray-500 dark:text-gray-400">Total Count</span>
+              <span className="font-semibold text-gray-800 dark:text-white/90">{filteredData.length}</span>
+            </div>
+          </div>
           <Button className="flex items-center gap-2" size="sm" onClick={handleAddPump}>
             <PlusIcon className="w-4 h-4" />
             Add Pump
@@ -570,11 +584,33 @@ export default function PumpsContainer() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Name</label>
-            <Input type="text" name="driver_name" placeholder="Enter driver name" value={newPump.driver_name || ""} onChange={handleInputChange} />
+            <Input
+              type="text"
+              name="driver_name"
+              placeholder="Enter driver name"
+              value={newPump.driver_name || ""}
+              onChange={handleInputChange}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Contact</label>
-            <Input type="text" name="driver_contact" placeholder="Enter driver contact" value={newPump.driver_contact || ""} onChange={handleInputChange} />
+            <Input
+              type="text"
+              name="driver_contact"
+              placeholder="Enter driver contact"
+              value={newPump.driver_contact || ""}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
+            <Input
+              type="text"
+              name="remarks"
+              placeholder="Enter remarks"
+              value={newPump.remarks || ""}
+              onChange={handleInputChange}
+            />
           </div>
           <div className="col-span-2 flex justify-end gap-3 mt-6">
             <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
@@ -644,11 +680,27 @@ export default function PumpsContainer() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Name</label>
-              <Input type="text" name="driver_name" value={editedPump.driver_name || ""} onChange={handleEditInputChange} />
+              <Input
+                type="text"
+                name="driver_name"
+                value={editedPump.driver_name || ""}
+                onChange={handleEditInputChange}
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Contact</label>
-              <Input type="text" name="driver_contact" value={editedPump.driver_contact || ""} onChange={handleEditInputChange} />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Driver Contact
+              </label>
+              <Input
+                type="text"
+                name="driver_contact"
+                value={editedPump.driver_contact || ""}
+                onChange={handleEditInputChange}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
+              <Input type="text" name="remarks" value={editedPump.remarks || ""} onChange={handleEditInputChange} />
             </div>
             <div className="col-span-2 flex justify-end gap-3 mt-6">
               <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>

@@ -13,6 +13,7 @@ interface TransitMixer {
   driver_contact: string | null;
   status: "active" | "inactive";
   created_at: string;
+  remarks: string | null; // Add remarks to the interface
 }
 
 interface TransitMixersTableProps {
@@ -67,6 +68,12 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                 >
                   Status
                 </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Remarks
+                </TableCell>
                 {/* <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Created At</TableCell> */}
                 <TableCell
                   isHeader
@@ -81,7 +88,7 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
               {data.map((mixer) => (
                 <TableRow key={mixer._id}>
                   <TableCell className="px-5 py-4 text-start">
-                    <span className="block font-medium bg-yellow-200 w-fit px-3 py-2 rounded-md border border-gray-800 text-gray-800 text-theme-sm dark:text-white/90">
+                    <span className="block font-medium bg-yellow-200 w-fit px-3 py-2 rounded-md border border-gray-800 text-gray-800 text-theme-sm dark:text-black/90">
                       {mixer.identifier}
                     </span>
                   </TableCell>
@@ -107,6 +114,9 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                     >
                       {mixer.status.charAt(0).toUpperCase() + mixer.status.slice(1)}
                     </span>
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {mixer.remarks || "-"}
                   </TableCell>
                   {/* <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {new Date(mixer.created_at).toLocaleDateString()}
