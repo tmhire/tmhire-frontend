@@ -718,7 +718,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
                         selectedProject
                           ? "text-gray-800 dark:text-white/90"
-                          : projects.length === 0
+                          : projects.length === 0 && !!selectedClient
                           ? "text-red-500"
                           : "text-gray-400 dark:text-gray-400"
                       }`}
@@ -727,7 +727,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       aria-expanded={isProjectDropdownOpen}
                       disabled={!selectedClient || projects.length === 0}
                     >
-                      {projects.length === 0
+                      {!selectedClient
+                        ? "Select a client first"
+                        : projects.length === 0
                         ? "Please create a project for this client."
                         : projects.find((p: Project) => p._id === selectedProject)?.name || "Select a project"}
                     </button>
@@ -1176,37 +1178,57 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           <tr className="border-b border-gray-100 dark:border-gray-700">
                             <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
                               Total pumping hours
-                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">Pumping quantity / Pumping speed</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                                Pumping quantity / Pumping speed
+                              </div>
                             </td>
-                            <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{totalPumpingHours > 0 ? totalPumpingHours.toFixed(2) : "-"}</td>
+                            <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
+                              {totalPumpingHours > 0 ? totalPumpingHours.toFixed(2) : "-"}
+                            </td>
                           </tr>
                           <tr className="border-b border-gray-100 dark:border-gray-700">
                             <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
                               Trips per TM
-                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">Total pumping hours / Cycle time</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                                Total pumping hours / Cycle time
+                              </div>
                             </td>
-                            <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{tripsPerTM > 0 ? tripsPerTM.toFixed(2) : "-"}</td>
+                            <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
+                              {tripsPerTM > 0 ? tripsPerTM.toFixed(2) : "-"}
+                            </td>
                           </tr>
                           <tr className="border-b border-gray-100 dark:border-gray-700">
                             <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
                               Quantity transported per TM
-                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">Trips per TM × TM avg capacity</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                                Trips per TM × TM avg capacity
+                              </div>
                             </td>
-                            <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{m3PerTM > 0 ? m3PerTM.toFixed(2) : "-"}</td>
+                            <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
+                              {m3PerTM > 0 ? m3PerTM.toFixed(2) : "-"}
+                            </td>
                           </tr>
                           <tr>
                             <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
                               TM required formula
-                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">ceil(Pumping quantity / m³ transported per TM)</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                                ceil(Pumping quantity / m³ transported per TM)
+                              </div>
                             </td>
-                            <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{tmReq > 0 ? tmReq : "-"}</td>
+                            <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
+                              {tmReq > 0 ? tmReq : "-"}
+                            </td>
                           </tr>
                           <tr className="border-b border-gray-100 dark:border-gray-700">
                             <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
                               Total trips
-                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">ceil(Trips per TM × TM required) + 1 (buffer)</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                                ceil(Trips per TM × TM required) + 1 (buffer)
+                              </div>
                             </td>
-                            <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{totalTrips > 0 ? totalTrips : "-"}</td>
+                            <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
+                              {totalTrips > 0 ? totalTrips : "-"}
+                            </td>
                           </tr>
                         </tbody>
                       </table>
