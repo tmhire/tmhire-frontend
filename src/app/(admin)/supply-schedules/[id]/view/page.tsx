@@ -98,20 +98,20 @@ export default function SupplyScheduleViewPage() {
       case "completed":
         return "success";
       case "cancelled":
-        return "danger";
+        return "error";
       default:
-        return "default";
+        return "primary";
     }
   };
 
-  const formatTimeRange = (start: string, end: string) => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
+  // const formatTimeRange = (start: string, end: string) => {
+  //   const startDate = new Date(start);
+  //   const endDate = new Date(end);
     
-    const pad = (n: number) => n.toString().padStart(2, '0');
+  //   const pad = (n: number) => n.toString().padStart(2, '0');
     
-    return `${pad(startDate.getHours())}:${pad(startDate.getMinutes())} - ${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
-  };
+  //   return `${pad(startDate.getHours())}:${pad(startDate.getMinutes())} - ${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
+  // };
 
   const formatOverallRange = (trips: SupplySchedule['output_table']) => {
     if (trips.length === 0) return "N/A";

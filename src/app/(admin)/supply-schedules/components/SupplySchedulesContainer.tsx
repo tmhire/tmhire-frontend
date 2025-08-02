@@ -54,7 +54,7 @@ export default function SupplySchedulesContainer() {
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [selectedSite, setSelectedSite] = useState<string>("");
-  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedDate] = useState<string>("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<SupplySchedule | null>(null);
   const [timeStatusFilter, setTimeStatusFilter] = useState<string>("All");
@@ -190,19 +190,7 @@ export default function SupplySchedulesContainer() {
     return Array.from(new Set(schedulesData.map((schedule) => schedule.site_address)));
   }, [schedulesData]);
 
-  const uniqueDates = useMemo(() => {
-    if (!schedulesData) return [];
-    return Array.from(new Set(schedulesData.map((schedule) => schedule.input_params.schedule_date)));
-  }, [schedulesData]);
 
-  const parseScheduleDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
 
   if (isLoadingSchedules) {
     return (
