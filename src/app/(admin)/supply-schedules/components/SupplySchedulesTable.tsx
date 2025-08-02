@@ -63,13 +63,13 @@ export default function SupplySchedulesTable({ data, onDelete }: SupplySchedules
     });
   };
 
-  const formatTime = (dateTimeString: string) => {
-    const date = new Date(dateTimeString);
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  // const formatTime = (dateTimeString: string) => {
+  //   const date = new Date(dateTimeString);
+  //   return date.toLocaleTimeString("en-US", {
+  //     hour: "2-digit",
+  //     minute: "2-digit",
+  //   });
+  // };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -116,25 +116,7 @@ export default function SupplySchedulesTable({ data, onDelete }: SupplySchedules
                 isHeader
                 className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Quantity (m³)
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
                 Schedule Date
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Start Time
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                TM Count
               </TableCell>
               <TableCell
                 isHeader
@@ -166,20 +148,9 @@ export default function SupplySchedulesTable({ data, onDelete }: SupplySchedules
                   <span className="text-gray-800 dark:text-white/90">{schedule.site_address}</span>
                 </TableCell>
                 <TableCell className="px-3 py-4 text-start">
-                  <span className="text-gray-800 dark:text-white/90">{schedule.input_params.quantity}</span>
-                </TableCell>
-                <TableCell className="px-3 py-4 text-start">
                   <span className="text-gray-500 dark:text-gray-400">
                     {formatDate(schedule.input_params.schedule_date)}
                   </span>
-                </TableCell>
-                <TableCell className="px-3 py-4 text-start">
-                  <span className="text-gray-500 dark:text-gray-400">
-                    {formatTime(schedule.input_params.pump_start)}
-                  </span>
-                </TableCell>
-                <TableCell className="px-3 py-4 text-start">
-                  <span className="text-gray-800 dark:text-white/90">{schedule.tm_count}</span>
                 </TableCell>
                 <TableCell className="px-3 py-4 text-start">
                   <Badge size="sm" color={getStatusColor(schedule.status)}>
@@ -226,4 +197,4 @@ export default function SupplySchedulesTable({ data, onDelete }: SupplySchedules
       </div>
     </div>
   );
-} 
+}
