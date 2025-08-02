@@ -95,7 +95,7 @@ export default function SchedulesContainer() {
   });
 
   const handleAddSchedule = () => {
-    router.push("/schedules/new");
+    router.push("/pumping-schedules/new");
   };
 
   const handleDelete = (schedule: Schedule) => {

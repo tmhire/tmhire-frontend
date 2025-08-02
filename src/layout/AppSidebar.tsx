@@ -49,7 +49,12 @@ const navItems: NavItem[] = [
   {
     icon: <SquareChartGantt />,
     name: "Pumping Schedules",
-    path: "/schedules",
+    path: "/pumping-schedules",
+  },
+  {
+    icon: <SquareChartGantt />,
+    name: "Supply Schedules",
+    path: "/supply-schedules",
   },
   {
     icon: <Calendar />,
