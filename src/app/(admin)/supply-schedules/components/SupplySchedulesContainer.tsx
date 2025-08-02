@@ -101,282 +101,310 @@ export default function SupplySchedulesContainer() {
   };
 
   const handleConfirmDelete = async () => {
-    if (selectedSchedule) {
+    if (!selectedSchedule) return;
+    try {
       await deleteScheduleMutation.mutateAsync(selectedSchedule._id);
+    } catch (error) {
+      console.error("Error deleting schedule:", error);
     }
   };
 
-  // Filter and search logic
+  // Get unique values for filters
+  const { clients, sites, statuses } = useMemo(() => {
+    if (!schedulesData) return { clients: [], sites: [], statuses: [] };
+
+    const uniqueClients = Array.from(new Set(schedulesData.map((schedule) => schedule.client_name)));
+    const uniqueSites = Array.from(new Set(schedulesData.map((schedule) => schedule.site_address)));
+    const uniqueStatuses = Array.from(new Set(schedulesData.map((schedule) => schedule.status)));
+
+    return {
+      clients: uniqueClients.sort(),
+      sites: uniqueSites.sort(),
+      statuses: uniqueStatuses.sort(),
+    };
+  }, [schedulesData]);
+
+    // Filter schedules based on search query and filters
   const filteredSchedules = useMemo(() => {
     if (!schedulesData) return [];
 
-    let filtered = schedulesData;
+    const now = new Date();
+    // Helper to parse schedule date (assume input_params.schedule_date is ISO or yyyy-mm-dd)
+    const parseScheduleDate = (dateStr: string) => {
+      // Try to parse as ISO, fallback to yyyy-mm-dd
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) return d;
+      // fallback: yyyy-mm-dd
+      const [year, month, day] = dateStr.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    };
 
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (schedule) =>
-          schedule.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          schedule.site_address.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
+    return schedulesData.filter((schedule) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        schedule.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        schedule.site_address.toLowerCase().includes(searchQuery.toLowerCase());
 
-    // Status filter
-    if (selectedStatus) {
-      filtered = filtered.filter((schedule) => schedule.status === selectedStatus);
-    }
+      const matchesStatus = selectedStatus === "" || schedule.status === selectedStatus;
 
-    // Client filter
-    if (selectedClient) {
-      filtered = filtered.filter((schedule) => schedule.client_id === selectedClient);
-    }
+      const matchesClient = selectedClient === "" || schedule.client_name === selectedClient;
 
-    // Site filter
-    if (selectedSite) {
-      filtered = filtered.filter((schedule) => schedule.site_address === selectedSite);
-    }
+      const matchesSite = selectedSite === "" || schedule.site_address === selectedSite;
 
-    // Date filter
-    if (selectedDate) {
-      filtered = filtered.filter((schedule) => schedule.input_params.schedule_date === selectedDate);
-    }
+      const matchesDate = !selectedDate || schedule.input_params.schedule_date === selectedDate;
 
-    // Time status filter
-    if (timeStatusFilter !== "All") {
-      const now = new Date();
-      filtered = filtered.filter((schedule) => {
-        const scheduleDate = new Date(schedule.input_params.schedule_date);
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
+      // Time-based status filter
+      const matchesTimeStatus = timeStatusFilter === "All" ? true : (() => {
+        const scheduleDate = parseScheduleDate(schedule.input_params.schedule_date);
+        // Remove time for comparison (treat as local date)
+        const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const schedDate = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate());
+        
         switch (timeStatusFilter) {
           case "Today":
-            return scheduleDate.getTime() === today.getTime();
+            return schedDate.getTime() === nowDate.getTime();
           case "Tomorrow":
-            return scheduleDate.getTime() === tomorrow.getTime();
+            const tomorrow = new Date(nowDate);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            return schedDate.getTime() === tomorrow.getTime();
           case "This Week":
-            const weekStart = new Date(today);
+            const weekStart = new Date(nowDate);
             weekStart.setDate(weekStart.getDate() - weekStart.getDay());
             const weekEnd = new Date(weekStart);
             weekEnd.setDate(weekEnd.getDate() + 6);
-            return scheduleDate >= weekStart && scheduleDate <= weekEnd;
+            return schedDate >= weekStart && schedDate <= weekEnd;
           case "Past":
-            return scheduleDate < today;
+            return schedDate < nowDate;
           case "Upcoming":
-            return scheduleDate > tomorrow;
+            return schedDate > nowDate;
           default:
             return true;
         }
-      });
-    }
+      })();
 
-    return filtered;
+      return matchesSearch && matchesStatus && matchesClient && matchesSite && matchesDate && matchesTimeStatus;
+    });
   }, [schedulesData, searchQuery, selectedStatus, selectedClient, selectedSite, selectedDate, timeStatusFilter]);
-
-  // Get unique values for filters
-  const uniqueStatuses = useMemo(() => {
-    if (!schedulesData) return [];
-    return Array.from(new Set(schedulesData.map((schedule) => schedule.status)));
-  }, [schedulesData]);
-
-  const uniqueClients = useMemo(() => {
-    if (!schedulesData) return [];
-    return Array.from(new Set(schedulesData.map((schedule) => schedule.client_name)));
-  }, [schedulesData]);
-
-  const uniqueSites = useMemo(() => {
-    if (!schedulesData) return [];
-    return Array.from(new Set(schedulesData.map((schedule) => schedule.site_address)));
-  }, [schedulesData]);
-
-
 
   if (isLoadingSchedules) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-full">
         <Spinner size="lg" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-title-md2 font-semibold text-black dark:text-white">Supply Schedules</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Manage your supply schedules</p>
-        </div>
-        <Button onClick={handleAddSchedule} className="flex items-center gap-2">
-          <PlusIcon size={16} />
+    <div>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-xl font-semibold text-black dark:text-white">Supply Schedules Management</h2>
+        <Button onClick={handleAddSchedule} className="flex items-center gap-2" size="sm">
+          <PlusIcon className="w-4 h-4" />
           Add Supply Schedule
         </Button>
       </div>
 
-      <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center">
+      <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <div className="px-6 py-5">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Search Bar */}
             <div className="relative">
+              <span className="absolute -translate-y-1/2 left-4 top-1/2 pointer-events-none">
+                <Search size={"15px"} className="text-gray-800 dark:text-white/90" />
+              </span>
               <input
                 type="text"
-                placeholder="Search schedules..."
+                placeholder="Search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full md:w-80 appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                className="h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]"
               />
-              <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            </div>
-
-            {/* Status Filter */}
-            <div className="relative">
-              <button
-                onClick={() => setIsStatusFilterOpen(!isStatusFilterOpen)}
-                className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
-              >
-                Status: {selectedStatus || "All"}
-              </button>
-              <Dropdown isOpen={isStatusFilterOpen} onClose={() => setIsStatusFilterOpen(false)}>
-                <button
-                  onClick={() => {
-                    setSelectedStatus("");
-                    setIsStatusFilterOpen(false);
-                  }}
-                  className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  All
-                </button>
-                {uniqueStatuses.map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => {
-                      setSelectedStatus(status);
-                      setIsStatusFilterOpen(false);
-                    }}
-                    className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                  >
-                    {status}
-                  </button>
-                ))}
-              </Dropdown>
             </div>
 
             {/* Client Filter */}
-            <div className="relative">
-              <button
+            <div className="relative text-sm">
+              <Button
+                variant="outline"
                 onClick={() => setIsClientFilterOpen(!isClientFilterOpen)}
-                className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+                className="dropdown-toggle"
+                size="sm"
               >
                 Client: {selectedClient || "All"}
-              </button>
-              <Dropdown isOpen={isClientFilterOpen} onClose={() => setIsClientFilterOpen(false)}>
-                <button
-                  onClick={() => {
-                    setSelectedClient("");
-                    setIsClientFilterOpen(false);
-                  }}
-                  className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  All
-                </button>
-                {uniqueClients.map((client) => (
+              </Button>
+              <Dropdown isOpen={isClientFilterOpen} onClose={() => setIsClientFilterOpen(false)} className="w-48">
+                <div className="p-2 text-gray-800 dark:text-white/90">
                   <button
-                    key={client}
+                    className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                     onClick={() => {
-                      setSelectedClient(client);
+                      setSelectedClient("");
                       setIsClientFilterOpen(false);
                     }}
-                    className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
-                    {client}
+                    All
                   </button>
-                ))}
+                  {clients.map((client) => (
+                    <button
+                      key={client}
+                      className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                      onClick={() => {
+                        setSelectedClient(client);
+                        setIsClientFilterOpen(false);
+                      }}
+                    >
+                      {client}
+                    </button>
+                  ))}
+                </div>
               </Dropdown>
             </div>
 
-            {/* Site Filter */}
-            <div className="relative">
-              <button
+            {/* Site Location Filter */}
+            <div className="relative text-sm">
+              <Button
+                variant="outline"
                 onClick={() => setIsSiteFilterOpen(!isSiteFilterOpen)}
-                className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+                className="dropdown-toggle"
+                size="sm"
               >
-                Site: {selectedSite || "All"}
-              </button>
-              <Dropdown isOpen={isSiteFilterOpen} onClose={() => setIsSiteFilterOpen(false)}>
-                <button
-                  onClick={() => {
-                    setSelectedSite("");
-                    setIsSiteFilterOpen(false);
-                  }}
-                  className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  All
-                </button>
-                {uniqueSites.map((site) => (
+                Location: {selectedSite || "All"}
+              </Button>
+              <Dropdown isOpen={isSiteFilterOpen} onClose={() => setIsSiteFilterOpen(false)} className="w-48">
+                <div className="p-2 text-gray-800 dark:text-white/90">
                   <button
-                    key={site}
+                    className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                     onClick={() => {
-                      setSelectedSite(site);
+                      setSelectedSite("");
                       setIsSiteFilterOpen(false);
                     }}
-                    className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
-                    {site}
+                    All
                   </button>
-                ))}
+                  {sites.map((site) => (
+                    <button
+                      key={site}
+                      className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                      onClick={() => {
+                        setSelectedSite(site);
+                        setIsSiteFilterOpen(false);
+                      }}
+                    >
+                      {site}
+                    </button>
+                  ))}
+                </div>
+              </Dropdown>
+            </div>
+
+            {/* Status Filter */}
+            <div className="relative text-sm">
+              <Button
+                variant="outline"
+                onClick={() => setIsStatusFilterOpen(!isStatusFilterOpen)}
+                className="dropdown-toggle"
+                size="sm"
+              >
+                Status: {selectedStatus || "All"}
+              </Button>
+              <Dropdown isOpen={isStatusFilterOpen} onClose={() => setIsStatusFilterOpen(false)} className="w-48">
+                <div className="p-2 text-gray-800 dark:text-white/90">
+                  <button
+                    className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                    onClick={() => {
+                      setSelectedStatus("");
+                      setIsStatusFilterOpen(false);
+                    }}
+                  >
+                    All
+                  </button>
+                  {statuses.map((status) => (
+                    <button
+                      key={status}
+                      className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                      onClick={() => {
+                        setSelectedStatus(status);
+                        setIsStatusFilterOpen(false);
+                      }}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
               </Dropdown>
             </div>
 
             {/* Time Status Filter */}
-            <div className="relative">
-              <button
+            <div className="relative text-sm">
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setIsTimeStatusFilterOpen(!isTimeStatusFilterOpen)}
-                className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+                className="dropdown-toggle"
               >
-                Time: {timeStatusFilter}
-              </button>
-              <Dropdown isOpen={isTimeStatusFilterOpen} onClose={() => setIsTimeStatusFilterOpen(false)}>
-                {["All", "Today", "Tomorrow", "This Week", "Past", "Upcoming"].map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => {
-                      setTimeStatusFilter(filter);
-                      setIsTimeStatusFilterOpen(false);
-                    }}
-                    className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                  >
-                    {filter}
-                  </button>
-                ))}
+                Time Status: {timeStatusFilter}
+              </Button>
+              <Dropdown
+                isOpen={isTimeStatusFilterOpen}
+                onClose={() => setIsTimeStatusFilterOpen(false)}
+                className="w-48"
+              >
+                <div className="p-2 text-gray-800 dark:text-white/90">
+                  {["All", "Today", "Tomorrow", "This Week", "Past", "Upcoming"].map((filter) => (
+                    <button
+                      key={filter}
+                      className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                      onClick={() => {
+                        setTimeStatusFilter(filter);
+                        setIsTimeStatusFilterOpen(false);
+                      }}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
               </Dropdown>
             </div>
           </div>
         </div>
 
-        <SupplySchedulesTable data={filteredSchedules} onDelete={handleDelete} />
+        {/* Card Body */}
+        <div className="p-4 border-t border-gray-100 dark:border-gray-800 sm:p-6">
+          <div className="space-y-6">
+            {status === "loading" ? (
+              <div className="flex justify-center py-4">
+                <Spinner text="Loading session..." />
+              </div>
+            ) : status === "unauthenticated" ? (
+              <div className="text-center py-4 text-gray-800 dark:text-white/90">Please sign in to view schedules</div>
+            ) : isLoadingSchedules ? (
+              <div className="flex justify-center py-4">
+                <Spinner text="Loading schedules..." />
+              </div>
+            ) : (
+              <SupplySchedulesTable data={filteredSchedules} onDelete={handleDelete} />
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
+      {/* Delete Modal */}
+      <Modal className="max-w-[500px] p-5" isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
         <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Confirm Delete</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Are you sure you want to delete the supply schedule for{" "}
-            <span className="font-semibold">{selectedSchedule?.client_name}</span>? This action cannot be undone.
-          </p>
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={() => setIsDeleteModalOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-            >
+          <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Delete Supply Schedule</h4>
+          <p className="mb-6">Are you sure you want to delete this supply schedule? This action cannot be undone.</p>
+          <div className="flex justify-end gap-4">
+            <Button onClick={() => setIsDeleteModalOpen(false)} variant="outline">
               Cancel
-            </button>
-            <button
-              onClick={handleConfirmDelete}
-              disabled={deleteScheduleMutation.isPending}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
-            >
-              {deleteScheduleMutation.isPending ? "Deleting..." : "Delete"}
-            </button>
+            </Button>
+            <Button onClick={handleConfirmDelete} variant="warning" disabled={deleteScheduleMutation.isPending}>
+              {deleteScheduleMutation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <Spinner size="sm" />
+                  <span>Deleting...</span>
+                </div>
+              ) : (
+                "Delete"
+              )}
+            </Button>
           </div>
         </div>
       </Modal>
