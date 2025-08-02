@@ -80,9 +80,9 @@ export default function SupplySchedulesTable({ data, onDelete }: SupplySchedules
       case "completed":
         return "success";
       case "cancelled":
-        return "danger";
+        return "error";
       default:
-        return "default";
+        return "primary";
     }
   };
 
