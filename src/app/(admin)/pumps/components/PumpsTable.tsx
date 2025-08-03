@@ -35,61 +35,61 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
               <TableRow>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   S.No
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Pump No.
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Type
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Capacity (m3)
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Make
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Plant
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Driver
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Status
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Remarks
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Actions
                 </TableCell>
@@ -100,19 +100,25 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
               {data.map((pump, index) => (
                 <TableRow key={pump._id}>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {index + 1}
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    <span
-                      className={`block font-medium w-fit px-3 py-2 rounded-md border border-gray-800 text-gray-800 text-theme-sm dark:text-black/90 ${
-                        pump.type === "line" ? "bg-blue-200" : "bg-green-200"
-                      }`}
-                    >
-                      {pump.identifier}
-                    </span>
+                  <TableCell className="px-3 py-2 text-start">
+                    <div className={`flex w-full rounded-lg border-2 border-black shadow items-center ${
+                      pump.type === "line" ? "bg-blue-500" : "bg-green-500"
+                    }`}>
+                      <label className={`flex flex-col justify-between gap-1 text-center rounded-l p-2 text-[6px] font-bold text-white ${
+                        pump.type === "line" ? "bg-blue-700" : "bg-green-700"
+                      }`}>
+                        <img className="h-3" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" />
+                        {pump.type === "line" ? "LINE" : "BOOM"}
+                      </label>
+                      <label className="p-1 px-2 font-mono text-sm font-medium items-center">
+                        {pump.identifier}
+                      </label>
+                    </div>
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     <span
                       className={
                         pump.type === "line"
@@ -123,28 +129,28 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                       {pump.type}
                     </span>
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {pump.capacity}
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {pump.make || "N/A"}
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {plantMap.get(pump.plant_id) || "N/A"}
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     <div className="flex flex-col">
                       <span className="font-medium">{pump.driver_name || "-"}</span>
                       <span className="text-xs text-gray-400">{pump.driver_contact || "-"}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {pump.status}
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {pump.remarks || "-"}
                   </TableCell>
-                  <TableCell className="px-5 py-4">
+                  <TableCell className="px-3 py-4">
                     <div className="flex items-center gap-2">
                       <Button size="sm" variant="outline" onClick={() => onEdit(pump)}>
                         <Edit size={"12px"} />

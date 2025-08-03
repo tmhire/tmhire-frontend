@@ -157,10 +157,18 @@ const navItems: NavItem[] = [
   },
   {
     icon: null,
-    name: "Schedules",
-    path: "/schedules",
+    name: "Pumping Schedules",
+    path: "/pumping-schedules",
     subItems: [
-      { name: "New Pumping Schedule", path: "/schedules/new", pro: false },
+      { name: "New Pumping Schedule", path: "/pumping-schedules/new", pro: false },
+    ],
+  },
+  {
+    icon: null,
+    name: "Supply Schedules",
+    path: "/supply-schedules",
+    subItems: [
+      { name: "New Supply Schedule", path: "/supply-schedules/new", pro: false },
     ],
   },
   {

@@ -696,7 +696,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start Time</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Site Reach Time</label>
                   <div className="relative">
                     <Input type="time" name="startTime" value={formData.startTime} onChange={handleInputChange} />
                     <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">

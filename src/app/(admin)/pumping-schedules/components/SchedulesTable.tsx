@@ -45,13 +45,13 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
 
   const handleView = (schedule: Schedule) => {
     if (schedule.status === "draft") {
-      return router.push(`/schedules/${schedule._id}`);
+      return router.push(`/pumping-schedules/${schedule._id}`);
     }
     if (schedule.status === "generated") {
-      return router.push(`/schedules/${schedule._id}/view`);
+      return router.push(`/pumping-schedules/${schedule._id}/view`);
     }
     // fallback (optional):
-    return router.push(`/schedules/${schedule._id}`);
+    return router.push(`/pumping-schedules/${schedule._id}`);
   };
 
   return (

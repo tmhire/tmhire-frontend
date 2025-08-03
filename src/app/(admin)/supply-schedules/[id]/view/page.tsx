@@ -156,14 +156,14 @@ export default function SupplyScheduleViewPage() {
             <p className="text-gray-600 dark:text-gray-400">View supply schedule information</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        {/* <div className="flex gap-2">
           <Button
             variant="outline"
             onClick={() => router.push(`/supply-schedules/${schedule._id}`)}
           >
             Edit Schedule
           </Button>
-        </div>
+        </div> */}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">

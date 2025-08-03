@@ -310,8 +310,24 @@ export default function PumpsContainer() {
         <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Concrete Pumps</h2>
         <nav className="flex flex-row gap-2">
           <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm dark:border-gray-800 dark:bg-white/[0.03]">
-            {/* Use a group/users icon for total count */}
-            {/* <Truck className="text-gray-800 size-4 dark:text-white/90" /> */}
+            <div className="flex flex-row gap-6 items-center">
+              <button 
+                className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded cursor-pointer transition-colors"
+                onClick={() => setSelectedPumpType(selectedPumpType === "Line" ? "" : "Line")}
+              >
+                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                <span className={`text-xs ${selectedPumpType === "Line" ? "text-blue-600 dark:text-blue-400 font-medium" : "text-gray-500 dark:text-gray-400"}`}>Line</span>
+              </button>
+              <button 
+                className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded cursor-pointer transition-colors"
+                onClick={() => setSelectedPumpType(selectedPumpType === "Boom" ? "" : "Boom")}
+              >
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <span className={`text-xs ${selectedPumpType === "Boom" ? "text-green-600 dark:text-green-400 font-medium" : "text-gray-500 dark:text-gray-400"}`}>Boom</span>
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm dark:border-gray-800 dark:bg-white/[0.03]">
             <div className="flex flex-row gap-8 items-center">
               <span className="text-xs text-gray-500 dark:text-gray-400">Total Count</span>
               <span className="font-semibold text-gray-800 dark:text-white/90">{filteredData.length}</span>

@@ -96,10 +96,16 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {index + 1}
                   </TableCell>
-                  <TableCell className="px-5 py-4 text-start">
-                    <span className="block font-medium bg-yellow-400 w-fit px-3 py-2 rounded-md border border-gray-800 text-gray-800 text-theme-sm dark:text-black/90">
-                      {mixer.identifier}
-                    </span>
+                  <TableCell className="px-3 py-2 text-start">
+                    <div className="flex w-full rounded-lg border-2 border-black bg-yellow-500 shadow items-center gap-2">
+                      <label className="flex flex-col justify-between bg-blue-700 rounded-l p-2 text-[8px]  text-white">
+                        <img className="h-3" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" />
+                        IND
+                      </label>
+                      <label className="p-1 px-2 font-mono text-sm font-medium items-center ">
+                        {mixer.identifier}
+                      </label>
+                    </div>
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {mixer.capacity}
