@@ -206,6 +206,7 @@ export default function CalendarContainer() {
 
   // Update URL when date changes
   const handleDateChange = (newDate: string) => {
+    newDate = newDate.split("-").reverse().join("-");
     setSelectedDate(newDate);
     const params = new URLSearchParams(searchParams.toString());
     params.set("date", newDate);
