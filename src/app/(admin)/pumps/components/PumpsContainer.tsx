@@ -307,7 +307,7 @@ export default function PumpsContainer() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Pumps</h2>
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Concrete Pumps</h2>
         <nav className="flex flex-row gap-2">
           <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm dark:border-gray-800 dark:bg-white/[0.03]">
             {/* Use a group/users icon for total count */}

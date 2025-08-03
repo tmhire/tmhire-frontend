@@ -43,12 +43,6 @@ export default function ClientsTable({ data, onEdit, onDelete }: ClientsTablePro
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Created
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
                   Actions
                 </TableCell>
               </TableRow>
@@ -69,9 +63,6 @@ export default function ClientsTable({ data, onEdit, onDelete }: ClientsTablePro
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {client.legal_entity || "N/A"}
-                  </TableCell>
-                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {new Date(client.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="px-5 py-4">
                     <div className="flex items-center gap-2">

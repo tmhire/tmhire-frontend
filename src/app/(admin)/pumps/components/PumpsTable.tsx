@@ -37,6 +37,12 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
+                  S.No
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
                   Pump No.
                 </TableCell>
                 <TableCell
@@ -92,8 +98,11 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
 
             {/* Table Body */}
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-              {data.map((pump) => (
+              {data.map((pump, index) => (
                 <TableRow key={pump._id}>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {index + 1}
+                  </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     <span
                       className={`block font-medium w-fit px-3 py-2 rounded-md border border-gray-800 text-gray-800 text-theme-sm dark:text-black/90 ${

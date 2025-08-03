@@ -23,12 +23,12 @@ const navItems: NavItem[] = [
   },
   {
     icon: <Box />,
-    name: "Plants",
+    name: "RMC Plants",
     path: "/plants",
   },
   {
     icon: <Users />,
-    name: "Clients",
+    name: "Clients / Customer",
     path: "/clients",
   },
   {
@@ -43,7 +43,7 @@ const navItems: NavItem[] = [
   },
   {
     icon: <TruckElectric />,
-    name: "Pumps",
+    name: "Concrete Pumps",
     path: "/pumps",
   },
   {

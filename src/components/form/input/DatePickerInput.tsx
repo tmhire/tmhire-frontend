@@ -26,15 +26,15 @@ export default function DatePickerInput({
   useEffect(() => {
     if (inputRef.current) {
       flatpickrRef.current = flatpickr(inputRef.current, {
-        dateFormat: 'Y-m-d',
+        dateFormat: 'd-m-Y',
         defaultDate: value,
         onChange: ([selectedDate]) => {
           if (selectedDate) {
-            // Use local date string to avoid timezone issues
+            // Format date as DD-MM-YYYY
             const year = selectedDate.getFullYear();
             const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
             const day = String(selectedDate.getDate()).padStart(2, '0');
-            onChange(`${year}-${month}-${day}`);
+            onChange(`${day}-${month}-${year}`);
           }
         },
         onClose: () => {

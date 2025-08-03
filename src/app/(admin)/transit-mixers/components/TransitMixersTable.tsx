@@ -42,6 +42,12 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
+                  S.No
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
                   TM No.
                 </TableCell>
                 <TableCell
@@ -85,10 +91,13 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
             </TableHeader>
             {/* Table Body */}
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-              {data.map((mixer) => (
+              {data.map((mixer, index) => (
                 <TableRow key={mixer._id}>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {index + 1}
+                  </TableCell>
                   <TableCell className="px-5 py-4 text-start">
-                    <span className="block font-medium bg-yellow-200 w-fit px-3 py-2 rounded-md border border-gray-800 text-gray-800 text-theme-sm dark:text-black/90">
+                    <span className="block font-medium bg-yellow-400 w-fit px-3 py-2 rounded-md border border-gray-800 text-gray-800 text-theme-sm dark:text-black/90">
                       {mixer.identifier}
                     </span>
                   </TableCell>

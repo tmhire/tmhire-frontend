@@ -5,12 +5,14 @@ import { PlusIcon, Search } from "lucide-react";
 import Button from "@/components/ui/button/Button";
 import { useState, useMemo } from "react";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
+import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
+import { ChevronDownIcon } from "lucide-react";
 
 interface Client {
   _id: string;
@@ -32,9 +34,10 @@ export default function ClientsContainer() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [isLocationFilterOpen, setIsLocationFilterOpen] = useState(false);
-  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
+  // const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
-  const [selectedDate, setSelectedDate] = useState<string>("");
+  // const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedDate] = useState<string>("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -47,6 +50,27 @@ export default function ClientsContainer() {
     name: "",
     legal_entity: "",
   });
+
+  // Legal entity options
+  const legalEntityOptions = [
+    "Private Limited Company (Pvt Ltd)",
+    "Public Limited Company (PLC)",
+    "Partnership",
+    "Sole Proprietorship",
+    "Limited Liability Partnership (LLP)",
+    "Corporation",
+    "Limited Company (Ltd)",
+    "Unlimited Company",
+    "Cooperative Society",
+    "Trust",
+    "Foundation",
+    "Association",
+    "Other"
+  ];
+
+  // Dropdown states
+  const [isCreateLegalEntityDropdownOpen, setIsCreateLegalEntityDropdownOpen] = useState(false);
+  const [isEditLegalEntityDropdownOpen, setIsEditLegalEntityDropdownOpen] = useState(false);
 
   const { data: clientsData, isLoading: isLoadingClients } = useQuery({
     queryKey: ['clients'],
@@ -182,6 +206,23 @@ export default function ClientsContainer() {
     }));
   };
 
+  // Legal entity dropdown handlers
+  const handleCreateLegalEntitySelect = (entity: string) => {
+    setNewClient(prev => ({
+      ...prev,
+      legal_entity: entity
+    }));
+    setIsCreateLegalEntityDropdownOpen(false);
+  };
+
+  const handleEditLegalEntitySelect = (entity: string) => {
+    setEditedClient(prev => ({
+      ...prev,
+      legal_entity: entity
+    }));
+    setIsEditLegalEntityDropdownOpen(false);
+  };
+
   // Get unique legal entities from clients data
   const legalEntities = useMemo(() => {
     if (!clientsData) return [];
@@ -234,7 +275,7 @@ export default function ClientsContainer() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Clients</h2>
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Clients / Customer</h2>
         <nav>
           <Button className="flex items-center gap-2" size="sm" onClick={handleAddClient}>
             <PlusIcon className="w-4 h-4" />
@@ -297,7 +338,7 @@ export default function ClientsContainer() {
                 </Dropdown>
               </div>
 
-              {/* Date Filter */}
+              {/* Date Filter
               <div className="relative text-sm">
                 <Button
                   variant="outline"
@@ -323,7 +364,7 @@ export default function ClientsContainer() {
                     ))}
                   </div>
                 </Dropdown>
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -368,13 +409,34 @@ export default function ClientsContainer() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Legal Entity</label>
-            <Input
-              type="text"
-              name="legal_entity"
-              placeholder="Enter legal entity (e.g., PVT Ltd)"
-              value={newClient.legal_entity}
-              onChange={handleInputChange}
-            />
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsCreateLegalEntityDropdownOpen(!isCreateLegalEntityDropdownOpen)}
+                className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
+              >
+                <span className={newClient.legal_entity ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-white/30"}>
+                  {newClient.legal_entity || "Select legal entity"}
+                </span>
+                <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+              </button>
+              
+              <Dropdown 
+                isOpen={isCreateLegalEntityDropdownOpen} 
+                onClose={() => setIsCreateLegalEntityDropdownOpen(false)}
+                className="w-full min-w-[300px] max-h-60 overflow-y-auto"
+              >
+                {legalEntityOptions.map((option) => (
+                  <DropdownItem
+                    key={option}
+                    onClick={() => handleCreateLegalEntitySelect(option)}
+                    className="text-sm py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    {option}
+                  </DropdownItem>
+                ))}
+              </Dropdown>
+            </div>
           </div>
         </div>
         <div className="flex items-center justify-end w-full gap-3 mt-8">
@@ -412,12 +474,34 @@ export default function ClientsContainer() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Legal Entity</label>
-              <Input
-                type="text"
-                name="legal_entity"
-                value={editedClient.legal_entity}
-                onChange={handleEditInputChange}
-              />
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsEditLegalEntityDropdownOpen(!isEditLegalEntityDropdownOpen)}
+                  className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
+                >
+                  <span className={editedClient.legal_entity ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-white/30"}>
+                    {editedClient.legal_entity || "Select legal entity"}
+                  </span>
+                  <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+                </button>
+                
+                <Dropdown 
+                  isOpen={isEditLegalEntityDropdownOpen} 
+                  onClose={() => setIsEditLegalEntityDropdownOpen(false)}
+                  className="w-full min-w-[300px] max-h-60 overflow-y-auto"
+                >
+                  {legalEntityOptions.map((option) => (
+                    <DropdownItem
+                      key={option}
+                      onClick={() => handleEditLegalEntitySelect(option)}
+                      className="text-sm py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      {option}
+                    </DropdownItem>
+                  ))}
+                </Dropdown>
+              </div>
             </div>
           </div>
         )}

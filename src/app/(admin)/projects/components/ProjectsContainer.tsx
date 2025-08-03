@@ -5,12 +5,14 @@ import { PlusIcon, Search } from "lucide-react";
 import Button from "@/components/ui/button/Button";
 import { useState, useMemo } from "react";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
+import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
+import { ChevronDownIcon } from "lucide-react";
 
 interface Project {
   _id: string;
@@ -77,25 +79,29 @@ export default function ProjectsContainer() {
     remarks: "",
   });
 
+  // Dropdown states for client selection
+  const [isCreateClientDropdownOpen, setIsCreateClientDropdownOpen] = useState(false);
+  const [isEditClientDropdownOpen, setIsEditClientDropdownOpen] = useState(false);
+
   const { data: projectsData, isLoading: isLoadingProjects } = useQuery({
-    queryKey: ['projects'],
+    queryKey: ["projects"],
     queryFn: async () => {
-      const response = await fetchWithAuth('/projects');
-      if (!response) throw new Error('No response from server');
+      const response = await fetchWithAuth("/projects");
+      if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to fetch projects');
+      if (!data.success) throw new Error(data.message || "Failed to fetch projects");
       return data.data as Project[];
     },
     enabled: status === "authenticated",
   });
 
   const { data: clientsData } = useQuery({
-    queryKey: ['clients'],
+    queryKey: ["clients"],
     queryFn: async () => {
-      const response = await fetchWithAuth('/clients');
-      if (!response) throw new Error('No response from server');
+      const response = await fetchWithAuth("/clients");
+      if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to fetch clients');
+      if (!data.success) throw new Error(data.message || "Failed to fetch clients");
       return data.data;
     },
     enabled: status === "authenticated",
@@ -104,17 +110,17 @@ export default function ProjectsContainer() {
   // Create project mutation
   const createProjectMutation = useMutation({
     mutationFn: async (projectData: CreateProjectData) => {
-      const response = await fetchWithAuth('/projects', {
-        method: 'POST',
+      const response = await fetchWithAuth("/projects", {
+        method: "POST",
         body: JSON.stringify(projectData),
       });
-      if (!response) throw new Error('No response from server');
+      if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to create project');
+      if (!data.success) throw new Error(data.message || "Failed to create project");
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       setIsCreateModalOpen(false);
       setNewProject({
         name: "",
@@ -132,16 +138,16 @@ export default function ProjectsContainer() {
   const editProjectMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: CreateProjectData }) => {
       const response = await fetchWithAuth(`/projects/${id}`, {
-        method: 'PUT',
+        method: "PUT",
         body: JSON.stringify(data),
       });
-      if (!response) throw new Error('No response from server');
+      if (!response) throw new Error("No response from server");
       const responseData = await response.json();
-      if (!responseData.success) throw new Error(responseData.message || 'Failed to update project');
+      if (!responseData.success) throw new Error(responseData.message || "Failed to update project");
       return responseData.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       setIsEditModalOpen(false);
       setSelectedProject(null);
     },
@@ -151,15 +157,15 @@ export default function ProjectsContainer() {
   const deleteProjectMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await fetchWithAuth(`/projects/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
-      if (!response) throw new Error('No response from server');
+      if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to delete project');
+      if (!data.success) throw new Error(data.message || "Failed to delete project");
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       setIsDeleteModalOpen(false);
       setSelectedProject(null);
     },
@@ -173,7 +179,7 @@ export default function ProjectsContainer() {
     try {
       await createProjectMutation.mutateAsync(newProject);
     } catch (error) {
-      console.error('Error creating project:', error);
+      console.error("Error creating project:", error);
     }
   };
 
@@ -204,7 +210,7 @@ export default function ProjectsContainer() {
         data: editedProject,
       });
     } catch (error) {
-      console.error('Error updating project:', error);
+      console.error("Error updating project:", error);
     }
   };
 
@@ -213,7 +219,7 @@ export default function ProjectsContainer() {
     try {
       await deleteProjectMutation.mutateAsync(selectedProject._id);
     } catch (error) {
-      console.error('Error deleting project:', error);
+      console.error("Error deleting project:", error);
     }
   };
 
@@ -233,13 +239,30 @@ export default function ProjectsContainer() {
     }));
   };
 
+  // Client dropdown handlers
+  const handleCreateClientSelect = (clientId: string) => {
+    setNewProject((prev) => ({
+      ...prev,
+      client_id: clientId,
+    }));
+    setIsCreateClientDropdownOpen(false);
+  };
+
+  const handleEditClientSelect = (clientId: string) => {
+    setEditedProject((prev) => ({
+      ...prev,
+      client_id: clientId,
+    }));
+    setIsEditClientDropdownOpen(false);
+  };
+
   // Date range options
   const dateRanges = useMemo(() => {
     return [
       { label: "Last 7 days", days: 7 },
       { label: "Last 30 days", days: 30 },
       { label: "Last 90 days", days: 90 },
-      { label: "All time", days: Infinity }
+      { label: "All time", days: Infinity },
     ];
   }, []);
 
@@ -263,7 +286,7 @@ export default function ProjectsContainer() {
       let matchesDate = true;
 
       if (selectedDate) {
-        const selectedRange = dateRanges.find(range => range.label === selectedDate);
+        const selectedRange = dateRanges.find((range) => range.label === selectedDate);
         if (selectedRange) {
           if (selectedRange.days !== Infinity) {
             const cutoffDate = new Date(now.getTime() - selectedRange.days * 24 * 60 * 60 * 1000);
@@ -313,7 +336,10 @@ export default function ProjectsContainer() {
                   className="dropdown-toggle"
                   size="sm"
                 >
-                  Client: {selectedClient ? clientsData?.find((c: Client) => c._id === selectedClient)?.name || "Unknown" : "All"}
+                  Client:{" "}
+                  {selectedClient
+                    ? clientsData?.find((c: Client) => c._id === selectedClient)?.name || "Unknown"
+                    : "All"}
                 </Button>
                 <Dropdown isOpen={isClientFilterOpen} onClose={() => setIsClientFilterOpen(false)} className="w-48">
                   <div className="p-2 text-gray-800 dark:text-white/90 ">
@@ -380,14 +406,16 @@ export default function ProjectsContainer() {
                   <Spinner text="Loading session..." />
                 </div>
               ) : status === "unauthenticated" ? (
-                <div className="text-center py-4 text-gray-800 dark:text-white/90">Please sign in again to view projects</div>
+                <div className="text-center py-4 text-gray-800 dark:text-white/90">
+                  Please sign in again to view projects
+                </div>
               ) : isLoadingProjects ? (
                 <div className="flex justify-center py-4">
                   <Spinner text="Loading projects..." />
                 </div>
               ) : (
-                <ProjectsTable 
-                  data={filteredData} 
+                <ProjectsTable
+                  data={filteredData}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   clients={clientsData || []}
@@ -399,9 +427,51 @@ export default function ProjectsContainer() {
       </div>
 
       {/* Create Modal */}
-      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} className="max-w-[800px] p-5 lg:p-10">
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        className="max-w-[800px] p-5 lg:p-10"
+      >
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Project</h4>
         <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Client</label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsCreateClientDropdownOpen(!isCreateClientDropdownOpen)}
+                className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
+              >
+                <span
+                  className={
+                    newProject.client_id ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-white/30"
+                  }
+                >
+                  {newProject.client_id
+                    ? clientsData?.find((client: { _id: string }) => client._id === newProject.client_id)?.name ||
+                      "Select a client"
+                    : "Select a client"}
+                </span>
+                <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+              </button>
+
+              <Dropdown
+                isOpen={isCreateClientDropdownOpen}
+                onClose={() => setIsCreateClientDropdownOpen(false)}
+                className="w-full min-w-[300px] max-h-60 overflow-y-auto"
+              >
+                {clientsData?.map((client: Client) => (
+                  <DropdownItem
+                    key={client._id}
+                    onClick={() => handleCreateClientSelect(client._id)}
+                    className="text-sm py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    {client.name}
+                  </DropdownItem>
+                ))}
+              </Dropdown>
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
             <Input
@@ -411,22 +481,6 @@ export default function ProjectsContainer() {
               value={newProject.name}
               onChange={handleInputChange}
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Client</label>
-            <select
-              name="client_id"
-              value={newProject.client_id}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-            >
-              <option value="">Select a client</option>
-              {clientsData?.map((client: Client) => (
-                <option key={client._id} value={client._id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
           </div>
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address</label>
@@ -483,17 +537,15 @@ export default function ProjectsContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
             Cancel
           </Button>
-          <Button 
-            size="sm" 
-            onClick={handleCreateProject}
-            disabled={createProjectMutation.isPending}
-          >
+          <Button size="sm" onClick={handleCreateProject} disabled={createProjectMutation.isPending}>
             {createProjectMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />
                 <span>Creating...</span>
               </div>
-            ) : 'Create Project'}
+            ) : (
+              "Create Project"
+            )}
           </Button>
         </div>
       </Modal>
@@ -504,38 +556,50 @@ export default function ProjectsContainer() {
         {selectedProject && (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
-              <Input
-                type="text"
-                name="name"
-                value={editedProject.name}
-                onChange={handleEditInputChange}
-              />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Client</label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsEditClientDropdownOpen(!isEditClientDropdownOpen)}
+                  className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
+                >
+                  <span
+                    className={
+                      editedProject.client_id ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-white/30"
+                    }
+                  >
+                    {editedProject.client_id
+                      ? clientsData?.find((client: Client) => client._id === editedProject.client_id)?.name ||
+                        "Select a client"
+                      : "Select a client"}
+                  </span>
+                  <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+                </button>
+
+                <Dropdown
+                  isOpen={isEditClientDropdownOpen}
+                  onClose={() => setIsEditClientDropdownOpen(false)}
+                  className="w-full min-w-[300px] max-h-60 overflow-y-auto"
+                >
+                  {clientsData?.map((client: Client) => (
+                    <DropdownItem
+                      key={client._id}
+                      onClick={() => handleEditClientSelect(client._id)}
+                      className="text-sm py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      {client.name}
+                    </DropdownItem>
+                  ))}
+                </Dropdown>
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Client</label>
-              <select
-                name="client_id"
-                value={editedProject.client_id}
-                onChange={handleEditInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-              >
-                <option value="">Select a client</option>
-                {clientsData?.map((client: Client) => (
-                  <option key={client._id} value={client._id}>
-                    {client.name}
-                  </option>
-                ))}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
+              <Input type="text" name="name" value={editedProject.name} onChange={handleEditInputChange} />
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address</label>
-              <Input
-                type="text"
-                name="address"
-                value={editedProject.address}
-                onChange={handleEditInputChange}
-              />
+              <Input type="text" name="address" value={editedProject.address} onChange={handleEditInputChange} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Name</label>
@@ -547,7 +611,9 @@ export default function ProjectsContainer() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Number</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Contact Number
+              </label>
               <Input
                 type="tel"
                 name="contact_number"
@@ -566,12 +632,7 @@ export default function ProjectsContainer() {
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
-              <Input
-                type="text"
-                name="remarks"
-                value={editedProject.remarks}
-                onChange={handleEditInputChange}
-              />
+              <Input type="text" name="remarks" value={editedProject.remarks} onChange={handleEditInputChange} />
             </div>
           </div>
         )}
@@ -579,23 +640,25 @@ export default function ProjectsContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsEditModalOpen(false)}>
             Cancel
           </Button>
-          <Button 
-            size="sm" 
-            onClick={handleSaveEdit}
-            disabled={editProjectMutation.isPending}
-          >
+          <Button size="sm" onClick={handleSaveEdit} disabled={editProjectMutation.isPending}>
             {editProjectMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />
                 <span>Saving...</span>
               </div>
-            ) : 'Save Changes'}
+            ) : (
+              "Save Changes"
+            )}
           </Button>
         </div>
       </Modal>
 
       {/* Delete Modal */}
-      <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} className="max-w-[500px] p-5 lg:p-10">
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        className="max-w-[500px] p-5 lg:p-10"
+      >
         <h4 className="font-semibold text-gray-800 mb-4 text-title-sm dark:text-white/90">Delete Project</h4>
         {selectedProject && (
           <div className="space-y-4">
@@ -606,9 +669,9 @@ export default function ProjectsContainer() {
               <Button size="sm" variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
                 Cancel
               </Button>
-              <Button 
-                size="sm" 
-                variant="warning" 
+              <Button
+                size="sm"
+                variant="warning"
                 onClick={handleConfirmDelete}
                 disabled={deleteProjectMutation.isPending}
               >
@@ -617,7 +680,9 @@ export default function ProjectsContainer() {
                     <Spinner size="sm" />
                     <span>Deleting...</span>
                   </div>
-                ) : 'Delete'}
+                ) : (
+                  "Delete"
+                )}
               </Button>
             </div>
           </div>
@@ -625,4 +690,4 @@ export default function ProjectsContainer() {
       </Modal>
     </div>
   );
-} 
+}

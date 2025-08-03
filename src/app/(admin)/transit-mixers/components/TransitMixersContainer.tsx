@@ -466,7 +466,9 @@ export default function TransitMixersContainer() {
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Transit Mixer</h4>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">TM No.</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              TM No. (Format: XX 00 AA 0000)
+            </label>
             <div>
               <Input
                 type="text"
@@ -505,6 +507,18 @@ export default function TransitMixersContainer() {
             </select>
           </div>
           <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status</label>
+            <select
+              name="status"
+              value={newMixer.status || "active"}
+              onChange={handleInputChange}
+              className="w-full h-11 rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Name</label>
             <Input
               type="text"
@@ -523,18 +537,6 @@ export default function TransitMixersContainer() {
               value={newMixer.driver_contact || ""}
               onChange={handleInputChange}
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status</label>
-            <select
-              name="status"
-              value={newMixer.status || "active"}
-              onChange={handleInputChange}
-              className="w-full h-11 rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
@@ -570,7 +572,9 @@ export default function TransitMixersContainer() {
         {selectedMixer && (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">TM No.</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                TM No. (Format: XX 00 AA 0000)
+              </label>
               <Input type="text" name="identifier" value={selectedMixer.identifier} onChange={handleEditInputChange} />
             </div>
             <div>
@@ -594,6 +598,18 @@ export default function TransitMixersContainer() {
               </select>
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status</label>
+              <select
+                name="status"
+                value={selectedMixer.status || "active"}
+                onChange={handleEditInputChange}
+                className="w-full h-11 rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Name</label>
               <Input
                 type="text"
@@ -613,18 +629,7 @@ export default function TransitMixersContainer() {
                 onChange={handleEditInputChange}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status</label>
-              <select
-                name="status"
-                value={selectedMixer.status || "active"}
-                onChange={handleEditInputChange}
-                className="w-full h-11 rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
               <Input type="text" name="remarks" value={selectedMixer.remarks || ""} onChange={handleEditInputChange} />

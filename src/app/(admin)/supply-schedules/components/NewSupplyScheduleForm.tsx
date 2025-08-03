@@ -27,6 +27,10 @@ interface Project {
   _id: string;
   name: string;
   client_id: string;
+  address: string;
+  contact_name: string;
+  contact_number: string;
+  coordinates: string;
 }
 
 interface AvailableTM {
@@ -110,7 +114,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     returnTime: "",
     productionTime: "",
     concreteGrade: "",
-    siteAddress: "",
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [formDataRetrieved, setFormDataRetrieved] = useState(true);
@@ -190,7 +193,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
           returnTime: data.data.input_params.return_time.toString(),
           productionTime: data.data.input_params.buffer_time.toString(),
           concreteGrade: data.data.concreteGrade,
-          siteAddress: data.data.site_address || "",
         });
         const tm_ids = new Set();
         const tmSequence: string[] = [];
@@ -244,7 +246,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
             pump_start: `${formData.scheduleDate}T${formData.startTime}`,
             schedule_date: formData.scheduleDate,
           },
-          site_address: formData.siteAddress,
+          site_address: selectedProject ? projects.find((p) => p._id === selectedProject)?.address || "" : "",
         }),
       });
 
@@ -344,7 +346,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
               pump_start: `${formData.scheduleDate}T${formData.startTime}`,
               schedule_date: formData.scheduleDate,
             },
-            site_address: formData.siteAddress,
+            site_address: selectedProject ? projects.find((p) => p._id === selectedProject)?.address || "" : "",
           }),
         });
 
@@ -420,13 +422,12 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     router.push(`/supply-schedules/${schedule_id}/view`);
   };
 
-  const selectedClientDetails = clientsData?.find((c: Client) => c._id === selectedClient);
   const progressPercentage = ((step - 1) / (steps.length - 1)) * 100;
 
   const isStep1FormValid = () => {
     return (
       !!selectedClient &&
-      !!formData.siteAddress &&
+      !!selectedProject &&
       !!formData.scheduleDate &&
       !!formData.startTime &&
       !!formData.quantity &&
@@ -641,28 +642,22 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                     </Dropdown>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Site Address
-                  </label>
-                  <Input
-                    type="text"
-                    name="siteAddress"
-                    value={formData.siteAddress}
-                    onChange={handleInputChange}
-                    placeholder="Enter site address"
-                  />
-                </div>
-                {selectedClientDetails && (
+                {/* Project Details */}
+                {selectedProject && projects.find((p) => p._id === selectedProject) && (
                   <div className="flex justify-start items-end">
                     <div className="flex flex-col gap-0">
-                      <label className="block text-sm font-medium text-gray-400 dark:text-gray-300">
-                        Client Details
-                      </label>
                       <p className="mt-2 text-sm text-gray-400 dark:text-gray-400">
-                        {selectedClientDetails.name} - {selectedClientDetails.contact_phone}
+                        {projects.find((p) => p._id === selectedProject)?.contact_name} -{" "}
+                        {projects.find((p) => p._id === selectedProject)?.contact_number}
                       </p>
-                      <p className="text-sm text-gray-400 dark:text-gray-400">{selectedClientDetails.address}</p>
+                      <p className="text-sm text-gray-400 dark:text-gray-400">
+                        {projects.find((p) => p._id === selectedProject)?.address}
+                      </p>
+                      {projects.find((p) => p._id === selectedProject)?.coordinates && (
+                        <p className="text-sm text-gray-400 dark:text-gray-400">
+                          Coordinates: {projects.find((p) => p._id === selectedProject)?.coordinates}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -754,15 +749,14 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
               </div>
               <div className="grid grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Grade of Concrete
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">RMC Grade</label>
+
                   <Input
                     type="number"
                     name="concreteGrade"
                     value={parseFloat(formData.concreteGrade)}
                     onChange={handleInputChange}
-                    placeholder="Enter concrete grade"
+                    placeholder="Enter RMC grade"
                   />
                 </div>
                 <div>

@@ -106,6 +106,10 @@ interface Project {
   _id: string;
   name: string;
   client_id: string;
+  address: string;
+  contact_name: string;
+  contact_number: string;
+  coordinates: string;
 }
 
 const steps = [
@@ -137,7 +141,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     returnTime: "",
     productionTime: "",
     concreteGrade: "",
-    siteAddress: "",
     pump_start_time_from_plant: "",
     pumpFixingTime: "",
     pumpRemovalTime: "",
@@ -252,7 +255,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           returnTime: data.data.input_params.return_time.toString(),
           productionTime: data.data.input_params.buffer_time.toString(),
           concreteGrade: data.data.concreteGrade,
-          siteAddress: data.data.site_address || "",
           pump_start_time_from_plant: data.data.input_params.pump_start_time_from_plant
             ? data.data.input_params.pump_start_time_from_plant
             : "",
@@ -323,7 +325,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             pump_fixing_time: parseFloat(formData.pumpFixingTime),
             pump_removal_time: parseFloat(formData.pumpRemovalTime),
           },
-          site_address: formData.siteAddress, // You might want to add this as a form field
+          site_address: selectedProject ? projects.find((p) => p._id === selectedProject)?.address || "" : "",
           pumping_job: parseFloat(formData.pumpingJob),
           floor_height: parseFloat(formData.floorHeight),
           pump_site_reach_time: formData.pumpSiteReachTime,
@@ -408,7 +410,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               pump_removal_time: parseFloat(formData.pumpRemovalTime),
               unloading_time: parseFloat(formData.unloadingTime),
             },
-            site_address: formData.siteAddress, // You might want to add this as a form field
+            site_address: selectedProject ? projects.find((p) => p._id === selectedProject)?.address || "" : "",
             pumping_job: parseFloat(formData.pumpingJob),
             floor_height: parseFloat(formData.floorHeight),
             pump_site_reach_time: formData.pumpSiteReachTime,
@@ -418,7 +420,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         const data = await response.json();
         if (data.success) {
           setCalculatedTMs(data?.data);
-          if (!schedule_id) router.push(`/schedules/${data?.data?._id}`);
+          if (!schedule_id) router.push(`/pumping-schedules/${data?.data?._id}`);
           return true;
         }
         return false;
@@ -494,10 +496,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       tmSequence,
       ...formData,
     });
-    router.push(`/schedules/${schedule_id}/view`);
+    router.push(`/pumping-schedules/${schedule_id}/view`);
   };
 
-  const selectedClientDetails = clientsData?.find((c: Client) => c._id === selectedClient);
   // const filteredPumps = pumpsData?.filter((p: Pump) => p.type === pumpType) || [];
   const progressPercentage = ((step - 1) / (steps.length - 1)) * 100;
 
@@ -506,7 +507,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     return (
       !!selectedClient &&
       // !!selectedPump &&
-      !!formData.siteAddress &&
+      !!selectedProject &&
       !!formData.scheduleDate &&
       !!formData.startTime &&
       !!formData.quantity &&
@@ -782,30 +783,22 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </Dropdown>
                   </div>
                 </div>
-                {/* Site Address */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Site Address
-                  </label>
-                  <Input
-                    type="text"
-                    name="siteAddress"
-                    value={formData.siteAddress}
-                    onChange={handleInputChange}
-                    placeholder="Enter site address"
-                  />
-                </div>
-                {/* Client Details */}
-                {selectedClientDetails && (
+                {/* Project Details */}
+                {selectedProject && projects.find((p) => p._id === selectedProject) && (
                   <div className="flex justify-start items-end">
                     <div className="flex flex-col gap-0">
-                      <label className="block text-sm font-medium text-gray-400 dark:text-gray-300">
-                        Client Details
-                      </label>
                       <p className="mt-2 text-sm text-gray-400 dark:text-gray-400">
-                        {selectedClientDetails.name} - {selectedClientDetails.contact_phone}
+                        {projects.find((p) => p._id === selectedProject)?.contact_name} -{" "}
+                        {projects.find((p) => p._id === selectedProject)?.contact_number}
                       </p>
-                      <p className="text-sm text-gray-400 dark:text-gray-400">{selectedClientDetails.address}</p>
+                      <p className="text-sm text-gray-400 dark:text-gray-400">
+                        {projects.find((p) => p._id === selectedProject)?.address}
+                      </p>
+                      {projects.find((p) => p._id === selectedProject)?.coordinates && (
+                        <p className="text-sm text-gray-400 dark:text-gray-400">
+                          Coordinates: {projects.find((p) => p._id === selectedProject)?.coordinates}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -921,9 +914,17 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="pumpFixingTime"
-                    value={parseFloat(formData.pumpFixingTime)}
-                    onChange={handleInputChange}
-                    placeholder="Enter pump fixing time"
+                    value={formData.pumpFixingTime || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numValue = parseFloat(value);
+                      if (value === "" || (numValue >= 1 && numValue <= 600 && Number.isInteger(numValue))) {
+                        handleInputChange(e);
+                      }
+                    }}
+                    placeholder="Enter pump fixing time (1-600)"
+                    min="1"
+                    max="600"
                   />
                 </div>
                 {/* Pump Start Time */}
@@ -946,9 +947,16 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="pumpRemovalTime"
-                    value={parseFloat(formData.pumpRemovalTime)}
-                    onChange={handleInputChange}
-                    placeholder="Enter pump removal time"
+                    value={formData.pumpRemovalTime || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numValue = parseFloat(value);
+                      if (value === "" || (numValue >= 1 && numValue <= 600 && Number.isInteger(numValue))) {
+                        handleInputChange(e);
+                      }
+                    }}
+                    placeholder="Enter pump removal time (1-600)"
+                    min="1"
                   />
                 </div>
               </div>
@@ -997,15 +1005,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               <div className="grid grid-cols-[auto_auto_auto] gap-6">
                 {/* Grade of Concrete */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Grade of Concrete
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">RMC Grade</label>
                   <Input
                     type="number"
                     name="concreteGrade"
                     value={parseFloat(formData.concreteGrade)}
                     onChange={handleInputChange}
-                    placeholder="Enter concrete grade"
+                    placeholder="Enter RMC grade"
                   />
                 </div>
                 {/* Type of Pumping Job */}
@@ -1061,14 +1067,20 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 {/* Floor Height (Pumping) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Floor Height (Pumping)
+                    Floor (Pumping)
                   </label>
                   <Input
                     type="number"
                     name="floorHeight"
-                    value={parseFloat(formData.floorHeight)}
-                    onChange={handleInputChange}
-                    placeholder="Enter floor height between 1 to 99"
+                    value={formData.floorHeight ? parseFloat(formData.floorHeight) : ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numValue = parseFloat(value);
+                      if (value === "" || (numValue >= 1 && numValue <= 99 && Number.isInteger(numValue))) {
+                        handleInputChange(e);
+                      }
+                    }}
+                    placeholder="Enter floor between 1 to 99"
                     min="1"
                     max="99"
                   />
@@ -1079,87 +1091,96 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             {/* Transit Mixer Details Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
               <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Transit Mixer Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Left: Form fields (span 2 columns on md+) */}
-                <div className="md:col-span-2 space-y-2">
-                  {/* Production and Buffer Time */}
-                  <div className="col-span-1 md:col-span-2 grid grid-cols-2 items-center gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-start">
+                {/* Column 1: Input Labels */}
+                <div className="space-y-4 col-span-2">
+                  <div className="h-11 flex items-center">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Loading and Buffer Time (min)
                     </label>
+                  </div>
+                  <div className="h-11 flex items-center">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Onward Time (min)
+                    </label>
+                  </div>
+                  <div className="h-11 flex flex-col items-left">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      TM Unloading Time (min)
+                    </label>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      This value is auto-filled from the previous section based on Pumping Speed.
+                    </p>
+                  </div>
+                  <div className="h-11 flex items-center">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Return Time (min)
+                    </label>
+                  </div>
+                  <div className="h-11 flex items-center">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Total Cycle Time (min)
+                    </label>
+                  </div>
+                </div>
+
+                {/* Column 2: Input Fields */}
+                <div className="space-y-4 ">
+                  <div className="h-11">
                     <Input
                       type="number"
                       name="productionTime"
                       value={parseFloat(formData.productionTime)}
                       onChange={handleInputChange}
                       placeholder="Enter production time"
+                      className="w-full"
                     />
                   </div>
-                  {/* Transit Mixer Onward Time */}
-                  <div className="col-span-1 md:col-span-2 grid grid-cols-2 items-center gap-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Onward Time (min)
-                    </label>
+                  <div className="h-11">
                     <Input
                       type="number"
                       name="onwardTime"
                       value={parseFloat(formData.onwardTime)}
                       onChange={handleInputChange}
                       placeholder="Enter onward time"
+                      className="w-full"
                     />
                   </div>
-                  {/* TM Unloading Time */}
-                  <div className="col-span-1 md:col-span-2 grid grid-cols-2 items-center gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        TM Unloading Time (min)
-                      </label>
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        This value is auto-filled from the previous section based on Pumping Speed and Avg TM Capacity.
-                      </p>
-                    </div>
-                    <div>
-                      <Input
-                        type="number"
-                        name="unloadingTime"
-                        value={parseFloat(formData.unloadingTime)}
-                        onChange={handleInputChange}
-                        placeholder="Enter unloading time"
-                        disabled
-                      />
-                    </div>
+                  <div className="h-11">
+                    <Input
+                      type="number"
+                      name="unloadingTime"
+                      value={parseFloat(formData.unloadingTime)}
+                      onChange={handleInputChange}
+                      placeholder="Enter unloading time"
+                      disabled
+                      className="w-full"
+                    />
                   </div>
-                  {/* Transit Mixer Return Time */}
-                  <div className="col-span-1 md:col-span-2 grid grid-cols-2 items-center gap-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Return Time (min)
-                    </label>
+                  <div className="h-11">
                     <Input
                       type="number"
                       name="returnTime"
                       value={parseFloat(formData.returnTime)}
                       onChange={handleInputChange}
                       placeholder="Enter return time"
+                      className="w-full"
                     />
                   </div>
-                  {/* Total Cycle Time (calculated) */}
-                  <div className="col-span-1 md:col-span-2 grid grid-cols-2 items-center gap-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Total Cycle Time (min)
-                    </label>
+                  <div className="h-11">
                     <Input
                       type="number"
                       value={[formData.productionTime, formData.onwardTime, formData.unloadingTime, formData.returnTime]
                         .map((v) => parseFloat(v) || 0)
                         .reduce((a, b) => a + b, 0)}
                       disabled
-                      className="bg-gray-100 dark:bg-gray-800 font-semibold"
+                      className="bg-gray-100 dark:bg-gray-800 font-semibold w-full"
                       placeholder="Auto-calculated"
                     />
                   </div>
                 </div>
-                {/* Right: Calculations Table (only show on md+) */}
-                <div className="hidden md:block">
+                {/* Column 3: Formulas and Values */}
+                <div className="hidden md:block md:col-span-2 md:border-l">
                   {(() => {
                     const quantity = parseFloat(formData.quantity) || 0;
                     const speed = parseFloat(formData.speed) || 0;
@@ -1180,7 +1201,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     const tmReq = m3PerTM > 0 ? Math.ceil(quantity / m3PerTM) : 0;
                     const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
                     return (
-                      <table className="min-w-[320px] text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
+                      <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
                         <tbody>
                           <tr className="border-b border-gray-100 dark:border-gray-700">
                             <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
@@ -1239,6 +1260,96 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           </tr>
                         </tbody>
                       </table>
+                    );
+                  })()}
+                </div>
+
+                {/* Column 4: TM Distribution Table */}
+                <div className="hidden md:block  md:col-span-2 md:border-l">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 ml-3">TM Distribution Table</h4>
+                  {(() => {
+                    const quantity = parseFloat(formData.quantity) || 0;
+                    const speed = parseFloat(formData.speed) || 0;
+                    const avgTMCap =
+                      typeof avgTMCapData?.average_capacity === "number" ? avgTMCapData.average_capacity : 0;
+                    const cycleTimeMin = [
+                      formData.productionTime,
+                      formData.onwardTime,
+                      formData.unloadingTime,
+                      formData.returnTime,
+                    ]
+                      .map((v) => parseFloat(v) || 0)
+                      .reduce((a, b) => a + b, 0);
+                    const cycleTimeHr = cycleTimeMin / 60;
+                    const totalPumpingHours = speed > 0 ? quantity / speed : 0;
+                    const tripsPerTM = cycleTimeHr > 0 ? totalPumpingHours / cycleTimeHr : 0;
+                    const m3PerTM = tripsPerTM * avgTMCap;
+                    const tmReq = m3PerTM > 0 ? Math.ceil(quantity / m3PerTM) : 0;
+                    const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
+
+                    if (tmReq === 0 || totalTrips === 0) {
+                      return (
+                        <div className="text-gray-500 dark:text-gray-400 text-sm ml-3">
+                          No distribution data available. Please fill in all required fields.
+                        </div>
+                      );
+                    }
+
+                    // Calculate TM distribution
+                    const baseTripsPerTM = Math.floor(tripsPerTM);
+                    const remainingTrips = totalTrips - baseTripsPerTM * tmReq;
+                    const tmsWithExtraTrip = Math.min(remainingTrips, tmReq);
+                    const tmsWithBaseTrips = tmReq - tmsWithExtraTrip;
+
+                    const distribution = [];
+                    if (tmsWithBaseTrips > 0) {
+                      distribution.push({
+                        tmCount: tmsWithBaseTrips,
+                        trips: baseTripsPerTM,
+                        totalTrips: tmsWithBaseTrips * baseTripsPerTM,
+                      });
+                    }
+                    if (tmsWithExtraTrip > 0) {
+                      distribution.push({
+                        tmCount: tmsWithExtraTrip,
+                        trips: baseTripsPerTM + 1,
+                        totalTrips: tmsWithExtraTrip * (baseTripsPerTM + 1),
+                      });
+                    }
+
+                    return (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
+                          <thead>
+                            <tr className="bg-gray-50 dark:bg-gray-800">
+                              <th className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">
+                                NO OF TM
+                              </th>
+                              <th className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">
+                                NO OF TRIPS
+                              </th>
+                              <th className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">
+                                TOTAL TRIPS
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {distribution.map((row, idx) => (
+                              <tr key={idx} className="border-b border-gray-100 dark:border-gray-700">
+                                <td className="px-4 py-2 text-left">{row.tmCount.toFixed(2)}</td>
+                                <td className="px-4 py-2 text-left">{row.trips.toFixed(2)}</td>
+                                <td className="px-4 py-2 text-left">{row.totalTrips.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                            {/* Summary row */}
+                            <tr className="font-semibold">
+                              <td className="px-4 py-2 text-left">{tmReq.toFixed(2)}</td>
+                              <td className="px-4 py-2 text-left"></td>
+                              <td className="px-4 py-2 text-left">{totalTrips.toFixed(2)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
                     );
                   })()}
                 </div>
@@ -1455,16 +1566,20 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Cycle Time (hours)</p>
                       <p className="text-lg font-medium text-gray-900 dark:text-white">
-                        {calculatedTMs.cycle_time?.toFixed(0) || 'N/A'}
+                        {calculatedTMs.cycle_time?.toFixed(0) || "N/A"}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Total Trips</p>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.total_trips || 'N/A'}</p>
+                      <p className="text-lg font-medium text-gray-900 dark:text-white">
+                        {calculatedTMs.total_trips || "N/A"}
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Opt Required TMs</p>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.tm_count || 'N/A'}</p>
+                      <p className="text-lg font-medium text-gray-900 dark:text-white">
+                        {calculatedTMs.tm_count || "N/A"}
+                      </p>
                     </div>
                     <div>
                       <input
@@ -1497,7 +1612,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     )}
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Avg Trips per TM</p>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">{calculatedTMs.trips_per_tm || 'N/A'}</p>
+                      <p className="text-lg font-medium text-gray-900 dark:text-white">
+                        {calculatedTMs.trips_per_tm || "N/A"}
+                      </p>
                     </div>
                   </div>
                 </div>

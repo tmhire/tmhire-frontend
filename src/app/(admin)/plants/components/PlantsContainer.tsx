@@ -293,7 +293,7 @@ export default function PlantsContainer() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Plants</h2>
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">RMC Plants</h2>
         <nav>
           <Button className="flex items-center gap-2" size="sm" onClick={handleAddPlant}>
             <PlusIcon className="w-4 h-4" />

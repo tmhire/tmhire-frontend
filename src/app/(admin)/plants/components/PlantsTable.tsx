@@ -37,12 +37,6 @@ export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps
                   isHeader
                   className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  ID
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
                   Name
                 </TableCell>
                 <TableCell
@@ -94,18 +88,6 @@ export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
               {data.map((plant) => (
                 <TableRow key={plant._id}>
-                  <TableCell className="px-3 py-4 text-start">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <span
-                          className="block text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                          title={plant._id}
-                        >
-                          {plant._id.slice(0, 4)}...{plant._id.slice(-4)}
-                        </span>
-                      </div>
-                    </div>
-                  </TableCell>
                   <TableCell className="px-3 py-4 text-start">
                     <div className="flex items-center gap-3">
                       <div>
