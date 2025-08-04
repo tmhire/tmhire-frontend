@@ -5,8 +5,8 @@ import { Metadata } from "next";
 import React from "react";
 
 export const metadata: Metadata = {
-  title: "Profile | TM Hire - Concrete Calculator",
-  description: "Manage your company profile and settings in TM Hire's Concrete Calculator platform",
+  title: "Profile | TM Grid - Concrete Calculator",
+  description: "Manage your company profile and settings in TM Grid's Concrete Calculator platform",
 };
 
 export default function Profile() {

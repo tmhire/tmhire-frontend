@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import SchedulesContainer from "./components/SchedulesContainer";
 
 export const metadata: Metadata = {
-  title: "Schedules | TM Hire - Concrete Calculator",
+  title: "Schedules | TM Grid - Concrete Calculator",
   description: "Manage and track your concrete delivery schedules and assignments",
 };
 

@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import PumpCalendarContainer from "./components/PumpCalendarContainer";
 
 export const metadata: Metadata = {
-  title: "Pump Calendar | TM Hire - Concrete Calculator",
+  title: "Pump Calendar | TM Grid - Concrete Calculator",
   description: "View and manage your pump delivery schedules and production calendar",
 };
 

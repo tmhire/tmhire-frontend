@@ -22,7 +22,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                   unoptimized
                   priority
                 /> */}
-                <p className="text-center text-gray-400 dark:text-white/60">TM Hire</p>
+                <p className="text-center text-gray-400 dark:text-white/60">TM Grid</p>
               </div>
             </div>
           </div>

@@ -138,6 +138,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     quantity: "",
     speed: "",
     onwardTime: "",
+    pumpOnwardTime: "",
     returnTime: "",
     productionTime: "",
     concreteGrade: "",
@@ -251,6 +252,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               : pumping_speed && avgTMCap
               ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
               : "",
+          pumpOnwardTime: data.data.input_params.pump_onward_time.toString(),
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
           productionTime: data.data.input_params.buffer_time.toString(),
@@ -303,6 +305,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const updateSchedule = async () => {
     if (!schedule_id) return false;
     try {
+      // Convert DD-MM-YYYY to YYYY-MM-DD format
+      const convertDateFormat = (dateStr: string) => {
+        const [day, month, year] = dateStr.split('-');
+        return `${year}-${month}-${day}`;
+      };
+
       const response = await fetchWithAuth(`/schedules/${schedule_id}`, {
         method: "PUT",
         body: JSON.stringify({
@@ -317,10 +325,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             pumping_speed: parseFloat(formData.speed),
             unloading_time: Math.round(parseFloat(formData.unloadingTime)),
             onward_time: parseFloat(formData.onwardTime),
+            pump_onward_time: parseFloat(formData.pumpOnwardTime),
             return_time: parseFloat(formData.returnTime),
             buffer_time: parseFloat(formData.productionTime),
-            pump_start: `${formData.scheduleDate}T${formData.startTime}`,
-            schedule_date: formData.scheduleDate,
+            pump_start: `${convertDateFormat(formData.scheduleDate)}T${formData.startTime}`,
+            schedule_date: convertDateFormat(formData.scheduleDate),
             pump_start_time_from_plant: formData.pump_start_time_from_plant,
             pump_fixing_time: parseFloat(formData.pumpFixingTime),
             pump_removal_time: parseFloat(formData.pumpRemovalTime),
@@ -379,15 +388,21 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       !formData.quantity ||
       !formData.speed ||
       !formData.onwardTime ||
+      !formData.pumpOnwardTime ||
       !formData.returnTime ||
-      !formData.productionTime ||
-      !formData.pump_start_time_from_plant
+      !formData.productionTime
     ) {
       return false;
     }
     if (!schedule_id) {
       setIsCalculating(true);
       try {
+        // Convert DD-MM-YYYY to YYYY-MM-DD format
+        const convertDateFormat = (dateStr: string) => {
+          const [day, month, year] = dateStr.split('-');
+          return `${year}-${month}-${day}`;
+        };
+
         const response = await fetchWithAuth("/schedules", {
           method: "POST",
           body: JSON.stringify({
@@ -401,10 +416,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               quantity: parseFloat(formData.quantity),
               pumping_speed: parseFloat(formData.speed),
               onward_time: parseFloat(formData.onwardTime),
+              pump_onward_time: parseFloat(formData.pumpOnwardTime),
               return_time: parseFloat(formData.returnTime),
               buffer_time: parseFloat(formData.productionTime),
-              pump_start: `${formData.scheduleDate}T${formData.startTime}`,
-              schedule_date: formData.scheduleDate,
+              pump_start: `${convertDateFormat(formData.scheduleDate)}T${formData.startTime}`,
+              schedule_date: convertDateFormat(formData.scheduleDate),
               pump_start_time_from_plant: formData.pump_start_time_from_plant,
               pump_fixing_time: parseFloat(formData.pumpFixingTime),
               pump_removal_time: parseFloat(formData.pumpRemovalTime),
@@ -506,7 +522,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const isStep1FormValid = () => {
     return (
       !!selectedClient &&
-      // !!selectedPump &&
       !!selectedProject &&
       !!formData.scheduleDate &&
       !!formData.startTime &&
@@ -515,14 +530,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       !!formData.onwardTime &&
       !!formData.returnTime &&
       !!formData.productionTime &&
-      !!formData.pump_start_time_from_plant &&
       !!formData.speed &&
       !!formData.pumpFixingTime &&
       !!formData.pumpRemovalTime &&
       !!formData.unloadingTime &&
       !!formData.pumpingJob &&
       !!formData.floorHeight &&
-      !!formData.pumpSiteReachTime
+      !!formData.pumpOnwardTime
     );
   };
 
@@ -870,41 +884,30 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-5 gap-6 mb-6">
+              <div className="grid grid-cols-4 gap-6 mb-6">
                 {/* Pump Onward Time */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pump Start Time from Plant
+                    Pump Onward Time (min)
                   </label>
-                  <div className="relative">
-                    <Input
-                      type="time"
-                      name="pump_start_time_from_plant"
-                      value={formData.pump_start_time_from_plant}
-                      onChange={handleInputChange}
-                      placeholder="Enter pump start time from plant"
-                    />
-                    <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-                      <Clock className="size-5" />
-                    </span>
-                  </div>
-                </div>
-                {/* Pump Site Reach Time */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pump Site Reach Time
-                  </label>
-                  <div className="relative">
-                    <Input
-                      type="time"
-                      name="pumpSiteReachTime"
-                      value={formData.pumpSiteReachTime}
-                      onChange={handleInputChange}
-                    />
-                    <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-                      <Clock className="size-5" />
-                    </span>
-                  </div>
+                  <Input
+                    type="number"
+                    name="pumpOnwardTime"
+                    value={formData.pumpOnwardTime || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numValue = parseFloat(value);
+                      if (
+                        value === "" ||
+                        (numValue >= 1 && numValue <= 600 && Number.isInteger(numValue))
+                      ) {
+                        handleInputChange(e);
+                      }
+                    }}
+                    placeholder="Enter pump onward time from plant (1-600)"
+                    min="1"
+                    max="600"
+                  />
                 </div>
                 {/* Pipeline Fixing Time */}
                 <div className="col-span-1">
@@ -1266,7 +1269,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                 {/* Column 4: TM Distribution Table */}
                 <div className="hidden md:block  md:col-span-2 md:border-l">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 ml-3">TM Distribution Table</h4>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 ml-3">
+                    TM Distribution Table
+                  </h4>
                   {(() => {
                     const quantity = parseFloat(formData.quantity) || 0;
                     const speed = parseFloat(formData.speed) || 0;

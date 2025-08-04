@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import PumpsContainer from "./components/PumpsContainer";
 
 export const metadata: Metadata = {
-  title: "Pumps | TM Hire - Concrete Calculator",
+  title: "Pumps | TM Grid - Concrete Calculator",
   description: "Manage your concrete pumps, their specifications, and availability",
 };
 

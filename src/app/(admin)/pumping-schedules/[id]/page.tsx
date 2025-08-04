@@ -3,7 +3,7 @@ import NewScheduleForm from "../components/NewScheduleForm";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-  title: "New Pumping Schedule | TM Hire - Concrete Calculator",
+  title: "New Pumping Schedule | TM Grid - Concrete Calculator",
   description: "Create a new concrete delivery schedule and assign resources",
 };
 

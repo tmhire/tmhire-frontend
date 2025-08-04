@@ -20,15 +20,15 @@ const jetBrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "TM Hire - Concrete Calculator",
-    template: "%s | TM Hire - Concrete Calculator",
+    default: "TM Grid - Concrete Calculator",
+    template: "%s | TM Grid - Concrete Calculator",
   },
   description:
-    "Streamline your concrete operations with TM Hire's comprehensive concrete calculator and management platform",
-  keywords: ["concrete calculator", "concrete management", "construction", "concrete operations", "TM Hire"],
-  authors: [{ name: "TM Hire" }],
-  creator: "TM Hire",
-  publisher: "TM Hire",
+    "Streamline your concrete operations with TM Grid's comprehensive concrete calculator and management platform",
+  keywords: ["concrete calculator", "concrete management", "construction", "concrete operations", "TM Grid"],
+  authors: [{ name: "TM Grid" }],
+  creator: "TM Grid",
+  publisher: "TM Grid",
   formatDetection: {
     email: false,
     address: false,
@@ -39,24 +39,24 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "https://tmhire.com",
-    title: "TM Hire - Concrete Calculator",
+    title: "TM Grid - Concrete Calculator",
     description:
-      "Streamline your concrete operations with TM Hire's comprehensive concrete calculator and management platform",
-    siteName: "TM Hire",
+      "Streamline your concrete operations with TM Grid's comprehensive concrete calculator and management platform",
+    siteName: "TM Grid",
     images: [
       {
         url: "https://i.ibb.co/BV0jYxcR/image.png",
         width: 1200,
         height: 630,
-        alt: "TM Hire - Concrete Calculator",
+        alt: "TM Grid - Concrete Calculator",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "TM Hire - Concrete Calculator",
+    title: "TM Grid - Concrete Calculator",
     description:
-      "Streamline your concrete operations with TM Hire's comprehensive concrete calculator and management platform",
+      "Streamline your concrete operations with TM Grid's comprehensive concrete calculator and management platform",
     images: ["https://i.ibb.co/BV0jYxcR/image.png"],
   },
   icons: {

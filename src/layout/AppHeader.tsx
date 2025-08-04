@@ -85,7 +85,7 @@ const AppHeader: React.FC = () => {
                   <h1 className="text-gray-800 dark:text-white/90 text-xl font-semibold">
                     {loading ? "Loading..." : profile?.company || "Company"}
                   </h1>
-                  <p className="text-gray-500 dark:text-gray-400 text-xs">powered by TM Hire</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">powered by TM Grid</p>
                 </div>
               </div>
             </Link>

@@ -121,7 +121,7 @@ export default function WelcomeModal() {
       <div className="no-scrollbar relative w-full overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
         <div className="px-2 mb-8">
           <h4 className="mb-2 text-xl font-semibold text-gray-800 dark:text-white/90">
-            Welcome to TM Hire&apos;s Concrete Calculator
+            Welcome to TM Grid&apos;s Concrete Calculator
           </h4>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Let&apos;s get you started by setting up your company information.

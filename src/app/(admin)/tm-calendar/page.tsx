@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import CalendarContainer from "./components/CalendarContainer";
 
 export const metadata: Metadata = {
-  title: "Calendar | TM Hire - Concrete Calculator",
+  title: "Calendar | TM Grid - Concrete Calculator",
   description: "View and manage your concrete delivery schedules and production calendar",
 };
 
