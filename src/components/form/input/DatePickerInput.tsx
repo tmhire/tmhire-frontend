@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
-import flatpickr from 'flatpickr';
-import 'flatpickr/dist/flatpickr.min.css';
-import { Instance as FlatpickrInstance } from 'flatpickr/dist/types/instance';
+import { useEffect, useRef } from "react";
+import flatpickr from "flatpickr";
+import "flatpickr/dist/flatpickr.min.css";
+import { Instance as FlatpickrInstance } from "flatpickr/dist/types/instance";
 
 interface DatePickerInputProps {
   value?: string;
@@ -26,22 +26,22 @@ export default function DatePickerInput({
   useEffect(() => {
     if (inputRef.current) {
       flatpickrRef.current = flatpickr(inputRef.current, {
-        dateFormat: 'd-m-Y',
+        dateFormat: "d-m-Y",
         defaultDate: value,
         onChange: ([selectedDate]) => {
           if (selectedDate) {
             // Format date as DD-MM-YYYY
             const year = selectedDate.getFullYear();
-            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-            const day = String(selectedDate.getDate()).padStart(2, '0');
-            onChange(`${day}-${month}-${year}`);
+            const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+            const day = String(selectedDate.getDate()).padStart(2, "0");
+            onChange(`${year}-${month}-${day}`);
           }
         },
         onClose: () => {
           if (!inputRef.current?.value) {
-            onChange('');
+            onChange("");
           }
-        }
+        },
       });
     }
 

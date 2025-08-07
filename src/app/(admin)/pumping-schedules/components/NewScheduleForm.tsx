@@ -238,6 +238,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       if (data.success) {
         setGeneratedSchedule(data.data);
         setSelectedClient(data.data.client_id);
+        setSelectedProject(data.data.project_id);
         setSelectedPump(data.data.pump);
         setPumpType(data.data.pump_type || "line");
         const pumping_speed = data.data.input_params.pumping_speed;
@@ -266,7 +267,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           pumpRemovalTime: data.data.input_params.pump_removal_time
             ? data.data.input_params.pump_removal_time.toString()
             : "",
-          pumpingJob: data.data.pumping_job ? data.data.pumping_job.toString() : "",
+          pumpingJob: data.data.pumping_job,
           floorHeight: data.data.floor_height ? data.data.floor_height.toString() : "",
           pumpSiteReachTime: data.data.pump_site_reach_time ? data.data.pump_site_reach_time.toString() : "",
         });
@@ -305,12 +306,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const updateSchedule = async () => {
     if (!schedule_id) return false;
     try {
-      // Convert DD-MM-YYYY to YYYY-MM-DD format
-      const convertDateFormat = (dateStr: string) => {
-        const [day, month, year] = dateStr.split('-');
-        return `${year}-${month}-${day}`;
-      };
-
       const response = await fetchWithAuth(`/schedules/${schedule_id}`, {
         method: "PUT",
         body: JSON.stringify({
@@ -328,14 +323,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             pump_onward_time: parseFloat(formData.pumpOnwardTime),
             return_time: parseFloat(formData.returnTime),
             buffer_time: parseFloat(formData.productionTime),
-            pump_start: `${convertDateFormat(formData.scheduleDate)}T${formData.startTime}`,
-            schedule_date: convertDateFormat(formData.scheduleDate),
+            pump_start: `${formData.scheduleDate}T${formData.startTime}`,
+            schedule_date: formData.scheduleDate,
             pump_start_time_from_plant: formData.pump_start_time_from_plant,
             pump_fixing_time: parseFloat(formData.pumpFixingTime),
             pump_removal_time: parseFloat(formData.pumpRemovalTime),
           },
           site_address: selectedProject ? projects.find((p) => p._id === selectedProject)?.address || "" : "",
-          pumping_job: parseFloat(formData.pumpingJob),
+          pumping_job: formData.pumpingJob,
           floor_height: parseFloat(formData.floorHeight),
           pump_site_reach_time: formData.pumpSiteReachTime,
         }),
@@ -397,12 +392,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     if (!schedule_id) {
       setIsCalculating(true);
       try {
-        // Convert DD-MM-YYYY to YYYY-MM-DD format
-        const convertDateFormat = (dateStr: string) => {
-          const [day, month, year] = dateStr.split('-');
-          return `${year}-${month}-${day}`;
-        };
-
         const response = await fetchWithAuth("/schedules", {
           method: "POST",
           body: JSON.stringify({
@@ -419,15 +408,15 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               pump_onward_time: parseFloat(formData.pumpOnwardTime),
               return_time: parseFloat(formData.returnTime),
               buffer_time: parseFloat(formData.productionTime),
-              pump_start: `${convertDateFormat(formData.scheduleDate)}T${formData.startTime}`,
-              schedule_date: convertDateFormat(formData.scheduleDate),
+              pump_start: `${formData.scheduleDate}T${formData.startTime}`,
+              schedule_date: formData.scheduleDate,
               pump_start_time_from_plant: formData.pump_start_time_from_plant,
               pump_fixing_time: parseFloat(formData.pumpFixingTime),
               pump_removal_time: parseFloat(formData.pumpRemovalTime),
               unloading_time: parseFloat(formData.unloadingTime),
             },
             site_address: selectedProject ? projects.find((p) => p._id === selectedProject)?.address || "" : "",
-            pumping_job: parseFloat(formData.pumpingJob),
+            pumping_job: formData.pumpingJob,
             floor_height: parseFloat(formData.floorHeight),
             pump_site_reach_time: formData.pumpSiteReachTime,
           }),
@@ -897,10 +886,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     onChange={(e) => {
                       const value = e.target.value;
                       const numValue = parseFloat(value);
-                      if (
-                        value === "" ||
-                        (numValue >= 1 && numValue <= 600 && Number.isInteger(numValue))
-                      ) {
+                      if (value === "" || (numValue >= 1 && numValue <= 600 && Number.isInteger(numValue))) {
                         handleInputChange(e);
                       }
                     }}
