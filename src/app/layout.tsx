@@ -34,18 +34,18 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL("https://tmhire.com"),
+  metadataBase: new URL("https://tmgrid.in"),
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://tmhire.com",
+    url: "https://tmgrid.in",
     title: "TM Grid - Concrete Calculator",
     description:
       "Streamline your concrete operations with TM Grid's comprehensive concrete calculator and management platform",
     siteName: "TM Grid",
     images: [
       {
-        url: "https://i.ibb.co/BV0jYxcR/image.png",
+        url: "https://i.ibb.co/S4SG9K1p/image.png",
         width: 1200,
         height: 630,
         alt: "TM Grid - Concrete Calculator",
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     title: "TM Grid - Concrete Calculator",
     description:
       "Streamline your concrete operations with TM Grid's comprehensive concrete calculator and management platform",
-    images: ["https://i.ibb.co/BV0jYxcR/image.png"],
+    images: ["https://i.ibb.co/S4SG9K1p/image.png"],
   },
   icons: {
     icon: "/favicon.ico",

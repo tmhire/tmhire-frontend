@@ -15,7 +15,7 @@ const Portal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return ReactDOM.createPortal(children, portalRef.current);
 };
 
-// Tooltip component for tmhire project
+// Tooltip component for tmgrid project
 // Renders outside the main container using a portal, styled to match the design theme
 // Accepts content, children (trigger), fontSize, and placement props
 //
@@ -92,7 +92,7 @@ const Tooltip: React.FC<TooltipProps> = ({
         <Portal>
           <div
             style={getTooltipStyle()}
-            className={`tmhire-tooltip ${className} bg-gray-100 text-black dark:bg-slate-800 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 shadow-xl`}
+            className={`tmgrid-tooltip ${className} bg-gray-100 text-black dark:bg-slate-800 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 shadow-xl`}
           >
             {content}
           </div>
