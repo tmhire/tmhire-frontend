@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components
 import Badge from "@/components/ui/badge/Badge";
 import { Trash2, Eye } from "lucide-react";
 import Button from "@/components/ui/button/Button";
+import Tooltip from "@/components/ui/tooltip";
 
 interface SupplySchedule {
   _id: string;
@@ -162,15 +163,26 @@ export default function SupplySchedulesTable({ data, onDelete }: SupplySchedules
                 </TableCell>
                 <TableCell className="px-3 py-4 text-start">
                   <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleView(schedule)}
-                      className="flex items-center gap-1"
+                    <Tooltip
+                      key={schedule._id}
+                      content={
+                        schedule.status === "generated"
+                          ? "View Schedule"
+                          : "Generate the schedule before trying to view"
+                      }
+                      opacity={0.5}
                     >
-                      <Eye size={14} />
-                      View
-                    </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleView(schedule)}
+                        className="flex items-center gap-1"
+                        disabled={schedule.status !== "generated"}
+                      >
+                        <Eye size={14} />
+                        View
+                      </Button>
+                    </Tooltip>
                     <Button
                       size="sm"
                       variant="outline"
