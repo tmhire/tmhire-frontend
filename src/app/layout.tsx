@@ -20,12 +20,12 @@ const jetBrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "TM Grid - Concrete Calculator",
-    template: "%s | TM Grid - Concrete Calculator",
+    default: "TM Grid - Concrete Scheduling of Jobs",
+    template: "%s | TM Grid - Concrete Scheduling of Jobs",
   },
   description:
-    "Streamline your concrete operations with TM Grid's comprehensive concrete calculator and management platform",
-  keywords: ["concrete calculator", "concrete management", "construction", "concrete operations", "TM Grid"],
+    "Streamline your concrete operations with TM Grid's comprehensive concrete scheduling and management platform",
+  keywords: ["concrete scheduling", "concrete management", "construction", "concrete operations", "TM Grid"],
   authors: [{ name: "TM Grid" }],
   creator: "TM Grid",
   publisher: "TM Grid",
@@ -39,24 +39,24 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "https://tmgrid.in",
-    title: "TM Grid - Concrete Calculator",
+    title: "TM Grid - Concrete Scheduling of Jobs",
     description:
-      "Streamline your concrete operations with TM Grid's comprehensive concrete calculator and management platform",
+      "Streamline your concrete operations with TM Grid's comprehensive concrete scheduling and management platform",
     siteName: "TM Grid",
     images: [
       {
         url: "https://i.ibb.co/S4SG9K1p/image.png",
         width: 1200,
         height: 630,
-        alt: "TM Grid - Concrete Calculator",
+        alt: "TM Grid - Concrete Scheduling of Jobs",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "TM Grid - Concrete Calculator",
+    title: "TM Grid - Concrete Scheduling of Jobs",
     description:
-      "Streamline your concrete operations with TM Grid's comprehensive concrete calculator and management platform",
+      "Streamline your concrete operations with TM Grid's comprehensive concrete scheduling and management platform",
     images: ["https://i.ibb.co/S4SG9K1p/image.png"],
   },
   icons: {
