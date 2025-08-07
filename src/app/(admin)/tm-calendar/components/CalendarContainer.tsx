@@ -206,7 +206,6 @@ export default function CalendarContainer() {
 
   // Update URL when date changes
   const handleDateChange = (newDate: string) => {
-    newDate = newDate.split("-").reverse().join("-");
     setSelectedDate(newDate);
     const params = new URLSearchParams(searchParams.toString());
     params.set("date", newDate);
@@ -227,7 +226,6 @@ export default function CalendarContainer() {
       });
 
       const data: ApiResponse = await response.json();
-      console.log("data", data);
       if (data.success) {
         const transformedData = transformApiData(data);
         setGanttData(transformedData);

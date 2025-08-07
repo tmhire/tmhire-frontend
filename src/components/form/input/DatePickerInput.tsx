@@ -54,7 +54,7 @@ export default function DatePickerInput({
 
   useEffect(() => {
     if (flatpickrRef.current && value) {
-      flatpickrRef.current.setDate(value);
+      flatpickrRef.current.setDate(new Date(value), false);
     }
   }, [value]);
 
