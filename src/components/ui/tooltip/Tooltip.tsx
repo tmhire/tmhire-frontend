@@ -27,14 +27,10 @@ interface TooltipProps {
   children: React.ReactElement;
   fontSize?: string;
   className?: string;
+  opacity?: number; // add this
 }
 
-const Tooltip: React.FC<TooltipProps> = ({
-  content,
-  children,
-  fontSize = '0.7rem',
-  className = '',
-}) => {
+const Tooltip: React.FC<TooltipProps> = ({ content, children, fontSize = "0.7rem", className = "", opacity = 1 }) => {
   const [visible, setVisible] = useState(false);
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -61,16 +57,16 @@ const Tooltip: React.FC<TooltipProps> = ({
   // Positioning logic
   const getTooltipStyle = () => {
     const base: React.CSSProperties = {
-      position: 'absolute',
+      position: "absolute",
       zIndex: 9999,
       fontSize,
-      pointerEvents: 'none',
-      transition: 'opacity 0.15s',
-      opacity: visible ? 1 : 0,
-      whiteSpace: 'pre-line',
+      pointerEvents: "none",
+      transition: "opacity 0.15s",
+      opacity: visible ? opacity : 0,
+      whiteSpace: "pre-line",
       left: mousePos.x + 12,
       top: mousePos.y + 12,
-      transform: 'translate(0, 0)',
+      transform: "translate(0, 0)",
     };
     return base;
   };
@@ -84,7 +80,7 @@ const Tooltip: React.FC<TooltipProps> = ({
         onMouseLeave={hideTooltip}
         onFocus={showTooltipOnFocus}
         onBlur={hideTooltip}
-        style={{ display: 'inline-block' }}
+        style={{ display: "inline-block" }}
       >
         {children}
       </div>
@@ -102,4 +98,4 @@ const Tooltip: React.FC<TooltipProps> = ({
   );
 };
 
-export default Tooltip; 
+export default Tooltip;
