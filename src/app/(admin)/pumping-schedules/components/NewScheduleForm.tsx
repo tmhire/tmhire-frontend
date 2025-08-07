@@ -1080,7 +1080,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             {/* Transit Mixer Details Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
               <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Transit Mixer Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
                 {/* Column 1: Input Labels */}
                 <div className="space-y-4 col-span-2">
                   <div className="h-11 flex items-center">
@@ -1227,9 +1227,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           </tr>
                           <tr>
                             <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                              TM required formula
+                              Optimum TM Required
                               <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                                ceil(Pumping quantity / m³ transported per TM)
+                                roundUp(Pumping quantity / m³ transported per TM)
                               </div>
                             </td>
                             <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
@@ -1238,9 +1238,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           </tr>
                           <tr className="border-b border-gray-100 dark:border-gray-700">
                             <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                              Total trips
+                              Total trips (approx.)
                               <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                                ceil(Trips per TM × TM required) + 1 (buffer)
+                                roundUp(Trips per TM × TM required)
                               </div>
                             </td>
                             <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
@@ -1249,98 +1249,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           </tr>
                         </tbody>
                       </table>
-                    );
-                  })()}
-                </div>
-
-                {/* Column 4: TM Distribution Table */}
-                <div className="hidden md:block  md:col-span-2 md:border-l">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 ml-3">
-                    TM Distribution Table
-                  </h4>
-                  {(() => {
-                    const quantity = parseFloat(formData.quantity) || 0;
-                    const speed = parseFloat(formData.speed) || 0;
-                    const avgTMCap =
-                      typeof avgTMCapData?.average_capacity === "number" ? avgTMCapData.average_capacity : 0;
-                    const cycleTimeMin = [
-                      formData.productionTime,
-                      formData.onwardTime,
-                      formData.unloadingTime,
-                      formData.returnTime,
-                    ]
-                      .map((v) => parseFloat(v) || 0)
-                      .reduce((a, b) => a + b, 0);
-                    const cycleTimeHr = cycleTimeMin / 60;
-                    const totalPumpingHours = speed > 0 ? quantity / speed : 0;
-                    const tripsPerTM = cycleTimeHr > 0 ? totalPumpingHours / cycleTimeHr : 0;
-                    const m3PerTM = tripsPerTM * avgTMCap;
-                    const tmReq = m3PerTM > 0 ? Math.ceil(quantity / m3PerTM) : 0;
-                    const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
-
-                    if (tmReq === 0 || totalTrips === 0) {
-                      return (
-                        <div className="text-gray-500 dark:text-gray-400 text-sm ml-3">
-                          No distribution data available. Please fill in all required fields.
-                        </div>
-                      );
-                    }
-
-                    // Calculate TM distribution
-                    const baseTripsPerTM = Math.floor(tripsPerTM);
-                    const remainingTrips = totalTrips - baseTripsPerTM * tmReq;
-                    const tmsWithExtraTrip = Math.min(remainingTrips, tmReq);
-                    const tmsWithBaseTrips = tmReq - tmsWithExtraTrip;
-
-                    const distribution = [];
-                    if (tmsWithBaseTrips > 0) {
-                      distribution.push({
-                        tmCount: tmsWithBaseTrips,
-                        trips: baseTripsPerTM,
-                        totalTrips: tmsWithBaseTrips * baseTripsPerTM,
-                      });
-                    }
-                    if (tmsWithExtraTrip > 0) {
-                      distribution.push({
-                        tmCount: tmsWithExtraTrip,
-                        trips: baseTripsPerTM + 1,
-                        totalTrips: tmsWithExtraTrip * (baseTripsPerTM + 1),
-                      });
-                    }
-
-                    return (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
-                          <thead>
-                            <tr className="bg-gray-50 dark:bg-gray-800">
-                              <th className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">
-                                NO OF TM
-                              </th>
-                              <th className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">
-                                NO OF TRIPS
-                              </th>
-                              <th className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">
-                                TOTAL TRIPS
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {distribution.map((row, idx) => (
-                              <tr key={idx} className="border-b border-gray-100 dark:border-gray-700">
-                                <td className="px-4 py-2 text-left">{row.tmCount.toFixed(2)}</td>
-                                <td className="px-4 py-2 text-left">{row.trips.toFixed(2)}</td>
-                                <td className="px-4 py-2 text-left">{row.totalTrips.toFixed(2)}</td>
-                              </tr>
-                            ))}
-                            {/* Summary row */}
-                            <tr className="font-semibold">
-                              <td className="px-4 py-2 text-left">{tmReq.toFixed(2)}</td>
-                              <td className="px-4 py-2 text-left"></td>
-                              <td className="px-4 py-2 text-left">{totalTrips.toFixed(2)}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
                     );
                   })()}
                 </div>
@@ -1568,7 +1476,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </div>
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Opt Required TMs</p>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">
+                      <p
+                        className={`text-lg font-medium text-gray-900 dark:text-white ${
+                          overruleTMCount ? "line-through text-red-500 dark:text-red-500" : ""
+                        }`}
+                      >
                         {calculatedTMs.tm_count || "N/A"}
                       </p>
                     </div>
@@ -1577,35 +1489,49 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         type="checkbox"
                         id="overrule-tm-count"
                         checked={overruleTMCount}
-                        onChange={() => setOverruleTMCount((prev) => !prev)}
+                        onChange={() => {
+                          setOverruleTMCount((prev) => {
+                            const newVal = !prev;
+                            if (newVal && calculatedTMs?.tm_count) {
+                              setCustomTMCount(calculatedTMs.tm_count);
+                            }
+                            return newVal;
+                          });
+                        }}
                         className="h-3 w-3 text-brand-500 rounded border-gray-300 focus:ring-brand-500 mr-2"
                       />
                       <label
                         htmlFor="overrule-tm-count"
                         className="text-sm text-gray-700 dark:text-gray-300 select-none"
                       >
-                        Overrule recommended TM count
+                        Overrule by User
                       </label>
                     </div>
-                    {overruleTMCount && (
-                      <input
-                        type="number"
-                        min={1}
-                        value={customTMCount}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value, 10);
-                          setCustomTMCount(isNaN(val) ? 1 : val);
-                          setHasChanged(true);
-                        }}
-                        className="mt-1 w-20 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                        placeholder="TM count"
-                      />
-                    )}
+
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Avg Trips per TM</p>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">
-                        {calculatedTMs.trips_per_tm || "N/A"}
-                      </p>
+                      {overruleTMCount && (
+                        <input
+                          type="number"
+                          min={1}
+                          value={customTMCount}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            setCustomTMCount(isNaN(val) ? 1 : val);
+                            setHasChanged(true);
+                          }}
+                          className="mt-1 w-20 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                          placeholder="TM count"
+                        />
+                      )}
+                    </div>
+                    <div>
+                      {overruleTMCount && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {overruleTMCount
+                            ? `We are using ${customTMCount} TMs for our calculation.`
+                            : ``}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -78,6 +78,15 @@ export default function ProjectsContainer() {
     coordinates: "",
     remarks: "",
   });
+  const [contactNumberError, setContactNumberError] = useState("");
+  const [editContactNumberError, setEditContactNumberError] = useState("");
+
+  const validateMobileNumber = (number: string): boolean => {
+    // Remove all non-digits
+    const digitsOnly = number.replace(/\D/g, "");
+    // Check if it's a valid Indian mobile number (10 digits starting with 6-9)
+    return /^[6-9]\d{9}$/.test(digitsOnly);
+  };
 
   // Dropdown states for client selection
   const [isCreateClientDropdownOpen, setIsCreateClientDropdownOpen] = useState(false);
@@ -131,6 +140,7 @@ export default function ProjectsContainer() {
         coordinates: "",
         remarks: "",
       });
+      setContactNumberError("");
     },
   });
 
@@ -150,6 +160,7 @@ export default function ProjectsContainer() {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       setIsEditModalOpen(false);
       setSelectedProject(null);
+      setEditContactNumberError("");
     },
   });
 
@@ -173,6 +184,16 @@ export default function ProjectsContainer() {
 
   const handleAddProject = () => {
     setIsCreateModalOpen(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+    setContactNumberError("");
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditContactNumberError("");
   };
 
   const handleCreateProject = async () => {
@@ -229,6 +250,15 @@ export default function ProjectsContainer() {
       ...prev,
       [name]: value,
     }));
+
+    // Validate contact number if it's being changed
+    if (name === "contact_number") {
+      if (value && !validateMobileNumber(value)) {
+        setContactNumberError("Please enter a valid 10-digit mobile number starting with 6-9");
+      } else {
+        setContactNumberError("");
+      }
+    }
   };
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -237,6 +267,15 @@ export default function ProjectsContainer() {
       ...prev,
       [name]: value,
     }));
+
+    // Validate contact number if it's being changed in edit modal
+    if (name === "contact_number") {
+      if (value && !validateMobileNumber(value)) {
+        setEditContactNumberError("Please enter a valid 10-digit mobile number starting with 6-9");
+      } else {
+        setEditContactNumberError("");
+      }
+    }
   };
 
   // Client dropdown handlers
@@ -429,7 +468,7 @@ export default function ProjectsContainer() {
       {/* Create Modal */}
       <Modal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={handleCloseCreateModal}
         className="max-w-[800px] p-5 lg:p-10"
       >
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Project</h4>
@@ -511,6 +550,7 @@ export default function ProjectsContainer() {
               value={newProject.contact_number}
               onChange={handleInputChange}
             />
+            {contactNumberError && <p className="text-red-500 text-xs mt-1">{contactNumberError}</p>}
           </div>
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Coordinates</label>
@@ -534,7 +574,7 @@ export default function ProjectsContainer() {
           </div>
         </div>
         <div className="flex items-center justify-end w-full gap-3 mt-8">
-          <Button size="sm" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+          <Button size="sm" variant="outline" onClick={handleCloseCreateModal}>
             Cancel
           </Button>
           <Button size="sm" onClick={handleCreateProject} disabled={createProjectMutation.isPending}>
@@ -551,7 +591,7 @@ export default function ProjectsContainer() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-[800px] p-5 lg:p-10">
+      <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal} className="max-w-[800px] p-5 lg:p-10">
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Edit Project</h4>
         {selectedProject && (
           <div className="grid grid-cols-2 gap-4">
@@ -620,6 +660,7 @@ export default function ProjectsContainer() {
                 value={editedProject.contact_number}
                 onChange={handleEditInputChange}
               />
+              {editContactNumberError && <p className="text-red-500 text-xs mt-1">{editContactNumberError}</p>}
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Coordinates</label>
@@ -637,7 +678,7 @@ export default function ProjectsContainer() {
           </div>
         )}
         <div className="flex items-center justify-end w-full gap-3 mt-8">
-          <Button size="sm" variant="outline" onClick={() => setIsEditModalOpen(false)}>
+          <Button size="sm" variant="outline" onClick={handleCloseEditModal}>
             Cancel
           </Button>
           <Button size="sm" onClick={handleSaveEdit} disabled={editProjectMutation.isPending}>

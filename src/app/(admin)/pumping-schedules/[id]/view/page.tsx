@@ -150,7 +150,7 @@ export default function ScheduleViewPage() {
             </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cycle Time</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.cycle_time?.toFixed(2)} min</p>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.cycle_time?.toFixed(2)} hrs</p>
             </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Pump Start Time</h4>
