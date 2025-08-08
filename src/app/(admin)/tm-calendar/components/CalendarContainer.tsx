@@ -1331,14 +1331,6 @@ export default function CalendarContainer() {
                               if (width <= 0) return null;
                               // Get client color from clientColors map
                               const clientColor = clientColors.get(tasks[0].client) || "bg-gray-300";
-                              console.log(
-                                item.name,
-                                minStart,
-                                windowStart,
-                                Math.min(...starts),
-                                `${selectedDate}T00:00:00.000Z`
-                              );
-
                               return (
                                 <div
                                   key={tasks[0].client + i}
