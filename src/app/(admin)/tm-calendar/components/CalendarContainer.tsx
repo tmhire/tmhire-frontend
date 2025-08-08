@@ -7,6 +7,7 @@ import DatePickerInput from "@/components/form/input/DatePickerInput";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Tooltip from "@/components/ui/tooltip";
+import { useQuery } from "@tanstack/react-query";
 
 // Types for better type safety and backend integration
 type ApiTask = {
@@ -50,6 +51,27 @@ type ApiResponse = {
     mixers: ApiItem[];
     pumps: ApiItem[];
   };
+};
+
+// Types for plants, pumps, and TMs
+type Plant = {
+  _id: string;
+  name: string;
+  location: string;
+  address: string;
+};
+
+type Pump = {
+  _id: string;
+  identifier: string;
+  type: "line" | "boom";
+  plant_id: string;
+};
+
+type TransitMixer = {
+  _id: string;
+  identifier: string;
+  plant_id: string | null;
 };
 
 const timeSlots = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
@@ -98,7 +120,7 @@ const CLIENT_TAILWIND_COLORS = [
 const getTaskType = (id: string) => id.split("-")[0];
 
 // Helper function to transform API data to component format
-const transformApiData = (apiData: ApiResponse): Item[] => {
+const transformApiData = (apiData: ApiResponse, plantMap: Map<string, string>): Item[] => {
   // Create a map of unique clients
   const uniqueClients = new Set<string>();
   apiData.data.mixers.forEach((mixer) => {
@@ -130,10 +152,13 @@ const transformApiData = (apiData: ApiResponse): Item[] => {
     // Determine mixer's current client (first task's client or null)
     const currentClient = transformedTasks.length > 0 ? transformedTasks[0].client : null;
 
+    // Convert plant ID to plant name
+    const plantName = plantMap.get(item.plant) || item.plant;
+
     return {
       id: item.id,
       name: item.name,
-      plant: item.plant,
+      plant: plantName,
       client: currentClient,
       item: itemType,
       type: item.type || null,
@@ -173,8 +198,9 @@ export default function CalendarContainer() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedItem, setSelectedItem] = useState<"all" | "mixer" | "pump">("all");
   const [selectedPlant, setSelectedPlant] = useState("all");
-  const [selectedMixer, setSelectedMixer] = useState("all");
   const [selectedClient, setSelectedClient] = useState("all");
+  const [selectedPumps, setSelectedPumps] = useState<string[]>([]);
+  const [selectedTMs, setSelectedTMs] = useState<string[]>([]);
   const [timeFormat, setTimeFormat] = useState("24h");
   const [customStartHour, setCustomStartHour] = useState(6); // default 6:00
   const [ganttData, setGanttData] = useState<Item[]>([]);
@@ -184,11 +210,58 @@ export default function CalendarContainer() {
   // Dropdown states
   const [isItemFilterOpen, setIsItemFilterOpen] = useState(false);
   const [isPlantFilterOpen, setIsPlantFilterOpen] = useState(false);
-  const [isMixerFilterOpen, setIsMixerFilterOpen] = useState(false);
   const [isClientFilterOpen, setIsClientFilterOpen] = useState(false);
   const [isTimeFormatOpen, setIsTimeFormatOpen] = useState(false);
+  const [isPumpFilterOpen, setIsPumpFilterOpen] = useState(false);
+  const [isTMFilterOpen, setIsTMFilterOpen] = useState(false);
 
   const { fetchWithAuth } = useApiClient();
+
+  // Fetch plants, pumps, and TMs data
+  const { data: plantsData } = useQuery<Plant[]>({
+    queryKey: ["plants"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/plants");
+      const data = await response.json();
+      if (data.success) {
+        return data.data;
+      }
+      return [];
+    },
+    enabled: status === "authenticated",
+  });
+
+  const { data: pumpsData } = useQuery<Pump[]>({
+    queryKey: ["pumps"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/pumps");
+      const data = await response.json();
+      if (data.success) {
+        return data.data;
+      }
+      return [];
+    },
+    enabled: status === "authenticated",
+  });
+
+  const { data: tmsData } = useQuery<TransitMixer[]>({
+    queryKey: ["transit-mixers"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/tms");
+      const data = await response.json();
+      if (data.success) {
+        return data.data;
+      }
+      return [];
+    },
+    enabled: status === "authenticated",
+  });
+
+  // Create plant ID to name mapping
+  const plantMap = React.useMemo(() => {
+    if (!plantsData) return new Map<string, string>();
+    return new Map(plantsData.map((plant) => [plant._id, plant.name]));
+  }, [plantsData]);
 
   // Memoized clientColors map for use in rendering
   const clientColors = React.useMemo(() => {
@@ -227,7 +300,7 @@ export default function CalendarContainer() {
 
       const data: ApiResponse = await response.json();
       if (data.success) {
-        const transformedData = transformApiData(data);
+        const transformedData = transformApiData(data, plantMap);
         setGanttData(transformedData);
       } else {
         setError(data.message || "Failed to fetch gantt data");
@@ -255,11 +328,15 @@ export default function CalendarContainer() {
   const filteredData = ganttData.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPlant = selectedPlant === "all" || item.plant === selectedPlant;
-    const matchesMixer = selectedMixer === "all" || item.name === selectedMixer;
+    // const matchesMixer = selectedMixer === "all" || item.name === selectedMixer;
     const matchesClient = selectedClient === "all" || item.client === selectedClient;
     const matchesItem = selectedItem === "all" || item.item === selectedItem;
 
-    return matchesSearch && matchesPlant && matchesMixer && matchesClient && matchesItem;
+    // Multi-select filters for pumps and TMs
+    const matchesPumps = selectedPumps.length === 0 || (item.item === "pump" && selectedPumps.includes(item.name));
+    const matchesTMs = selectedTMs.length === 0 || (item.item === "mixer" && selectedTMs.includes(item.name));
+
+    return matchesSearch && matchesPlant && matchesClient && matchesItem && matchesPumps && matchesTMs;
   });
 
   const formatTime = (hour: number) => {
@@ -273,10 +350,14 @@ export default function CalendarContainer() {
 
   // Get unique values for filter options
   const plants = Array.from(new Set(ganttData.map((item) => item.plant)));
-  const mixers = Array.from(new Set(ganttData.map((item) => item.name)));
+  // const mixers = Array.from(new Set(ganttData.map((item) => item.name)));
   const clients = Array.from(
     new Set(ganttData.map((item) => item.client).filter((client): client is string => client !== null))
   );
+
+  // Get available pumps and TMs from fetched data
+  const availablePumps = pumpsData?.map((pump) => pump.identifier) || [];
+  const availableTMs = tmsData?.map((tm) => tm.identifier) || [];
 
   // Get unique clients with their colors for the legend
   const clientLegend = Object.values(
@@ -351,7 +432,7 @@ export default function CalendarContainer() {
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Schedule Calendar</h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Manage and monitor mixer schedules across all production lines
+            Manage and monitor mixer schedules across all production lines and pumps
           </p>
         </div>
 
@@ -402,7 +483,7 @@ export default function CalendarContainer() {
           {/* Expandable Filters */}
           {showFilters && (
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.05]">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                 {/* Item Filter */}
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TM or Pump</label>
@@ -447,6 +528,44 @@ export default function CalendarContainer() {
                   )}
                 </div>
 
+                {/* Client Filter */}
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client</label>
+                  <button
+                    onClick={() => setIsClientFilterOpen(!isClientFilterOpen)}
+                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  >
+                    {selectedClient === "all" ? "All Clients" : selectedClient}
+                  </button>
+                  {isClientFilterOpen && (
+                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                      <div className="p-2 text-gray-800 dark:text-white/90">
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setSelectedClient("all");
+                            setIsClientFilterOpen(false);
+                          }}
+                        >
+                          All Clients
+                        </button>
+                        {clients.map((client) => (
+                          <button
+                            key={client}
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setSelectedClient(client);
+                              setIsClientFilterOpen(false);
+                            }}
+                          >
+                            {client}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Plant Filter */}
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plant</label>
@@ -485,78 +604,94 @@ export default function CalendarContainer() {
                   )}
                 </div>
 
-                {/* Mixer Filter */}
+                {/* Pump Filter */}
                 <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Transit Mixer
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Pumps</label>
                   <button
-                    onClick={() => setIsMixerFilterOpen(!isMixerFilterOpen)}
+                    onClick={() => setIsPumpFilterOpen(!isPumpFilterOpen)}
                     className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   >
-                    {selectedMixer === "all" ? "All Mixers" : selectedMixer}
+                    {selectedPumps.length === 0 ? "All Pumps" : `${selectedPumps.length} selected`}
                   </button>
-                  {isMixerFilterOpen && (
-                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                  {isPumpFilterOpen && (
+                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-48 overflow-y-auto">
                       <div className="p-2 text-gray-800 dark:text-white/90">
                         <button
                           className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                           onClick={() => {
-                            setSelectedMixer("all");
-                            setIsMixerFilterOpen(false);
+                            setSelectedPumps([]);
+                            setIsPumpFilterOpen(false);
                           }}
                         >
-                          All Mixers
+                          All Pumps
                         </button>
-                        {mixers.map((mixer) => (
-                          <button
-                            key={mixer}
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setSelectedMixer(mixer);
-                              setIsMixerFilterOpen(false);
-                            }}
+                        {availablePumps.map((pump) => (
+                          <label
+                            key={pump}
+                            className="flex items-center px-4 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
                           >
-                            {mixer}
-                          </button>
+                            <input
+                              type="checkbox"
+                              checked={selectedPumps.includes(pump)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedPumps([...selectedPumps, pump]);
+                                } else {
+                                  setSelectedPumps(selectedPumps.filter((p) => p !== pump));
+                                }
+                              }}
+                              className="mr-2"
+                            />
+                            {pump}
+                          </label>
                         ))}
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Client Filter */}
+                {/* TM Filter */}
                 <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Transit Mixers
+                  </label>
                   <button
-                    onClick={() => setIsClientFilterOpen(!isClientFilterOpen)}
+                    onClick={() => setIsTMFilterOpen(!isTMFilterOpen)}
                     className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   >
-                    {selectedClient === "all" ? "All Clients" : selectedClient}
+                    {selectedTMs.length === 0 ? "All TMs" : `${selectedTMs.length} selected`}
                   </button>
-                  {isClientFilterOpen && (
-                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                  {isTMFilterOpen && (
+                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-48 overflow-y-auto">
                       <div className="p-2 text-gray-800 dark:text-white/90">
                         <button
                           className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                           onClick={() => {
-                            setSelectedClient("all");
-                            setIsClientFilterOpen(false);
+                            setSelectedTMs([]);
+                            setIsTMFilterOpen(false);
                           }}
                         >
-                          All Clients
+                          All TMs
                         </button>
-                        {clients.map((client) => (
-                          <button
-                            key={client}
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setSelectedClient(client);
-                              setIsClientFilterOpen(false);
-                            }}
+                        {availableTMs.map((tm) => (
+                          <label
+                            key={tm}
+                            className="flex items-center px-4 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
                           >
-                            {client}
-                          </button>
+                            <input
+                              type="checkbox"
+                              checked={selectedTMs.includes(tm)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedTMs([...selectedTMs, tm]);
+                                } else {
+                                  setSelectedTMs(selectedTMs.filter((t) => t !== tm));
+                                }
+                              }}
+                              className="mr-2"
+                            />
+                            {tm}
+                          </label>
                         ))}
                       </div>
                     </div>
@@ -710,7 +845,7 @@ export default function CalendarContainer() {
             {/* Expandable Filters */}
             {showFilters && (
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.05]">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                   {/* Item Filter */}
                   <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -795,45 +930,6 @@ export default function CalendarContainer() {
                     )}
                   </div>
 
-                  {/* Mixer Filter */}
-                  <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Transit Mixer
-                    </label>
-                    <button
-                      onClick={() => setIsMixerFilterOpen(!isMixerFilterOpen)}
-                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                    >
-                      {selectedMixer === "all" ? "All Mixers" : selectedMixer}
-                    </button>
-                    {isMixerFilterOpen && (
-                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
-                        <div className="p-2 text-gray-800 dark:text-white/90">
-                          <button
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setSelectedMixer("all");
-                              setIsMixerFilterOpen(false);
-                            }}
-                          >
-                            All Mixers
-                          </button>
-                          {mixers.map((mixer) => (
-                            <button
-                              key={mixer}
-                              className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                              onClick={() => {
-                                setSelectedMixer(mixer);
-                                setIsMixerFilterOpen(false);
-                              }}
-                            >
-                              {mixer}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
 
                   {/* Client Filter */}
                   <div className="relative">
@@ -867,6 +963,100 @@ export default function CalendarContainer() {
                             >
                               {client}
                             </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Pump Filter */}
+                  <div className="relative">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Pumps</label>
+                    <button
+                      onClick={() => setIsPumpFilterOpen(!isPumpFilterOpen)}
+                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    >
+                      {selectedPumps.length === 0 ? "All Pumps" : `${selectedPumps.length} selected`}
+                    </button>
+                    {isPumpFilterOpen && (
+                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-48 overflow-y-auto">
+                        <div className="p-2 text-gray-800 dark:text-white/90">
+                          <button
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setSelectedPumps([]);
+                              setIsPumpFilterOpen(false);
+                            }}
+                          >
+                            All Pumps
+                          </button>
+                          {availablePumps.map((pump) => (
+                            <label
+                              key={pump}
+                              className="flex items-center px-4 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedPumps.includes(pump)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedPumps([...selectedPumps, pump]);
+                                  } else {
+                                    setSelectedPumps(selectedPumps.filter((p) => p !== pump));
+                                  }
+                                }}
+                                className="mr-2"
+                              />
+                              {pump}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* TM Filter */}
+                  <div className="relative">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Transit Mixers
+                    </label>
+                    <button
+                      onClick={() => setIsTMFilterOpen(!isTMFilterOpen)}
+                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    >
+                      {selectedTMs.length === 0 ? "All TMs" : `${selectedTMs.length} selected`}
+                    </button>
+                    {isTMFilterOpen && (
+                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-48 overflow-y-auto">
+                        <div className="p-2 text-gray-800 dark:text-white/90">
+                          <button
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setSelectedTMs([]);
+                              setIsTMFilterOpen(false);
+                            }}
+                          >
+                            All TMs
+                          </button>
+                          {availableTMs.map((tm) => (
+                            <label
+                              key={tm}
+                              className="flex items-center px-4 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedTMs.includes(tm)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedTMs([...selectedTMs, tm]);
+                                  } else {
+                                    setSelectedTMs(selectedTMs.filter((t) => t !== tm));
+                                  }
+                                }}
+                                className="mr-2"
+                              />
+                              {tm}
+                            </label>
                           ))}
                         </div>
                       </div>
