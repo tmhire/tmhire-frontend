@@ -76,20 +76,9 @@ type TransitMixer = {
 
 const timeSlots = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
 
-// Helper function to convert time string to hour number
-const timeStringToHour = (timeStr: string): number => {
-  const [hours, minutes] = timeStr.split(":").map(Number);
-  return hours + minutes / 60;
-};
-
 // Helper function to calculate duration between two times
 const calculateDuration = (start: string, end: string): number => {
-  const startFloat = timeStringToHour(start); // e.g. 2.18
-  const endFloat = timeStringToHour(end); // e.g. 3.26
-  const rawDuration = endFloat - startFloat;
-  // Round to nearest 0.5
-  const roundedDuration = Math.round(rawDuration * 60);
-  return roundedDuration;
+  return Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000);
 };
 
 // Task type color map
@@ -202,7 +191,7 @@ export default function CalendarContainer() {
   const [selectedPumps, setSelectedPumps] = useState<string[]>([]);
   const [selectedTMs, setSelectedTMs] = useState<string[]>([]);
   const [timeFormat, setTimeFormat] = useState("24h");
-  const [customStartHour, setCustomStartHour] = useState(6); // default 6:00
+  const [customStartHour, setCustomStartHour] = useState(0);
   const [ganttData, setGanttData] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -290,11 +279,12 @@ export default function CalendarContainer() {
     try {
       setLoading(true);
       setError(null);
+      const time = `${String(customStartHour).padStart(2, "0")}:00:00`;
 
       const response = await fetchWithAuth("/calendar/gantt", {
         method: "POST",
         body: JSON.stringify({
-          query_date: date,
+          query_date: `${date}T${time}`,
         }),
       });
 
@@ -322,7 +312,7 @@ export default function CalendarContainer() {
     if (status === "authenticated" && session) {
       fetchGanttData(selectedDate);
     }
-  }, [selectedDate, status]);
+  }, [selectedDate, customStartHour, status]);
 
   // Filter data based on search term and selected filters
   const filteredData = ganttData.filter((item) => {
@@ -407,11 +397,9 @@ export default function CalendarContainer() {
   // Calculate totalMinutes as the difference between firstStart and lastEnd
   Object.values(clientStats).forEach((stat) => {
     if (stat.firstStart && stat.lastEnd) {
-      const [startH, startM] = stat.firstStart.split(":").map(Number);
-      const [endH, endM] = stat.lastEnd.split(":").map(Number);
-      const startTotal = startH * 60 + startM;
-      const endTotal = endH * 60 + endM;
-      stat.totalMinutes = endTotal - startTotal;
+      const startTotal = new Date(stat.firstStart).getTime();
+      const endTotal = new Date(stat.lastEnd).getTime();
+      stat.totalMinutes = endTotal - startTotal / 60000;
       if (stat.totalMinutes < 0) stat.totalMinutes = 0;
     }
   });
@@ -713,6 +701,7 @@ export default function CalendarContainer() {
                         <button
                           className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                           onClick={() => {
+                            setCustomStartHour(0); // reset to 00:00
                             setTimeFormat("24h");
                             setIsTimeFormatOpen(false);
                           }}
@@ -722,6 +711,7 @@ export default function CalendarContainer() {
                         <button
                           className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                           onClick={() => {
+                            setCustomStartHour(0); // reset to 00:00
                             setTimeFormat("12h");
                             setIsTimeFormatOpen(false);
                           }}
@@ -731,6 +721,7 @@ export default function CalendarContainer() {
                         <button
                           className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                           onClick={() => {
+                            setCustomStartHour(6); // default 6:00
                             setTimeFormat("24h-custom");
                             setIsTimeFormatOpen(false);
                           }}
@@ -930,7 +921,6 @@ export default function CalendarContainer() {
                     )}
                   </div>
 
-
                   {/* Client Filter */}
                   <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client</label>
@@ -1084,6 +1074,7 @@ export default function CalendarContainer() {
                           <button
                             className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                             onClick={() => {
+                              setCustomStartHour(0); // reset to 00:00
                               setTimeFormat("24h");
                               setIsTimeFormatOpen(false);
                             }}
@@ -1093,6 +1084,7 @@ export default function CalendarContainer() {
                           <button
                             className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                             onClick={() => {
+                              setCustomStartHour(0); // reset to 00:00
                               setTimeFormat("12h");
                               setIsTimeFormatOpen(false);
                             }}
@@ -1102,6 +1094,7 @@ export default function CalendarContainer() {
                           <button
                             className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                             onClick={() => {
+                              setCustomStartHour(6); // default 6:00
                               setTimeFormat("24h-custom");
                               setIsTimeFormatOpen(false);
                             }}
@@ -1183,7 +1176,7 @@ export default function CalendarContainer() {
 
                       const slots = getTimeSlots();
                       const windowStart = slots[0];
-                      const windowEnd = slots[slots.length - 1];
+                      const windowEnd = slots[0] !== 0 ? (slots[slots.length - 1] % 24) + 25 : 24;
                       // Helper to check if a time is within the window, considering wrap-around
                       const isInWindow = (start: number, end: number) => {
                         if (windowStart < windowEnd) {
@@ -1229,48 +1222,78 @@ export default function CalendarContainer() {
                         return { offset, width };
                       };
 
-                      // --- Group tasks by client for background pills ---
-                      const clientTaskGroups: Record<string, Task[]> = {};
-                      item.tasks.forEach((task) => {
-                        if (!clientTaskGroups[task.client]) clientTaskGroups[task.client] = [];
-                        clientTaskGroups[task.client].push(task);
-                      });
+                      // // --- Group tasks by client for background pills ---
+                      // const clientTaskGroups: Record<string, Task[]> = {};
+                      // item.tasks.forEach((task) => {
+                      //   if (!clientTaskGroups[task.client]) clientTaskGroups[task.client] = [];
+                      //   clientTaskGroups[task.client].push(task);
+                      // });
 
-                      // --- Calculate Free Time ---
-                      const busyIntervals: { start: number; end: number }[] = item.tasks
-                        .map((task) => {
-                          let s = timeStringToHour(task.actualStart);
-                          let e = timeStringToHour(task.actualEnd);
-                          if (windowStart < windowEnd) {
-                            s = Math.max(s, windowStart);
-                            e = Math.min(e, windowEnd + 1);
-                            if (e <= s) return null;
+                      function groupConsecutiveTasks(tasks: Task[]): Task[][] {
+                        if (!tasks.length) return [];
+
+                        // Ensure tasks are sorted by actualStart
+                        const sortedTasks = [...tasks].sort(
+                          (a, b) => new Date(a.actualStart).getTime() - new Date(b.actualStart).getTime()
+                        );
+
+                        const groups: Task[][] = [];
+                        let currentGroup: Task[] = [sortedTasks[0]];
+
+                        for (let i = 1; i < sortedTasks.length; i++) {
+                          const prevEnd = new Date(sortedTasks[i - 1].actualEnd).getTime();
+                          const currStart = new Date(sortedTasks[i].actualStart).getTime();
+
+                          // Check if current task starts exactly 1 minute after previous task ends
+                          if (currStart === prevEnd) {
+                            currentGroup.push(sortedTasks[i]);
                           } else {
-                            if (s < windowStart && e <= windowStart) {
-                              s = s;
-                              e = Math.min(e, windowEnd + 1);
-                              if (e <= s) return null;
-                            } else if (s >= windowStart) {
-                              s = Math.max(s, windowStart);
-                              e = e;
-                              if (e <= s) return null;
-                            } else {
-                              s = s;
-                              e = e;
-                            }
+                            groups.push(currentGroup);
+                            currentGroup = [sortedTasks[i]];
                           }
-                          return { start: s, end: e };
-                        })
-                        .filter(Boolean) as { start: number; end: number }[];
-                      busyIntervals.sort((a, b) => a.start - b.start);
-                      const merged: { start: number; end: number }[] = [];
-                      for (const interval of busyIntervals) {
-                        if (!merged.length || merged[merged.length - 1].end < interval.start) {
-                          merged.push({ ...interval });
-                        } else {
-                          merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, interval.end);
                         }
+
+                        // Push the last group
+                        groups.push(currentGroup);
+
+                        return groups;
                       }
+                      const uniqueTasks = groupConsecutiveTasks(item.tasks);
+                      // // --- Calculate Free Time ---
+                      // const busyIntervals: { start: number; end: number }[] = item.tasks
+                      //   .map((task) => {
+                      //     let s = new Date(task.actualStart).getTime() / 3600000;
+                      //     let e = new Date(task.actualEnd).getTime() / 3600000;
+                      //     if (windowStart < windowEnd) {
+                      //       s = Math.max(s, windowStart);
+                      //       e = Math.min(e, windowEnd + 1);
+                      //       if (e <= s) return null;
+                      //     } else {
+                      //       if (s < windowStart && e <= windowStart) {
+                      //         s = s;
+                      //         e = Math.min(e, windowEnd + 1);
+                      //         if (e <= s) return null;
+                      //       } else if (s >= windowStart) {
+                      //         s = Math.max(s, windowStart);
+                      //         e = e;
+                      //         if (e <= s) return null;
+                      //       } else {
+                      //         s = s;
+                      //         e = e;
+                      //       }
+                      //     }
+                      //     return { start: s, end: e };
+                      //   })
+                      //   .filter(Boolean) as { start: number; end: number }[];
+                      // busyIntervals.sort((a, b) => a.start - b.start);
+                      // const merged: { start: number; end: number }[] = [];
+                      // for (const interval of busyIntervals) {
+                      //   if (!merged.length || merged[merged.length - 1].end < interval.start) {
+                      //     merged.push({ ...interval });
+                      //   } else {
+                      //     merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, interval.end);
+                      //   }
+                      // }
                       let freeTime = 24;
                       item.tasks.forEach((task) => {
                         freeTime -= calculateDuration(task.actualStart, task.actualEnd) / 60;
@@ -1295,20 +1318,30 @@ export default function CalendarContainer() {
                           {/* Time Slots */}
                           <div className="flex-1 flex relative">
                             {/* Render background pills for each client */}
-                            {Object.entries(clientTaskGroups).map(([client, tasks], i) => {
+                            {uniqueTasks.map((tasks, i) => {
                               // Find earliest start and latest end for this client
-                              const starts = tasks.map((t) => timeStringToHour(t.actualStart));
-                              const ends = tasks.map((t) => timeStringToHour(t.actualEnd));
-                              const minStart = Math.min(...starts);
-                              const maxEnd = Math.max(...ends);
+                              const starts = tasks.map((t) => new Date(t.actualStart).getTime());
+                              const ends = tasks.map((t) => new Date(t.actualEnd).getTime());
+                              const minStart =
+                                (Math.min(...starts) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
+                              const maxEnd =
+                                (Math.max(...ends) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
                               if (!isInWindow(minStart, maxEnd)) return null;
                               const { offset, width } = getBarProps(minStart, maxEnd);
                               if (width <= 0) return null;
                               // Get client color from clientColors map
-                              const clientColor = clientColors.get(client) || "bg-gray-300";
+                              const clientColor = clientColors.get(tasks[0].client) || "bg-gray-300";
+                              console.log(
+                                item.name,
+                                minStart,
+                                windowStart,
+                                Math.min(...starts),
+                                `${selectedDate}T00:00:00.000Z`
+                              );
+
                               return (
                                 <div
-                                  key={client + i}
+                                  key={tasks[0].client + i}
                                   className={`absolute - h-6 rounded ${clientColor} opacity-90 z-0`}
                                   style={{
                                     left: `${offset * 40 - 3}px`,
@@ -1320,8 +1353,14 @@ export default function CalendarContainer() {
                             })}
                             {/* Render bars for each task by type that overlaps the window */}
                             {item.tasks.map((task, i) => {
-                              const start = timeStringToHour(task.actualStart);
-                              const end = timeStringToHour(task.actualEnd);
+                              const start =
+                                (new Date(task.actualStart).getTime() -
+                                  new Date(`${selectedDate}T00:00:00.000Z`).getTime()) /
+                                3600000;
+                              const end =
+                                (new Date(task.actualEnd).getTime() -
+                                  new Date(`${selectedDate}T00:00:00.000Z`).getTime()) /
+                                3600000;
                               if (!isInWindow(start, end)) return null;
                               const { offset, width } = getBarProps(start, end);
                               if (width <= 0) return null;
