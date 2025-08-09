@@ -78,7 +78,26 @@ const timeSlots = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
 
 // Helper function to calculate duration between two times
 const calculateDuration = (start: string, end: string): number => {
-  return Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000);
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const diffMs = endDate.getTime() - startDate.getTime();
+  return Math.round(diffMs / (1000 * 60));
+};
+
+// Helper function to format date and time for tooltips
+const formatDateTimeForTooltip = (dateTimeString: string): string => {
+  const date = new Date(dateTimeString);
+  const dateStr = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const timeStr = date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${dateStr} ${timeStr}`;
 };
 
 // Task type color map
@@ -415,7 +434,7 @@ export default function CalendarContainer() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-full mx-aut">
         {/* Header */}
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Schedule Calendar</h2>
@@ -762,7 +781,7 @@ export default function CalendarContainer() {
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-full mx-aut">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <div className="text-red-800 dark:text-red-200 font-medium">Error loading calendar data</div>
           <div className="text-red-600 dark:text-red-300 text-sm mt-1">{error}</div>
@@ -778,11 +797,11 @@ export default function CalendarContainer() {
   }
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div className="max-w-7xl mx-auto">
+    <div className="w-full">
+      <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+        <div className="w-full">
           {/* Header */}
-          <div className="mb-6">
+          <div className="mb-6 w-full">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Schedule Calendar</h2>
             <p className="text-gray-600 dark:text-gray-400">
               Manage and monitor mixer schedules across all production lines
@@ -790,7 +809,7 @@ export default function CalendarContainer() {
           </div>
 
           {/* Controls Bar */}
-          <div className="bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4 mb-6">
+          <div className="w-full bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4 mb-6">
             <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
               {/* Left side - Search and Filters */}
               <div className="flex flex-col sm:flex-row gap-3 flex-1">
@@ -1126,7 +1145,7 @@ export default function CalendarContainer() {
           </div>
 
           {/* Date Display */}
-          <div className="mb-4">
+          <div className="mb-4 w-full">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               {new Date(selectedDate).toLocaleDateString("en-US", {
                 weekday: "long",
@@ -1138,28 +1157,28 @@ export default function CalendarContainer() {
           </div>
 
           {/* Gantt Chart */}
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-            <div className="max-w-full overflow-x-auto">
-              <div className="min-w-[1000px]">
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] w-full">
+            <div className="w-full overflow-x-auto">
+              <div className="min-w-full w-full">
                 {/* Time Header */}
                 <div className="flex border-b border-gray-300 dark:border-white/[0.05]">
                   {/* Serial Number Column */}
-                  <div className="w-10 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] text-center">
+                  <div className="w-16 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] text-center flex-shrink-0">
                     SNo
                   </div>
-                  <div className="w-24 px-5 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05]">
+                  <div className="w-32 px-5 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] flex-shrink-0">
                     Mixer ID
                   </div>
                   {getTimeSlots().map((time) => (
                     <div
                       key={time}
-                      className="w-10 px-2 py-3 text-center font-medium text-gray-500 text-[9px] dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05]"
+                      className="flex-1 px-2 py-3 text-center font-medium text-gray-500 text-[9px] dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] min-w-[40px]"
                     >
                       {formatTime(time)}
                     </div>
                   ))}
                   {/* Free Time Column */}
-                  <div className="w-20 px-1 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center">
+                  <div className="w-24 px-1 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center flex-shrink-0">
                     Unused Hrs
                   </div>
                 </div>
@@ -1308,11 +1327,11 @@ export default function CalendarContainer() {
                           }`}
                         >
                           {/* Serial Number */}
-                          <div className="w-10 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
+                          <div className="w-16 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
                             {idx + 1}
                           </div>
                           {/* Mixer Name */}
-                          <div className="w-24 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center">
+                          <div className="w-32 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0">
                             {item.name.length > 7 ? ".." + item.name.slice(-7) : item.name}
                           </div>
                           {/* Time Slots */}
@@ -1322,22 +1341,29 @@ export default function CalendarContainer() {
                               // Find earliest start and latest end for this client
                               const starts = tasks.map((t) => new Date(t.actualStart).getTime());
                               const ends = tasks.map((t) => new Date(t.actualEnd).getTime());
-                              const minStart =
-                                (Math.min(...starts) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
-                              const maxEnd =
-                                (Math.max(...ends) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
+                              
+                              // Create the selected date start time in the same timezone as the task dates
+                              // Parse the selected date and create a Date object at 00:00:00 in local time
+                              const [year, month, day] = selectedDate.split('-').map(Number);
+                              const selectedDateStart = new Date(year, month - 1, day, 0, 0, 0, 0);
+                              
+                              // Calculate the time difference in hours from the start of the selected date
+                              const minStart = (Math.min(...starts) - selectedDateStart.getTime()) / 3600000;
+                              const maxEnd = (Math.max(...ends) - selectedDateStart.getTime()) / 3600000;
+                              
                               if (!isInWindow(minStart, maxEnd)) return null;
                               const { offset, width } = getBarProps(minStart, maxEnd);
                               if (width <= 0) return null;
                               // Get client color from clientColors map
                               const clientColor = clientColors.get(tasks[0].client) || "bg-gray-300";
+                              const timeSlotsLength = getTimeSlots().length;
                               return (
                                 <div
                                   key={tasks[0].client + i}
                                   className={`absolute - h-6 rounded ${clientColor} opacity-90 z-0`}
                                   style={{
-                                    left: `${offset * 40 - 3}px`,
-                                    width: `${width * 40 + 7}px`,
+                                    left: `${((offset / timeSlotsLength) * 100)-0.25}%`,
+                                    width: `${((width / timeSlotsLength) * 100)+0.5}%`,
                                     zIndex: 1,
                                   }}
                                 />
@@ -1345,30 +1371,36 @@ export default function CalendarContainer() {
                             })}
                             {/* Render bars for each task by type that overlaps the window */}
                             {item.tasks.map((task, i) => {
-                              const start =
-                                (new Date(task.actualStart).getTime() -
-                                  new Date(`${selectedDate}T00:00:00.000Z`).getTime()) /
-                                3600000;
-                              const end =
-                                (new Date(task.actualEnd).getTime() -
-                                  new Date(`${selectedDate}T00:00:00.000Z`).getTime()) /
-                                3600000;
+                              // Calculate time in local timezone, not UTC
+                              const taskStartDate = new Date(task.actualStart);
+                              const taskEndDate = new Date(task.actualEnd);
+                              
+                              // Create the selected date start time in the same timezone as the task dates
+                              // Parse the selected date and create a Date object at 00:00:00 in local time
+                              const [year, month, day] = selectedDate.split('-').map(Number);
+                              const selectedDateStart = new Date(year, month - 1, day, 0, 0, 0, 0);
+                              
+                              // Calculate the time difference in hours from the start of the selected date
+                              const start = (taskStartDate.getTime() - selectedDateStart.getTime()) / 3600000;
+                              const end = (taskEndDate.getTime() - selectedDateStart.getTime()) / 3600000;
+                              
                               if (!isInWindow(start, end)) return null;
                               const { offset, width } = getBarProps(start, end);
                               if (width <= 0) return null;
                               const duration = calculateDuration(task.actualStart, task.actualEnd);
+                              const timeSlotsLength = getTimeSlots().length;
                               return (
                                 <Tooltip
                                   key={task.id + i}
-                                  content={`Type: ${task.type}\nClient: ${task.client}\n${task.actualStart} to ${task.actualEnd}\nDuration: ${duration}m`}
+                                  content={`Type: ${task.type}\nClient: ${task.client}\n${formatDateTimeForTooltip(task.actualStart)} to ${formatDateTimeForTooltip(task.actualEnd)}\nDuration: ${duration}m`}
                                 >
                                   <div
-                                    className={`absolute top-1 h-4 rounded ${
+                                    className={`absolute top-1 h-4 rounded-sm ${
                                       TASK_TYPE_COLORS[task.type] || "bg-gray-500"
                                     } opacity-100 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
                                     style={{
-                                      left: `${offset * 40 + 1}px`,
-                                      width: `${width * 40 - 1}px`,
+                                      left: `${(offset / timeSlotsLength) * 100}%`,
+                                      width: `${(width / timeSlotsLength) * 100}%`,
                                       zIndex: 5,
                                     }}
                                   >
@@ -1385,12 +1417,12 @@ export default function CalendarContainer() {
                             {slots.map((time) => (
                               <div
                                 key={time}
-                                className="w-10 h-6 border-r border-gray-300 dark:border-white/[0.05] relative"
+                                className="flex-1 h-6 border-r border-gray-300 dark:border-white/[0.05] relative min-w-[40px]"
                               />
                             ))}
                           </div>
                           {/* Free Time */}
-                          <div className="w-20 px-1 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
+                          <div className="w-24 px-1 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
                             {freeTime}
                           </div>
                         </div>

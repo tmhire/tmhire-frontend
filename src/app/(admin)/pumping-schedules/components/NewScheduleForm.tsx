@@ -1003,10 +1003,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     placeholder="Enter RMC grade"
                   />
                 </div>
-                {/* Type of Pumping Job */}
+                {/* Placement Zone */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Type of Pumping Job
+                    Placement Zone
                   </label>
                   <div className="relative">
                     <button

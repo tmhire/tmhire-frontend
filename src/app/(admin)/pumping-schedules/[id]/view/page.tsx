@@ -40,6 +40,7 @@ interface Schedule {
     pump_fixing_time: number;
     pump_removal_time: number;
     unloading_time: number;
+    pump_onward_time?: number;
   };
   output_table: Array<{
     trip_no: number;
@@ -70,6 +71,40 @@ interface Schedule {
   }>;
 }
 
+// Utility function to calculate pump start time from plant
+const calculatePumpStartTimeFromPlant = (schedule: Schedule): string => {
+  if (!schedule.input_params.pump_start) return "N/A";
+  
+  const pumpStart = new Date(schedule.input_params.pump_start);
+  const pumpFixingTime = schedule.input_params.pump_fixing_time || 0;
+  const pumpOnwardTime = schedule.input_params.pump_onward_time || 0;
+  
+  // Subtract pump fixing time and pump onward time from pump start time
+  const totalMinutesToSubtract = pumpFixingTime + pumpOnwardTime;
+  const calculatedTime = new Date(pumpStart.getTime() - (totalMinutesToSubtract * 60 * 1000));
+  
+  return calculatedTime.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+// Utility function to calculate pump site reach time
+const calculatePumpSiteReachTime = (schedule: Schedule): string => {
+  if (!schedule.input_params.pump_start) return "N/A";
+  
+  const pumpStart = new Date(schedule.input_params.pump_start);
+  const pumpFixingTime = schedule.input_params.pump_fixing_time || 0;
+  
+  // Subtract pump fixing time from pump start time
+  const calculatedTime = new Date(pumpStart.getTime() - (pumpFixingTime * 60 * 1000));
+  
+  return calculatedTime.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 export default function ScheduleViewPage() {
   const params = useParams();
   const { fetchWithAuth } = useApiClient();
@@ -99,13 +134,12 @@ export default function ScheduleViewPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-3">
-        <h2 className="text-xl font-semibold text-black dark:text-white">Pumping Schedule Details</h2>
+        <h2 className="text-xl font-semibold text-black dark:text-white">Concrete Pumping - Schedule Summary</h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
         {/* Summary Card */}
         <div className="md:col-span-2 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl p-6 flex flex-col justify-center h-full">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-4">Schedule Summary</h3>
           <div className="grid grid-cols-4 gap-x-8 gap-y-4">
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Scheduled Date</h4>
@@ -313,11 +347,13 @@ export default function ScheduleViewPage() {
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
-                        {schedule.input_params.pump_start_time_from_plant || "N/A"}
+                        {calculatePumpStartTimeFromPlant(schedule)}
                       </span>
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
-                      <span className="text-gray-500 dark:text-gray-400">{schedule.pump_site_reach_time || "N/A"}</span>
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {calculatePumpSiteReachTime(schedule)}
+                      </span>
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
