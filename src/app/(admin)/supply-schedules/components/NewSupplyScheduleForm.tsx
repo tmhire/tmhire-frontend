@@ -886,53 +886,119 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                       <h4 className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-3">Capacity Analysis</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm text-blue-600 dark:text-blue-400">Required Pumping Quantity</p>
+                          <p className="text-sm text-blue-600 dark:text-blue-400">Required Supply Quantity</p>
                           <p className="text-lg font-semibold text-blue-800 dark:text-blue-200">
                             {formData.quantity} m³
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-blue-600 dark:text-blue-400">Selected TM Capacity</p>
+                          <p className="text-sm text-blue-600 dark:text-blue-400">Selected TM(s) Total Capacity</p>
                           <p className="text-lg font-semibold text-blue-800 dark:text-blue-200">
-                            {calculatedTMs.available_tms.find((tm) => tm.id === tmSequence[0])?.capacity || 0} m³
+                            {tmSequence.reduce((total, tmId) => {
+                              const tm = calculatedTMs.available_tms.find((t) => t.id === tmId);
+                              return total + (tm?.capacity || 0);
+                            }, 0)} m³
                           </p>
                         </div>
                       </div>
                       {(() => {
-                        const selectedTM = calculatedTMs.available_tms.find((tm) => tm.id === tmSequence[0]);
-                        const capacity = selectedTM?.capacity || 0;
+                        const selectedTMs = tmSequence.map(tmId => calculatedTMs.available_tms.find(t => t.id === tmId)).filter(Boolean);
+                        const totalCapacity = selectedTMs.reduce((sum, tm) => sum + (tm?.capacity || 0), 0);
                         const quantity = parseFloat(formData.quantity) || 0;
-                        const isSufficient = capacity >= quantity;
+                        const isSufficient = totalCapacity >= quantity;
 
-                        return (
-                          <div
-                            className={`mt-3 p-3 rounded-lg ${
-                              isSufficient
-                                ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
-                                : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-2 h-2 rounded-full ${isSufficient ? "bg-green-500" : "bg-red-500"}`}
-                              ></div>
-                              <p
-                                className={`text-sm font-medium ${
-                                  isSufficient ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"
-                                }`}
-                              >
-                                {isSufficient
-                                  ? `TM capacity (${capacity} m³) is sufficient for required quantity (${quantity} m³)`
-                                  : `TM capacity (${capacity} m³) is insufficient for required quantity (${quantity} m³)`}
+                        if (tmSequence.length === 1) {
+                          // Single TM selected - show trips required
+                          const tm = selectedTMs[0];
+                          const tripsRequired = tm ? Math.ceil(quantity / tm.capacity) : 0;
+                          
+                          return (
+                            <div
+                              className={`mt-3 p-3 rounded-lg ${
+                                isSufficient
+                                  ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+                                  : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className={`w-2 h-2 rounded-full ${isSufficient ? "bg-green-500" : "bg-red-500"}`}
+                                ></div>
+                                <p
+                                  className={`text-sm font-medium ${
+                                    isSufficient ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"
+                                  }`}
+                                >
+                                  {isSufficient
+                                    ? `TM capacity (${tm?.capacity} m³) is sufficient for required quantity (${quantity} m³)`
+                                    : `TM capacity (${tm?.capacity} m³) is insufficient for required quantity (${quantity} m³)`}
+                                </p>
+                              </div>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                <span className="font-semibold">Trips required:</span> {tripsRequired} trips
                               </p>
+                              {!isSufficient && (
+                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                  Consider selecting a TM with higher capacity or using multiple TMs.
+                                </p>
+                              )}
                             </div>
-                            {!isSufficient && (
-                              <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                                Consider selecting a TM with higher capacity or using multiple TMs.
+                          );
+                        } else {
+                          // Multiple TMs selected - show total capacity and trips
+                          // Calculate trips more intelligently by distributing quantity based on capacity ratios
+                          const totalCapacity = selectedTMs.reduce((sum, tm) => sum + (tm?.capacity || 0), 0);
+                          const tmTrips: { tm: AvailableTM; trips: number }[] = [];
+                          
+                          // Calculate trips for each TM based on their capacity ratio
+                          for (const tm of selectedTMs) {
+                            if (!tm) continue;
+                            
+                            // Calculate the proportion of quantity this TM should handle based on its capacity
+                            const capacityRatio = tm.capacity / totalCapacity;
+                            const quantityForThisTM = quantity * capacityRatio;
+                            const tripsForThisTM = Math.ceil(quantityForThisTM / tm.capacity);
+                            
+                            tmTrips.push({ tm, trips: tripsForThisTM });
+                          }
+                          
+                          const totalTrips = tmTrips.reduce((sum, item) => sum + item.trips, 0);
+                          
+                          return (
+                            <div
+                              className={`mt-3 p-3 rounded-lg ${
+                                isSufficient
+                                  ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+                                  : "bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className={`w-2 h-2 rounded-full ${isSufficient ? "bg-green-500" : "bg-yellow-500"}`}
+                                ></div>
+                                <p
+                                  className={`text-sm font-medium ${
+                                    isSufficient ? "text-green-700 dark:text-green-300" : "text-yellow-700 dark:text-yellow-300"
+                                  }`}
+                                >
+                                  {isSufficient
+                                    ? `Total capacity (${totalCapacity} m³) is sufficient for required quantity (${quantity} m³)`
+                                    : `Total capacity (${totalCapacity} m³) may be insufficient for required quantity (${quantity} m³)`}
+                                </p>
+                              </div>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                <span className="font-semibold">Estimated total trips:</span> {totalTrips} trips across {selectedTMs.length} TMs
                               </p>
-                            )}
-                          </div>
-                        );
+                              <div className="mt-2 space-y-1">
+                                {tmTrips.map((item) => (
+                                  <p key={item.tm.id} className="text-xs text-gray-500 dark:text-gray-400">
+                                    {item.tm.identifier}: ~{item.trips} trips ({item.tm.capacity} m³ capacity)
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
                       })()}
                     </div>
                   )}
@@ -1000,17 +1066,18 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                           <div className="flex flex-row items-center space-x-4 w-full">
                                             <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
                                             <input
-                                              type="radio"
-                                              name="tm-selection"
+                                              type="checkbox"
                                               checked={tmSequence.includes(tm.id)}
                                               disabled={!tm.availability}
                                               onChange={(e) => {
                                                 if (e.target.checked) {
-                                                  setTMSequence([tm.id]);
-                                                  setHasChanged(true);
+                                                  setTMSequence((prev) => [...prev, tm.id]);
+                                                } else {
+                                                  setTMSequence((prev) => prev.filter((id) => id !== tm.id));
                                                 }
+                                                setHasChanged(true);
                                               }}
-                                              className="h-4 w-4 text-brand-500 border-gray-300 focus:ring-brand-500"
+                                              className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
                                             />
                                             <div className="flex flex-row w-full justify-between">
                                               <p className="text-sm font-medium text-gray-900 dark:text-white">
@@ -1048,7 +1115,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
 
                 {/* Right Column - Selected TM */}
                 <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Selected TM</h3>
+                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Selected TMs</h3>
                   <div className="space-y-2">
                     {tmSequence.length > 0 && calculatedTMs ? (
                       (() => {
@@ -1058,33 +1125,38 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                           return acc;
                         }, {} as Record<string, string>);
 
-                        const tmId = tmSequence[0];
-                        const tm = calculatedTMs.available_tms.find((t) => t.id === tmId);
-                        const plant = tm?.plant_id ? plantIdToName[tm.plant_id] || "Unassigned" : "Unassigned";
-
                         return (
-                          <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-4">
-                                <span className="text-xs text-brand-600 dark:text-brand-400 font-semibold bg-brand-100 dark:bg-brand-900/30 px-2 py-1 rounded-full">
-                                  1
-                                </span>
-                                <span className="text-gray-700 dark:text-gray-300 font-medium">{tm?.identifier}</span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                {plant && (
-                                  <span className="px-2 py-1 text-xs font-medium text-brand-600 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-400 rounded-full">
-                                    {plant}
-                                  </span>
-                                )}
-                                <span className="text-sm text-gray-500 dark:text-gray-400">{tm?.capacity} m³</span>
-                              </div>
-                            </div>
+                          <div className="space-y-2">
+                            {tmSequence.map((tmId, index) => {
+                              const tm = calculatedTMs.available_tms.find((t) => t.id === tmId);
+                              const plant = tm?.plant_id ? plantIdToName[tm.plant_id] || "Unassigned" : "Unassigned";
+
+                              return (
+                                <div key={tmId} className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-4">
+                                      <span className="text-xs text-brand-600 dark:text-brand-400 font-semibold bg-brand-100 dark:bg-brand-900/30 px-2 py-1 rounded-full">
+                                        {index + 1}
+                                      </span>
+                                      <span className="text-gray-700 dark:text-gray-300 font-medium">{tm?.identifier}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      {plant && (
+                                        <span className="px-2 py-1 text-xs font-medium text-brand-600 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-400 rounded-full">
+                                          {plant}
+                                        </span>
+                                      )}
+                                      <span className="text-sm text-gray-500 dark:text-gray-400">{tm?.capacity} m³</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         );
                       })()
                     ) : (
-                      <div className="text-center py-4 text-gray-500 dark:text-gray-400">No TM selected</div>
+                      <div className="text-center py-4 text-gray-500 dark:text-gray-400">No TMs selected</div>
                     )}
                   </div>
                 </div>
@@ -1097,15 +1169,15 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 </Button>
                 <div className="flex items-center gap-4 justify-end flex-1">
                   {/* Warning message */}
-                  {tmSequence.length !== 1 && (
+                  {tmSequence.length === 0 && (
                     <div className="p-2 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg text-xs">
-                      Please select exactly <span className="font-semibold">1 TM</span> to proceed.
+                      Please select at least <span className="font-semibold">1 TM</span> to proceed.
                     </div>
                   )}
                   <Button
                     onClick={handleNext}
                     className="flex items-center gap-2 min-w-[140px]"
-                    disabled={isGenerating || tmSequence.length !== 1}
+                    disabled={isGenerating || tmSequence.length === 0}
                   >
                     {isGenerating ? "Generating..." : "Next Step"}
                     {!isGenerating && <ArrowRight size={16} />}

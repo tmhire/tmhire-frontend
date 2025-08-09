@@ -54,13 +54,13 @@ const navItems: NavItem[] = [
   {
     icon: <SquareChartGantt />,
     name: "Pumping Schedules",
-    shortName: "Pumping Sch",
+    shortName: "Pumping Schedules",
     path: "/pumping-schedules",
   },
   {
     icon: <SquareChartGantt />,
     name: "Supply Schedules",
-    shortName: "Supply Sch",
+    shortName: "Supply Schedules",
     path: "/supply-schedules",
   },
   {
