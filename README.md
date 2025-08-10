@@ -1,42 +1,56 @@
-# TailAdmin Next.js - Free Next.js Tailwind Admin Dashboard Template
+# TM Grid - Concrete Management System Frontend
 
-TailAdmin is a free and open-source admin dashboard template built on **Next.js and Tailwind CSS** providing developers with everything they need to create a feature-rich and data-driven: back-end, dashboard, or admin panel solution for any sort of web project.
+TM Grid is a comprehensive concrete management system that helps concrete companies streamline their operations, manage resources, and optimize scheduling. This repository contains the frontend application built with Next.js and Tailwind CSS.
 
-![TailAdmin - Next.js Dashboard Preview](./banner.png)
+![TM Grid Dashboard](https://i.ibb.co/S4SG9K1p/image.png)
 
-With TailAdmin Next.js, you get access to all the necessary dashboard UI components, elements, and pages required to build a high-quality and complete dashboard or admin panel. Whether you're building a dashboard or admin panel for a complex web application or a simple website. 
+## Live Deployments
 
-TailAdmin utilizes the powerful features of **Next.js 15** and common features of Next.js such as server-side rendering (SSR), static site generation (SSG), and seamless API route integration. Combined with the advancements of **React 19** and the robustness of **TypeScript**, TailAdmin is the perfect solution to help get your project up and running quickly.
+- Production: [https://tmgrid.in](https://tmgrid.in)
+- Staging: [https://tmhire-frontend.vercel.app](https://tmhire-frontend.vercel.app)
 
 ## Overview
 
-TailAdmin provides essential UI components and layouts for building feature-rich, data-driven admin dashboards and control panels. It's built on:
+TM Grid provides a complete solution for concrete companies to manage their:
+- RMC Plants and their operations
+- Clients and Projects
+- Transit Mixers fleet
+- Concrete Pumps
+- Pumping Schedules
+- Supply Schedules
+- Calendar-based resource management
+
+The frontend application is built on modern web technologies:
 
 - Next.js 15.x
 - React 19
 - TypeScript
 - Tailwind CSS V4
 
-### Quick Links
-- [✨ Visit Website](https://tailadmin.com)
-- [📄 Documentation](https://tailadmin.com/docs)
-- [⬇️ Download](https://tailadmin.com/download)
-- [🖌️ Figma Design File (Community Edition)](https://www.figma.com/community/file/1463141366275764364)
-- [⚡ Get PRO Version](https://tailadmin.com/pricing)
+### Key Features
 
-### Demos
-- [Free Version](https://nextjs-free-demo.tailadmin.com)
-- [Pro Version](https://nextjs-demo.tailadmin.com)
+1. **Resource Management**
+   - Manage RMC Plants with details like location, capacity, and contact information
+   - Track Transit Mixers including status, maintenance, and assignments
+   - Monitor Concrete Pumps and their availability
+   - Maintain client and project information
 
-### Other Versions
-- [HTML Version](https://github.com/TailAdmin/tailadmin-free-tailwind-dashboard-template)
-- [React Version](https://github.com/TailAdmin/free-react-tailwind-admin-dashboard)
-- [Vue.js Version](https://github.com/TailAdmin/vue-tailwind-admin-dashboard)
+2. **Scheduling & Planning**
+   - Visual calendar interface for resource allocation
+   - Pumping schedule management with conflict detection
+   - Supply schedule optimization
+   - Real-time availability tracking
+
+3. **Dashboard & Analytics**
+   - Overview of daily operations
+   - Resource utilization metrics
+   - Project status tracking
+   - Performance analytics
 
 ## Installation
 
 ### Prerequisites
-To get started with TailAdmin, ensure you have the following prerequisites installed and set up:
+To get started with TM Grid frontend, ensure you have the following prerequisites installed and set up:
 
 - Node.js 18.x or later (recommended to use Node.js 20.x or later)
 
@@ -44,7 +58,7 @@ To get started with TailAdmin, ensure you have the following prerequisites insta
 Clone the repository using the following command:
 
 ```bash
-git clone https://github.com/TailAdmin/tm-hire-dashboard.git
+git clone https://github.com/tmhire/tmhire-frontend.git
 ```
 
 > Windows Users: place the repository near the root of your drive if you face issues while cloning.
@@ -64,110 +78,139 @@ git clone https://github.com/TailAdmin/tm-hire-dashboard.git
     yarn dev
     ```
 
-## Components
+## Technology Stack
 
-TailAdmin is a pre-designed starting point for building a web-based dashboard using Next.js and Tailwind CSS. The template includes:
+- **Frontend Framework**: Next.js 15.x with App Router and React 19
+- **Styling**: Tailwind CSS v4
+- **State Management**: React Query for server state
+- **Authentication**: NextAuth.js with multiple providers
+- **Charts & Visualization**: ApexCharts
+- **UI Components**: Custom components built with Tailwind CSS
+- **Form Handling**: React Hook Form with validation
+- **API Integration**: RESTful API with fetch client
 
-- Sophisticated and accessible sidebar
-- Data visualization components
-- Profile management and custom 404 page
-- Tables and Charts(Line and Bar)
-- Authentication forms and input elements
-- Alerts, Dropdowns, Modals, Buttons and more
-- Can't forget Dark Mode 🕶️
+## System Architecture
 
-All components are built with React and styled using Tailwind CSS for easy customization.
+### Frontend Components
+1. **Authentication System**
+   - Sign in/Sign up pages
+   - Protected routes with middleware
+   - Session management
 
-## Feature Comparison
+2. **Dashboard & Analytics**
+   - Overview statistics
+   - Resource utilization charts
+   - Recent activities
 
-### Free Version
-- 1 Unique Dashboard
-- 30+ dashboard components
-- 50+ UI elements
-- Basic Figma design files
-- Community support
+3. **Resource Management**
+   - Plants management interface
+   - Transit mixer tracking
+   - Pump management
+   - Client and project management
 
-### Pro Version
-- 5 Unique Dashboards: Analytics, Ecommerce, Marketing, CRM, Stocks (more coming soon)
-- 400+ dashboard components and UI elements
-- Complete Figma design file
-- Email support
+4. **Scheduling System**
+   - Calendar-based scheduling
+   - Gantt chart views
+   - Schedule conflict resolution
+   - Resource allocation
 
-To learn more about pro version features and pricing, visit our [pricing page](https://tailadmin.com/pricing).
+## Getting Started
 
-## Changelog
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/tmhire/tmhire-frontend.git
+   ```
 
-### Version 2.0.2 - [March 25, 2025]
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-- Upgraded to Next v15.2.3 for [CVE-2025-29927](https://nextjs.org/blog/cve-2025-29927) concerns
-- Included overrides vectormap for packages to prevent peer dependency errors during installation.
-- Migrated from react-flatpickr to flatpickr package for React 19 support
+3. Set up environment variables:
+   Create a `.env.local` file with the following:
+   ```env
+   NEXT_PUBLIC_API_URL=your_backend_api_url
+   NEXTAUTH_URL=your_frontend_url
+   NEXTAUTH_SECRET=your_secret_key
+   GOOGLE_CLIENT_ID=your_google_client_id
+   GOOGLE_CLIENT_SECRET=your_google_client_secret
+   ```
 
-### Version 2.0.1 - [February 27, 2025]
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-#### Update Overview
+## Configuration
 
-- Upgraded to Tailwind CSS v4 for better performance and efficiency.
-- Updated class usage to match the latest syntax and features.
-- Replaced deprecated class and optimized styles.
+The application can be configured through various environment variables:
 
-#### Next Steps
+- `NEXT_PUBLIC_API_URL`: Backend API endpoint
+- `NEXTAUTH_URL`: Frontend application URL
+- `NEXTAUTH_SECRET`: Secret key for NextAuth.js
+- `GOOGLE_CLIENT_ID`: Google OAuth client ID
+- `GOOGLE_CLIENT_SECRET`: Google OAuth client secret
 
-- Run npm install or yarn install to update dependencies.
-- Check for any style changes or compatibility issues.
-- Refer to the Tailwind CSS v4 [Migration Guide](https://tailwindcss.com/docs/upgrade-guide) on this release. if needed.
-- This update keeps the project up to date with the latest Tailwind improvements. 🚀
+## API Integration
 
-### v2.0.0 (February 2025)
-A major update focused on Next.js 15 implementation and comprehensive redesign.
+The frontend communicates with the backend through a RESTful API. Key endpoints include:
 
-#### Major Improvements
-- Complete redesign using Next.js 15 App Router and React Server Components
-- Enhanced user interface with Next.js-optimized components
-- Improved responsiveness and accessibility
-- New features including collapsible sidebar, chat screens, and calendar
-- Redesigned authentication using Next.js App Router and server actions
-- Updated data visualization using ApexCharts for React
+- `/auth/*` - Authentication and user management
+- `/plants/*` - RMC Plant operations
+- `/clients/*` - Client management
+- `/projects/*` - Project management
+- `/pumps/*` - Concrete pump operations
+- `/tms/*` - Transit mixer management
+- `/schedules/*` - Schedule management
 
-#### Breaking Changes
+## Development
 
-- Migrated from Next.js 14 to Next.js 15
-- Chart components now use ApexCharts for React
-- Authentication flow updated to use Server Actions and middleware
+### Code Structure
 
-[Read more](https://tailadmin.com/docs/update-logs/nextjs) on this release.
+```
+src/
+  ├── app/              # Next.js app directory
+  │   ├── (admin)/     # Protected admin routes
+  │   ├── (auth)/      # Authentication pages
+  │   └── api/         # API routes
+  ├── components/       # Reusable components
+  ├── context/         # React context providers
+  ├── hooks/           # Custom React hooks
+  ├── lib/            # Utility functions
+  └── types/          # TypeScript definitions
+```
 
-#### Breaking Changes
-- Migrated from Next.js 14 to Next.js 15
-- Chart components now use ApexCharts for React
-- Authentication flow updated to use Server Actions and middleware
+### Adding New Features
 
-### v1.3.4 (July 01, 2024)
-- Fixed JSvectormap rendering issues
+1. Create new components in the appropriate directory
+2. Update the routing in `app/` directory
+3. Add any necessary API endpoints
+4. Update types in `types/` directory
+5. Add tests for new functionality
 
-### v1.3.3 (June 20, 2024)
-- Fixed build error related to Loader component
+## Contributing
 
-### v1.3.2 (June 19, 2024)
-- Added ClickOutside component for dropdown menus
-- Refactored sidebar components
-- Updated Jsvectormap package
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to your branch
+5. Create a Pull Request
 
-### v1.3.1 (Feb 12, 2024)
-- Fixed layout naming consistency
-- Updated styles
+## Security
 
-### v1.3.0 (Feb 05, 2024)
-- Upgraded to Next.js 14
-- Added Flatpickr integration
-- Improved form elements
-- Enhanced multiselect functionality
-- Added default layout component
-
-## License
-
-TailAdmin Next.js Free Version is released under the MIT License.
+- Authentication is handled via NextAuth.js
+- All API routes are protected with middleware
+- Session management with JWT tokens
+- Input validation on all forms
+- XSS protection through React's built-in escaping
+- CSRF protection via SameSite cookies
 
 ## Support
 
-If you find this project helpful, please consider giving it a star on GitHub. Your support helps us continue developing and maintaining this template.
+For support or inquiries:
+- Email: support@tmgrid.com
+- GitHub Issues: Create a new issue in this repository
+
+## License
+
+Copyright © 2025 TM Grid. All rights reserved.
