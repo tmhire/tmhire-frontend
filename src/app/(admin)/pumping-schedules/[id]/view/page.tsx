@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components
 import Badge from "@/components/ui/badge/Badge";
 
 interface Schedule {
+  pumping_job: string;
   _id: string;
   user_id: string;
   project_id: string;
@@ -39,6 +40,7 @@ interface Schedule {
     pump_fixing_time: number;
     pump_removal_time: number;
     unloading_time: number;
+    pump_onward_time?: number;
   };
   output_table: Array<{
     trip_no: number;
@@ -69,6 +71,40 @@ interface Schedule {
   }>;
 }
 
+// Utility function to calculate pump start time from plant
+const calculatePumpStartTimeFromPlant = (schedule: Schedule): string => {
+  if (!schedule.input_params.pump_start) return "N/A";
+  
+  const pumpStart = new Date(schedule.input_params.pump_start);
+  const pumpFixingTime = schedule.input_params.pump_fixing_time || 0;
+  const pumpOnwardTime = schedule.input_params.pump_onward_time || 0;
+  
+  // Subtract pump fixing time and pump onward time from pump start time
+  const totalMinutesToSubtract = pumpFixingTime + pumpOnwardTime;
+  const calculatedTime = new Date(pumpStart.getTime() - (totalMinutesToSubtract * 60 * 1000));
+  
+  return calculatedTime.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+// Utility function to calculate pump site reach time
+const calculatePumpSiteReachTime = (schedule: Schedule): string => {
+  if (!schedule.input_params.pump_start) return "N/A";
+  
+  const pumpStart = new Date(schedule.input_params.pump_start);
+  const pumpFixingTime = schedule.input_params.pump_fixing_time || 0;
+  
+  // Subtract pump fixing time from pump start time
+  const calculatedTime = new Date(pumpStart.getTime() - (pumpFixingTime * 60 * 1000));
+  
+  return calculatedTime.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 export default function ScheduleViewPage() {
   const params = useParams();
   const { fetchWithAuth } = useApiClient();
@@ -98,26 +134,38 @@ export default function ScheduleViewPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-3">
-        <h2 className="text-xl font-semibold text-black dark:text-white">Pumping Schedule Details</h2>
+        <h2 className="text-xl font-semibold text-black dark:text-white">Concrete Pumping - Schedule Summary</h2>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
         {/* Summary Card */}
         <div className="md:col-span-2 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl p-6 flex flex-col justify-center h-full">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-4">Schedule Summary</h3>
           <div className="grid grid-cols-4 gap-x-8 gap-y-4">
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Schedule Date</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Scheduled Date</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.schedule_date}</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</h4>
-              <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
-                {schedule.status}
-              </Badge>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Pump Start Time at Site</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">
+                {schedule.input_params.pump_start
+                  ? new Date(schedule.input_params.pump_start).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "N/A"}
+              </p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Client</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Type of Pump</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.pump_type || "N/A"}</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Pumping Speed m³/hour</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.pumping_speed} m³/hr</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Client & Project Name</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.client_name}</p>
             </div>
             <div>
@@ -125,54 +173,52 @@ export default function ScheduleViewPage() {
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.site_address}</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total Quantity</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.quantity} m³</p>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Placement Zone</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.pumping_job}</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Pumping Speed</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.pumping_speed} m³/hr</p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">RMC Grade</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.concreteGrade}</p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Floor</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Floor Height</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.floor_height}</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total Trips</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.total_trips}</p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Avg. Trips per TM</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.trips_per_tm}</p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cycle Time</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.cycle_time?.toFixed(2)} min</p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Pump Start Time</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">RMC Grade</h4>
               <p className="text-base text-gray-800 dark:text-white/90">
-                {schedule.input_params.pump_start ? new Date(schedule.input_params.pump_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "N/A"}
+                {schedule.concreteGrade && `M ${schedule.concreteGrade}`}
               </p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Onward Time</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total Qty Pumped in m³</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.quantity} m³</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Load/Buffer Time (mins) (A)
+              </h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.buffer_time} min</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Onward Time (mins) (B)</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.onward_time} min</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Return Time</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.return_time} min</p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Unloading Time</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Unloading Time (mins) C</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.unloading_time} min</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Buffer Time</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.buffer_time} min</p>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Return Time (mins) (D)</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.return_time} min</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Total TM Cycle Time (hours)/Min (A+B+C+D)
+              </h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.cycle_time?.toFixed(2)} hrs</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</h4>
+              <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
+                {schedule.status}
+              </Badge>
             </div>
           </div>
         </div>
@@ -207,27 +253,33 @@ export default function ScheduleViewPage() {
             const totalTrips = schedule.output_table.length;
             return (
               <div className="overflow-x-auto">
-                <table className="min-w-[220px] text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
+                <table className="min-w-full text-xs border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-800">
-                      <th className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">No. of TMs</th>
-                      <th className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">No. of Trips</th>
-                      <th className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">Total Trips</th>
+                      <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">Sl. No</th>
+                      <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">NO OF TMs (A)</th>
+                      <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">NO OF TRIPS/TM (B)</th>
+                      <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">TOTAL TRIPS (A) x (B)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((row, idx) => (
-                      <tr key={idx} className="border-b border-gray-100 dark:border-gray-700 text-gray-500 dark:text-gray-400">
-                        <td className="px-4 py-2 text-left">{row.tmCount.toFixed(2)}</td>
-                        <td className="px-4 py-2 text-left">{row.trips.toFixed(2)}</td>
-                        <td className="px-4 py-2 text-left">{row.totalTrips.toFixed(2)}</td>
+                      <tr
+                        key={idx}
+                        className="border-b text-sm border-gray-100 dark:border-gray-700 text-gray-500 dark:text-gray-400"
+                      >
+                        <td className="px-2 py-2 text-left">{idx + 1}</td>
+                        <td className="px-2 py-2 text-left">{row.tmCount}</td>
+                        <td className="px-2 py-2 text-left">{row.trips}</td>
+                        <td className="px-2 py-2 text-left">{row.totalTrips}</td>
                       </tr>
                     ))}
                     {/* Summary row */}
                     <tr className="font-semibold text-gray-500 dark:text-gray-400">
-                      <td className="px-4 py-2 text-left">{totalTMs.toFixed(2)}</td>
-                      <td className="px-4 py-2 text-left"></td>
-                      <td className="px-4 py-2 text-left">{totalTrips.toFixed(2)}</td>
+                      <td className="px-2 py-2 text-left">TOTAL</td>
+                      <td className="px-2 py-2 text-left">{totalTMs}</td>
+                      <td className="px-2 py-2 text-left"></td>
+                      <td className="px-2 py-2 text-left">{totalTrips}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -247,37 +299,37 @@ export default function ScheduleViewPage() {
                   <TableRow>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Pump No.
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Pump Type
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Pump Start Time from Plant
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Pump Site Reach Time
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Pump Fixing Time (min)
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Pump Removal Time (min)
                     </TableCell>
@@ -287,7 +339,7 @@ export default function ScheduleViewPage() {
                   <TableRow>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
-                        {schedule.available_pumps.find(pump => pump.id === schedule.pump)?.identifier || "N/A"}
+                        {schedule.available_pumps.find((pump) => pump.id === schedule.pump)?.identifier || "N/A"}
                       </span>
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
@@ -295,12 +347,12 @@ export default function ScheduleViewPage() {
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
-                        {schedule.input_params.pump_start_time_from_plant || "N/A"}
+                        {calculatePumpStartTimeFromPlant(schedule)}
                       </span>
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
-                        {schedule.pump_site_reach_time || "N/A"}
+                        {calculatePumpSiteReachTime(schedule)}
                       </span>
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
@@ -331,61 +383,67 @@ export default function ScheduleViewPage() {
                   <TableRow>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Trip No
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       TM No
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Plant Name
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Plant Start
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                    >
+                      Plant Load Time
+                    </TableCell>
+                    <TableCell
+                      isHeader
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Pump Start
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Unloading Time
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Return Time
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Cum. Volume
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Cycle Time (min)
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Cushion Time (min)
                     </TableCell>
@@ -415,6 +473,11 @@ export default function ScheduleViewPage() {
                           {trip.plant_start
                             ? new Date(trip.plant_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                             : "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-3 py-4 text-start">
+                        <span className="text-gray-800 dark:text-white/90">
+                          {schedule.input_params.buffer_time} min
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-4 text-start">
@@ -471,55 +534,73 @@ export default function ScheduleViewPage() {
           }
           // Group trips by TM
           const tmTrips: Record<string, typeof schedule.output_table> = {};
-          schedule.output_table.forEach(trip => {
+          schedule.output_table.forEach((trip) => {
             if (!tmTrips[trip.tm_id]) tmTrips[trip.tm_id] = [];
             tmTrips[trip.tm_id].push(trip);
           });
           // Sort trips for each TM by trip_no
-          Object.values(tmTrips).forEach(trips => trips.sort((a, b) => a.trip_no - b.trip_no));
+          Object.values(tmTrips).forEach((trips) => trips.sort((a, b) => a.trip_no - b.trip_no));
           // Get all TM IDs and max number of trips
           const tmIds = Object.keys(tmTrips);
-          const maxTrips = Math.max(...Object.values(tmTrips).map(trips => trips.length));
+          const maxTrips = Math.max(...Object.values(tmTrips).map((trips) => trips.length));
           // Helper to format time range
           function formatTimeRange(start: string, end: string) {
-            if (!start || !end) return '-';
+            if (!start || !end) return "-";
             const s = new Date(start);
             const e = new Date(end);
-            const pad = (n: number) => n.toString().padStart(2, '0');
-            const sH = pad(s.getHours()), sM = pad(s.getMinutes());
-            const eH = pad(e.getHours()), eM = pad(e.getMinutes());
+            const pad = (n: number) => n.toString().padStart(2, "0");
+            const sH = pad(s.getHours()),
+              sM = pad(s.getMinutes());
+            const eH = pad(e.getHours()),
+              eM = pad(e.getMinutes());
             // If same day, show as HH:MM-HH:MM
             return `${sH}:${sM}-${eH}:${eM}`;
           }
           // Helper to format overall time range
-          function formatOverallRange(trips: Schedule['output_table']) {
-            if (!trips.length) return '-';
-            const starts = trips.map(t => t.plant_start).filter(Boolean).map(t => new Date(t));
-            const ends = trips.map(t => t.return).filter(Boolean).map(t => new Date(t));
-            if (!starts.length || !ends.length) return '-';
-            const minStart = new Date(Math.min(...starts.map(d => d.getTime())));
-            const maxEnd = new Date(Math.max(...ends.map(d => d.getTime())));
-            const pad = (n: number) => n.toString().padStart(2, '0');
-            const sH = pad(minStart.getHours()), sM = pad(minStart.getMinutes());
-            const eH = pad(maxEnd.getHours()), eM = pad(maxEnd.getMinutes());
+          function formatOverallRange(trips: Schedule["output_table"]) {
+            if (!trips.length) return "-";
+            const starts = trips
+              .map((t) => t.plant_start)
+              .filter(Boolean)
+              .map((t) => new Date(t));
+            const ends = trips
+              .map((t) => t.return)
+              .filter(Boolean)
+              .map((t) => new Date(t));
+            if (!starts.length || !ends.length) return "-";
+            const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
+            const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
+            const pad = (n: number) => n.toString().padStart(2, "0");
+            const sH = pad(minStart.getHours()),
+              sM = pad(minStart.getMinutes());
+            const eH = pad(maxEnd.getHours()),
+              eM = pad(maxEnd.getMinutes());
             return `${sH}:${sM} - ${eH}:${eM}`;
           }
           // Helper to get total hours for a TM
-          function getTotalHours(trips: Schedule['output_table']) {
+          function getTotalHours(trips: Schedule["output_table"]) {
             if (!trips.length) return 0;
-            const starts = trips.map(t => t.plant_start).filter(Boolean).map(t => new Date(t));
-            const ends = trips.map(t => t.return).filter(Boolean).map(t => new Date(t));
+            const starts = trips
+              .map((t) => t.plant_start)
+              .filter(Boolean)
+              .map((t) => new Date(t));
+            const ends = trips
+              .map((t) => t.return)
+              .filter(Boolean)
+              .map((t) => new Date(t));
             if (!starts.length || !ends.length) return 0;
-            const minStart = new Date(Math.min(...starts.map(d => d.getTime())));
-            const maxEnd = new Date(Math.max(...ends.map(d => d.getTime())));
+            const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
+            const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
             return (maxEnd.getTime() - minStart.getTime()) / (1000 * 60 * 60); // hours
           }
           // For last row: average total hours
-          const totalHoursArr = tmIds.map(tmId => getTotalHours(tmTrips[tmId]));
-          const avgTotalHours = totalHoursArr.length ? (totalHoursArr.reduce((a, b) => a + b, 0) / totalHoursArr.length) : 0;
+          const totalHoursArr = tmIds.map((tmId) => getTotalHours(tmTrips[tmId]));
+          const avgTotalHours = totalHoursArr.length
+            ? totalHoursArr.reduce((a, b) => a + b, 0) / totalHoursArr.length
+            : 0;
           // For TM label, use identifier if available
           const tmIdToIdentifier: Record<string, string> = {};
-          schedule.output_table.forEach(trip => {
+          schedule.output_table.forEach((trip) => {
             if (trip.tm_id && trip.tm_no) tmIdToIdentifier[trip.tm_id] = trip.tm_no;
           });
           return (
@@ -527,13 +608,15 @@ export default function ScheduleViewPage() {
               <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800">
-                    <th className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">S.No.</th>
-                    <th className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">TM</th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">S.No.</th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">TM</th>
                     {Array.from({ length: maxTrips }).map((_, i) => (
-                      <th key={i} className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">Trip {i + 1}</th>
+                      <th key={i} className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">
+                        Trip {i + 1}
+                      </th>
                     ))}
-                    <th className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">Start-End Time</th>
-                    <th className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200 text-right">Total Hours</th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">Start-End Time</th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-right">Total Hours</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -543,30 +626,34 @@ export default function ScheduleViewPage() {
                     const totalHours = getTotalHours(trips);
                     return (
                       <tr key={tmId} className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="px-4 py-2 text-gray-600 dark:text-gray-400 text-left">{index + 1}</td>
-                        <td className="px-4 py-2 text-gray-800 dark:text-white/90 font-medium text-left">{tmIdToIdentifier[tmId] || tmId}</td>
+                        <td className="px-2 py-2 text-gray-600 dark:text-gray-400 text-left">{index + 1}</td>
+                        <td className="px-2 py-2 text-gray-800 dark:text-white/90 font-medium text-left">
+                          {tmIdToIdentifier[tmId] || tmId}
+                        </td>
                         {Array.from({ length: maxTrips }).map((_, i) => {
                           const trip = trips[i];
                           return (
-                            <td key={i} className="px-4 py-2 text-left text-gray-800 dark:text-white/90">
-                              {trip ? formatTimeRange(trip.plant_start, trip.return) : '-'}
+                            <td key={i} className="px-2 py-2 text-left text-gray-800 dark:text-white/90">
+                              {trip ? formatTimeRange(trip.plant_start, trip.return) : "-"}
                             </td>
                           );
                         })}
                         <td className="px-4 text-gray-800 dark:text-white/90 py-2 text-left">{overallRange}</td>
-                        <td className="px-4 text-gray-800 dark:text-white/90 py-2 text-right">{totalHours ? totalHours.toFixed(1) : '-'}</td>
+                        <td className="px-4 text-gray-800 dark:text-white/90 py-2 text-right">
+                          {totalHours ? totalHours.toFixed(1) : "-"}
+                        </td>
                       </tr>
                     );
                   })}
                   {/* Last row: average total hours */}
                   <tr className="font-semibold bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white/90">
-                    <td className="px-4 py-2 text-left">Avg</td>
-                    <td className="px-4 py-2 text-center "></td>
+                    <td className="px-2 py-2 text-left">Avg</td>
+                    <td className="px-2 py-2 text-center "></td>
                     {Array.from({ length: maxTrips }).map((_, i) => (
-                      <td key={i} className="px-4 py-2"></td>
+                      <td key={i} className="px-2 py-2"></td>
                     ))}
-                    <td className="px-4 py-2 text-center"></td>
-                    <td className="px-4 py-2 text-right">{avgTotalHours ? avgTotalHours.toFixed(1) : '-'}</td>
+                    <td className="px-2 py-2 text-center"></td>
+                    <td className="px-2 py-2 text-right">{avgTotalHours ? avgTotalHours.toFixed(1) : "-"}</td>
                   </tr>
                 </tbody>
               </table>

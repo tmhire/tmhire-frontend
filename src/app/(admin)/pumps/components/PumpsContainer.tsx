@@ -82,6 +82,15 @@ export default function PumpsContainer() {
     remarks: "", // <-- Added
   });
   const [error, setError] = useState("");
+  const [driverContactError, setDriverContactError] = useState("");
+  const [editDriverContactError, setEditDriverContactError] = useState("");
+
+  const validateMobileNumber = (number: string): boolean => {
+    // Remove all non-digits
+    const digitsOnly = number.replace(/\D/g, "");
+    // Check if it's a valid Indian mobile number (10 digits starting with 6-9)
+    return /^[6-9]\d{9}$/.test(digitsOnly);
+  };
 
   const handleIdentifierInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.toUpperCase();
@@ -168,6 +177,7 @@ export default function PumpsContainer() {
         driver_contact: "",
         remarks: "", // <-- Added
       });
+      setDriverContactError("");
     },
   });
 
@@ -187,6 +197,7 @@ export default function PumpsContainer() {
       queryClient.invalidateQueries({ queryKey: ["pumps"] });
       setIsEditModalOpen(false);
       setSelectedPump(null);
+      setEditDriverContactError("");
     },
   });
 
@@ -210,6 +221,17 @@ export default function PumpsContainer() {
 
   const handleAddPump = () => {
     setIsCreateModalOpen(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+    setDriverContactError("");
+    setError("");
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditDriverContactError("");
   };
 
   const handleCreatePump = async () => {
@@ -269,6 +291,15 @@ export default function PumpsContainer() {
       ...prev,
       [name]: newValue,
     }));
+
+    // Validate driver contact if it's being changed in edit modal
+    if (name === "driver_contact") {
+      if (value && !validateMobileNumber(value)) {
+        setEditDriverContactError("Please enter a valid 10-digit mobile number starting with 6-9");
+      } else {
+        setEditDriverContactError("");
+      }
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -277,6 +308,15 @@ export default function PumpsContainer() {
       ...prev,
       [name]: name === "capacity" ? Number(value) : value,
     }));
+
+    // Validate driver contact if it's being changed
+    if (name === "driver_contact") {
+      if (value && !validateMobileNumber(value)) {
+        setDriverContactError("Please enter a valid 10-digit mobile number starting with 6-9");
+      } else {
+        setDriverContactError("");
+      }
+    }
   };
 
   // Get unique plants from pumps data
@@ -537,7 +577,7 @@ export default function PumpsContainer() {
       {/* Create Modal */}
       <Modal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={handleCloseCreateModal}
         className="max-w-[800px] p-5 lg:p-10"
       >
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Pump</h4>
@@ -617,6 +657,7 @@ export default function PumpsContainer() {
               value={newPump.driver_contact || ""}
               onChange={handleInputChange}
             />
+            {driverContactError && <p className="text-red-500 text-xs mt-1">{driverContactError}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
@@ -629,7 +670,7 @@ export default function PumpsContainer() {
             />
           </div>
           <div className="col-span-2 flex justify-end gap-3 mt-6">
-            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+            <Button variant="outline" onClick={handleCloseCreateModal}>
               Cancel
             </Button>
             <Button onClick={handleCreatePump} disabled={createPumpMutation.isPending || !newPump.identifier}>
@@ -647,7 +688,7 @@ export default function PumpsContainer() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-[800px] p-5 lg:p-10">
+      <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal} className="max-w-[800px] p-5 lg:p-10">
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Edit Pump</h4>
         {selectedPump && (
           <div className="grid grid-cols-2 gap-4">
@@ -713,13 +754,14 @@ export default function PumpsContainer() {
                 value={editedPump.driver_contact || ""}
                 onChange={handleEditInputChange}
               />
+              {editDriverContactError && <p className="text-red-500 text-xs mt-1">{editDriverContactError}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
               <Input type="text" name="remarks" value={editedPump.remarks || ""} onChange={handleEditInputChange} />
             </div>
             <div className="col-span-2 flex justify-end gap-3 mt-6">
-              <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+              <Button variant="outline" onClick={handleCloseEditModal}>
                 Cancel
               </Button>
               <Button onClick={handleSaveEdit} disabled={editPumpMutation.isPending}>

@@ -70,11 +70,11 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
   };
 
   const handleView = (schedule: Schedule) => {
-    router.push(`/supply-schedules/${schedule._id}/view`);
+    router.push(`/pumping-schedules/${schedule._id}/view`);
   };
 
   const handleEdit = (schedule: Schedule) => {
-    router.push(`/supply-schedules/${schedule._id}`);
+    router.push(`/pumping-schedules/${schedule._id}`);
   };
 
   return (

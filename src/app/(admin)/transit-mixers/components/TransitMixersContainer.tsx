@@ -61,6 +61,15 @@ export default function TransitMixersContainer() {
     remarks: "", // <-- Added
   });
   const [error, setError] = useState("");
+  const [driverContactError, setDriverContactError] = useState("");
+  const [editDriverContactError, setEditDriverContactError] = useState("");
+
+  const validateMobileNumber = (number: string): boolean => {
+    // Remove all non-digits
+    const digitsOnly = number.replace(/\D/g, "");
+    // Check if it's a valid Indian mobile number (10 digits starting with 6-9)
+    return /^[6-9]\d{9}$/.test(digitsOnly);
+  };
 
   const handleIdentifierInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.toUpperCase();
@@ -118,6 +127,7 @@ export default function TransitMixersContainer() {
         status: "active",
         remarks: "", // <-- Added
       });
+      setDriverContactError("");
     },
   });
 
@@ -137,6 +147,7 @@ export default function TransitMixersContainer() {
       queryClient.invalidateQueries({ queryKey: ["transit-mixers"] });
       setIsEditModalOpen(false);
       setSelectedMixer(null);
+      setEditDriverContactError("");
     },
   });
 
@@ -181,6 +192,17 @@ export default function TransitMixersContainer() {
 
   const handleAddMixer = () => {
     setIsCreateModalOpen(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+    setDriverContactError("");
+    setError("");
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditDriverContactError("");
   };
 
   const handleCreateMixer = async () => {
@@ -234,6 +256,15 @@ export default function TransitMixersContainer() {
       ...prev,
       [name]: name === "capacity" ? Number(value) : value,
     }));
+
+    // Validate driver contact if it's being changed
+    if (name === "driver_contact") {
+      if (value && !validateMobileNumber(value)) {
+        setDriverContactError("Please enter a valid 10-digit mobile number starting with 6-9");
+      } else {
+        setDriverContactError("");
+      }
+    }
   };
 
   // For edit modal, add a handler for all fields
@@ -244,6 +275,15 @@ export default function TransitMixersContainer() {
       ...selectedMixer,
       [name]: name === "capacity" ? Number(value) : value,
     });
+
+    // Validate driver contact if it's being changed in edit modal
+    if (name === "driver_contact") {
+      if (value && !validateMobileNumber(value)) {
+        setEditDriverContactError("Please enter a valid 10-digit mobile number starting with 6-9");
+      } else {
+        setEditDriverContactError("");
+      }
+    }
   };
 
   // const plantsOptions = ["Main Plant", "North Plant", "South Plant", "East Plant"];
@@ -312,6 +352,9 @@ export default function TransitMixersContainer() {
             <div className="flex flex-row gap-8 items-center">
               <span className="text-xs text-gray-500 dark:text-gray-400">Avg Capacity</span>
               <span className="font-semibold text-gray-800 dark:text-white/90">{calculateAverageCapacity()}m³</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                Rounded off to {Math.ceil(Number(calculateAverageCapacity()))} m³
+              </span>
             </div>
           </div>
           <Button className="flex items-center gap-2" size="sm" onClick={handleAddMixer}>
@@ -460,7 +503,7 @@ export default function TransitMixersContainer() {
       {/* Create Modal */}
       <Modal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={handleCloseCreateModal}
         className="max-w-[800px] p-5 lg:p-10"
       >
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Transit Mixer</h4>
@@ -537,6 +580,7 @@ export default function TransitMixersContainer() {
               value={newMixer.driver_contact || ""}
               onChange={handleInputChange}
             />
+            {driverContactError && <p className="text-red-500 text-xs mt-1">{driverContactError}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
@@ -550,7 +594,7 @@ export default function TransitMixersContainer() {
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6">
-          <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+          <Button variant="outline" onClick={handleCloseCreateModal}>
             Cancel
           </Button>
           <Button onClick={handleCreateMixer} disabled={createTransitMixerMutation.isPending}>
@@ -567,7 +611,7 @@ export default function TransitMixersContainer() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-[800px] p-5 lg:p-10">
+      <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal} className="max-w-[800px] p-5 lg:p-10">
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Edit Transit Mixer</h4>
         {selectedMixer && (
           <div className="grid grid-cols-2 gap-4">
@@ -628,6 +672,7 @@ export default function TransitMixersContainer() {
                 value={selectedMixer.driver_contact || ""}
                 onChange={handleEditInputChange}
               />
+              {editDriverContactError && <p className="text-red-500 text-xs mt-1">{editDriverContactError}</p>}
             </div>
 
             <div>
@@ -635,7 +680,7 @@ export default function TransitMixersContainer() {
               <Input type="text" name="remarks" value={selectedMixer.remarks || ""} onChange={handleEditInputChange} />
             </div>
             <div className="col-span-2 flex justify-end gap-3 mt-6">
-              <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+              <Button variant="outline" onClick={handleCloseEditModal}>
                 Cancel
               </Button>
               <Button onClick={handleSaveEdit} disabled={editTransitMixerMutation.isPending}>

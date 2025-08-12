@@ -7,6 +7,7 @@ import DatePickerInput from "@/components/form/input/DatePickerInput";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Tooltip from "@/components/ui/tooltip";
+import { useQuery } from "@tanstack/react-query";
 
 // Types for better type safety and backend integration
 type ApiTask = {
@@ -52,22 +53,51 @@ type ApiResponse = {
   };
 };
 
-const timeSlots = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
-
-// Helper function to convert time string to hour number
-const timeStringToHour = (timeStr: string): number => {
-  const [hours, minutes] = timeStr.split(":").map(Number);
-  return hours + minutes / 60;
+// Types for plants, pumps, and TMs
+type Plant = {
+  _id: string;
+  name: string;
+  location: string;
+  address: string;
 };
+
+type Pump = {
+  _id: string;
+  identifier: string;
+  type: "line" | "boom";
+  plant_id: string;
+};
+
+type TransitMixer = {
+  _id: string;
+  identifier: string;
+  plant_id: string | null;
+};
+
+const timeSlots = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
 
 // Helper function to calculate duration between two times
 const calculateDuration = (start: string, end: string): number => {
-  const startFloat = timeStringToHour(start); // e.g. 2.18
-  const endFloat = timeStringToHour(end); // e.g. 3.26
-  const rawDuration = endFloat - startFloat;
-  // Round to nearest 0.5
-  const roundedDuration = Math.round(rawDuration * 60);
-  return roundedDuration;
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const diffMs = endDate.getTime() - startDate.getTime();
+  return Math.round(diffMs / (1000 * 60));
+};
+
+// Helper function to format date and time for tooltips
+const formatDateTimeForTooltip = (dateTimeString: string): string => {
+  const date = new Date(dateTimeString);
+  const dateStr = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const timeStr = date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${dateStr} ${timeStr}`;
 };
 
 // Task type color map
@@ -98,7 +128,7 @@ const CLIENT_TAILWIND_COLORS = [
 const getTaskType = (id: string) => id.split("-")[0];
 
 // Helper function to transform API data to component format
-const transformApiData = (apiData: ApiResponse): Item[] => {
+const transformApiData = (apiData: ApiResponse, plantMap: Map<string, string>): Item[] => {
   // Create a map of unique clients
   const uniqueClients = new Set<string>();
   apiData.data.mixers.forEach((mixer) => {
@@ -130,10 +160,13 @@ const transformApiData = (apiData: ApiResponse): Item[] => {
     // Determine mixer's current client (first task's client or null)
     const currentClient = transformedTasks.length > 0 ? transformedTasks[0].client : null;
 
+    // Convert plant ID to plant name
+    const plantName = plantMap.get(item.plant) || item.plant;
+
     return {
       id: item.id,
       name: item.name,
-      plant: item.plant,
+      plant: plantName,
       client: currentClient,
       item: itemType,
       type: item.type || null,
@@ -173,10 +206,11 @@ export default function CalendarContainer() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedItem, setSelectedItem] = useState<"all" | "mixer" | "pump">("all");
   const [selectedPlant, setSelectedPlant] = useState("all");
-  const [selectedMixer, setSelectedMixer] = useState("all");
   const [selectedClient, setSelectedClient] = useState("all");
+  const [selectedPumps, setSelectedPumps] = useState<string[]>([]);
+  const [selectedTMs, setSelectedTMs] = useState<string[]>([]);
   const [timeFormat, setTimeFormat] = useState("24h");
-  const [customStartHour, setCustomStartHour] = useState(6); // default 6:00
+  const [customStartHour, setCustomStartHour] = useState(0);
   const [ganttData, setGanttData] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -184,11 +218,58 @@ export default function CalendarContainer() {
   // Dropdown states
   const [isItemFilterOpen, setIsItemFilterOpen] = useState(false);
   const [isPlantFilterOpen, setIsPlantFilterOpen] = useState(false);
-  const [isMixerFilterOpen, setIsMixerFilterOpen] = useState(false);
   const [isClientFilterOpen, setIsClientFilterOpen] = useState(false);
   const [isTimeFormatOpen, setIsTimeFormatOpen] = useState(false);
+  const [isPumpFilterOpen, setIsPumpFilterOpen] = useState(false);
+  const [isTMFilterOpen, setIsTMFilterOpen] = useState(false);
 
   const { fetchWithAuth } = useApiClient();
+
+  // Fetch plants, pumps, and TMs data
+  const { data: plantsData } = useQuery<Plant[]>({
+    queryKey: ["plants"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/plants");
+      const data = await response.json();
+      if (data.success) {
+        return data.data;
+      }
+      return [];
+    },
+    enabled: status === "authenticated",
+  });
+
+  const { data: pumpsData } = useQuery<Pump[]>({
+    queryKey: ["pumps"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/pumps");
+      const data = await response.json();
+      if (data.success) {
+        return data.data;
+      }
+      return [];
+    },
+    enabled: status === "authenticated",
+  });
+
+  const { data: tmsData } = useQuery<TransitMixer[]>({
+    queryKey: ["transit-mixers"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/tms");
+      const data = await response.json();
+      if (data.success) {
+        return data.data;
+      }
+      return [];
+    },
+    enabled: status === "authenticated",
+  });
+
+  // Create plant ID to name mapping
+  const plantMap = React.useMemo(() => {
+    if (!plantsData) return new Map<string, string>();
+    return new Map(plantsData.map((plant) => [plant._id, plant.name]));
+  }, [plantsData]);
 
   // Memoized clientColors map for use in rendering
   const clientColors = React.useMemo(() => {
@@ -217,17 +298,18 @@ export default function CalendarContainer() {
     try {
       setLoading(true);
       setError(null);
+      const time = `${String(customStartHour).padStart(2, "0")}:00:00`;
 
       const response = await fetchWithAuth("/calendar/gantt", {
         method: "POST",
         body: JSON.stringify({
-          query_date: date,
+          query_date: `${date}T${time}`,
         }),
       });
 
       const data: ApiResponse = await response.json();
       if (data.success) {
-        const transformedData = transformApiData(data);
+        const transformedData = transformApiData(data, plantMap);
         setGanttData(transformedData);
       } else {
         setError(data.message || "Failed to fetch gantt data");
@@ -249,17 +331,21 @@ export default function CalendarContainer() {
     if (status === "authenticated" && session) {
       fetchGanttData(selectedDate);
     }
-  }, [selectedDate, status]);
+  }, [selectedDate, customStartHour, status]);
 
   // Filter data based on search term and selected filters
   const filteredData = ganttData.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPlant = selectedPlant === "all" || item.plant === selectedPlant;
-    const matchesMixer = selectedMixer === "all" || item.name === selectedMixer;
+    // const matchesMixer = selectedMixer === "all" || item.name === selectedMixer;
     const matchesClient = selectedClient === "all" || item.client === selectedClient;
     const matchesItem = selectedItem === "all" || item.item === selectedItem;
 
-    return matchesSearch && matchesPlant && matchesMixer && matchesClient && matchesItem;
+    // Multi-select filters for pumps and TMs
+    const matchesPumps = selectedPumps.length === 0 || (item.item === "pump" && selectedPumps.includes(item.name));
+    const matchesTMs = selectedTMs.length === 0 || (item.item === "mixer" && selectedTMs.includes(item.name));
+
+    return matchesSearch && matchesPlant && matchesClient && matchesItem && matchesPumps && matchesTMs;
   });
 
   const formatTime = (hour: number) => {
@@ -273,10 +359,14 @@ export default function CalendarContainer() {
 
   // Get unique values for filter options
   const plants = Array.from(new Set(ganttData.map((item) => item.plant)));
-  const mixers = Array.from(new Set(ganttData.map((item) => item.name)));
+  // const mixers = Array.from(new Set(ganttData.map((item) => item.name)));
   const clients = Array.from(
     new Set(ganttData.map((item) => item.client).filter((client): client is string => client !== null))
   );
+
+  // Get available pumps and TMs from fetched data
+  const availablePumps = pumpsData?.map((pump) => pump.identifier) || [];
+  const availableTMs = tmsData?.map((tm) => tm.identifier) || [];
 
   // Get unique clients with their colors for the legend
   const clientLegend = Object.values(
@@ -326,11 +416,9 @@ export default function CalendarContainer() {
   // Calculate totalMinutes as the difference between firstStart and lastEnd
   Object.values(clientStats).forEach((stat) => {
     if (stat.firstStart && stat.lastEnd) {
-      const [startH, startM] = stat.firstStart.split(":").map(Number);
-      const [endH, endM] = stat.lastEnd.split(":").map(Number);
-      const startTotal = startH * 60 + startM;
-      const endTotal = endH * 60 + endM;
-      stat.totalMinutes = endTotal - startTotal;
+      const startTotal = new Date(stat.firstStart).getTime();
+      const endTotal = new Date(stat.lastEnd).getTime();
+      stat.totalMinutes = endTotal - startTotal / 60000;
       if (stat.totalMinutes < 0) stat.totalMinutes = 0;
     }
   });
@@ -346,12 +434,12 @@ export default function CalendarContainer() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-full mx-aut">
         {/* Header */}
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Schedule Calendar</h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Manage and monitor mixer schedules across all production lines
+            Manage and monitor mixer schedules across all production lines and pumps
           </p>
         </div>
 
@@ -402,7 +490,7 @@ export default function CalendarContainer() {
           {/* Expandable Filters */}
           {showFilters && (
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.05]">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                 {/* Item Filter */}
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TM or Pump</label>
@@ -447,84 +535,6 @@ export default function CalendarContainer() {
                   )}
                 </div>
 
-                {/* Plant Filter */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plant</label>
-                  <button
-                    onClick={() => setIsPlantFilterOpen(!isPlantFilterOpen)}
-                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  >
-                    {selectedPlant === "all" ? "All Plants" : selectedPlant}
-                  </button>
-                  {isPlantFilterOpen && (
-                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
-                      <div className="p-2 text-gray-800 dark:text-white/90">
-                        <button
-                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                          onClick={() => {
-                            setSelectedPlant("all");
-                            setIsPlantFilterOpen(false);
-                          }}
-                        >
-                          All Plants
-                        </button>
-                        {plants.map((plant) => (
-                          <button
-                            key={plant}
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setSelectedPlant(plant);
-                              setIsPlantFilterOpen(false);
-                            }}
-                          >
-                            {plant}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Mixer Filter */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Transit Mixer
-                  </label>
-                  <button
-                    onClick={() => setIsMixerFilterOpen(!isMixerFilterOpen)}
-                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  >
-                    {selectedMixer === "all" ? "All Mixers" : selectedMixer}
-                  </button>
-                  {isMixerFilterOpen && (
-                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
-                      <div className="p-2 text-gray-800 dark:text-white/90">
-                        <button
-                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                          onClick={() => {
-                            setSelectedMixer("all");
-                            setIsMixerFilterOpen(false);
-                          }}
-                        >
-                          All Mixers
-                        </button>
-                        {mixers.map((mixer) => (
-                          <button
-                            key={mixer}
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setSelectedMixer(mixer);
-                              setIsMixerFilterOpen(false);
-                            }}
-                          >
-                            {mixer}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
                 {/* Client Filter */}
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client</label>
@@ -563,6 +573,138 @@ export default function CalendarContainer() {
                   )}
                 </div>
 
+                {/* Plant Filter */}
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plant</label>
+                  <button
+                    onClick={() => setIsPlantFilterOpen(!isPlantFilterOpen)}
+                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  >
+                    {selectedPlant === "all" ? "All Plants" : selectedPlant}
+                  </button>
+                  {isPlantFilterOpen && (
+                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                      <div className="p-2 text-gray-800 dark:text-white/90">
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setSelectedPlant("all");
+                            setIsPlantFilterOpen(false);
+                          }}
+                        >
+                          All Plants
+                        </button>
+                        {plants.map((plant) => (
+                          <button
+                            key={plant}
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setSelectedPlant(plant);
+                              setIsPlantFilterOpen(false);
+                            }}
+                          >
+                            {plant}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Pump Filter */}
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Pumps</label>
+                  <button
+                    onClick={() => setIsPumpFilterOpen(!isPumpFilterOpen)}
+                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  >
+                    {selectedPumps.length === 0 ? "All Pumps" : `${selectedPumps.length} selected`}
+                  </button>
+                  {isPumpFilterOpen && (
+                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-48 overflow-y-auto">
+                      <div className="p-2 text-gray-800 dark:text-white/90">
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setSelectedPumps([]);
+                            setIsPumpFilterOpen(false);
+                          }}
+                        >
+                          All Pumps
+                        </button>
+                        {availablePumps.map((pump) => (
+                          <label
+                            key={pump}
+                            className="flex items-center px-4 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedPumps.includes(pump)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedPumps([...selectedPumps, pump]);
+                                } else {
+                                  setSelectedPumps(selectedPumps.filter((p) => p !== pump));
+                                }
+                              }}
+                              className="mr-2"
+                            />
+                            {pump}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* TM Filter */}
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Transit Mixers
+                  </label>
+                  <button
+                    onClick={() => setIsTMFilterOpen(!isTMFilterOpen)}
+                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  >
+                    {selectedTMs.length === 0 ? "All TMs" : `${selectedTMs.length} selected`}
+                  </button>
+                  {isTMFilterOpen && (
+                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-48 overflow-y-auto">
+                      <div className="p-2 text-gray-800 dark:text-white/90">
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setSelectedTMs([]);
+                            setIsTMFilterOpen(false);
+                          }}
+                        >
+                          All TMs
+                        </button>
+                        {availableTMs.map((tm) => (
+                          <label
+                            key={tm}
+                            className="flex items-center px-4 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedTMs.includes(tm)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedTMs([...selectedTMs, tm]);
+                                } else {
+                                  setSelectedTMs(selectedTMs.filter((t) => t !== tm));
+                                }
+                              }}
+                              className="mr-2"
+                            />
+                            {tm}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Time Format Filter */}
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Time Format</label>
@@ -578,6 +720,7 @@ export default function CalendarContainer() {
                         <button
                           className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                           onClick={() => {
+                            setCustomStartHour(0); // reset to 00:00
                             setTimeFormat("24h");
                             setIsTimeFormatOpen(false);
                           }}
@@ -587,6 +730,7 @@ export default function CalendarContainer() {
                         <button
                           className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                           onClick={() => {
+                            setCustomStartHour(0); // reset to 00:00
                             setTimeFormat("12h");
                             setIsTimeFormatOpen(false);
                           }}
@@ -596,6 +740,7 @@ export default function CalendarContainer() {
                         <button
                           className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                           onClick={() => {
+                            setCustomStartHour(6); // default 6:00
                             setTimeFormat("24h-custom");
                             setIsTimeFormatOpen(false);
                           }}
@@ -636,7 +781,7 @@ export default function CalendarContainer() {
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-full mx-aut">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <div className="text-red-800 dark:text-red-200 font-medium">Error loading calendar data</div>
           <div className="text-red-600 dark:text-red-300 text-sm mt-1">{error}</div>
@@ -652,11 +797,11 @@ export default function CalendarContainer() {
   }
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div className="max-w-7xl mx-auto">
+    <div className="w-full">
+      <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+        <div className="w-full">
           {/* Header */}
-          <div className="mb-6">
+          <div className="mb-6 w-full">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Schedule Calendar</h2>
             <p className="text-gray-600 dark:text-gray-400">
               Manage and monitor mixer schedules across all production lines
@@ -664,7 +809,7 @@ export default function CalendarContainer() {
           </div>
 
           {/* Controls Bar */}
-          <div className="bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4 mb-6">
+          <div className="w-full bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4 mb-6">
             <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
               {/* Left side - Search and Filters */}
               <div className="flex flex-col sm:flex-row gap-3 flex-1">
@@ -710,7 +855,7 @@ export default function CalendarContainer() {
             {/* Expandable Filters */}
             {showFilters && (
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.05]">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                   {/* Item Filter */}
                   <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -795,46 +940,6 @@ export default function CalendarContainer() {
                     )}
                   </div>
 
-                  {/* Mixer Filter */}
-                  <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Transit Mixer
-                    </label>
-                    <button
-                      onClick={() => setIsMixerFilterOpen(!isMixerFilterOpen)}
-                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                    >
-                      {selectedMixer === "all" ? "All Mixers" : selectedMixer}
-                    </button>
-                    {isMixerFilterOpen && (
-                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
-                        <div className="p-2 text-gray-800 dark:text-white/90">
-                          <button
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setSelectedMixer("all");
-                              setIsMixerFilterOpen(false);
-                            }}
-                          >
-                            All Mixers
-                          </button>
-                          {mixers.map((mixer) => (
-                            <button
-                              key={mixer}
-                              className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                              onClick={() => {
-                                setSelectedMixer(mixer);
-                                setIsMixerFilterOpen(false);
-                              }}
-                            >
-                              {mixer}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
                   {/* Client Filter */}
                   <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client</label>
@@ -873,6 +978,100 @@ export default function CalendarContainer() {
                     )}
                   </div>
 
+                  {/* Pump Filter */}
+                  <div className="relative">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Pumps</label>
+                    <button
+                      onClick={() => setIsPumpFilterOpen(!isPumpFilterOpen)}
+                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    >
+                      {selectedPumps.length === 0 ? "All Pumps" : `${selectedPumps.length} selected`}
+                    </button>
+                    {isPumpFilterOpen && (
+                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-48 overflow-y-auto">
+                        <div className="p-2 text-gray-800 dark:text-white/90">
+                          <button
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setSelectedPumps([]);
+                              setIsPumpFilterOpen(false);
+                            }}
+                          >
+                            All Pumps
+                          </button>
+                          {availablePumps.map((pump) => (
+                            <label
+                              key={pump}
+                              className="flex items-center px-4 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedPumps.includes(pump)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedPumps([...selectedPumps, pump]);
+                                  } else {
+                                    setSelectedPumps(selectedPumps.filter((p) => p !== pump));
+                                  }
+                                }}
+                                className="mr-2"
+                              />
+                              {pump}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* TM Filter */}
+                  <div className="relative">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Transit Mixers
+                    </label>
+                    <button
+                      onClick={() => setIsTMFilterOpen(!isTMFilterOpen)}
+                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    >
+                      {selectedTMs.length === 0 ? "All TMs" : `${selectedTMs.length} selected`}
+                    </button>
+                    {isTMFilterOpen && (
+                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-48 overflow-y-auto">
+                        <div className="p-2 text-gray-800 dark:text-white/90">
+                          <button
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setSelectedTMs([]);
+                              setIsTMFilterOpen(false);
+                            }}
+                          >
+                            All TMs
+                          </button>
+                          {availableTMs.map((tm) => (
+                            <label
+                              key={tm}
+                              className="flex items-center px-4 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedTMs.includes(tm)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedTMs([...selectedTMs, tm]);
+                                  } else {
+                                    setSelectedTMs(selectedTMs.filter((t) => t !== tm));
+                                  }
+                                }}
+                                className="mr-2"
+                              />
+                              {tm}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Time Format Filter */}
                   <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -894,6 +1093,7 @@ export default function CalendarContainer() {
                           <button
                             className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                             onClick={() => {
+                              setCustomStartHour(0); // reset to 00:00
                               setTimeFormat("24h");
                               setIsTimeFormatOpen(false);
                             }}
@@ -903,6 +1103,7 @@ export default function CalendarContainer() {
                           <button
                             className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                             onClick={() => {
+                              setCustomStartHour(0); // reset to 00:00
                               setTimeFormat("12h");
                               setIsTimeFormatOpen(false);
                             }}
@@ -912,6 +1113,7 @@ export default function CalendarContainer() {
                           <button
                             className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                             onClick={() => {
+                              setCustomStartHour(6); // default 6:00
                               setTimeFormat("24h-custom");
                               setIsTimeFormatOpen(false);
                             }}
@@ -943,7 +1145,7 @@ export default function CalendarContainer() {
           </div>
 
           {/* Date Display */}
-          <div className="mb-4">
+          <div className="mb-4 w-full">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               {new Date(selectedDate).toLocaleDateString("en-US", {
                 weekday: "long",
@@ -955,28 +1157,28 @@ export default function CalendarContainer() {
           </div>
 
           {/* Gantt Chart */}
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-            <div className="max-w-full overflow-x-auto">
-              <div className="min-w-[1000px]">
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] w-full">
+            <div className="w-full overflow-x-auto">
+              <div className="min-w-full w-full">
                 {/* Time Header */}
                 <div className="flex border-b border-gray-300 dark:border-white/[0.05]">
                   {/* Serial Number Column */}
-                  <div className="w-10 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] text-center">
+                  <div className="w-16 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] text-center flex-shrink-0">
                     SNo
                   </div>
-                  <div className="w-24 px-5 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05]">
+                  <div className="w-32 px-5 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] flex-shrink-0">
                     Mixer ID
                   </div>
                   {getTimeSlots().map((time) => (
                     <div
                       key={time}
-                      className="w-10 px-2 py-3 text-center font-medium text-gray-500 text-[9px] dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05]"
+                      className="flex-1 px-2 py-3 text-center font-medium text-gray-500 text-[9px] dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] min-w-[40px]"
                     >
                       {formatTime(time)}
                     </div>
                   ))}
                   {/* Free Time Column */}
-                  <div className="w-20 px-1 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center">
+                  <div className="w-24 px-1 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center flex-shrink-0">
                     Unused Hrs
                   </div>
                 </div>
@@ -993,7 +1195,7 @@ export default function CalendarContainer() {
 
                       const slots = getTimeSlots();
                       const windowStart = slots[0];
-                      const windowEnd = slots[slots.length - 1];
+                      const windowEnd = slots[0] !== 0 ? (slots[slots.length - 1] % 24) + 25 : 24;
                       // Helper to check if a time is within the window, considering wrap-around
                       const isInWindow = (start: number, end: number) => {
                         if (windowStart < windowEnd) {
@@ -1039,48 +1241,78 @@ export default function CalendarContainer() {
                         return { offset, width };
                       };
 
-                      // --- Group tasks by client for background pills ---
-                      const clientTaskGroups: Record<string, Task[]> = {};
-                      item.tasks.forEach((task) => {
-                        if (!clientTaskGroups[task.client]) clientTaskGroups[task.client] = [];
-                        clientTaskGroups[task.client].push(task);
-                      });
+                      // // --- Group tasks by client for background pills ---
+                      // const clientTaskGroups: Record<string, Task[]> = {};
+                      // item.tasks.forEach((task) => {
+                      //   if (!clientTaskGroups[task.client]) clientTaskGroups[task.client] = [];
+                      //   clientTaskGroups[task.client].push(task);
+                      // });
 
-                      // --- Calculate Free Time ---
-                      const busyIntervals: { start: number; end: number }[] = item.tasks
-                        .map((task) => {
-                          let s = timeStringToHour(task.actualStart);
-                          let e = timeStringToHour(task.actualEnd);
-                          if (windowStart < windowEnd) {
-                            s = Math.max(s, windowStart);
-                            e = Math.min(e, windowEnd + 1);
-                            if (e <= s) return null;
+                      function groupConsecutiveTasks(tasks: Task[]): Task[][] {
+                        if (!tasks.length) return [];
+
+                        // Ensure tasks are sorted by actualStart
+                        const sortedTasks = [...tasks].sort(
+                          (a, b) => new Date(a.actualStart).getTime() - new Date(b.actualStart).getTime()
+                        );
+
+                        const groups: Task[][] = [];
+                        let currentGroup: Task[] = [sortedTasks[0]];
+
+                        for (let i = 1; i < sortedTasks.length; i++) {
+                          const prevEnd = new Date(sortedTasks[i - 1].actualEnd).getTime();
+                          const currStart = new Date(sortedTasks[i].actualStart).getTime();
+
+                          // Check if current task starts exactly 1 minute after previous task ends
+                          if (currStart === prevEnd) {
+                            currentGroup.push(sortedTasks[i]);
                           } else {
-                            if (s < windowStart && e <= windowStart) {
-                              s = s;
-                              e = Math.min(e, windowEnd + 1);
-                              if (e <= s) return null;
-                            } else if (s >= windowStart) {
-                              s = Math.max(s, windowStart);
-                              e = e;
-                              if (e <= s) return null;
-                            } else {
-                              s = s;
-                              e = e;
-                            }
+                            groups.push(currentGroup);
+                            currentGroup = [sortedTasks[i]];
                           }
-                          return { start: s, end: e };
-                        })
-                        .filter(Boolean) as { start: number; end: number }[];
-                      busyIntervals.sort((a, b) => a.start - b.start);
-                      const merged: { start: number; end: number }[] = [];
-                      for (const interval of busyIntervals) {
-                        if (!merged.length || merged[merged.length - 1].end < interval.start) {
-                          merged.push({ ...interval });
-                        } else {
-                          merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, interval.end);
                         }
+
+                        // Push the last group
+                        groups.push(currentGroup);
+
+                        return groups;
                       }
+                      const uniqueTasks = groupConsecutiveTasks(item.tasks);
+                      // // --- Calculate Free Time ---
+                      // const busyIntervals: { start: number; end: number }[] = item.tasks
+                      //   .map((task) => {
+                      //     let s = new Date(task.actualStart).getTime() / 3600000;
+                      //     let e = new Date(task.actualEnd).getTime() / 3600000;
+                      //     if (windowStart < windowEnd) {
+                      //       s = Math.max(s, windowStart);
+                      //       e = Math.min(e, windowEnd + 1);
+                      //       if (e <= s) return null;
+                      //     } else {
+                      //       if (s < windowStart && e <= windowStart) {
+                      //         s = s;
+                      //         e = Math.min(e, windowEnd + 1);
+                      //         if (e <= s) return null;
+                      //       } else if (s >= windowStart) {
+                      //         s = Math.max(s, windowStart);
+                      //         e = e;
+                      //         if (e <= s) return null;
+                      //       } else {
+                      //         s = s;
+                      //         e = e;
+                      //       }
+                      //     }
+                      //     return { start: s, end: e };
+                      //   })
+                      //   .filter(Boolean) as { start: number; end: number }[];
+                      // busyIntervals.sort((a, b) => a.start - b.start);
+                      // const merged: { start: number; end: number }[] = [];
+                      // for (const interval of busyIntervals) {
+                      //   if (!merged.length || merged[merged.length - 1].end < interval.start) {
+                      //     merged.push({ ...interval });
+                      //   } else {
+                      //     merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, interval.end);
+                      //   }
+                      // }
                       let freeTime = 24;
                       item.tasks.forEach((task) => {
                         freeTime -= calculateDuration(task.actualStart, task.actualEnd) / 60;
@@ -1095,34 +1327,43 @@ export default function CalendarContainer() {
                           }`}
                         >
                           {/* Serial Number */}
-                          <div className="w-10 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
+                          <div className="w-16 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
                             {idx + 1}
                           </div>
                           {/* Mixer Name */}
-                          <div className="w-24 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center">
+                          <div className="w-32 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0">
                             {item.name.length > 7 ? ".." + item.name.slice(-7) : item.name}
                           </div>
                           {/* Time Slots */}
                           <div className="flex-1 flex relative">
                             {/* Render background pills for each client */}
-                            {Object.entries(clientTaskGroups).map(([client, tasks], i) => {
+                            {uniqueTasks.map((tasks, i) => {
                               // Find earliest start and latest end for this client
-                              const starts = tasks.map((t) => timeStringToHour(t.actualStart));
-                              const ends = tasks.map((t) => timeStringToHour(t.actualEnd));
-                              const minStart = Math.min(...starts);
-                              const maxEnd = Math.max(...ends);
+                              const starts = tasks.map((t) => new Date(t.actualStart).getTime());
+                              const ends = tasks.map((t) => new Date(t.actualEnd).getTime());
+                              
+                              // Create the selected date start time in the same timezone as the task dates
+                              // Parse the selected date and create a Date object at 00:00:00 in local time
+                              const [year, month, day] = selectedDate.split('-').map(Number);
+                              const selectedDateStart = new Date(year, month - 1, day, 0, 0, 0, 0);
+                              
+                              // Calculate the time difference in hours from the start of the selected date
+                              const minStart = (Math.min(...starts) - selectedDateStart.getTime()) / 3600000;
+                              const maxEnd = (Math.max(...ends) - selectedDateStart.getTime()) / 3600000;
+                              
                               if (!isInWindow(minStart, maxEnd)) return null;
                               const { offset, width } = getBarProps(minStart, maxEnd);
                               if (width <= 0) return null;
                               // Get client color from clientColors map
-                              const clientColor = clientColors.get(client) || "bg-gray-300";
+                              const clientColor = clientColors.get(tasks[0].client) || "bg-gray-300";
+                              const timeSlotsLength = getTimeSlots().length;
                               return (
                                 <div
-                                  key={client + i}
+                                  key={tasks[0].client + i}
                                   className={`absolute - h-6 rounded ${clientColor} opacity-90 z-0`}
                                   style={{
-                                    left: `${offset * 40 - 3}px`,
-                                    width: `${width * 40 + 7}px`,
+                                    left: `${((offset / timeSlotsLength) * 100)-0.25}%`,
+                                    width: `${((width / timeSlotsLength) * 100)+0.5}%`,
                                     zIndex: 1,
                                   }}
                                 />
@@ -1130,24 +1371,36 @@ export default function CalendarContainer() {
                             })}
                             {/* Render bars for each task by type that overlaps the window */}
                             {item.tasks.map((task, i) => {
-                              const start = timeStringToHour(task.actualStart);
-                              const end = timeStringToHour(task.actualEnd);
+                              // Calculate time in local timezone, not UTC
+                              const taskStartDate = new Date(task.actualStart);
+                              const taskEndDate = new Date(task.actualEnd);
+                              
+                              // Create the selected date start time in the same timezone as the task dates
+                              // Parse the selected date and create a Date object at 00:00:00 in local time
+                              const [year, month, day] = selectedDate.split('-').map(Number);
+                              const selectedDateStart = new Date(year, month - 1, day, 0, 0, 0, 0);
+                              
+                              // Calculate the time difference in hours from the start of the selected date
+                              const start = (taskStartDate.getTime() - selectedDateStart.getTime()) / 3600000;
+                              const end = (taskEndDate.getTime() - selectedDateStart.getTime()) / 3600000;
+                              
                               if (!isInWindow(start, end)) return null;
                               const { offset, width } = getBarProps(start, end);
                               if (width <= 0) return null;
                               const duration = calculateDuration(task.actualStart, task.actualEnd);
+                              const timeSlotsLength = getTimeSlots().length;
                               return (
                                 <Tooltip
                                   key={task.id + i}
-                                  content={`Type: ${task.type}\nClient: ${task.client}\n${task.actualStart} to ${task.actualEnd}\nDuration: ${duration}m`}
+                                  content={`Type: ${task.type}\nClient: ${task.client}\n${formatDateTimeForTooltip(task.actualStart)} to ${formatDateTimeForTooltip(task.actualEnd)}\nDuration: ${duration}m`}
                                 >
                                   <div
-                                    className={`absolute top-1 h-4 rounded ${
+                                    className={`absolute top-1 h-4 rounded-sm ${
                                       TASK_TYPE_COLORS[task.type] || "bg-gray-500"
                                     } opacity-100 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
                                     style={{
-                                      left: `${offset * 40 + 1}px`,
-                                      width: `${width * 40 - 1}px`,
+                                      left: `${(offset / timeSlotsLength) * 100}%`,
+                                      width: `${(width / timeSlotsLength) * 100}%`,
                                       zIndex: 5,
                                     }}
                                   >
@@ -1164,12 +1417,12 @@ export default function CalendarContainer() {
                             {slots.map((time) => (
                               <div
                                 key={time}
-                                className="w-10 h-6 border-r border-gray-300 dark:border-white/[0.05] relative"
+                                className="flex-1 h-6 border-r border-gray-300 dark:border-white/[0.05] relative min-w-[40px]"
                               />
                             ))}
                           </div>
                           {/* Free Time */}
-                          <div className="w-20 px-1 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center">
+                          <div className="w-24 px-1 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
                             {freeTime}
                           </div>
                         </div>

@@ -119,11 +119,26 @@ const timeStringToHour = (timeStr: string): number => {
 };
 
 const calculateDuration = (start: string, end: string): number => {
-  const startFloat = timeStringToHour(start);
-  const endFloat = timeStringToHour(end);
-  const rawDuration = endFloat - startFloat;
-  const roundedDuration = Math.round(rawDuration * 60);
-  return roundedDuration;
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const diffMs = endDate.getTime() - startDate.getTime();
+  return Math.round(diffMs / (1000 * 60));
+};
+
+// Helper function to format date and time for tooltips
+const formatDateTimeForTooltip = (dateTimeString: string): string => {
+  const date = new Date(dateTimeString);
+  const dateStr = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const timeStr = date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${dateStr} ${timeStr}`;
 };
 
 const transformApiData = (apiData: ApiResponse): Pump[] => {
@@ -972,7 +987,7 @@ export default function PumpCalendarContainer() {
                               return (
                                 <Tooltip
                                   key={ct.client}
-                                  content={`Pump: ${pump.name}\nClient: ${ct.client}\n${ct.actualStart} to ${ct.actualEnd}\nDuration: ${ct.duration}m`}
+                                  content={`Pump: ${pump.name}\nClient: ${ct.client}\n${formatDateTimeForTooltip(ct.actualStart)} to ${formatDateTimeForTooltip(ct.actualEnd)}\nDuration: ${ct.duration}m`}
                                 >
                                   <div
                                     className={`absolute top-1 h-4 rounded ${ct.color} opacity-80 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center`}
