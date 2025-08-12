@@ -1,5 +1,5 @@
-import type { DefaultSession } from 'next-auth';
-import type { DefaultJWT } from 'next-auth/jwt';
+import type { DefaultSession } from "next-auth";
+import type { DefaultJWT } from "next-auth/jwt";
 
 declare module "next-auth" {
   interface Session extends DefaultSession {
@@ -17,7 +17,9 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
-    } & DefaultSession["user"]
+    } & DefaultSession["user"];
+    preferred_format: "12h" | "24h";
+    custom_start_hour: number;
   }
 
   interface User {
@@ -32,6 +34,8 @@ declare module "next-auth" {
     accessToken?: string;
     refreshToken?: string;
     tokenType?: string;
+    preferred_format: "12h" | "24h";
+    custom_start_hour: number;
   }
 }
 

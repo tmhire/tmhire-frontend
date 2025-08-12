@@ -23,6 +23,8 @@ interface AuthProps {
   accessToken: string;
   refreshToken: string;
   tokenType: string;
+  preferred_format: "12h" | "24h";
+  custom_start_hour: number;
 }
 
 async function handleEmailPassword(
@@ -44,7 +46,7 @@ async function handleEmailPassword(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Accept: "application/json"
+        Accept: "application/json",
       },
       body: JSON.stringify(user),
     });
@@ -78,6 +80,8 @@ async function handleEmailPassword(
       accessToken: json?.data?.access_token,
       refreshToken: json?.data?.refresh_token,
       tokenType: json?.data?.token_type,
+      preferred_format: json?.data?.preferred_format || "12h",
+      custom_start_hour: json?.data?.custom_start_hour || 6,
     };
   } catch (error) {
     console.error("Failed to exchange token with backend:", error instanceof Error ? error.message : String(error));
@@ -129,6 +133,8 @@ async function exchangeGoogleToken(idToken: string): Promise<AuthProps | null> {
       accessToken: data?.data?.access_token,
       refreshToken: data?.data?.refresh_token,
       tokenType: data?.data?.token_type,
+      preferred_format: data?.data?.refresh_token,
+      custom_start_hour: data?.data?.token_type,
     };
   } catch (error) {
     console.error("Failed to exchange token with backend:", error instanceof Error ? error.message : String(error));
@@ -207,14 +213,23 @@ export const authOptions: AuthOptions = {
       }
       return true;
     },
-    async jwt({ token, user, account, trigger, session }: { 
-      token: JWT, 
-      user?: User | AdapterUser, 
-      account?: Account | null, 
-      trigger?: string,
-      session?: Session 
+    async jwt({
+      token,
+      user,
+      account,
+      trigger,
+      session,
+    }: {
+      token: JWT;
+      user?: User | AdapterUser;
+      account?: Account | null;
+      trigger?: string;
+      session?: Session;
     }): Promise<JWT> {
+      console.log("Initial sign in with session:", session);
+
       if (trigger === "update" && session) {
+        console.log("Updating JWT with session data:", session);
         // ✅ Persist updated tokens into JWT after session.update()
         token.backendAccessToken = session.backendAccessToken;
         token.backendAccessTokenExpires = session.backendAccessTokenExpires;
@@ -225,11 +240,15 @@ export const authOptions: AuthOptions = {
         if (session?.company) token.company = session.company;
         if (session?.city) token.city = session.city;
         if (session?.contact) token.contact = session.contact;
+        if (session?.preferred_format) token.preferred_format = session.preferred_format;
+        if (session?.custom_start_hour) token.custom_start_hour = session.custom_start_hour;
 
         return token;
       }
+      console.log("JWT callback triggered with user:", user, "and account:", account);
       // Initial sign in
       if (account && user) {
+        console.log("Initial sign in with user:", account, user);
         // Store the user ID in the token
         token.userId = user.id;
         // Store user's name and image
@@ -239,6 +258,7 @@ export const authOptions: AuthOptions = {
         if (account.provider === "google" && account.id_token) {
           // Exchange the Google token for a backend token
           const backendAuth = await exchangeGoogleToken(account.id_token);
+          console.log("Initial sign in with backendAuth:", backendAuth);
 
           if (backendAuth) {
             // Store the backend tokens in the JWT
@@ -249,6 +269,8 @@ export const authOptions: AuthOptions = {
             token.company = backendAuth.company;
             token.city = backendAuth.city;
             token.contact = backendAuth.contact;
+            token.preferred_format = backendAuth.preferred_format;
+            token.custom_start_hour = backendAuth.custom_start_hour;
 
             // Decode access token to store expiration
             const decoded = jwtDecode<{ exp: number }>(backendAuth.accessToken);
@@ -272,6 +294,8 @@ export const authOptions: AuthOptions = {
           token.company = user.company;
           token.city = user.city;
           token.contact = user.contact;
+          token.preferred_format = user.preferred_format;
+          token.custom_start_hour = user.custom_start_hour;
 
           // Decode access token to store expiration
           const decoded = jwtDecode<{ exp: number }>(user.accessToken);
@@ -320,7 +344,7 @@ export const authOptions: AuthOptions = {
       console.log("token", token);
       return token;
     },
-    async session({ session, token }: { session: Session, token: JWT }): Promise<Session> {
+    async session({ session, token }: { session: Session; token: JWT }): Promise<Session> {
       // Send properties to the client
       if (session.user) {
         // Add user ID to the session
@@ -338,6 +362,8 @@ export const authOptions: AuthOptions = {
         session.company = token.company as string;
         session.city = token.city as string;
         session.contact = token.contact as number;
+        session.preferred_format = token.preferred_format as "12h" | "24h";
+        session.custom_start_hour = token.custom_start_hour as number;
 
         // Log authentication status
         const hasToken = !!token.backendAccessToken;
