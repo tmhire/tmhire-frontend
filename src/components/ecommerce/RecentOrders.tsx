@@ -77,7 +77,7 @@ export default function RecentSchedules({ orders }: RecentSchedulesProps) {
               : "This Month"}
           </button>
           <button
-            onClick={() => router.push("/schedules")}
+            onClick={() => router.push("/pumping-schedules")}
             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
           >
             See all
@@ -122,9 +122,7 @@ export default function RecentSchedules({ orders }: RecentSchedulesProps) {
                   {order.client}
                 </TableCell>
 
-                <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                  {order.quantity}
-                </TableCell>
+                <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">{order.quantity}</TableCell>
 
                 <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                   {new Date(order.order_date).toLocaleDateString()}
@@ -133,13 +131,7 @@ export default function RecentSchedules({ orders }: RecentSchedulesProps) {
                 <TableCell className="py-3">
                   <Badge
                     size="sm"
-                    color={
-                      order.status === "generated"
-                        ? "success"
-                        : order.status === "draft"
-                        ? "warning"
-                        : "error"
-                    }
+                    color={order.status === "generated" ? "success" : order.status === "draft" ? "warning" : "error"}
                   >
                     {order.status}
                   </Badge>
