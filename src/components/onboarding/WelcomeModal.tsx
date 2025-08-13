@@ -191,7 +191,7 @@ export default function WelcomeModal() {
                   {isTimeFormatOpen && (
                     <div className="absolute z-20 mt-1 w-sm bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
                       {timeFormatOptions.map((option) => (
-                        <div className="p-2 text-gray-800 dark:text-white/90">
+                        <div className="p-2 text-gray-800 dark:text-white/90" key={option.value}>
                           <button
                             className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                             name="globalFormat"
