@@ -91,11 +91,13 @@ const formatDateTimeForTooltip = (dateTimeString: string): string => {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   });
   const timeStr = date.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
+    timeZone: "UTC",
   });
   return `${dateStr} ${timeStr}`;
 };
@@ -1341,16 +1343,11 @@ export default function CalendarContainer() {
                               // Find earliest start and latest end for this client
                               const starts = tasks.map((t) => new Date(t.actualStart).getTime());
                               const ends = tasks.map((t) => new Date(t.actualEnd).getTime());
-                              
-                              // Create the selected date start time in the same timezone as the task dates
-                              // Parse the selected date and create a Date object at 00:00:00 in local time
-                              const [year, month, day] = selectedDate.split('-').map(Number);
-                              const selectedDateStart = new Date(year, month - 1, day, 0, 0, 0, 0);
-                              
-                              // Calculate the time difference in hours from the start of the selected date
-                              const minStart = (Math.min(...starts) - selectedDateStart.getTime()) / 3600000;
-                              const maxEnd = (Math.max(...ends) - selectedDateStart.getTime()) / 3600000;
-                              
+                              const minStart =
+                                (Math.min(...starts) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
+                              const maxEnd =
+                                (Math.max(...ends) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
+
                               if (!isInWindow(minStart, maxEnd)) return null;
                               const { offset, width } = getBarProps(minStart, maxEnd);
                               if (width <= 0) return null;
@@ -1362,8 +1359,8 @@ export default function CalendarContainer() {
                                   key={tasks[0].client + i}
                                   className={`absolute - h-6 rounded ${clientColor} opacity-90 z-0`}
                                   style={{
-                                    left: `${((offset / timeSlotsLength) * 100)-0.25}%`,
-                                    width: `${((width / timeSlotsLength) * 100)+0.5}%`,
+                                    left: `${(offset / timeSlotsLength) * 100 - 0.25}%`,
+                                    width: `${(width / timeSlotsLength) * 100 + 0.5}%`,
                                     zIndex: 1,
                                   }}
                                 />
@@ -1371,19 +1368,15 @@ export default function CalendarContainer() {
                             })}
                             {/* Render bars for each task by type that overlaps the window */}
                             {item.tasks.map((task, i) => {
-                              // Calculate time in local timezone, not UTC
-                              const taskStartDate = new Date(task.actualStart);
-                              const taskEndDate = new Date(task.actualEnd);
-                              
-                              // Create the selected date start time in the same timezone as the task dates
-                              // Parse the selected date and create a Date object at 00:00:00 in local time
-                              const [year, month, day] = selectedDate.split('-').map(Number);
-                              const selectedDateStart = new Date(year, month - 1, day, 0, 0, 0, 0);
-                              
-                              // Calculate the time difference in hours from the start of the selected date
-                              const start = (taskStartDate.getTime() - selectedDateStart.getTime()) / 3600000;
-                              const end = (taskEndDate.getTime() - selectedDateStart.getTime()) / 3600000;
-                              
+                              const start =
+                                (new Date(task.actualStart).getTime() -
+                                  new Date(`${selectedDate}T00:00:00.000Z`).getTime()) /
+                                3600000;
+                              const end =
+                                (new Date(task.actualEnd).getTime() -
+                                  new Date(`${selectedDate}T00:00:00.000Z`).getTime()) /
+                                3600000;
+
                               if (!isInWindow(start, end)) return null;
                               const { offset, width } = getBarProps(start, end);
                               if (width <= 0) return null;
@@ -1392,7 +1385,9 @@ export default function CalendarContainer() {
                               return (
                                 <Tooltip
                                   key={task.id + i}
-                                  content={`Type: ${task.type}\nClient: ${task.client}\n${formatDateTimeForTooltip(task.actualStart)} to ${formatDateTimeForTooltip(task.actualEnd)}\nDuration: ${duration}m`}
+                                  content={`Type: ${task.type}\nClient: ${task.client}\n${formatDateTimeForTooltip(
+                                    task.actualStart
+                                  )} to ${formatDateTimeForTooltip(task.actualEnd)}\nDuration: ${duration}m`}
                                 >
                                   <div
                                     className={`absolute top-1 h-4 rounded-sm ${
