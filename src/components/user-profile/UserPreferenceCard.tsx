@@ -211,9 +211,9 @@ export default function UserPreferenceCard() {
                         }))
                       }
                     >
-                      {Array.from({ length: 48 }, (_, i) => (
-                        <option key={i} value={i / 2} className="dark:bg-gray-800 dark:text-white">
-                          {floatToTimeString(i / 2)}
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={i} className="dark:bg-gray-800 dark:text-white">
+                          {floatToTimeString(i)}
                         </option>
                       ))}
                     </select>
