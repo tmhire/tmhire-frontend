@@ -1,6 +1,5 @@
 "use client";
 
-import { useProfile } from "@/hooks/useProfile";
 import WelcomeModal from "./WelcomeModal";
 import { useSession } from "next-auth/react";
 

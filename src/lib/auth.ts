@@ -5,7 +5,6 @@ import { jwtDecode } from "jwt-decode";
 import type { JWT } from "next-auth/jwt";
 import type { Account, Session, User } from "next-auth";
 import type { AdapterUser } from "next-auth/adapters";
-import { circOut } from "motion/react";
 
 // Configure backend API URL from environment or use default
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
