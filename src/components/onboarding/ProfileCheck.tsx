@@ -5,17 +5,15 @@ import WelcomeModal from "./WelcomeModal";
 import { useSession } from "next-auth/react";
 
 export default function ProfileCheck() {
-  const { profile, loading } = useProfile();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
 
   // Wait for both session and profile to load
-  if (loading || status === "loading") return null;
+  if (status === "loading") return null;
 
   // Show welcome modal if:
   // 1. User is authenticated AND
   // 2. Profile is loaded but company is missing
-  console.log("P{rofile:", profile);
-  if (status === "authenticated" && profile?.new_user) {
+  if (status === "authenticated" && session?.new_user) {
     return (
       <>
         <div className="dark:bg-gray-800 bg-gray-200 p-3 dark:text-brand-300 text-brand-800 text-sm text-right">

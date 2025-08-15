@@ -6,7 +6,6 @@ import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
 import Image from "next/image";
-import { useProfile } from "@/hooks/useProfile";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { Spinner } from "../ui/spinner";
@@ -14,9 +13,8 @@ import _ from "lodash";
 
 export default function UserMetaCard() {
   const { isOpen, openModal, closeModal } = useModal();
-  const { profile, loading } = useProfile();
   const { fetchWithAuth } = useApiClient();
-  const { data: session } = useSession();
+  const { data: session, update, status } = useSession();
   const [formData, setFormData] = React.useState({
     name: "",
     contact: "",
@@ -26,17 +24,17 @@ export default function UserMetaCard() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   React.useEffect(() => {
-    if (profile) {
+    if (session && session.user) {
       setFormData({
-        name: profile.name || "",
-        contact: profile.contact?.toString() || "",
+        name: session.user?.name || "",
+        contact: session.contact?.toString() || "",
       });
       setPrevFormData({
-        name: profile.name || "",
-        contact: profile.contact?.toString() || "",
+        name: session.user?.name || "",
+        contact: session.contact?.toString() || "",
       });
     }
-  }, [profile]);
+  }, [session]);
 
   React.useEffect(() => {
     if (_.isEqual(formData, prevFormData)) {
@@ -70,7 +68,13 @@ export default function UserMetaCard() {
         closeModal();
         setPrevFormData(formData);
         // setHasChanged(false);
-        // window.location.reload();
+        // window.location.reload();+
+        await update({
+          ...(session as unknown as Record<string, unknown>),
+          new_user: false,
+          name: formData.name,
+          contact: formData.contact,
+        });
       }
     } catch (error) {
       console.error("Failed to update profile:", error);
@@ -79,7 +83,7 @@ export default function UserMetaCard() {
     }
   };
 
-  if (loading) {
+  if (status != "authenticated") {
     return (
       <div className="flex items-center justify-center p-8">
         <Spinner size="lg" text="Loading profile..." />

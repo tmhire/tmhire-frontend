@@ -5,14 +5,14 @@ import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
-import { useProfile } from "@/hooks/useProfile";
 import { useApiClient } from "@/hooks/useApiClient";
 import { Spinner } from "../ui/spinner";
 import _ from "lodash";
+import { useSession } from "next-auth/react";
 
 export default function UserInfoCard() {
   const { isOpen, openModal, closeModal } = useModal();
-  const { profile, loading } = useProfile();
+  const { data: session, update, status } = useSession();
   const { fetchWithAuth } = useApiClient();
   const [formData, setFormData] = React.useState({
     company: "",
@@ -24,19 +24,19 @@ export default function UserInfoCard() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   React.useEffect(() => {
-    if (profile) {
+    if (session && session?.user) {
       setFormData({
-        company: profile.company || "",
-        city: profile.city || "",
-        email: profile.email || "",
+        company: session.company || "",
+        city: session.city || "",
+        email: session.user?.email || "",
       });
       setPrevFormData({
-        company: profile.company || "",
-        city: profile.city || "",
-        email: profile.email || "",
+        company: session.company || "",
+        city: session.city || "",
+        email: session.user?.email || "",
       });
     }
-  }, [profile]);
+  }, [session]);
 
   React.useEffect(() => {
     if (_.isEqual(formData, prevFormData)) {
@@ -71,6 +71,12 @@ export default function UserInfoCard() {
         setPrevFormData(formData);
         // setHasChanged(false);
         // window.location.reload();
+        await update({
+          ...(session as unknown as Record<string, unknown>),
+          new_user: false,
+          company: formData.company,
+          city: formData.city,
+        });
       }
     } catch (error) {
       console.error("Failed to update profile:", error);
@@ -79,7 +85,7 @@ export default function UserInfoCard() {
     }
   };
 
-  if (loading) {
+  if (status != "authenticated") {
     return (
       <div className="flex items-center justify-center p-8">
         <Spinner size="lg" text="Loading profile..." />

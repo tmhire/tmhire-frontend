@@ -6,6 +6,8 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
+import { formatTimeByPreference } from "@/lib/utils";
+import { useProfile } from "@/hooks/useProfile";
 
 interface Schedule {
   pumping_job: string;
@@ -48,6 +50,7 @@ interface Schedule {
     tm_id: string;
     plant_start: string;
     pump_start: string;
+    unloading_buffer: string;
     unloading_time: string;
     return: string;
     completed_capacity: number;
@@ -72,42 +75,34 @@ interface Schedule {
 }
 
 // Utility function to calculate pump start time from plant
-const calculatePumpStartTimeFromPlant = (schedule: Schedule): string => {
+const calculatePumpStartTimeFromPlant = (schedule: Schedule, preferredFormat?: string): string => {
   if (!schedule.input_params.pump_start) return "N/A";
-  
+
   const pumpStart = new Date(schedule.input_params.pump_start);
   const pumpFixingTime = schedule.input_params.pump_fixing_time || 0;
   const pumpOnwardTime = schedule.input_params.pump_onward_time || 0;
-  
-  // Subtract pump fixing time and pump onward time from pump start time
+
   const totalMinutesToSubtract = pumpFixingTime + pumpOnwardTime;
-  const calculatedTime = new Date(pumpStart.getTime() - (totalMinutesToSubtract * 60 * 1000));
-  
-  return calculatedTime.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const calculatedTime = new Date(pumpStart.getTime() - totalMinutesToSubtract * 60 * 1000);
+
+  return formatTimeByPreference(calculatedTime, preferredFormat);
 };
 
-// Utility function to calculate pump site reach time
-const calculatePumpSiteReachTime = (schedule: Schedule): string => {
+const calculatePumpSiteReachTime = (schedule: Schedule, preferredFormat?: string): string => {
   if (!schedule.input_params.pump_start) return "N/A";
-  
+
   const pumpStart = new Date(schedule.input_params.pump_start);
   const pumpFixingTime = schedule.input_params.pump_fixing_time || 0;
-  
-  // Subtract pump fixing time from pump start time
-  const calculatedTime = new Date(pumpStart.getTime() - (pumpFixingTime * 60 * 1000));
-  
-  return calculatedTime.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+
+  const calculatedTime = new Date(pumpStart.getTime() - pumpFixingTime * 60 * 1000);
+
+  return formatTimeByPreference(calculatedTime, preferredFormat);
 };
 
 export default function ScheduleViewPage() {
   const params = useParams();
   const { fetchWithAuth } = useApiClient();
+  const { profile } = useProfile();
 
   const { data: schedule, isLoading } = useQuery<Schedule>({
     queryKey: ["schedule", params.id],
@@ -132,7 +127,7 @@ export default function ScheduleViewPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="w-full mx-">
       <div className="mb-3">
         <h2 className="text-xl font-semibold text-black dark:text-white">Concrete Pumping - Schedule Summary</h2>
       </div>
@@ -191,9 +186,7 @@ export default function ScheduleViewPage() {
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.quantity} m³</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Load/Buffer Time (mins) (A)
-              </h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Load/Buffer Time (mins) (A)</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.buffer_time} min</p>
             </div>
             <div>
@@ -257,9 +250,15 @@ export default function ScheduleViewPage() {
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-800">
                       <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">Sl. No</th>
-                      <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">NO OF TMs (A)</th>
-                      <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">NO OF TRIPS/TM (B)</th>
-                      <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">TOTAL TRIPS (A) x (B)</th>
+                      <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">
+                        NO OF TMs (A)
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">
+                        NO OF TRIPS/TM (B)
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">
+                        TOTAL TRIPS (A) x (B)
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -347,12 +346,12 @@ export default function ScheduleViewPage() {
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
-                        {calculatePumpStartTimeFromPlant(schedule)}
+                        {calculatePumpStartTimeFromPlant(schedule, profile?.preferred_format)}
                       </span>
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
-                        {calculatePumpSiteReachTime(schedule)}
+                        {calculatePumpSiteReachTime(schedule, profile?.preferred_format)}
                       </span>
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
@@ -421,7 +420,13 @@ export default function ScheduleViewPage() {
                       isHeader
                       className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
-                      Unloading Time
+                      Unloading Buffer
+                    </TableCell>
+                    <TableCell
+                      isHeader
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                    >
+                      Unloading End Time
                     </TableCell>
                     <TableCell
                       isHeader
@@ -470,9 +475,7 @@ export default function ScheduleViewPage() {
                       </TableCell>
                       <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
-                          {trip.plant_start
-                            ? new Date(trip.plant_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                            : "-"}
+                          {formatTimeByPreference(trip.plant_start, profile?.preferred_format)}
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-4 text-start">
@@ -482,28 +485,29 @@ export default function ScheduleViewPage() {
                       </TableCell>
                       <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
-                          {trip.pump_start
-                            ? new Date(trip.pump_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                          {trip.pump_start ? formatTimeByPreference(trip.pump_start, profile?.preferred_format) : "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-3 py-4 text-start">
+                        <span className="text-gray-500 dark:text-gray-400">
+                          {trip.unloading_buffer
+                            ? formatTimeByPreference(trip.unloading_buffer, profile?.preferred_format)
                             : "-"}
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
                           {trip.unloading_time
-                            ? new Date(trip.unloading_time).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
+                            ? formatTimeByPreference(trip.unloading_time, profile?.preferred_format)
                             : "-"}
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
-                          {trip.return
-                            ? new Date(trip.return).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                            : "-"}
+                          {trip.return ? formatTimeByPreference(trip.return, profile?.preferred_format) : "-"}
                         </span>
                       </TableCell>
+
                       <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">{trip.completed_capacity} m³</span>
                       </TableCell>
@@ -543,21 +547,8 @@ export default function ScheduleViewPage() {
           // Get all TM IDs and max number of trips
           const tmIds = Object.keys(tmTrips);
           const maxTrips = Math.max(...Object.values(tmTrips).map((trips) => trips.length));
-          // Helper to format time range
-          function formatTimeRange(start: string, end: string) {
-            if (!start || !end) return "-";
-            const s = new Date(start);
-            const e = new Date(end);
-            const pad = (n: number) => n.toString().padStart(2, "0");
-            const sH = pad(s.getHours()),
-              sM = pad(s.getMinutes());
-            const eH = pad(e.getHours()),
-              eM = pad(e.getMinutes());
-            // If same day, show as HH:MM-HH:MM
-            return `${sH}:${sM}-${eH}:${eM}`;
-          }
           // Helper to format overall time range
-          function formatOverallRange(trips: Schedule["output_table"]) {
+          function formatOverallRange(trips: Schedule["output_table"], preferredFormat?: string) {
             if (!trips.length) return "-";
             const starts = trips
               .map((t) => t.plant_start)
@@ -567,16 +558,18 @@ export default function ScheduleViewPage() {
               .map((t) => t.return)
               .filter(Boolean)
               .map((t) => new Date(t));
+
             if (!starts.length || !ends.length) return "-";
+
             const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
             const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
-            const pad = (n: number) => n.toString().padStart(2, "0");
-            const sH = pad(minStart.getHours()),
-              sM = pad(minStart.getMinutes());
-            const eH = pad(maxEnd.getHours()),
-              eM = pad(maxEnd.getMinutes());
-            return `${sH}:${sM} - ${eH}:${eM}`;
+
+            const sTime = formatTimeByPreference(minStart, preferredFormat);
+            const eTime = formatTimeByPreference(maxEnd, preferredFormat);
+
+            return `${sTime} - ${eTime}`;
           }
+
           // Helper to get total hours for a TM
           function getTotalHours(trips: Schedule["output_table"]) {
             if (!trips.length) return 0;
@@ -622,7 +615,7 @@ export default function ScheduleViewPage() {
                 <tbody>
                   {tmIds.map((tmId, index) => {
                     const trips = tmTrips[tmId];
-                    const overallRange = formatOverallRange(trips);
+                    const overallRange = formatOverallRange(trips, profile?.preferred_format);
                     const totalHours = getTotalHours(trips);
                     return (
                       <tr key={tmId} className="border-b border-gray-100 dark:border-gray-700">
@@ -634,7 +627,12 @@ export default function ScheduleViewPage() {
                           const trip = trips[i];
                           return (
                             <td key={i} className="px-2 py-2 text-left text-gray-800 dark:text-white/90">
-                              {trip ? formatTimeRange(trip.plant_start, trip.return) : "-"}
+                              {trip
+                                ? `${formatTimeByPreference(
+                                    trip.plant_start,
+                                    profile?.preferred_format
+                                  )} - ${formatTimeByPreference(trip.return, profile?.preferred_format)}`
+                                : "-"}
                             </td>
                           );
                         })}

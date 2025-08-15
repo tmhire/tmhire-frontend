@@ -739,3 +739,21 @@ span.flatpickr-weekday,
   opacity: 0.8;
   cursor: grabbing; /* Changes the cursor to indicate dragging */
 }
+
+/* Remove outline & box-shadow from TimePicker on focus */
+.react-time-picker__wrapper {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.react-time-picker__inputGroup input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.react-time-picker__inputGroup__input,
+.react-time-picker__inputGroup__amPm {
+  outline: none !important;
+  border: none !important;
+  background: transparent !important;
+}

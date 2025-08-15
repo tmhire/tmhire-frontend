@@ -4,16 +4,14 @@ import { useModal } from "../../hooks/useModal";
 import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
 import Label from "../form/Label";
-import { useProfile } from "@/hooks/useProfile";
 import { useApiClient } from "@/hooks/useApiClient";
 import { Spinner } from "../ui/spinner";
 import _ from "lodash";
 import { useSession } from "next-auth/react";
 
 export default function UserPreferenceCard() {
-  const { data: session, update } = useSession();
+  const { data: session, update, status } = useSession();
   const { isOpen, openModal, closeModal } = useModal();
-  const { profile, loading } = useProfile();
   const { fetchWithAuth } = useApiClient();
   const [formData, setFormData] = React.useState({
     globalFormat: "12h",
@@ -41,17 +39,17 @@ export default function UserPreferenceCard() {
   };
 
   React.useEffect(() => {
-    if (profile) {
+    if (session) {
       setFormData({
-        globalFormat: profile.preferred_format || "12h",
-        customStartHour: profile.custom_start_hour || 0,
+        globalFormat: session.preferred_format || "12h",
+        customStartHour: session.custom_start_hour || 0,
       });
       setPrevFormData({
-        globalFormat: profile.preferred_format || "12h",
-        customStartHour: profile.custom_start_hour || 0,
+        globalFormat: session.preferred_format || "12h",
+        customStartHour: session.custom_start_hour || 0,
       });
     }
-  }, [profile]);
+  }, [session]);
 
   React.useEffect(() => {
     if (_.isEqual(formData, prevFormData)) {
@@ -60,13 +58,11 @@ export default function UserPreferenceCard() {
     setHasChanged(true);
   }, [formData, prevFormData]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  React.useEffect(() => {
+    if (!isOpen) {
+      setIsTimeFormatOpen(false);
+    }
+  }, [isOpen]);
 
   const handleSave = async () => {
     if (!hasChanged) return;
@@ -75,7 +71,6 @@ export default function UserPreferenceCard() {
       const response = await fetchWithAuth("/auth/update", {
         method: "PUT",
         body: JSON.stringify({
-          ...profile,
           preferred_format: formData.globalFormat,
           custom_start_hour: formData.customStartHour,
         }),
@@ -101,7 +96,7 @@ export default function UserPreferenceCard() {
     }
   };
 
-  if (loading) {
+  if (status != "authenticated") {
     return (
       <div className="flex items-center justify-center p-8">
         <Spinner size="lg" text="Loading profile..." />
@@ -165,7 +160,7 @@ export default function UserPreferenceCard() {
             className="flex flex-col"
             onSubmit={(e) => {
               e.preventDefault();
-              handleSave();
+              // handleSave();
             }}
           >
             <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">

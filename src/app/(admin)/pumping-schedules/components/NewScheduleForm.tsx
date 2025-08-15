@@ -15,6 +15,8 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components
 import Badge from "@/components/ui/badge/Badge";
 import { useRouter } from "next/navigation";
 import { RadioGroup } from "@/components/ui/radio";
+import { useProfile } from "@/hooks/useProfile";
+import TimeInput from "@/components/form/input/TimeInput";
 
 interface Client {
   contact_phone: number;
@@ -68,6 +70,7 @@ interface ScheduleTrip {
   tm_id: string;
   plant_start: string;
   pump_start: string;
+  unloading_buffer: string;
   unloading_time: string;
   return: string;
   completed_capacity: number;
@@ -132,6 +135,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [generatedSchedule, setGeneratedSchedule] = useState<GeneratedSchedule | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasChanged, setHasChanged] = useState(false);
+  const { profile } = useProfile();
   const [formData, setFormData] = useState({
     scheduleDate: "",
     startTime: "",
@@ -374,6 +378,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     setHasChanged(true);
   };
 
+  const handleTimeChange = (name: string, value: string | null) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value || "",
+    }));
+    setHasChanged(true);
+  };
+
   const calculateRequiredTMs = async () => {
     if (!hasChanged) return true;
     if (
@@ -566,7 +578,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="w-full mx">
       <div className="flex flex-row w-full mb-4 items-center">
         <div className="w-1/3">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">New Pumping Schedule</h2>
@@ -810,7 +822,23 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
             {/* Pump Details Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
-              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Pump Details</h3>
+              <div className="flex justify-between items-center mb-4 w-full">
+                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4 flex justify-between items-center">
+                  Pump Details
+                </h3>
+                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                  Schedule timings:
+                  {profile?.preferred_format === "12h"
+                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12} ${
+                        (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
+                      } - ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12} ${
+                        (profile?.custom_start_hour ?? 0) + 12 < 24 ? "PM" : "AM"
+                      }`
+                    : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 - ${String(
+                        ((profile?.custom_start_hour ?? 0) + 12) % 24
+                      ).padStart(2, "0")}:00`}
+                </span>
+              </div>{" "}
               <div className="grid grid-cols-3 gap-6 mb-6">
                 {/* Pump Type Selection */}
                 <div className="col-span-1">
@@ -922,7 +950,15 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     Pump Start Time
                   </label>
                   <div className="relative">
-                    <Input type="time" name="startTime" value={formData.startTime} onChange={handleInputChange} />
+                    <TimeInput
+                      type="time"
+                      name="startTime"
+                      format={profile?.preferred_format === "12h" ? "h:mm a" : "HH:MM"}
+                      isOpen
+                      value={formData.startTime}
+                      onChange={(val) => handleTimeChange("startTime", val)}
+                    />
+                    {/* <Input type="time" name="startTime" value={formData.startTime} onChange={handleInputChange} /> */}
                     <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
                       <Clock className="size-5" />
                     </span>
@@ -1527,9 +1563,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <div>
                       {overruleTMCount && (
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {overruleTMCount
-                            ? `We are using ${customTMCount} TMs for our calculation.`
-                            : ``}
+                          {overruleTMCount ? `We are using ${customTMCount} TMs for our calculation.` : ``}
                         </p>
                       )}
                     </div>
@@ -1856,7 +1890,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               isHeader
                               className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                             >
-                              Unloading Time
+                              Unloading Buffer
+                            </TableCell>
+                            <TableCell
+                              isHeader
+                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                            >
+                              Unloading End Time
                             </TableCell>
                             <TableCell
                               isHeader
@@ -1917,6 +1957,16 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {trip.pump_start
                                     ? new Date(trip.pump_start).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
+                                    : "-"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="px-3 py-4 text-start">
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {trip.unloading_buffer
+                                    ? new Date(trip.unloading_buffer).toLocaleTimeString([], {
                                         hour: "2-digit",
                                         minute: "2-digit",
                                       })

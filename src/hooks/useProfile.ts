@@ -35,8 +35,9 @@ export function useProfile() {
   } = useQuery<ProfileData>({
     queryKey: ["profile"],
     queryFn: () => fetchProfile(fetchWithAuth),
-    enabled: status === "authenticated", // Only fetch when user is authenticated    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
-    gcTime: 1000 * 60 * 30, // Keep cache for 30 minutes
+    enabled: status === "authenticated",
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 
   return { profile, loading, error };

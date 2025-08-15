@@ -244,7 +244,8 @@ export const authOptions: AuthOptions = {
         if (session?.city) token.city = session.city;
         if (session?.contact) token.contact = session.contact;
         if (session?.preferred_format) token.preferred_format = session.preferred_format;
-        if (session?.custom_start_hour) token.custom_start_hour = session.custom_start_hour;
+        if (session?.custom_start_hour !== undefined && session.custom_start_hour !== null)
+          token.custom_start_hour = session.custom_start_hour;
         console.log("Updated JWT token:", token);
         return token;
       }
