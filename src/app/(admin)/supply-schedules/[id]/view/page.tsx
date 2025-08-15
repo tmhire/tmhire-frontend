@@ -9,6 +9,8 @@ import Badge from "@/components/ui/badge/Badge";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/button/Button";
+import { formatTimeByPreference } from "@/lib/utils";
+import { useProfile } from "@/hooks/useProfile";
 
 interface SupplySchedule {
   _id: string;
@@ -49,6 +51,7 @@ export default function SupplyScheduleViewPage() {
   const params = useParams();
   const { fetchWithAuth } = useApiClient();
   const router = useRouter();
+  const { profile } = useProfile();
 
   const { data: schedule, isLoading } = useQuery<SupplySchedule>({
     queryKey: ["supply-schedule", params.id],
@@ -107,47 +110,45 @@ export default function SupplyScheduleViewPage() {
   // const formatTimeRange = (start: string, end: string) => {
   //   const startDate = new Date(start);
   //   const endDate = new Date(end);
-    
+
   //   const pad = (n: number) => n.toString().padStart(2, '0');
-    
+
   //   return `${pad(startDate.getHours())}:${pad(startDate.getMinutes())} - ${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
   // };
 
-  const formatOverallRange = (trips: SupplySchedule['output_table']) => {
+  const formatOverallRange = (trips: SupplySchedule["output_table"]) => {
     if (trips.length === 0) return "N/A";
-    
+
     const firstTrip = trips[0];
     const lastTrip = trips[trips.length - 1];
-    
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    
+
+    const pad = (n: number) => n.toString().padStart(2, "0");
+
     const startTime = new Date(firstTrip.plant_start);
     const endTime = new Date(lastTrip.return);
-    
-    return `${pad(startTime.getHours())}:${pad(startTime.getMinutes())} - ${pad(endTime.getHours())}:${pad(endTime.getMinutes())}`;
+
+    return `${pad(startTime.getHours())}:${pad(startTime.getMinutes())} - ${pad(endTime.getHours())}:${pad(
+      endTime.getMinutes()
+    )}`;
   };
 
-  const getTotalHours = (trips: SupplySchedule['output_table']) => {
+  const getTotalHours = (trips: SupplySchedule["output_table"]) => {
     if (trips.length === 0) return 0;
-    
+
     const firstTrip = new Date(trips[0].plant_start);
     const lastTrip = new Date(trips[trips.length - 1].return);
-    
+
     const diffMs = lastTrip.getTime() - firstTrip.getTime();
     const diffHours = diffMs / (1000 * 60 * 60);
-    
+
     return diffHours;
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="w-full mx-">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            onClick={() => router.back()}
-            className="flex items-center gap-2"
-          >
+          <Button variant="outline" onClick={() => router.back()} className="flex items-center gap-2">
             <ArrowLeft size={16} />
             Back
           </Button>
@@ -184,11 +185,15 @@ export default function SupplyScheduleViewPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Schedule Date:</span>
-              <span className="font-medium text-gray-900 dark:text-white">{formatDate(schedule.input_params.schedule_date)}</span>
+              <span className="font-medium text-gray-900 dark:text-white">
+                {formatDate(schedule.input_params.schedule_date)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Start Time:</span>
-              <span className="font-medium text-gray-900 dark:text-white">{formatTime(schedule.input_params.pump_start)}</span>
+              <span className="font-medium text-gray-900 dark:text-white">
+                {formatTime(schedule.input_params.pump_start)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Status:</span>
@@ -324,44 +329,27 @@ export default function SupplyScheduleViewPage() {
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
-                        {trip.plant_start
-                          ? new Date(trip.plant_start).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : "-"}
+                        {trip.plant_start ? formatTimeByPreference(trip.plant_start, profile?.preferred_format) : "-"}
                       </span>
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
-                        {trip.pump_start
-                          ? new Date(trip.pump_start).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : "-"}
+                        {trip.pump_start ? formatTimeByPreference(trip.pump_start, profile?.preferred_format) : "-"}
                       </span>
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {trip.unloading_time
-                          ? new Date(trip.unloading_time).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
+                          ? formatTimeByPreference(trip.unloading_time, profile?.preferred_format)
                           : "-"}
                       </span>
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
-                        {trip.return
-                          ? new Date(trip.return).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : "-"}
+                        {trip.return ? formatTimeByPreference(trip.return, profile?.preferred_format) : "-"}
                       </span>
                     </TableCell>
+
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">{trip.completed_capacity} m³</span>
                     </TableCell>
@@ -384,4 +372,4 @@ export default function SupplyScheduleViewPage() {
       </div>
     </div>
   );
-} 
+}

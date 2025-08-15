@@ -17,6 +17,8 @@ export default function UserInfoCard() {
     company: "",
     city: "",
     email: "",
+    preferred_format: "24h",
+    custom_start_hour: 0,
   });
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -26,15 +28,17 @@ export default function UserInfoCard() {
         company: profile.company || "",
         city: profile.city || "",
         email: profile.email || "",
+        preferred_format: profile.preferred_format || "24h",
+        custom_start_hour: profile.custom_start_hour ?? 0,
       });
     }
   }, [profile]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: name === "custom_start_hour" ? Number(value) : value
     }));
   };
 
@@ -46,6 +50,8 @@ export default function UserInfoCard() {
         body: JSON.stringify({
           company: formData.company,
           city: formData.city,
+          preferred_format: formData.preferred_format,
+          custom_start_hour: formData.custom_start_hour,
         }),
       });
 
@@ -102,6 +108,24 @@ export default function UserInfoCard() {
               </p>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {profile?.email || "N/A"}
+              </p>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">
+                Preferred Time Format
+              </p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {profile?.preferred_format || "N/A"}
+              </p>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">
+                Custom Start Hour
+              </p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {profile?.custom_start_hour ?? "N/A"}
               </p>
             </div>
           </div>
@@ -178,6 +202,33 @@ export default function UserInfoCard() {
                       value={formData.email}
                       disabled={true}
                       className="bg-gray-100 dark:bg-gray-800"
+                    />
+                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label>Preferred Time Format</Label>
+                    <select
+                      name="preferred_format"
+                      value={formData.preferred_format}
+                      onChange={handleInputChange}
+                      disabled={isSubmitting}
+                      className="w-full rounded-md border border-gray-300 bg-white p-2 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                    >
+                      <option value="12h">12 Hour</option>
+                      <option value="24h">24 Hour</option>
+                    </select>
+                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label>Custom Start Hour</Label>
+                    <Input 
+                      type="number"
+                      name="custom_start_hour"
+                      value={formData.custom_start_hour}
+                      onChange={handleInputChange}
+                      disabled={isSubmitting}
+                      // min={0}
+                      // max={23}
                     />
                   </div>
                 </div>

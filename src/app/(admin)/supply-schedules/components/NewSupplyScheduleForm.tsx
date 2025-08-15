@@ -13,6 +13,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
 import { useRouter } from "next/navigation";
+import TimeInput from "@/components/form/input/TimeInput";
+import { useProfile } from "@/hooks/useProfile";
 
 interface Client {
   contact_phone: number;
@@ -94,6 +96,7 @@ const steps = [
 ];
 
 export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: string }) {
+  const { profile } = useProfile();
   const router = useRouter();
   const { fetchWithAuth } = useApiClient();
   const [step, setStep] = useState(schedule_id ? 2 : 1);
@@ -287,6 +290,14 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     setHasChanged(true);
   };
 
+  const handleTimeChange = (name: string, value: string | null) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value || "",
+    }));
+    setHasChanged(true);
+  };
+
   const setPumpingSpeedAndUnloadingTime = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleInputChange(e);
     const { name, value } = e.target;
@@ -454,7 +465,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="w-full mx-">
       <div className="flex flex-row w-full mb-4 items-center">
         <div className="w-1/3">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">New Supply Schedule</h2>
@@ -666,7 +677,23 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
             </div>
 
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
-              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Supply Details</h3>
+              <div className="flex justify-between items-center mb-4 w-full">
+                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4 flex justify-between items-center">
+                  Supply Details
+                </h3>
+                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                  Schedule timings:
+                  {profile?.preferred_format === "12h"
+                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12} ${
+                        (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
+                      } - ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12} ${
+                        (profile?.custom_start_hour ?? 0) + 12 < 24 ? "PM" : "AM"
+                      }`
+                    : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 - ${String(
+                        ((profile?.custom_start_hour ?? 0) + 12) % 24
+                      ).padStart(2, "0")}:00`}
+                </span>
+              </div>{" "}
               <div className="grid grid-cols-3 gap-6 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -701,7 +728,15 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                     Site Reach Time
                   </label>
                   <div className="relative">
-                    <Input type="time" name="startTime" value={formData.startTime} onChange={handleInputChange} />
+                    <TimeInput
+                      type="time"
+                      name="startTime"
+                      format={profile?.preferred_format === "12h" ? "h:mm a" : "HH:MM"}
+                      isOpen
+                      value={formData.startTime}
+                      onChange={(val) => handleTimeChange("startTime", val)}
+                    />
+                    {/* <Input type="time" name="startTime" value={formData.startTime} onChange={handleInputChange} /> */}
                     <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
                       <Clock className="size-5" />
                     </span>
@@ -897,12 +932,15 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                             {tmSequence.reduce((total, tmId) => {
                               const tm = calculatedTMs.available_tms.find((t) => t.id === tmId);
                               return total + (tm?.capacity || 0);
-                            }, 0)} m³
+                            }, 0)}{" "}
+                            m³
                           </p>
                         </div>
                       </div>
                       {(() => {
-                        const selectedTMs = tmSequence.map(tmId => calculatedTMs.available_tms.find(t => t.id === tmId)).filter(Boolean);
+                        const selectedTMs = tmSequence
+                          .map((tmId) => calculatedTMs.available_tms.find((t) => t.id === tmId))
+                          .filter(Boolean);
                         const totalCapacity = selectedTMs.reduce((sum, tm) => sum + (tm?.capacity || 0), 0);
                         const quantity = parseFloat(formData.quantity) || 0;
                         const isSufficient = totalCapacity >= quantity;
@@ -911,7 +949,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                           // Single TM selected - show trips required
                           const tm = selectedTMs[0];
                           const tripsRequired = tm ? Math.ceil(quantity / tm.capacity) : 0;
-                          
+
                           return (
                             <div
                               className={`mt-3 p-3 rounded-lg ${
@@ -926,7 +964,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                 ></div>
                                 <p
                                   className={`text-sm font-medium ${
-                                    isSufficient ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"
+                                    isSufficient
+                                      ? "text-green-700 dark:text-green-300"
+                                      : "text-red-700 dark:text-red-300"
                                   }`}
                                 >
                                   {isSufficient
@@ -949,21 +989,21 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                           // Calculate trips more intelligently by distributing quantity based on capacity ratios
                           const totalCapacity = selectedTMs.reduce((sum, tm) => sum + (tm?.capacity || 0), 0);
                           const tmTrips: { tm: AvailableTM; trips: number }[] = [];
-                          
+
                           // Calculate trips for each TM based on their capacity ratio
                           for (const tm of selectedTMs) {
                             if (!tm) continue;
-                            
+
                             // Calculate the proportion of quantity this TM should handle based on its capacity
                             const capacityRatio = tm.capacity / totalCapacity;
                             const quantityForThisTM = quantity * capacityRatio;
                             const tripsForThisTM = Math.ceil(quantityForThisTM / tm.capacity);
-                            
+
                             tmTrips.push({ tm, trips: tripsForThisTM });
                           }
-                          
+
                           const totalTrips = tmTrips.reduce((sum, item) => sum + item.trips, 0);
-                          
+
                           return (
                             <div
                               className={`mt-3 p-3 rounded-lg ${
@@ -978,7 +1018,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                 ></div>
                                 <p
                                   className={`text-sm font-medium ${
-                                    isSufficient ? "text-green-700 dark:text-green-300" : "text-yellow-700 dark:text-yellow-300"
+                                    isSufficient
+                                      ? "text-green-700 dark:text-green-300"
+                                      : "text-yellow-700 dark:text-yellow-300"
                                   }`}
                                 >
                                   {isSufficient
@@ -987,7 +1029,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                 </p>
                               </div>
                               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                <span className="font-semibold">Estimated total trips:</span> {totalTrips} trips across {selectedTMs.length} TMs
+                                <span className="font-semibold">Estimated total trips:</span> {totalTrips} trips across{" "}
+                                {selectedTMs.length} TMs
                               </p>
                               <div className="mt-2 space-y-1">
                                 {tmTrips.map((item) => (
@@ -1132,13 +1175,18 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                               const plant = tm?.plant_id ? plantIdToName[tm.plant_id] || "Unassigned" : "Unassigned";
 
                               return (
-                                <div key={tmId} className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                <div
+                                  key={tmId}
+                                  className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                                >
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center space-x-4">
                                       <span className="text-xs text-brand-600 dark:text-brand-400 font-semibold bg-brand-100 dark:bg-brand-900/30 px-2 py-1 rounded-full">
                                         {index + 1}
                                       </span>
-                                      <span className="text-gray-700 dark:text-gray-300 font-medium">{tm?.identifier}</span>
+                                      <span className="text-gray-700 dark:text-gray-300 font-medium">
+                                        {tm?.identifier}
+                                      </span>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                       {plant && (
@@ -1146,7 +1194,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                           {plant}
                                         </span>
                                       )}
-                                      <span className="text-sm text-gray-500 dark:text-gray-400">{tm?.capacity} m³</span>
+                                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                                        {tm?.capacity} m³
+                                      </span>
                                     </div>
                                   </div>
                                 </div>

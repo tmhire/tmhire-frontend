@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Tooltip from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
+import { useProfile } from "@/hooks/useProfile";
 
 // Types for better type safety and backend integration
 type ApiTask = {
@@ -199,6 +200,7 @@ export default function CalendarContainer() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { profile } = useProfile();
 
   // Get initial date from URL or use current date
   const initialDate = searchParams.get("date") || new Date().toISOString().split("T")[0];
@@ -211,8 +213,8 @@ export default function CalendarContainer() {
   const [selectedClient, setSelectedClient] = useState("all");
   const [selectedPumps, setSelectedPumps] = useState<string[]>([]);
   const [selectedTMs, setSelectedTMs] = useState<string[]>([]);
-  const [timeFormat, setTimeFormat] = useState("24h");
-  const [customStartHour, setCustomStartHour] = useState(0);
+  const [timeFormat, setTimeFormat] = useState(profile?.preferred_format);
+  const [customStartHour, setCustomStartHour] = useState(profile?.custom_start_hour || 0);
   const [ganttData, setGanttData] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -223,6 +225,7 @@ export default function CalendarContainer() {
   const [isClientFilterOpen, setIsClientFilterOpen] = useState(false);
   const [isTimeFormatOpen, setIsTimeFormatOpen] = useState(false);
   const [isPumpFilterOpen, setIsPumpFilterOpen] = useState(false);
+  const [isStartHourFilterOpen, setIsStartHourFilterOpen] = useState(false);
   const [isTMFilterOpen, setIsTMFilterOpen] = useState(false);
 
   const { fetchWithAuth } = useApiClient();
@@ -488,289 +491,6 @@ export default function CalendarContainer() {
               </button>
             </div>
           </div>
-
-          {/* Expandable Filters */}
-          {showFilters && (
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.05]">
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                {/* Item Filter */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TM or Pump</label>
-                  <button
-                    onClick={() => setIsItemFilterOpen(!isItemFilterOpen)}
-                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  >
-                    {selectedItem === "all" ? "All Vehicles" : selectedItem === "mixer" ? "TMs" : "Pumps"}
-                  </button>
-                  {isItemFilterOpen && (
-                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
-                      <div className="p-2 text-gray-800 dark:text-white/90">
-                        <button
-                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                          onClick={() => {
-                            setSelectedItem("all");
-                            setIsItemFilterOpen(false);
-                          }}
-                        >
-                          All Vehicles
-                        </button>
-                        <button
-                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                          onClick={() => {
-                            setSelectedItem("mixer");
-                            setIsItemFilterOpen(false);
-                          }}
-                        >
-                          TMs
-                        </button>
-                        <button
-                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                          onClick={() => {
-                            setSelectedItem("pump");
-                            setIsItemFilterOpen(false);
-                          }}
-                        >
-                          Pumps
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Client Filter */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client</label>
-                  <button
-                    onClick={() => setIsClientFilterOpen(!isClientFilterOpen)}
-                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  >
-                    {selectedClient === "all" ? "All Clients" : selectedClient}
-                  </button>
-                  {isClientFilterOpen && (
-                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
-                      <div className="p-2 text-gray-800 dark:text-white/90">
-                        <button
-                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                          onClick={() => {
-                            setSelectedClient("all");
-                            setIsClientFilterOpen(false);
-                          }}
-                        >
-                          All Clients
-                        </button>
-                        {clients.map((client) => (
-                          <button
-                            key={client}
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setSelectedClient(client);
-                              setIsClientFilterOpen(false);
-                            }}
-                          >
-                            {client}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Plant Filter */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plant</label>
-                  <button
-                    onClick={() => setIsPlantFilterOpen(!isPlantFilterOpen)}
-                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  >
-                    {selectedPlant === "all" ? "All Plants" : selectedPlant}
-                  </button>
-                  {isPlantFilterOpen && (
-                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
-                      <div className="p-2 text-gray-800 dark:text-white/90">
-                        <button
-                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                          onClick={() => {
-                            setSelectedPlant("all");
-                            setIsPlantFilterOpen(false);
-                          }}
-                        >
-                          All Plants
-                        </button>
-                        {plants.map((plant) => (
-                          <button
-                            key={plant}
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setSelectedPlant(plant);
-                              setIsPlantFilterOpen(false);
-                            }}
-                          >
-                            {plant}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Pump Filter */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Pumps</label>
-                  <button
-                    onClick={() => setIsPumpFilterOpen(!isPumpFilterOpen)}
-                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  >
-                    {selectedPumps.length === 0 ? "All Pumps" : `${selectedPumps.length} selected`}
-                  </button>
-                  {isPumpFilterOpen && (
-                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-48 overflow-y-auto">
-                      <div className="p-2 text-gray-800 dark:text-white/90">
-                        <button
-                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                          onClick={() => {
-                            setSelectedPumps([]);
-                            setIsPumpFilterOpen(false);
-                          }}
-                        >
-                          All Pumps
-                        </button>
-                        {availablePumps.map((pump) => (
-                          <label
-                            key={pump}
-                            className="flex items-center px-4 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedPumps.includes(pump)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedPumps([...selectedPumps, pump]);
-                                } else {
-                                  setSelectedPumps(selectedPumps.filter((p) => p !== pump));
-                                }
-                              }}
-                              className="mr-2"
-                            />
-                            {pump}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* TM Filter */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Transit Mixers
-                  </label>
-                  <button
-                    onClick={() => setIsTMFilterOpen(!isTMFilterOpen)}
-                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  >
-                    {selectedTMs.length === 0 ? "All TMs" : `${selectedTMs.length} selected`}
-                  </button>
-                  {isTMFilterOpen && (
-                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-48 overflow-y-auto">
-                      <div className="p-2 text-gray-800 dark:text-white/90">
-                        <button
-                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                          onClick={() => {
-                            setSelectedTMs([]);
-                            setIsTMFilterOpen(false);
-                          }}
-                        >
-                          All TMs
-                        </button>
-                        {availableTMs.map((tm) => (
-                          <label
-                            key={tm}
-                            className="flex items-center px-4 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedTMs.includes(tm)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedTMs([...selectedTMs, tm]);
-                                } else {
-                                  setSelectedTMs(selectedTMs.filter((t) => t !== tm));
-                                }
-                              }}
-                              className="mr-2"
-                            />
-                            {tm}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Time Format Filter */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Time Format</label>
-                  <button
-                    onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
-                    className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  >
-                    {timeFormat === "24h" ? "24-Hour Format" : timeFormat === "12h" ? "12-Hour Format" : "24h (Custom)"}
-                  </button>
-                  {isTimeFormatOpen && (
-                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
-                      <div className="p-2 text-gray-800 dark:text-white/90">
-                        <button
-                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                          onClick={() => {
-                            setCustomStartHour(0); // reset to 00:00
-                            setTimeFormat("24h");
-                            setIsTimeFormatOpen(false);
-                          }}
-                        >
-                          24-Hour Format
-                        </button>
-                        <button
-                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                          onClick={() => {
-                            setCustomStartHour(0); // reset to 00:00
-                            setTimeFormat("12h");
-                            setIsTimeFormatOpen(false);
-                          }}
-                        >
-                          12-Hour Format
-                        </button>
-                        <button
-                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                          onClick={() => {
-                            setCustomStartHour(6); // default 6:00
-                            setTimeFormat("24h-custom");
-                            setIsTimeFormatOpen(false);
-                          }}
-                        >
-                          24h (Custom)
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  {/* Show custom start hour selector if 24h-custom is selected */}
-                  {timeFormat === "24h-custom" && (
-                    <div className="mt-2">
-                      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Start Hour</label>
-                      <select
-                        className="w-full px-2 py-1 border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white"
-                        value={customStartHour}
-                        onChange={(e) => setCustomStartHour(Number(e.target.value))}
-                      >
-                        {Array.from({ length: 24 }, (_, i) => (
-                          <option key={i} value={i}>{`${String(i).padStart(2, "0")}:00`}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Loading State */}
@@ -857,7 +577,7 @@ export default function CalendarContainer() {
             {/* Expandable Filters */}
             {showFilters && (
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.05]">
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
                   {/* Item Filter */}
                   <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1083,11 +803,7 @@ export default function CalendarContainer() {
                       onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
                       className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     >
-                      {timeFormat === "24h"
-                        ? "24-Hour Format"
-                        : timeFormat === "12h"
-                        ? "12-Hour Format"
-                        : "24h (Custom)"}
+                      {timeFormat === "24h" ? "24-Hour Format" : "12-Hour Format"}
                     </button>
                     {isTimeFormatOpen && (
                       <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
@@ -1112,32 +828,38 @@ export default function CalendarContainer() {
                           >
                             12-Hour Format
                           </button>
-                          <button
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setCustomStartHour(6); // default 6:00
-                              setTimeFormat("24h-custom");
-                              setIsTimeFormatOpen(false);
-                            }}
-                          >
-                            24h (Custom)
-                          </button>
                         </div>
                       </div>
                     )}
                     {/* Show custom start hour selector if 24h-custom is selected */}
-                    {timeFormat === "24h-custom" && (
-                      <div className="mt-2">
-                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Start Hour</label>
-                        <select
-                          className="w-full px-2 py-1 border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white"
-                          value={customStartHour}
-                          onChange={(e) => setCustomStartHour(Number(e.target.value))}
-                        >
+                  </div>
+                  {/* Start Hour Filter */}
+                  <div className="relative">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Start Hour
+                    </label>
+                    <button
+                      onClick={() => setIsStartHourFilterOpen(!isStartHourFilterOpen)}
+                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    >
+                      {`${String(customStartHour).padStart(2, "0")}:00`}
+                    </button>
+                    {isStartHourFilterOpen && (
+                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-60 overflow-y-auto">
+                        <div className="p-2 text-gray-800 dark:text-white/90">
                           {Array.from({ length: 24 }, (_, i) => (
-                            <option key={i} value={i}>{`${String(i).padStart(2, "0")}:00`}</option>
+                            <button
+                              key={i}
+                              className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                              onClick={() => {
+                                setCustomStartHour(i);
+                                setIsStartHourFilterOpen(false);
+                              }}
+                            >
+                              {`${String(i).padStart(2, "0")}:00`}
+                            </button>
                           ))}
-                        </select>
+                        </div>
                       </div>
                     )}
                   </div>
