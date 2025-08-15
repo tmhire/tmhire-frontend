@@ -6,9 +6,12 @@ export interface ProfileData {
   _id: string;
   email: string;
   name: string;
+  new_user: boolean;
   contact: number;
   company: string;
   city: string;
+  preferred_format: "12h" | "24h";
+  custom_start_hour: number;
   created_at: string;
 }
 
@@ -25,7 +28,11 @@ export function useProfile() {
   const { fetchWithAuth } = useApiClient();
   const { status } = useSession();
 
-  const { data: profile, isLoading: loading, error } = useQuery<ProfileData>({
+  const {
+    data: profile,
+    isLoading: loading,
+    error,
+  } = useQuery<ProfileData>({
     queryKey: ["profile"],
     queryFn: () => fetchProfile(fetchWithAuth),
     enabled: status === "authenticated", // Only fetch when user is authenticated    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
@@ -33,4 +40,4 @@ export function useProfile() {
   });
 
   return { profile, loading, error };
-} 
+}

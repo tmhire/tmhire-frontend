@@ -8,17 +8,6 @@ import { useSession } from "next-auth/react";
 import { Factory, Truck, Users, Wrench, Calendar } from "lucide-react";
 import { useApiClient } from "@/hooks/useApiClient";
 
-// interface SessionUser {
-//   id?: string;
-//   name?: string | null;
-//   email?: string | null;
-//   image?: string | null;
-//   new_user?: boolean;
-//   company?: string;
-//   city?: string;
-//   contact?: number;
-// }
-
 export default function WelcomeModal() {
   const { data: session, update } = useSession();
   const { fetchWithAuth } = useApiClient();
@@ -37,17 +26,6 @@ export default function WelcomeModal() {
     globalFormat: "12h",
     customStartHour: 6,
   });
-
-  // Handle session loading state
-  // useEffect(() => {
-  //   if (status === "loading") {
-  //     setIsOpen(false);
-  //   } else if (status === "authenticated" && (session?.user as SessionUser)?.new_user) {
-  //     setIsOpen(true);
-  //   } else {
-  //     setIsOpen(false);
-  //   }
-  // }, [status, session]);
 
   const steps = [
     {
@@ -109,8 +87,11 @@ export default function WelcomeModal() {
       const response = await fetchWithAuth("/auth/update", {
         method: "PUT",
         body: JSON.stringify({
-          ...formData,
+          company: formData.company,
           contact: parseInt(formData.contact),
+          city: formData.city,
+          preferred_format: formData.globalFormat,
+          custom_start_hour: formData.customStartHour,
         }),
       });
 
@@ -120,14 +101,12 @@ export default function WelcomeModal() {
       if (data.success) {
         await update({
           ...(session as unknown as Record<string, unknown>),
-          user: {
-            ...session?.user,
-            new_user: false,
-            company: formData.company,
-            city: formData.city,
-            contact: parseInt(formData.contact),
-            globalFormat: formData.globalFormat,
-          },
+          new_user: false,
+          company: formData.company,
+          city: formData.city,
+          contact: parseInt(formData.contact),
+          preferred_format: formData.globalFormat,
+          custom_start_hour: formData.customStartHour,
         });
         setIsOpen(false);
       } else {
@@ -158,7 +137,7 @@ export default function WelcomeModal() {
           className="flex flex-col"
           onSubmit={(e) => {
             e.preventDefault();
-            handleSubmit();
+            // handleSubmit();
           }}
         >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -180,8 +159,8 @@ export default function WelcomeModal() {
                   <Input type="text" name="city" value={formData.city} onChange={handleChange} />
                 </div>
 
-                <div>
-                  <Label>Preferred Format</Label>
+                <div className="col-span-2 lg:col-span-1">
+                  <Label>Preferred Time Format</Label>
                   <button
                     onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
                     className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -211,8 +190,8 @@ export default function WelcomeModal() {
                   )}
                 </div>
 
-                <div>
-                  <Label>Custom Time</Label>
+                <div className="col-span-2 lg:col-span-1">
+                  <Label>Custom Start Time</Label>
                   <select
                     className="w-full px-2 py-1 border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white"
                     value={formData.customStartHour}
@@ -224,7 +203,7 @@ export default function WelcomeModal() {
                     }
                   >
                     {Array.from({ length: 48 }, (_, i) => (
-                      <option key={i} value={i / 2}>
+                      <option key={i} value={i / 2} className="dark:bg-gray-800 dark:text-white">
                         {floatToTimeString(i / 2)}
                       </option>
                     ))}

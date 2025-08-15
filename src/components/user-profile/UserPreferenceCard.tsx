@@ -3,37 +3,52 @@ import React from "react";
 import { useModal } from "../../hooks/useModal";
 import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
-import Input from "../form/input/InputField";
 import Label from "../form/Label";
 import { useProfile } from "@/hooks/useProfile";
 import { useApiClient } from "@/hooks/useApiClient";
 import { Spinner } from "../ui/spinner";
 import _ from "lodash";
+import { useSession } from "next-auth/react";
 
-export default function UserInfoCard() {
+export default function UserPreferenceCard() {
+  const { data: session, update } = useSession();
   const { isOpen, openModal, closeModal } = useModal();
   const { profile, loading } = useProfile();
   const { fetchWithAuth } = useApiClient();
   const [formData, setFormData] = React.useState({
-    company: "",
-    city: "",
-    email: "",
+    globalFormat: "12h",
+    customStartHour: 6,
   });
   const [prevFormData, setPrevFormData] = React.useState(formData);
   const [hasChanged, setHasChanged] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isTimeFormatOpen, setIsTimeFormatOpen] = React.useState(false);
+
+  const timeFormatOptions = [
+    { label: "12-Hour Format", value: "12h" },
+    { label: "24-Hour Format", value: "24h" },
+  ];
+
+  const floatToTimeString = (value: number) => {
+    let hours = Math.floor(value); // whole hours
+    const minutes = Math.round((value - hours) * 60); // remaining minutes
+    const period = formData.globalFormat == "12h" ? (hours >= 12 ? " PM" : " AM") : "";
+    if (formData.globalFormat === "12h") {
+      hours = hours % 12;
+      if (hours === 0) hours = 12;
+    }
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}${period}`;
+  };
 
   React.useEffect(() => {
     if (profile) {
       setFormData({
-        company: profile.company || "",
-        city: profile.city || "",
-        email: profile.email || "",
+        globalFormat: profile.preferred_format || "12h",
+        customStartHour: profile.custom_start_hour || 0,
       });
       setPrevFormData({
-        company: profile.company || "",
-        city: profile.city || "",
-        email: profile.email || "",
+        globalFormat: profile.preferred_format || "12h",
+        customStartHour: profile.custom_start_hour || 0,
       });
     }
   }, [profile]);
@@ -60,8 +75,9 @@ export default function UserInfoCard() {
       const response = await fetchWithAuth("/auth/update", {
         method: "PUT",
         body: JSON.stringify({
-          company: formData.company,
-          city: formData.city,
+          ...profile,
+          preferred_format: formData.globalFormat,
+          custom_start_hour: formData.customStartHour,
         }),
       });
 
@@ -71,6 +87,12 @@ export default function UserInfoCard() {
         setPrevFormData(formData);
         // setHasChanged(false);
         // window.location.reload();
+        await update({
+          ...(session as unknown as Record<string, unknown>),
+          new_user: false,
+          preferred_format: formData.globalFormat,
+          custom_start_hour: formData.customStartHour,
+        });
       }
     } catch (error) {
       console.error("Failed to update profile:", error);
@@ -91,22 +113,19 @@ export default function UserInfoCard() {
     <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 lg:mb-6">Company Details</h4>
+          <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 lg:mb-6">Preferences</h4>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-7 2xl:gap-x-32">
             <div>
-              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">Company Name</p>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{formData.company || "N/A"}</p>
+              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">Preferred Time Format</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{formData.globalFormat || "N/A"}</p>
             </div>
 
             <div>
-              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">City</p>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{formData.city || "N/A"}</p>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">Email address</p>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{formData.email || "N/A"}</p>
+              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">Custom Start Time</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {`${floatToTimeString(formData.customStartHour)}` || "N/A"}
+              </p>
             </div>
           </div>
         </div>
@@ -139,7 +158,7 @@ export default function UserInfoCard() {
           <div className="px-2 pr-14">
             <h4 className="mb-2 text-2xl font-semibold text-gray-700 dark:text-gray-300">Edit Company Details</h4>
             <p className="mb-6 text-sm text-gray-700 dark:text-gray-300 lg:mb-7">
-              Update your company details to keep your profile up-to-date.
+              Update your preferences to keep your profile up-to-date.
             </p>
           </div>
           <form
@@ -151,42 +170,58 @@ export default function UserInfoCard() {
           >
             <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
               <div className="mt-7">
-                <h5 className="mb-5 text-lg font-medium text-gray-700 dark:text-gray-300 lg:mb-6">
-                  Company Information
-                </h5>
+                <h5 className="mb-5 text-lg font-medium text-gray-700 dark:text-gray-300 lg:mb-6">Preferences</h5>
 
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>Company Name</Label>
-                    <Input
-                      type="text"
-                      name="company"
-                      value={formData.company}
-                      onChange={handleInputChange}
-                      disabled={isSubmitting}
-                    />
+                    <Label>Preferred Time Format</Label>
+                    <button
+                      onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
+                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    >
+                      {formData.globalFormat === "24h" ? "24-Hour Format" : "12-Hour Format"}
+                    </button>
+                    {isTimeFormatOpen && (
+                      <div className="absolute z-20 mt-1 w-sm bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                        {timeFormatOptions.map((option) => (
+                          <div className="p-2 text-gray-800 dark:text-white/90" key={option.value}>
+                            <button
+                              className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                              name="globalFormat"
+                              onClick={() => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  globalFormat: option.value as "12h" | "24h",
+                                }));
+                                setIsTimeFormatOpen(false);
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>City</Label>
-                    <Input
-                      type="text"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-
-                  <div className="col-span-2">
-                    <Label>Email</Label>
-                    <Input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      disabled={true}
-                      className="bg-gray-100 dark:bg-gray-800"
-                    />
+                    <Label>Custom Start Time</Label>
+                    <select
+                      className="w-full px-2 py-1 border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white"
+                      value={formData.customStartHour}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          customStartHour: parseFloat(e.target.value),
+                        }))
+                      }
+                    >
+                      {Array.from({ length: 48 }, (_, i) => (
+                        <option key={i} value={i / 2} className="dark:bg-gray-800 dark:text-white">
+                          {floatToTimeString(i / 2)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>

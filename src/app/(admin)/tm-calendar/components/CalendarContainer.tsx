@@ -762,7 +762,10 @@ export default function CalendarContainer() {
                         onChange={(e) => setCustomStartHour(Number(e.target.value))}
                       >
                         {Array.from({ length: 24 }, (_, i) => (
-                          <option key={i} value={i}>{`${String(i).padStart(2, "0")}:00`}</option>
+                          <option key={i} value={i} className="dark:bg-gray-800 dark:text-white">{`${String(i).padStart(
+                            2,
+                            "0"
+                          )}:00`}</option>
                         ))}
                       </select>
                     </div>
@@ -1135,7 +1138,9 @@ export default function CalendarContainer() {
                           onChange={(e) => setCustomStartHour(Number(e.target.value))}
                         >
                           {Array.from({ length: 24 }, (_, i) => (
-                            <option key={i} value={i}>{`${String(i).padStart(2, "0")}:00`}</option>
+                            <option key={i} value={i} className="dark:bg-gray-800 dark:text-white">{`${String(
+                              i
+                            ).padStart(2, "0")}:00`}</option>
                           ))}
                         </select>
                       </div>

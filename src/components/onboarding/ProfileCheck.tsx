@@ -14,7 +14,8 @@ export default function ProfileCheck() {
   // Show welcome modal if:
   // 1. User is authenticated AND
   // 2. Profile is loaded but company is missing
-  if (status === "authenticated" && !profile?.company) {
+  console.log("P{rofile:", profile);
+  if (status === "authenticated" && profile?.new_user) {
     return (
       <>
         <div className="dark:bg-gray-800 bg-gray-200 p-3 dark:text-brand-300 text-brand-800 text-sm text-right">

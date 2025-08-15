@@ -5,6 +5,7 @@ import { jwtDecode } from "jwt-decode";
 import type { JWT } from "next-auth/jwt";
 import type { Account, Session, User } from "next-auth";
 import type { AdapterUser } from "next-auth/adapters";
+import { circOut } from "motion/react";
 
 // Configure backend API URL from environment or use default
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -69,7 +70,7 @@ async function handleEmailPassword(
     }
 
     console.log("Successfully obtained backend token", json.data);
-    return {
+    const res = {
       id: json?.data?.id,
       name: json?.data?.name,
       email: json?.data?.email,
@@ -81,8 +82,10 @@ async function handleEmailPassword(
       refreshToken: json?.data?.refresh_token,
       tokenType: json?.data?.token_type,
       preferred_format: json?.data?.preferred_format || "12h",
-      custom_start_hour: json?.data?.custom_start_hour || 6,
+      custom_start_hour: json?.data?.custom_start_hour || 0,
     };
+    console.log(res);
+    return res;
   } catch (error) {
     console.error("Failed to exchange token with backend:", error instanceof Error ? error.message : String(error));
     return null;
@@ -226,7 +229,7 @@ export const authOptions: AuthOptions = {
       trigger?: string;
       session?: Session;
     }): Promise<JWT> {
-      console.log("Initial sign in with session:", session);
+      console.log("Initial sign in with session:", session, trigger);
 
       if (trigger === "update" && session) {
         console.log("Updating JWT with session data:", session);
@@ -236,13 +239,13 @@ export const authOptions: AuthOptions = {
         token.backendRefreshToken = session.backendRefreshToken;
         token.backendRefreshTokenExpires = session.backendRefreshTokenExpires;
         token.backendTokenType = session.backendTokenType;
-        if (session?.new_user) token.new_user = Boolean(session.new_user);
+        if (session?.new_user !== undefined && session.new_user !== null) token.new_user = session.new_user;
         if (session?.company) token.company = session.company;
         if (session?.city) token.city = session.city;
         if (session?.contact) token.contact = session.contact;
         if (session?.preferred_format) token.preferred_format = session.preferred_format;
         if (session?.custom_start_hour) token.custom_start_hour = session.custom_start_hour;
-
+        console.log("Updated JWT token:", token);
         return token;
       }
       console.log("JWT callback triggered with user:", user, "and account:", account);
@@ -358,7 +361,8 @@ export const authOptions: AuthOptions = {
         session.backendAccessTokenExpires = token.backendAccessTokenExpires as number;
         session.backendRefreshToken = token.backendRefreshToken as string;
         session.backendTokenType = token.backendTokenType as string;
-        session.new_user = token.new_user as unknown as string;
+        console.log("New User", token.new_user);
+        session.new_user = token.new_user as boolean;
         session.company = token.company as string;
         session.city = token.city as string;
         session.contact = token.contact as number;

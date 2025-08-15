@@ -3,7 +3,7 @@ import type { DefaultJWT } from "next-auth/jwt";
 
 declare module "next-auth" {
   interface Session extends DefaultSession {
-    new_user: string;
+    new_user: boolean;
     company?: string;
     city?: string;
     contact?: number;

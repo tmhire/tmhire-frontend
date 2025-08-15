@@ -10,6 +10,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { Spinner } from "../ui/spinner";
+import _ from "lodash";
 
 export default function UserMetaCard() {
   const { isOpen, openModal, closeModal } = useModal();
@@ -20,6 +21,8 @@ export default function UserMetaCard() {
     name: "",
     contact: "",
   });
+  const [prevFormData, setPrevFormData] = React.useState(formData);
+  const [hasChanged, setHasChanged] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   React.useEffect(() => {
@@ -28,18 +31,30 @@ export default function UserMetaCard() {
         name: profile.name || "",
         contact: profile.contact?.toString() || "",
       });
+      setPrevFormData({
+        name: profile.name || "",
+        contact: profile.contact?.toString() || "",
+      });
     }
   }, [profile]);
 
+  React.useEffect(() => {
+    if (_.isEqual(formData, prevFormData)) {
+      return setHasChanged(false);
+    }
+    setHasChanged(true);
+  }, [formData, prevFormData]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSave = async () => {
+    if (!hasChanged) return;
     try {
       setIsSubmitting(true);
       const response = await fetchWithAuth("/auth/update", {
@@ -53,7 +68,9 @@ export default function UserMetaCard() {
       const data = await response.json();
       if (data.success) {
         closeModal();
-        window.location.reload();
+        setPrevFormData(formData);
+        // setHasChanged(false);
+        // window.location.reload();
       }
     } catch (error) {
       console.error("Failed to update profile:", error);
@@ -76,33 +93,26 @@ export default function UserMetaCard() {
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-col items-center w-full gap-6 xl:flex-row">
             <div className="w-20 h-20 overflow-hidden border border-gray-200 rounded-full dark:border-gray-800">
-              <Image
-                width={80}
-                height={80}
-                src={session?.user?.image || "/images/user/owner.jpg"}
-                alt="user"
-              />
+              <Image width={80} height={80} src={session?.user?.image || "/images/user/owner.jpg"} alt="user" />
             </div>
             <div className="order-3 xl:order-2">
               <h4 className="mb-2 text-lg font-semibold text-center text-gray-700 dark:text-gray-300 xl:text-left">
-                {profile?.name || "User"}
+                {formData.name || "User"}
               </h4>
               <div className="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left">
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  {profile?.contact || "No contact"}
-                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">{formData.contact || "No contact"}</p>
               </div>
             </div>
             <div className="flex items-center order-2 gap-2 grow xl:order-3 xl:justify-end">
               <button
                 onClick={openModal}
-                className="flex h-11 w-11 items-center justify-center gap-2 rounded-full border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 lg:inline-flex lg:w-auto"
               >
                 <svg
                   className="fill-current"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 20 20"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 18 18"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
                 >
@@ -113,6 +123,7 @@ export default function UserMetaCard() {
                     fill=""
                   />
                 </svg>
+                Edit
               </button>
             </div>
           </div>
@@ -121,14 +132,18 @@ export default function UserMetaCard() {
       <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] m-4">
         <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
           <div className="px-2 pr-14">
-            <h4 className="mb-2 text-2xl font-semibold text-gray-700 dark:text-gray-300">
-              Edit Personal Information
-            </h4>
+            <h4 className="mb-2 text-2xl font-semibold text-gray-700 dark:text-gray-300">Edit Personal Information</h4>
             <p className="mb-6 text-sm text-gray-700 dark:text-gray-300 lg:mb-7">
               Update your details to keep your profile up-to-date.
             </p>
           </div>
-          <form className="flex flex-col" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+          <form
+            className="flex flex-col"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSave();
+            }}
+          >
             <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
               <div className="mt-7">
                 <h5 className="mb-5 text-lg font-medium text-gray-700 dark:text-gray-300 lg:mb-6">
@@ -138,8 +153,8 @@ export default function UserMetaCard() {
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Name</Label>
-                    <Input 
-                      type="text" 
+                    <Input
+                      type="text"
                       name="name"
                       value={formData.name}
                       onChange={handleInputChange}
@@ -149,8 +164,8 @@ export default function UserMetaCard() {
 
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Contact</Label>
-                    <Input 
-                      type="text" 
+                    <Input
+                      type="text"
                       name="contact"
                       value={formData.contact}
                       onChange={handleInputChange}
@@ -164,7 +179,7 @@ export default function UserMetaCard() {
               <Button size="sm" variant="outline" onClick={closeModal} disabled={isSubmitting}>
                 Close
               </Button>
-              <Button size="sm" disabled={isSubmitting}>
+              <Button size="sm" disabled={isSubmitting || !hasChanged}>
                 {isSubmitting ? <Spinner size="sm" /> : "Save Changes"}
               </Button>
             </div>
