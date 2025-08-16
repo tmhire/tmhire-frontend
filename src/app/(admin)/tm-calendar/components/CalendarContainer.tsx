@@ -212,7 +212,7 @@ export default function CalendarContainer() {
   const [selectedClient, setSelectedClient] = useState("all");
   const [selectedPumps, setSelectedPumps] = useState<string[]>([]);
   const [selectedTMs, setSelectedTMs] = useState<string[]>([]);
-  const [timeFormat, setTimeFormat] = useState<"12h" | "24h" | undefined>(session?.preferred_format);
+  const [timeFormat, setTimeFormat] = useState<"12h" | "24h">(session?.preferred_format || "24h");
   const [customStartHour, setCustomStartHour] = useState(
     session?.custom_start_hour !== undefined && session?.custom_start_hour !== null ? session.custom_start_hour : 0
   );
@@ -230,6 +230,13 @@ export default function CalendarContainer() {
   const [isTMFilterOpen, setIsTMFilterOpen] = useState(false);
 
   const { fetchWithAuth } = useApiClient();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      setTimeFormat(session.preferred_format || timeFormat);
+      setCustomStartHour(session.custom_start_hour || customStartHour);
+    }
+  }, [session, status]);
 
   // Fetch plants, pumps, and TMs data
   const { data: plantsData } = useQuery<Plant[]>({
