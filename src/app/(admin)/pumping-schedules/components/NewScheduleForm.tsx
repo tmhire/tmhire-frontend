@@ -2073,7 +2073,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               isHeader
                               className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                             >
-                              Plant Start
+                              Plant Start Time
                             </TableCell>
                             <TableCell
                               isHeader

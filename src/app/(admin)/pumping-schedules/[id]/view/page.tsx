@@ -402,7 +402,7 @@ export default function ScheduleViewPage() {
                       isHeader
                       className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
-                      Plant Start
+                      Plant Start Time
                     </TableCell>
                     <TableCell
                       isHeader
