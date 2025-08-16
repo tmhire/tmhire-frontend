@@ -852,21 +852,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                 {/* Grade of Concrete */}
                 <div className="w-full">
-  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-    RMC Grade
-  </label>
-  <div className="flex items-center w-full">
-    <span className="w-6 text-gray-700 dark:text-gray-300 font-medium">M</span>
-    <Input
-      type="number"
-      name="concreteGrade"
-      value={parseFloat(formData.concreteGrade)}
-      onChange={handleInputChange}
-      placeholder="Enter RMC grade"
-      className="flex-1 min-w-full"
-    />
-  </div>
-</div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">RMC Grade</label>
+                  <div className="flex items-center w-full">
+                    <span className="w-6 text-gray-700 dark:text-gray-300 font-medium">M</span>
+                    <Input
+                      type="number"
+                      name="concreteGrade"
+                      value={parseFloat(formData.concreteGrade)}
+                      onChange={handleInputChange}
+                      placeholder="Enter RMC grade"
+                      className="flex-1 min-w-full"
+                    />
+                  </div>
+                </div>
 
                 {/* Pumping Quantity */}
                 <div className="col-span-1">
@@ -2081,7 +2079,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               isHeader
                               className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                             >
-                              Pump Start
+                              Pump Start Time
                             </TableCell>
                             <TableCell
                               isHeader
@@ -2093,7 +2091,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               isHeader
                               className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                             >
-                              Unloading End Time
+                              Pump End Time
                             </TableCell>
                             <TableCell
                               isHeader

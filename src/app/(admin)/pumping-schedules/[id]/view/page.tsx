@@ -414,7 +414,7 @@ export default function ScheduleViewPage() {
                       isHeader
                       className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
-                      Pump Start
+                      Pump Start Time
                     </TableCell>
                     <TableCell
                       isHeader
@@ -426,7 +426,7 @@ export default function ScheduleViewPage() {
                       isHeader
                       className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
-                      Unloading End Time
+                      Pump End Time
                     </TableCell>
                     <TableCell
                       isHeader
