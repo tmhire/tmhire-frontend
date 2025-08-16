@@ -7,7 +7,16 @@ import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import Radio from "@/components/form/input/Radio";
 import Input from "@/components/form/input/InputField";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
-import { ArrowLeft, ArrowRight, Clock, CheckCircle2, GripVertical, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Clock,
+  CheckCircle2,
+  GripVertical,
+  ChevronDown,
+  ChevronRight,
+  Truck,
+} from "lucide-react";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useQuery } from "@tanstack/react-query";
@@ -17,6 +26,11 @@ import { useRouter } from "next/navigation";
 import { RadioGroup } from "@/components/ui/radio";
 import { useProfile } from "@/hooks/useProfile";
 import TimeInput from "@/components/form/input/TimeInput";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import { Pie } from "react-chartjs-2";
+
+// must register arc for Pie/Doughnut charts
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface Client {
   contact_phone: number;
@@ -680,8 +694,23 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           <div className="space-y-4">
             {/* Client Details Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
-              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Project Details</h3>
-              <div className="grid grid-cols-3 gap-6">
+              <div className="flex justify-between items-center mb-4 w-full">
+                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Schedule Details</h3>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900/40 py-1 px-3 rounded-full">
+                  Company Timings -
+                  {profile?.preferred_format === "12h"
+                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${
+                        (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
+                      } TODAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${
+                        (profile?.custom_start_hour ?? 0) + 12 < 24 ? "PM" : "AM"
+                      } TOMORROW`
+                    : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 TODAY TO ${String(
+                        ((profile?.custom_start_hour ?? 0) + 12) % 24
+                      ).padStart(2, "0")}:00 TOMORROW`}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-4 gap-6">
                 {/* Client Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -731,77 +760,80 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   </div>
                 </div>
                 {/* Project Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Choose Project
-                  </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
-                        selectedProject
-                          ? "text-gray-800 dark:text-white/90"
-                          : projects.length === 0 && !!selectedClient
-                          ? "text-red-500"
-                          : "text-gray-400 dark:text-gray-400"
-                      }`}
-                      onClick={() => setIsProjectDropdownOpen((open) => !open)}
-                      aria-haspopup="listbox"
-                      aria-expanded={isProjectDropdownOpen}
-                      disabled={!selectedClient || projects.length === 0}
-                    >
-                      {!selectedClient
-                        ? "Select a client first"
-                        : projects.length === 0
-                        ? "Please create a project for this client."
-                        : projects.find((p: Project) => p._id === selectedProject)?.name || "Select a project"}
-                    </button>
-                    <Dropdown
-                      isOpen={isProjectDropdownOpen}
-                      onClose={() => setIsProjectDropdownOpen(false)}
-                      className="w-full mt-1"
-                    >
-                      {projects.length === 0 ? (
-                        <DropdownItem
-                          className="text-red-500 dark:text-red-400 cursor-not-allowed"
-                          onClick={() => setIsProjectDropdownOpen(false)}
-                        >
-                          No projects found. Please create a project for this client.
-                        </DropdownItem>
-                      ) : (
-                        <>
+                <div className={`flex gap-4 ${selectedProject ? "w-full" : "w-full"}`}>
+                  {/* Project Dropdown */}
+                  <div className={`${selectedProject ? "w-1/2" : "w-full"}`}>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Choose Project
+                    </label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
+                          selectedProject
+                            ? "text-gray-800 dark:text-white/90"
+                            : projects.length === 0 && !!selectedClient
+                            ? "text-red-500"
+                            : "text-gray-400 dark:text-gray-400"
+                        }`}
+                        onClick={() => setIsProjectDropdownOpen((open) => !open)}
+                        aria-haspopup="listbox"
+                        aria-expanded={isProjectDropdownOpen}
+                        disabled={!selectedClient || projects.length === 0}
+                      >
+                        {!selectedClient
+                          ? "Select a client first"
+                          : projects.length === 0
+                          ? "Please create a project for this client."
+                          : projects.find((p: Project) => p._id === selectedProject)?.name || "Select a project"}
+                      </button>
+
+                      <Dropdown
+                        isOpen={isProjectDropdownOpen}
+                        onClose={() => setIsProjectDropdownOpen(false)}
+                        className="w-full mt-1"
+                      >
+                        {projects.length === 0 ? (
                           <DropdownItem
-                            className="text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            onClick={() => {
-                              setSelectedProject("");
-                              setHasChanged(true);
-                              setIsProjectDropdownOpen(false);
-                            }}
+                            className="text-red-500 dark:text-red-400 cursor-not-allowed"
+                            onClick={() => setIsProjectDropdownOpen(false)}
                           >
-                            Select a project
+                            No projects found. Please create a project for this client.
                           </DropdownItem>
-                          {(projects || []).map((option: Project) => (
+                        ) : (
+                          <>
                             <DropdownItem
-                              key={option._id}
-                              className="text-gray-800 dark:text-white/90 hover:bg-gray-100 dark:hover:bg-gray-700"
+                              className="text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                               onClick={() => {
-                                setSelectedProject(option._id);
+                                setSelectedProject("");
                                 setHasChanged(true);
                                 setIsProjectDropdownOpen(false);
                               }}
                             >
-                              {option.name}
+                              Select a project
                             </DropdownItem>
-                          ))}
-                        </>
-                      )}
-                    </Dropdown>
+                            {(projects || []).map((option: Project) => (
+                              <DropdownItem
+                                key={option._id}
+                                className="text-gray-800 dark:text-white/90 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                onClick={() => {
+                                  setSelectedProject(option._id);
+                                  setHasChanged(true);
+                                  setIsProjectDropdownOpen(false);
+                                }}
+                              >
+                                {option.name}
+                              </DropdownItem>
+                            ))}
+                          </>
+                        )}
+                      </Dropdown>
+                    </div>
                   </div>
-                </div>
-                {/* Project Details */}
-                {selectedProject && projects.find((p) => p._id === selectedProject) && (
-                  <div className="flex justify-start items-end">
-                    <div className="flex flex-col gap-0">
+
+                  {/* Project Details */}
+                  {selectedProject && projects.find((p) => p._id === selectedProject) && (
+                    <div className="w-1/2 flex flex-col justify-end">
                       <p className="mt-2 text-sm text-gray-400 dark:text-gray-400">
                         {projects.find((p) => p._id === selectedProject)?.contact_name} -{" "}
                         {projects.find((p) => p._id === selectedProject)?.contact_number}
@@ -815,61 +847,27 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         </p>
                       )}
                     </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Pump Details Section */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
-              <div className="flex justify-between items-center mb-4 w-full">
-                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4 flex justify-between items-center">
-                  Pump Details
-                </h3>
-                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
-                  Schedule timings:
-                  {profile?.preferred_format === "12h"
-                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12} ${
-                        (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
-                      } - ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12} ${
-                        (profile?.custom_start_hour ?? 0) + 12 < 24 ? "PM" : "AM"
-                      }`
-                    : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 - ${String(
-                        ((profile?.custom_start_hour ?? 0) + 12) % 24
-                      ).padStart(2, "0")}:00`}
-                </span>
-              </div>{" "}
-              <div className="grid grid-cols-3 gap-6 mb-6">
-                {/* Pump Type Selection */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Pump Type</label>
-                  <div className="flex flex-wrap items-center gap-8">
-                    <Radio
-                      id="line-pump"
-                      name="pump-type"
-                      value="line"
-                      checked={pumpType === "line"}
-                      onChange={(value) => {
-                        setPumpType(value as "line" | "boom");
-                        setSelectedPump("");
-                        setHasChanged(true);
-                      }}
-                      label="Line Pump"
-                    />
-                    <Radio
-                      id="boom-pump"
-                      name="pump-type"
-                      value="boom"
-                      checked={pumpType === "boom"}
-                      onChange={(value) => {
-                        setPumpType(value as "line" | "boom");
-                        setSelectedPump("");
-                        setHasChanged(true);
-                      }}
-                      label="Boom Pump"
-                    />
-                  </div>
+                  )}
                 </div>
+
+                {/* Grade of Concrete */}
+                <div className="w-full">
+  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+    RMC Grade
+  </label>
+  <div className="flex items-center w-full">
+    <span className="w-6 text-gray-700 dark:text-gray-300 font-medium">M</span>
+    <Input
+      type="number"
+      name="concreteGrade"
+      value={parseFloat(formData.concreteGrade)}
+      onChange={handleInputChange}
+      placeholder="Enter RMC grade"
+      className="flex-1 min-w-full"
+    />
+  </div>
+</div>
+
                 {/* Pumping Quantity */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -883,164 +881,55 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     placeholder="Enter quantity"
                   />
                 </div>
-                {/* Schedule Date of Pumping */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Schedule Date of Pumping
-                  </label>
-                  <DatePickerInput
-                    value={formData.scheduleDate}
-                    onChange={(date) => {
-                      setFormData((prev) => ({
-                        ...prev,
-                        scheduleDate: date,
-                      }));
-                      setHasChanged(true);
-                    }}
-                    placeholder="Select a date"
-                  />
-                </div>
               </div>
-              <div className="grid grid-cols-4 gap-6 mb-6">
-                {/* Pump Onward Time */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pump Onward Time (min)
-                  </label>
-                  <Input
-                    type="number"
-                    name="pumpOnwardTime"
-                    value={formData.pumpOnwardTime || ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      const numValue = parseFloat(value);
-                      if (value === "" || (numValue >= 1 && numValue <= 600 && Number.isInteger(numValue))) {
-                        handleInputChange(e);
-                      }
-                    }}
-                    placeholder="Enter pump onward time from plant (1-600)"
-                    min="1"
-                    max="600"
-                  />
-                </div>
-                {/* Pipeline Fixing Time */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pipeline Fixing Time (min)
-                  </label>
-                  <Input
-                    type="number"
-                    name="pumpFixingTime"
-                    value={formData.pumpFixingTime || ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      const numValue = parseFloat(value);
-                      if (value === "" || (numValue >= 1 && numValue <= 600 && Number.isInteger(numValue))) {
-                        handleInputChange(e);
-                      }
-                    }}
-                    placeholder="Enter pump fixing time (1-600)"
-                    min="1"
-                    max="600"
-                  />
-                </div>
-                {/* Pump Start Time */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pump Start Time
-                  </label>
-                  <div className="relative">
-                    <TimeInput
-                      type="time"
-                      name="startTime"
-                      format={profile?.preferred_format === "12h" ? "h:mm a" : "HH:MM"}
-                      isOpen
-                      value={formData.startTime}
-                      onChange={(val) => handleTimeChange("startTime", val)}
-                    />
-                    {/* <Input type="time" name="startTime" value={formData.startTime} onChange={handleInputChange} /> */}
-                    <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-                      <Clock className="size-5" />
-                    </span>
-                  </div>
-                </div>
-                {/* Pipeline Removal Time */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pipeline Removal Time (min)
-                  </label>
-                  <Input
-                    type="number"
-                    name="pumpRemovalTime"
-                    value={formData.pumpRemovalTime || ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      const numValue = parseFloat(value);
-                      if (value === "" || (numValue >= 1 && numValue <= 600 && Number.isInteger(numValue))) {
-                        handleInputChange(e);
-                      }
-                    }}
-                    placeholder="Enter pump removal time (1-600)"
-                    min="1"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-[1fr_auto_1fr] gap-6 mb-4 ">
-                {/* Pumping Speed */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pumping Speed (m³/hr)
-                  </label>
-                  <Input
-                    type="number"
-                    name="speed"
-                    value={parseFloat(formData.speed)}
-                    onChange={setPumpingSpeedAndUnloadingTime}
-                    placeholder="Enter speed"
-                  />
-                </div>
-                <div className="col-span-1 flex items-center justify-center text-sm text-gray-600 pt-6">or</div>
-                {/* Unloading Time */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Unloading Time (min)
-                  </label>
-                  <div className="flex flex-row gap-2 w-full">
-                    <div className="w-3/4">
-                      <Input
-                        type="number"
-                        name="unloadingTime"
-                        value={parseFloat(formData.unloadingTime)}
-                        onChange={setPumpingSpeedAndUnloadingTime}
-                        placeholder={
-                          avgTMCap !== null ? "Auto-calculated from pumping speed" : "Enter pumping speed to calculate"
-                        }
-                      />
-                    </div>
-                    <div className="w-1/4 flex items-center">
-                      {avgTMCap !== null && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Auto-calculated based on avg. TM cpty: {avgTMCap?.toFixed(0)} m³
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-[auto_auto_auto] gap-6">
-                {/* Grade of Concrete */}
+              {/* New grid row */}
+              <div className="grid grid-cols-4 gap-6 mt-6">
+                {/* Mother Plant */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">RMC Grade</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Mother Plant
+                  </label>
                   <Input
-                    type="number"
-                    name="concreteGrade"
-                    value={parseFloat(formData.concreteGrade)}
+                    type="text"
+                    name="motherPlant"
+                    value={projects.find((p) => p._id === selectedProject)?.name || ""}
+                    disabled
+                    placeholder="Auto filled from project"
+                  />
+                </div>
+
+                {/* SCH No + Prepared By */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">SCH No</label>
+                  <Input
+                    type="text"
+                    name="schNo"
+                    value={formData.pumpingJob || ""}
                     onChange={handleInputChange}
-                    placeholder="Enter RMC grade"
+                    placeholder="Plant Name - CP 1"
                   />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Prepared by TM Grid</p>
                 </div>
-                {/* Placement Zone */}
+
+                {/* Current Date */}
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Current Date
+                  </label>
+                  <Input type="text" name="currentDate" value={new Date().toLocaleDateString()} disabled />
+                </div>
+
+                {/* Current Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Current Time
+                  </label>
+                  <Input type="text" name="currentTime" value={new Date().toLocaleTimeString()} disabled />
+                </div>
+              </div>
+              <div className="grid grid-cols-8 gap-6 mt-6">
+                {/* Placement Zone */}
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Placement Zone
                   </label>
@@ -1054,7 +943,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       aria-haspopup="listbox"
                       aria-expanded={isPumpingJobDropdownOpen}
                     >
-                      {formData.pumpingJob || "Select Pumping Job"}
+                      {formData.pumpingJob || "Select Zone"}
                     </button>
                     <Dropdown
                       isOpen={isPumpingJobDropdownOpen}
@@ -1089,8 +978,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </Dropdown>
                   </div>
                 </div>
+
                 {/* Floor Height (Pumping) */}
-                <div>
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Floor (Pumping)
                   </label>
@@ -1110,34 +1000,249 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     max="99"
                   />
                 </div>
+
+                {/* Pump Type Selection */}
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Pump Type</label>
+                  <div className="flex flex-wrap items-center gap-8">
+                    <Radio
+                      id="line-pump"
+                      name="pump-type"
+                      value="line"
+                      checked={pumpType === "line"}
+                      onChange={(value) => {
+                        setPumpType(value as "line" | "boom");
+                        setSelectedPump("");
+                        setHasChanged(true);
+                      }}
+                      label="Line Pump"
+                    />
+                    <Radio
+                      id="boom-pump"
+                      name="pump-type"
+                      value="boom"
+                      checked={pumpType === "boom"}
+                      onChange={(value) => {
+                        setPumpType(value as "line" | "boom");
+                        setSelectedPump("");
+                        setHasChanged(true);
+                      }}
+                      label="Boom Pump"
+                    />
+                  </div>
+                </div>
+
+                {/* Schedule Date of Pumping */}
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Schedule Date of Pumping
+                  </label>
+                  <DatePickerInput
+                    value={formData.scheduleDate}
+                    onChange={(date) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        scheduleDate: date,
+                      }));
+                      setHasChanged(true);
+                    }}
+                    placeholder="Select a date"
+                  />
+                </div>
+                {/* Pump Start Time */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pump Start Time
+                  </label>
+                  <div className="relative">
+                    <TimeInput
+                      type="time"
+                      name="startTime"
+                      format={profile?.preferred_format === "12h" ? "h:mm a" : "HH:MM"}
+                      isOpen
+                      value={formData.startTime}
+                      onChange={(val) => handleTimeChange("startTime", val)}
+                    />
+                    <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
+                      <Clock className="size-5" />
+                    </span>
+                  </div>
+                </div>
+
+                {/* Pump End Time (Auto Calculated) */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pump End Time
+                  </label>
+                  <div className="relative">
+                    <Input
+                      type="time"
+                      name="endTime"
+                      value={formData.startTime}
+                      disabled
+                      className="cursor-not-allowed bg-gray-100 dark:bg-gray-800"
+                    />
+                    <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
+                      <Clock className="size-5" />
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pump Details Section */}
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 pb-3 bg-white dark:bg-gray-900/30">
+              <div className="flex justify-between items-center mb-4 w-full">
+                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4 flex justify-between items-center">
+                  Pump Details
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-10 gap-6 mb-6 ">
+                {/* Pump Onward Time */}
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pump Onward Time (min)
+                  </label>
+                  <Input
+                    type="number"
+                    name="pumpOnwardTime"
+                    value={formData.pumpOnwardTime || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numValue = parseFloat(value);
+                      if (value === "" || (numValue >= 1 && numValue <= 600 && Number.isInteger(numValue))) {
+                        handleInputChange(e);
+                      }
+                    }}
+                    placeholder="Enter pump onward time from plant (1-600)"
+                    min="1"
+                    max="600"
+                  />
+                </div>
+
+                {/* Pipeline Fixing Time */}
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pipeline Fixing Time (min)
+                  </label>
+                  <Input
+                    type="number"
+                    name="pumpFixingTime"
+                    value={formData.pumpFixingTime || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numValue = parseFloat(value);
+                      if (value === "" || (numValue >= 1 && numValue <= 600 && Number.isInteger(numValue))) {
+                        handleInputChange(e);
+                      }
+                    }}
+                    placeholder="Enter pump fixing time (1-600)"
+                    min="1"
+                    max="600"
+                  />
+                </div>
+
+                {/* Pipeline Removal Time */}
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pipeline Removal Time (min)
+                  </label>
+                  <Input
+                    type="number"
+                    name="pumpRemovalTime"
+                    value={formData.pumpRemovalTime || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numValue = parseFloat(value);
+                      if (value === "" || (numValue >= 1 && numValue <= 600 && Number.isInteger(numValue))) {
+                        handleInputChange(e);
+                      }
+                    }}
+                    placeholder="Enter pump removal time (1-600)"
+                    min="1"
+                  />
+                </div>
+
+                {/* Pumping Speed + OR + Unloading Time */}
+                <div className="col-span-4">
+                  <div className="flex items-start gap-4">
+                    {/* Pumping Speed */}
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Pumping Speed (m³/hr)
+                      </label>
+                      <Input
+                        type="number"
+                        name="speed"
+                        value={parseFloat(formData.speed)}
+                        onChange={setPumpingSpeedAndUnloadingTime}
+                        placeholder="Enter speed"
+                      />
+                    </div>
+
+                    {/* OR separator */}
+                    <div className="flex items-center text-sm text-gray-600 pt-10">or</div>
+
+                    {/* Unloading Time */}
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Unloading Time (min)
+                      </label>
+                      <div className="flex flex-col gap-1">
+                        <Input
+                          type="number"
+                          name="unloadingTime"
+                          value={parseFloat(formData.unloadingTime)}
+                          onChange={setPumpingSpeedAndUnloadingTime}
+                          placeholder={
+                            avgTMCap !== null
+                              ? "Auto-calculated from pumping speed"
+                              : "Enter pumping speed to calculate"
+                          }
+                        />
+                        {avgTMCap !== null && (
+                          <p className="text-xs text-gray-500">
+                            Auto-calculated based on avg. TM cpty: {avgTMCap?.toFixed(0)} m³
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Transit Mixer Details Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
               <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Transit Mixer Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
-                {/* Column 1: Input Labels */}
+
+              <div className="grid grid-cols-1 md:grid-cols-13 gap-6 items-start">
+                {/* Column 1: Labels with custom legend colors */}
                 <div className="space-y-4 col-span-2">
                   <div className="h-11 flex items-center">
+                    <span className="w-3 h-3 rounded-sm mr-2" style={{ backgroundColor: "#3b82f6" }}></span>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Loading and Buffer Time (min)
                     </label>
                   </div>
                   <div className="h-11 flex items-center">
+                    <span className="w-3 h-3 rounded-sm mr-2" style={{ backgroundColor: "#f59e0b" }}></span>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Onward Time (min)
                     </label>
                   </div>
                   <div className="h-11 flex flex-col items-left">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      TM Unloading Time (min)
-                    </label>
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      This value is auto-filled from the previous section based on Pumping Speed.
-                    </p>
+                    <div className="flex items-center">
+                      <span className="w-3 h-3 rounded-sm mr-2" style={{ backgroundColor: "#10b981" }}></span>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        TM Unloading Time (min)
+                      </label>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Auto-filled from Pumping Speed.</p>
                   </div>
                   <div className="h-11 flex items-center">
+                    <span className="w-3 h-3 rounded-sm mr-2" style={{ backgroundColor: "#ef4444" }}></span>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Return Time (min)
                     </label>
@@ -1150,7 +1255,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 </div>
 
                 {/* Column 2: Input Fields */}
-                <div className="space-y-4 ">
+                <div className="space-y-4  col-span-3">
                   <div className="h-11">
                     <Input
                       type="number"
@@ -1204,13 +1309,51 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     />
                   </div>
                 </div>
-                {/* Column 3: Formulas and Values */}
-                <div className="hidden md:block md:col-span-2 md:border-l">
+
+                {/* Column 4: Pie Chart */}
+                <div className="col-span-2">
+                  {(() => {
+                    const prod = parseFloat(formData.productionTime) || 0;
+                    const onward = parseFloat(formData.onwardTime) || 0;
+                    const unload = parseFloat(formData.unloadingTime) || 0;
+                    const ret = parseFloat(formData.returnTime) || 0;
+
+                    const options = {
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          display: false, // hide built-in legend
+                        },
+                      },
+                    };
+
+                    const data = {
+                      labels: ["Loading & Buffer", "Onward", "Unloading", "Return"],
+                      datasets: [
+                        {
+                          data: [prod, onward, unload, ret],
+                          backgroundColor: ["#3b82f6", "#f59e0b", "#10b981", "#ef4444"],
+                        },
+                      ],
+                    };
+
+                    return (
+                      <div className="w-full h-64">
+                        <Pie data={data} options={options} />
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Column 3: Calculated Values */}
+                <div className="col-span-6 flex flex-row gap-6">
                   {(() => {
                     const quantity = parseFloat(formData.quantity) || 0;
                     const speed = parseFloat(formData.speed) || 0;
                     const avgTMCap =
                       typeof avgTMCapData?.average_capacity === "number" ? avgTMCapData.average_capacity : 0;
+
                     const cycleTimeMin = [
                       formData.productionTime,
                       formData.onwardTime,
@@ -1219,72 +1362,153 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     ]
                       .map((v) => parseFloat(v) || 0)
                       .reduce((a, b) => a + b, 0);
+
                     const cycleTimeHr = cycleTimeMin / 60;
                     const totalPumpingHours = speed > 0 ? quantity / speed : 0;
                     const tripsPerTM = cycleTimeHr > 0 ? totalPumpingHours / cycleTimeHr : 0;
                     const m3PerTM = tripsPerTM * avgTMCap;
                     const tmReq = m3PerTM > 0 ? Math.ceil(quantity / m3PerTM) : 0;
                     const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
+
                     return (
-                      <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
-                        <tbody>
-                          <tr className="border-b border-gray-100 dark:border-gray-700">
-                            <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                              Total pumping hours
-                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                                Pumping quantity / Pumping speed
+                      <>
+                        {/* Calculation Table */}
+                        <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
+                          <tbody>
+                            <tr className="border-b border-gray-100 dark:border-gray-700">
+                              <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
+                                Total pumping hours
+                                <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                                  Pumping quantity / Pumping speed
+                                </div>
+                              </td>
+                              <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
+                                {totalPumpingHours > 0 ? totalPumpingHours.toFixed(2) : "-"}
+                              </td>
+                            </tr>
+                            <tr className="border-b border-gray-100 dark:border-gray-700">
+                              <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
+                                Trips per TM
+                                <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                                  Total pumping hours / Cycle time
+                                </div>
+                              </td>
+                              <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
+                                {tripsPerTM > 0 ? tripsPerTM.toFixed(2) : "-"}
+                              </td>
+                            </tr>
+                            <tr className="border-b border-gray-100 dark:border-gray-700">
+                              <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
+                                Quantity transported per TM
+                                <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                                  Trips per TM × TM avg capacity
+                                </div>
+                              </td>
+                              <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
+                                {m3PerTM > 0 ? m3PerTM.toFixed(2) : "-"}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
+                                Optimum TM Required
+                                <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                                  roundUp(Pumping quantity / m³ transported per TM)
+                                </div>
+                              </td>
+                              <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
+                                {tmReq > 0 ? tmReq : "-"}
+                              </td>
+                            </tr>
+                            <tr className="border-b border-gray-100 dark:border-gray-700">
+                              <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
+                                Total trips (approx.)
+                                <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                                  roundUp(Trips per TM × TM required)
+                                </div>
+                              </td>
+                              <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
+                                {totalTrips > 0 ? totalTrips : "-"}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        {/* TM Control Card */}
+                        <div className="col-span-2">
+                          <div className="h-full p-6 rounded-lg bg-blue-300 dark:bg-blue-900/40 flex flex-col justify-between">
+                            {/* Heading + explanation */}
+                            <div>
+                              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                                Optimum Required TMs
+                              </h2>
+                              <p className="text-sm text-gray-700 dark:text-gray-300 mb-4 leading-relaxed">
+                                The Optimum TM Required Count is calculated as{" "}
+                                {tmReq > 0 ? tmReq : "(fill in to calculate)"}. This value can be overridden using the
+                                inputs below.
+                              </p>
+                            </div>
+
+                            {/* Plus/Minus Controls */}
+                            {tmReq > 0 && (
+                              <div className="flex flex-col items-center mt-2">
+                                <div className="flex items-center justify-center space-x-4">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOverruleTMCount(true);
+
+                                      setCustomTMCount((prev) => {
+                                        const base = prev || tmReq || 1;
+                                        return Math.max(1, base - 1);
+                                      });
+
+                                      setHasChanged(true);
+                                    }}
+                                    className="px-4 py-2 bg-white dark:bg-gray-700 rounded text-lg font-bold"
+                                  >
+                                    -
+                                  </button>
+
+                                  <span className="text-4xl font-bold text-gray-900 dark:text-white min-w-[3rem] text-center">
+                                    {overruleTMCount ? customTMCount ?? tmReq ?? "-" : tmReq || "-"}
+                                  </span>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOverruleTMCount(true);
+
+                                      setCustomTMCount((prev) => {
+                                        const base = prev || tmReq || 1;
+                                        return base + 1;
+                                      });
+
+                                      setHasChanged(true);
+                                    }}
+                                    className="px-4 py-2 bg-white dark:bg-gray-700 rounded text-lg font-bold"
+                                  >
+                                    +
+                                  </button>
+                                </div>
                               </div>
-                            </td>
-                            <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                              {totalPumpingHours > 0 ? totalPumpingHours.toFixed(2) : "-"}
-                            </td>
-                          </tr>
-                          <tr className="border-b border-gray-100 dark:border-gray-700">
-                            <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                              Trips per TM
-                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                                Total pumping hours / Cycle time
+                            )}
+
+                            {/* Extra Trucks Section */}
+                            {overruleTMCount && customTMCount > tmReq && (
+                              <div className="mt-3">
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
+                                  Queue Accumulated:
+                                </p>
+                                <div className="flex flex-wrap gap-3">
+                                  {Array.from({ length: customTMCount - tmReq }).map((_, idx) => (
+                                    <Truck key={idx} className="w-8 h-8 dark:text-white text-black" strokeWidth={2.5} />
+                                  ))}
+                                </div>
                               </div>
-                            </td>
-                            <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                              {tripsPerTM > 0 ? tripsPerTM.toFixed(2) : "-"}
-                            </td>
-                          </tr>
-                          <tr className="border-b border-gray-100 dark:border-gray-700">
-                            <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                              Quantity transported per TM
-                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                                Trips per TM × TM avg capacity
-                              </div>
-                            </td>
-                            <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                              {m3PerTM > 0 ? m3PerTM.toFixed(2) : "-"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                              Optimum TM Required
-                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                                roundUp(Pumping quantity / m³ transported per TM)
-                              </div>
-                            </td>
-                            <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                              {tmReq > 0 ? tmReq : "-"}
-                            </td>
-                          </tr>
-                          <tr className="border-b border-gray-100 dark:border-gray-700">
-                            <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                              Total trips (approx.)
-                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                                roundUp(Trips per TM × TM required)
-                              </div>
-                            </td>
-                            <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                              {totalTrips > 0 ? totalTrips : "-"}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                            )}
+                          </div>
+                        </div>
+                      </>
                     );
                   })()}
                 </div>
@@ -1512,36 +1736,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </div>
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Opt Required TMs</p>
-                      <p
-                        className={`text-lg font-medium text-gray-900 dark:text-white ${
-                          overruleTMCount ? "line-through text-red-500 dark:text-red-500" : ""
-                        }`}
-                      >
-                        {calculatedTMs.tm_count || "N/A"}
+                      <p className="text-lg font-medium text-gray-900 dark:text-white">
+                        {overruleTMCount ? `${customTMCount} (overruled)` : calculatedTMs.tm_count || "N/A"}
                       </p>
-                    </div>
-                    <div>
-                      <input
-                        type="checkbox"
-                        id="overrule-tm-count"
-                        checked={overruleTMCount}
-                        onChange={() => {
-                          setOverruleTMCount((prev) => {
-                            const newVal = !prev;
-                            if (newVal && calculatedTMs?.tm_count) {
-                              setCustomTMCount(calculatedTMs.tm_count);
-                            }
-                            return newVal;
-                          });
-                        }}
-                        className="h-3 w-3 text-brand-500 rounded border-gray-300 focus:ring-brand-500 mr-2"
-                      />
-                      <label
-                        htmlFor="overrule-tm-count"
-                        className="text-sm text-gray-700 dark:text-gray-300 select-none"
-                      >
-                        Overrule by User
-                      </label>
                     </div>
 
                     <div>
