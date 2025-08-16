@@ -208,7 +208,7 @@ export default function CalendarContainer() {
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedItem, setSelectedItem] = useState<"all" | "mixer" | "pump">("all");
-  const [selectedPlant, setSelectedPlant] = useState("all");
+  const [selectedPlants, setSelectedPlants] = useState<string[]>([]);
   const [selectedClient, setSelectedClient] = useState("all");
   const [selectedPumps, setSelectedPumps] = useState<string[]>([]);
   const [selectedTMs, setSelectedTMs] = useState<string[]>([]);
@@ -342,12 +342,12 @@ export default function CalendarContainer() {
   // Filter data based on search term and selected filters
   const filteredData = ganttData.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPlant = selectedPlant === "all" || item.plant === selectedPlant;
     // const matchesMixer = selectedMixer === "all" || item.name === selectedMixer;
     const matchesClient = selectedClient === "all" || item.client === selectedClient;
     const matchesItem = selectedItem === "all" || item.item === selectedItem;
 
     // Multi-select filters for pumps and TMs
+    const matchesPlant = selectedPlants.length === 0 || selectedPlants.includes(item.plant);
     const matchesPumps = selectedPumps.length === 0 || (item.item === "pump" && selectedPumps.includes(item.name));
     const matchesTMs = selectedTMs.length === 0 || (item.item === "mixer" && selectedTMs.includes(item.name));
 
@@ -629,7 +629,7 @@ export default function CalendarContainer() {
                       onClick={() => setIsPlantFilterOpen(!isPlantFilterOpen)}
                       className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     >
-                      {selectedPlant === "all" ? "All Plants" : selectedPlant}
+                      {selectedPlants.length === 0 ? "All Plants" : `${selectedPlants.length} selected`}
                     </button>
                     {isPlantFilterOpen && (
                       <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
@@ -637,23 +637,31 @@ export default function CalendarContainer() {
                           <button
                             className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                             onClick={() => {
-                              setSelectedPlant("all");
+                              setSelectedPlants([]);
                               setIsPlantFilterOpen(false);
                             }}
                           >
                             All Plants
                           </button>
                           {plants.map((plant) => (
-                            <button
+                            <label
                               key={plant}
-                              className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                              onClick={() => {
-                                setSelectedPlant(plant);
-                                setIsPlantFilterOpen(false);
-                              }}
+                              className="flex items-center px-4 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
                             >
+                              <input
+                                type="checkbox"
+                                checked={selectedPlants.includes(plant)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedPlants([...selectedPlants, plant]);
+                                  } else {
+                                    setSelectedPlants(selectedPlants.filter((p) => p !== plant));
+                                  }
+                                }}
+                                className="mr-2"
+                              />
                               {plant}
-                            </button>
+                            </label>
                           ))}
                         </div>
                       </div>
