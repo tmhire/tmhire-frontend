@@ -212,10 +212,8 @@ export default function CalendarContainer() {
   const [selectedClient, setSelectedClient] = useState("all");
   const [selectedPumps, setSelectedPumps] = useState<string[]>([]);
   const [selectedTMs, setSelectedTMs] = useState<string[]>([]);
-  const [timeFormat, setTimeFormat] = useState<"12h" | "24h">(session?.preferred_format || "24h");
-  const [customStartHour, setCustomStartHour] = useState(
-    session?.custom_start_hour !== undefined && session?.custom_start_hour !== null ? session.custom_start_hour : 0
-  );
+  const [timeFormat, setTimeFormat] = useState<"12h" | "24h" | undefined>(session?.preferred_format);
+  const [customStartHour, setCustomStartHour] = useState<number | undefined>(session?.custom_start_hour);
   const [ganttData, setGanttData] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -233,8 +231,8 @@ export default function CalendarContainer() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      setTimeFormat(session.preferred_format || timeFormat);
-      setCustomStartHour(session.custom_start_hour || customStartHour);
+      !timeFormat && setTimeFormat(session.preferred_format);
+      !customStartHour && setCustomStartHour(session.custom_start_hour);
     }
   }, [session, status]);
 
@@ -311,7 +309,7 @@ export default function CalendarContainer() {
     try {
       setLoading(true);
       setError(null);
-      const time = `${String(customStartHour).padStart(2, "0")}:00:00`;
+      const time = `${String(customStartHour || 0).padStart(2, "0")}:00:00`;
 
       const response = await fetchWithAuth("/calendar/gantt", {
         method: "POST",
@@ -439,7 +437,7 @@ export default function CalendarContainer() {
   // Helper to generate time slots based on custom start hour
   const getTimeSlots = () => {
     // Generate 24 slots starting from customStartHour
-    return Array.from({ length: 24 }, (_, i) => (customStartHour + i) % 24);
+    return Array.from({ length: 24 }, (_, i) => ((customStartHour || 0) + i) % 24);
   };
 
   if (loading) {
@@ -936,10 +934,10 @@ export default function CalendarContainer() {
                       // Helper to check if a time is within the window, considering wrap-around
                       const isInWindow = (start: number, end: number) => {
                         if (windowStart < windowEnd) {
-                          return end > windowStart && start < windowEnd + 1;
+                          return end > windowStart && start < windowEnd;
                         } else {
                           // Wraps around midnight
-                          return end > windowStart || start < windowEnd + 1;
+                          return end > windowStart || start < windowEnd;
                         }
                       };
                       // Helper to get offset and width in the current window
