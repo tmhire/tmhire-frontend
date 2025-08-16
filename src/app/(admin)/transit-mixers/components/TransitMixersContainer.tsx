@@ -501,12 +501,21 @@ export default function TransitMixersContainer() {
       </div>
 
       {/* Create Modal */}
-      <Modal
-        isOpen={isCreateModalOpen}
-        onClose={handleCloseCreateModal}
-        className="max-w-[800px] p-5 lg:p-10"
-      >
-        <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Transit Mixer</h4>
+      <Modal isOpen={isCreateModalOpen} onClose={handleCloseCreateModal} className="max-w-[800px] p-5 lg:p-10">
+        <div className="flex justify-between pr-10 items-center w-full h-fit">
+          <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Transit Mixer</h4>
+
+          <div className="flex h-6 w-fit rounded border border-black bg-yellow-500 shadow items-center gap-1">
+            <label className="flex flex-col justify-between bg-blue-700 rounded-l px-1 py-1 text-[7px] text-white h-full">
+              <img className="h-2 w-auto" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" />
+              IND
+            </label>
+            <label className="px-2 font-mono text-sm font-medium whitespace-nowrap">
+              {newMixer.identifier ? newMixer.identifier : "XX 00 AA 0000"}
+            </label>
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
