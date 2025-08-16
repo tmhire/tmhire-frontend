@@ -105,8 +105,8 @@ const formatDateTimeForTooltip = (dateTimeString: string): string => {
 // Task type color map
 const TASK_TYPE_COLORS: Record<string, string> = {
   fixing: "bg-blue-400",
+  load: "bg-blue-400",
   onward: "bg-blue-500",
-  buffer: "bg-blue-400",
   work: "bg-blue-600",
   cushion: "bg-blue-300",
   return: "bg-blue-500",

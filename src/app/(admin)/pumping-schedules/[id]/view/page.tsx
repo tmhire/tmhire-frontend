@@ -48,9 +48,9 @@ interface Schedule {
     trip_no: number;
     tm_no: string;
     tm_id: string;
+    plant_load: string;
     plant_start: string;
     pump_start: string;
-    unloading_buffer: string;
     unloading_time: string;
     return: string;
     completed_capacity: number;
@@ -402,25 +402,19 @@ export default function ScheduleViewPage() {
                       isHeader
                       className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
-                      Plant Start Time
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
                       Plant Load Time
                     </TableCell>
                     <TableCell
                       isHeader
                       className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
-                      Pump Start Time
+                      Plant Start Time
                     </TableCell>
                     <TableCell
                       isHeader
                       className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
-                      Unloading Buffer
+                      Pump Start Time
                     </TableCell>
                     <TableCell
                       isHeader
@@ -474,25 +468,18 @@ export default function ScheduleViewPage() {
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-4 text-start">
+                        <span className="text-gray-800 dark:text-white/90">
+                          {trip.plant_load ? formatTimeByPreference(trip.plant_load, profile?.preferred_format) : "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
                           {formatTimeByPreference(trip.plant_start, profile?.preferred_format)}
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">
-                          {schedule.input_params.buffer_time} min
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
                           {trip.pump_start ? formatTimeByPreference(trip.pump_start, profile?.preferred_format) : "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
-                        <span className="text-gray-500 dark:text-gray-400">
-                          {trip.unloading_buffer
-                            ? formatTimeByPreference(trip.unloading_buffer, profile?.preferred_format)
-                            : "-"}
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-4 text-start">

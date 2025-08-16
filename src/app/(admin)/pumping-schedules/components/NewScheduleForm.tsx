@@ -82,9 +82,9 @@ interface ScheduleTrip {
   trip_no: number;
   tm_no: string;
   tm_id: string;
+  plant_load: string;
   plant_start: string;
   pump_start: string;
-  unloading_buffer: string;
   unloading_time: string;
   return: string;
   completed_capacity: number;
@@ -2073,6 +2073,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               isHeader
                               className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                             >
+                              Plant Load Time
+                            </TableCell>
+                            <TableCell
+                              isHeader
+                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                            >
                               Plant Start Time
                             </TableCell>
                             <TableCell
@@ -2080,12 +2086,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                             >
                               Pump Start Time
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Unloading Buffer
                             </TableCell>
                             <TableCell
                               isHeader
@@ -2140,6 +2140,16 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               </TableCell>
                               <TableCell className="px-3 py-4 text-start">
                                 <span className="text-gray-500 dark:text-gray-400">
+                                  {trip.plant_load
+                                    ? new Date(trip.plant_load).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
+                                    : "-"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="px-3 py-4 text-start">
+                                <span className="text-gray-500 dark:text-gray-400">
                                   {trip.plant_start
                                     ? new Date(trip.plant_start).toLocaleTimeString([], {
                                         hour: "2-digit",
@@ -2158,16 +2168,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                     : "-"}
                                 </span>
                               </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  {trip.unloading_buffer
-                                    ? new Date(trip.unloading_buffer).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
-                                    : "-"}
-                                </span>
-                              </TableCell>
+
                               <TableCell className="px-3 py-4 text-start">
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {trip.unloading_time
