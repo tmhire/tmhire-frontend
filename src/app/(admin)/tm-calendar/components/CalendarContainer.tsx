@@ -231,8 +231,12 @@ export default function CalendarContainer() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      !timeFormat && setTimeFormat(session.preferred_format);
-      !customStartHour && setCustomStartHour(session.custom_start_hour);
+      if (!timeFormat) {
+        setTimeFormat(session?.preferred_format);
+      }
+      if (!customStartHour) {
+        setCustomStartHour(session.custom_start_hour);
+      }
     }
   }, [session, status]);
 
@@ -471,11 +475,10 @@ export default function CalendarContainer() {
               {/* Filter Toggle */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                  showFilters
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
                     ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
                     : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
-                } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
+                  } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
               >
                 <Filter className="h-4 w-4" />
                 Filters
@@ -553,11 +556,10 @@ export default function CalendarContainer() {
                 {/* Filter Toggle */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                    showFilters
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
                       ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
                       : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
-                  } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
+                    } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
                 >
                   <Filter className="h-4 w-4" />
                   Filters
@@ -907,7 +909,7 @@ export default function CalendarContainer() {
                   {getTimeSlots().map((time) => (
                     <div
                       key={time}
-                      className="flex-1 px-2 py-3 text-center font-medium text-gray-500 text-[9px] dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] min-w-[40px]"
+                      className="flex-1 px-1 py-3 text-center font-medium text-gray-500 text-[9px] dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] min-w-[40px]"
                     >
                       {formatTime(time)}
                     </div>
@@ -1057,9 +1059,8 @@ export default function CalendarContainer() {
                       return (
                         <div
                           key={item.id}
-                          className={`flex hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors  ${
-                            (item.item === "pump" && item.type && typeRowColors[item.type]) || ""
-                          }`}
+                          className={`flex hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors  ${(item.item === "pump" && item.type && typeRowColors[item.type]) || ""
+                            }`}
                         >
                           {/* Serial Number */}
                           <div className="w-16 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
@@ -1067,7 +1068,8 @@ export default function CalendarContainer() {
                           </div>
                           {/* Mixer Name */}
                           <div className="w-32 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0">
-                            {item.name.length > 7 ? ".." + item.name.slice(-7) : item.name}
+                            {item.name.length > 13 ? ".." + item.name.slice(-13) : item.name}
+                            {/* {item.name} */}
                           </div>
                           {/* Time Slots */}
                           <div className="flex-1 flex relative">
@@ -1123,9 +1125,8 @@ export default function CalendarContainer() {
                                   )} to ${formatDateTimeForTooltip(task.actualEnd)}\nDuration: ${duration}m`}
                                 >
                                   <div
-                                    className={`absolute top-1 h-4 rounded-sm ${
-                                      TASK_TYPE_COLORS[task.type] || "bg-gray-500"
-                                    } opacity-100 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
+                                    className={`absolute top-1 h-4 rounded-sm ${TASK_TYPE_COLORS[task.type] || "bg-gray-500"
+                                      } opacity-100 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
                                     style={{
                                       left: `${(offset / timeSlotsLength) * 100}%`,
                                       width: `${(width / timeSlotsLength) * 100}%`,
