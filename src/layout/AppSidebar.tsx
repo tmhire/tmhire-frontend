@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import { BoxCubeIcon, ChevronDownIcon, PieChartIcon, PlugInIcon, TruckIcon } from "../icons/index";
-import { Box, Calendar, Grid, SquareChartGantt, TruckElectric, Users } from "lucide-react";
+import { Box, Calendar, Grid, SquareChartGantt, TruckElectric, Users, IdCardLanyard } from "lucide-react";
 
 type NavItem = {
   shortName?: string;
@@ -26,6 +26,12 @@ const navItems: NavItem[] = [
     name: "RMC Plants",
     shortName: "Plants",
     path: "/plants",
+  },
+  {
+    icon: <IdCardLanyard />,
+    name: "Team Members",
+    shortName: "Team",
+    path: "/team",
   },
   {
     icon: <Users />,
@@ -115,7 +121,9 @@ const AppSidebar: React.FC = () => {
   };
 
   const renderMenuItems = (navItems: NavItem[], menuType: "main" | "others") => (
-    <ul className={`flex flex-col  ${(isHovered || isExpanded || isMobileOpen) ?"":"items-center justify-center"} gap-4`}>
+    <ul
+      className={`flex flex-col  ${isHovered || isExpanded || isMobileOpen ? "" : "items-center justify-center"} gap-4`}
+    >
       {navItems.map((nav, index) => (
         <li key={nav.name}>
           {nav.subItems ? (
@@ -151,7 +159,11 @@ const AppSidebar: React.FC = () => {
                 href={nav.path}
                 className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"}`}
               >
-                <span className={`${isActive(nav.path) ? "menu-item-icon-active" : "menu-item-icon-inactive"} flex flex-col justify-center items-center gap-1`}>
+                <span
+                  className={`${
+                    isActive(nav.path) ? "menu-item-icon-active" : "menu-item-icon-inactive"
+                  } flex flex-col justify-center items-center gap-1`}
+                >
                   {nav.icon}
                   {!isExpanded && !isHovered && !isMobileOpen && nav.shortName && (
                     <span className="text-[10px] text-center leading-tight break-words max-w-[60px]">
@@ -300,7 +312,7 @@ const AppSidebar: React.FC = () => {
             onClick={handleToggle}
             aria-label="Toggle Sidebar"
           >
-            {(isMobileOpen || isExpanded) ? (
+            {isMobileOpen || isExpanded ? (
               // Show close (X) icon when expanded or on mobile
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
@@ -328,9 +340,7 @@ const AppSidebar: React.FC = () => {
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
           <div className="flex flex-col gap-4 pt-6">
-            <div>
-              {renderMenuItems(navItems, "main")}
-            </div>
+            <div>{renderMenuItems(navItems, "main")}</div>
           </div>
         </nav>
       </div>
