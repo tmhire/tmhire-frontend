@@ -1,10 +1,11 @@
 "use client";
 
 import PumpsTable from "./PumpsTable";
-import { PlusIcon, Search } from "lucide-react";
+import { PlusIcon, Search, ChevronDownIcon } from "lucide-react";
 import Button from "@/components/ui/button/Button";
 import { useState, useMemo } from "react";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
+import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
 import { useApiClient } from "@/hooks/useApiClient";
@@ -33,6 +34,8 @@ interface Pump {
   driver_contact: string | null;
   remarks: string | null; // <-- Added
   created_at: string;
+  pump_operator_id?: string | null;
+  pipeline_gang_id?: string | null;
 }
 
 interface CreatePumpData {
@@ -44,6 +47,8 @@ interface CreatePumpData {
   driver_name?: string;
   driver_contact?: string;
   remarks?: string | null; // <-- Added
+  pump_operator_id?: string;
+  pipeline_gang_id?: string;
 }
 
 export default function PumpsContainer() {
@@ -70,6 +75,8 @@ export default function PumpsContainer() {
     driver_name: "",
     driver_contact: "",
     remarks: "", // <-- Added
+    pump_operator_id: "",
+    pipeline_gang_id: "",
   });
   const [newPump, setNewPump] = useState<CreatePumpData>({
     identifier: "",
@@ -80,6 +87,8 @@ export default function PumpsContainer() {
     driver_name: "",
     driver_contact: "",
     remarks: "", // <-- Added
+    pump_operator_id: "",
+    pipeline_gang_id: "",
   });
   const [error, setError] = useState("");
   const [driverContactError, setDriverContactError] = useState("");
@@ -109,6 +118,12 @@ export default function PumpsContainer() {
 
   const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>("");
+
+  // Dropdown states for pump operator and pipeline gang
+  const [isCreateOperatorDropdownOpen, setIsCreateOperatorDropdownOpen] = useState(false);
+  const [isEditOperatorDropdownOpen, setIsEditOperatorDropdownOpen] = useState(false);
+  const [isCreateGangDropdownOpen, setIsCreateGangDropdownOpen] = useState(false);
+  const [isEditGangDropdownOpen, setIsEditGangDropdownOpen] = useState(false);
 
   // Fetch pumps query
   const {
@@ -152,6 +167,27 @@ export default function PumpsContainer() {
     return new Map(plantsData.map((plant) => [plant._id, plant.name]));
   }, [plantsData]);
 
+  // Fetch pump team members (operators and pipeline gangs)
+  const { data: pumpTeamMembers } = useQuery({
+    queryKey: ["pumpTeamMembers"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/team/group/pump");
+      if (!response) throw new Error("No response from server");
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message || "Failed to fetch pump team members");
+      return data.data as { _id: string; name: string; designation?: string }[];
+    },
+    enabled: status === "authenticated",
+  });
+
+  const pumpOperators = useMemo(() => {
+    return (pumpTeamMembers || []).filter((m) => m.designation === "pump-operator");
+  }, [pumpTeamMembers]);
+
+  const pipelineGangs = useMemo(() => {
+    return (pumpTeamMembers || []).filter((m) => m.designation === "pipeline-gang");
+  }, [pumpTeamMembers]);
+
   // Create pump mutation
   const createPumpMutation = useMutation({
     mutationFn: async (pumpData: CreatePumpData) => {
@@ -176,6 +212,8 @@ export default function PumpsContainer() {
         driver_name: "",
         driver_contact: "",
         remarks: "", // <-- Added
+        pump_operator_id: "",
+        pipeline_gang_id: "",
       });
       setDriverContactError("");
     },
@@ -253,6 +291,8 @@ export default function PumpsContainer() {
       driver_name: pump.driver_name || "",
       driver_contact: pump.driver_contact || "",
       remarks: pump.remarks || "", // <-- Added
+      pump_operator_id: pump.pump_operator_id || "",
+      pipeline_gang_id: pump.pipeline_gang_id || "",
     });
     setIsEditModalOpen(true);
   };
@@ -317,6 +357,27 @@ export default function PumpsContainer() {
         setDriverContactError("");
       }
     }
+  };
+
+  // Handlers for selecting operator and pipeline gang
+  const handleCreateOperatorSelect = (memberId: string) => {
+    setNewPump((prev) => ({ ...prev, pump_operator_id: memberId }));
+    setIsCreateOperatorDropdownOpen(false);
+  };
+
+  const handleEditOperatorSelect = (memberId: string) => {
+    setEditedPump((prev) => ({ ...prev, pump_operator_id: memberId }));
+    setIsEditOperatorDropdownOpen(false);
+  };
+
+  const handleCreateGangSelect = (memberId: string) => {
+    setNewPump((prev) => ({ ...prev, pipeline_gang_id: memberId }));
+    setIsCreateGangDropdownOpen(false);
+  };
+
+  const handleEditGangSelect = (memberId: string) => {
+    setEditedPump((prev) => ({ ...prev, pipeline_gang_id: memberId }));
+    setIsEditGangDropdownOpen(false);
   };
 
   // Get unique plants from pumps data
@@ -583,7 +644,13 @@ export default function PumpsContainer() {
                   </div>
                 </div>
               ) : (
-                <PumpsTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} plantMap={plantMap} />
+                <PumpsTable
+                  data={filteredData}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  plantMap={plantMap}
+                  teamMembers={pumpTeamMembers || []}
+                />
               )}
             </div>
           </div>
@@ -691,6 +758,80 @@ export default function PumpsContainer() {
             />
             {driverContactError && <p className="text-red-500 text-xs mt-1">{driverContactError}</p>}
           </div>
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pump Operator</label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsCreateOperatorDropdownOpen(!isCreateOperatorDropdownOpen)}
+                className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
+              >
+                <span
+                  className={
+                    newPump.pump_operator_id ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-white/30"
+                  }
+                >
+                  {newPump.pump_operator_id
+                    ? pumpOperators.find((m) => m._id === newPump.pump_operator_id)?.name || "Select pump operator"
+                    : "Select pump operator"}
+                </span>
+                <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+              </button>
+
+              <Dropdown
+                isOpen={isCreateOperatorDropdownOpen}
+                onClose={() => setIsCreateOperatorDropdownOpen(false)}
+                className="w-full min-w-[300px] max-h-60 overflow-y-auto"
+              >
+                {pumpOperators.map((member) => (
+                  <DropdownItem
+                    key={member._id}
+                    onClick={() => handleCreateOperatorSelect(member._id)}
+                    className="text-sm py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    {member.name}
+                  </DropdownItem>
+                ))}
+              </Dropdown>
+            </div>
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pipeline Gang</label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsCreateGangDropdownOpen(!isCreateGangDropdownOpen)}
+                className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
+              >
+                <span
+                  className={
+                    newPump.pipeline_gang_id ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-white/30"
+                  }
+                >
+                  {newPump.pipeline_gang_id
+                    ? pipelineGangs.find((m) => m._id === newPump.pipeline_gang_id)?.name || "Select pipeline gang"
+                    : "Select pipeline gang"}
+                </span>
+                <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+              </button>
+
+              <Dropdown
+                isOpen={isCreateGangDropdownOpen}
+                onClose={() => setIsCreateGangDropdownOpen(false)}
+                className="w-full min-w-[300px] max-h-60 overflow-y-auto"
+              >
+                {pipelineGangs.map((member) => (
+                  <DropdownItem
+                    key={member._id}
+                    onClick={() => handleCreateGangSelect(member._id)}
+                    className="text-sm py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    {member.name}
+                  </DropdownItem>
+                ))}
+              </Dropdown>
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
             <Input
@@ -787,6 +928,84 @@ export default function PumpsContainer() {
                 onChange={handleEditInputChange}
               />
               {editDriverContactError && <p className="text-red-500 text-xs mt-1">{editDriverContactError}</p>}
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pump Operator</label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsEditOperatorDropdownOpen(!isEditOperatorDropdownOpen)}
+                  className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
+                >
+                  <span
+                    className={
+                      editedPump.pump_operator_id
+                        ? "text-gray-800 dark:text-white/90"
+                        : "text-gray-400 dark:text-white/30"
+                    }
+                  >
+                    {editedPump.pump_operator_id
+                      ? pumpOperators.find((m) => m._id === editedPump.pump_operator_id)?.name || "Select pump operator"
+                      : "Select pump operator"}
+                  </span>
+                  <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+                </button>
+
+                <Dropdown
+                  isOpen={isEditOperatorDropdownOpen}
+                  onClose={() => setIsEditOperatorDropdownOpen(false)}
+                  className="w-full min-w-[300px] max-h-60 overflow-y-auto"
+                >
+                  {pumpOperators.map((member) => (
+                    <DropdownItem
+                      key={member._id}
+                      onClick={() => handleEditOperatorSelect(member._id)}
+                      className="text-sm py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      {member.name}
+                    </DropdownItem>
+                  ))}
+                </Dropdown>
+              </div>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pipeline Gang</label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsEditGangDropdownOpen(!isEditGangDropdownOpen)}
+                  className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
+                >
+                  <span
+                    className={
+                      editedPump.pipeline_gang_id
+                        ? "text-gray-800 dark:text-white/90"
+                        : "text-gray-400 dark:text-white/30"
+                    }
+                  >
+                    {editedPump.pipeline_gang_id
+                      ? pipelineGangs.find((m) => m._id === editedPump.pipeline_gang_id)?.name || "Select pipeline gang"
+                      : "Select pipeline gang"}
+                  </span>
+                  <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+                </button>
+
+                <Dropdown
+                  isOpen={isEditGangDropdownOpen}
+                  onClose={() => setIsEditGangDropdownOpen(false)}
+                  className="w-full min-w-[300px] max-h-60 overflow-y-auto"
+                >
+                  {pipelineGangs.map((member) => (
+                    <DropdownItem
+                      key={member._id}
+                      onClick={() => handleEditGangSelect(member._id)}
+                      className="text-sm py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      {member.name}
+                    </DropdownItem>
+                  ))}
+                </Dropdown>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>

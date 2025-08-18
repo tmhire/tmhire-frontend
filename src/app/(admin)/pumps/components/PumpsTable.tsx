@@ -15,6 +15,14 @@ interface Pump {
   driver_contact: string | null;
   created_at: string;
   remarks: string | null;
+  pump_operator_id?: string | null;
+  pipeline_gang_id?: string | null;
+}
+
+interface TeamMember {
+  _id: string;
+  name: string;
+  designation?: string;
 }
 
 interface PumpsTableProps {
@@ -22,9 +30,15 @@ interface PumpsTableProps {
   onEdit: (pump: Pump) => void;
   onDelete: (pump: Pump) => void;
   plantMap: Map<string, string>;
+  teamMembers: TeamMember[];
 }
 
-export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTableProps) {
+export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembers }: PumpsTableProps) {
+  const getMemberName = (id?: string | null) => {
+    if (!id) return "-";
+    const m = teamMembers.find((tm) => tm._id === id);
+    return m?.name || "-";
+  };
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto">
@@ -79,6 +93,18 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                   isHeader
                   className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
+                  Pump Operator
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Pipeline Gang
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
                   Status
                 </TableCell>
                 <TableCell
@@ -104,18 +130,20 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                     {index + 1}
                   </TableCell>
                   <TableCell className="px-3 py-2 text-start">
-                    <div className={`flex w-full rounded-lg border-2 border-black shadow items-center ${
-                      pump.type === "line" ? "bg-blue-500" : "bg-green-500"
-                    }`}>
-                      <label className={`flex flex-col justify-between gap-1 text-center rounded-l p-2 text-[6px] font-bold text-white ${
-                        pump.type === "line" ? "bg-blue-700" : "bg-green-700"
-                      }`}>
+                    <div
+                      className={`flex w-full rounded-lg border-2 border-black shadow items-center ${
+                        pump.type === "line" ? "bg-blue-500" : "bg-green-500"
+                      }`}
+                    >
+                      <label
+                        className={`flex flex-col justify-between gap-1 text-center rounded-l p-2 text-[6px] font-bold text-white ${
+                          pump.type === "line" ? "bg-blue-700" : "bg-green-700"
+                        }`}
+                      >
                         <img className="h-3" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" />
                         {pump.type === "line" ? "LINE" : "BOOM"}
                       </label>
-                      <label className="p-1 px-2 font-mono text-sm font-medium items-center">
-                        {pump.identifier}
-                      </label>
+                      <label className="p-1 px-2 font-mono text-sm font-medium items-center">{pump.identifier}</label>
                     </div>
                   </TableCell>
                   <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
@@ -143,6 +171,12 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap }: PumpsTa
                       <span className="font-medium">{pump.driver_name || "-"}</span>
                       <span className="text-xs text-gray-400">{pump.driver_contact || "-"}</span>
                     </div>
+                  </TableCell>
+                  <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {getMemberName(pump.pump_operator_id)}
+                  </TableCell>
+                  <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {getMemberName(pump.pipeline_gang_id)}
                   </TableCell>
                   <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {pump.status}
