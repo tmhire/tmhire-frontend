@@ -10,6 +10,7 @@ interface Project {
   address: string;
   client_id: string;
   mother_plant_id: string;
+  sales_engineer_id: string;
   contact_name: string;
   contact_number: string;
   coordinates: string;
@@ -42,15 +43,21 @@ interface Plant {
   created_at: string;
 }
 
+interface TeamMember {
+  _id: string;
+  name: string;
+}
+
 interface ProjectsTableProps {
   data: Project[];
   onEdit: (project: Project) => void;
   onDelete: (project: Project) => void;
   clients: Client[];
   plants: Plant[];
+  teamMembers: TeamMember[];
 }
 
-export default function ProjectsTable({ data, onEdit, onDelete, clients, plants }: ProjectsTableProps) {
+export default function ProjectsTable({ data, onEdit, onDelete, clients, plants, teamMembers }: ProjectsTableProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const getClientName = (clientId: string) => {
@@ -61,6 +68,11 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients, plants 
   const getPlantName = (plantId: string) => {
     const plant = plants.find((p) => p._id === plantId);
     return plant ? plant.name : "Unknown Plant";
+  };
+
+  const getEngineerName = (engineerId: string) => {
+    const eng = teamMembers.find((e) => e._id === engineerId);
+    return eng ? eng.name : "Unknown";
   };
 
   const handleCopyCoordinates = async (coordinates: string, projectId: string) => {
@@ -124,6 +136,12 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients, plants 
                 </TableCell>
                 <TableCell
                   isHeader
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-24"
+                >
+                  Sales Engineer
+                </TableCell>
+                <TableCell
+                  isHeader
                   className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-20"
                 >
                   Coordinates
@@ -173,6 +191,11 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients, plants 
                       <span className="font-medium truncate"> {project.contact_name}</span>
                       <span className="text-xs text-gray-400 truncate">{project.contact_number}</span>
                     </div>
+                  </TableCell>
+                  <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-24">
+                    <span className="truncate block">
+                      {project.sales_engineer_id ? getEngineerName(project.sales_engineer_id) : "-"}
+                    </span>
                   </TableCell>
                   <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-20">
                     {project.coordinates ? (

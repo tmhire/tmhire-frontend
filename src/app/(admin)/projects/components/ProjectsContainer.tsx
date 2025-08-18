@@ -21,6 +21,7 @@ interface Project {
   address: string;
   client_id: string;
   mother_plant_id: string;
+  sales_engineer_id: string;
   contact_name: string;
   contact_number: string;
   coordinates: string;
@@ -58,6 +59,7 @@ interface CreateProjectData {
   address: string;
   client_id: string;
   mother_plant_id: string;
+  sales_engineer_id: string;
   contact_name: string;
   contact_number: string;
   coordinates: string;
@@ -82,6 +84,7 @@ export default function ProjectsContainer() {
     address: "",
     client_id: "",
     mother_plant_id: "",
+    sales_engineer_id: "",
     contact_name: "",
     contact_number: "",
     coordinates: "",
@@ -92,6 +95,7 @@ export default function ProjectsContainer() {
     address: "",
     client_id: "",
     mother_plant_id: "",
+    sales_engineer_id: "",
     contact_name: "",
     contact_number: "",
     coordinates: "",
@@ -114,6 +118,10 @@ export default function ProjectsContainer() {
   // Dropdown states for plant selection
   const [isCreatePlantDropdownOpen, setIsCreatePlantDropdownOpen] = useState(false);
   const [isEditPlantDropdownOpen, setIsEditPlantDropdownOpen] = useState(false);
+
+  // Dropdown states for sales engineer selection
+  const [isCreateEngineerDropdownOpen, setIsCreateEngineerDropdownOpen] = useState(false);
+  const [isEditEngineerDropdownOpen, setIsEditEngineerDropdownOpen] = useState(false);
 
   const { data: projectsData, isLoading: isLoadingProjects } = useQuery({
     queryKey: ["projects"],
@@ -151,6 +159,19 @@ export default function ProjectsContainer() {
     enabled: status === "authenticated",
   });
 
+  // Sales engineers (team members under client group)
+  const { data: salesEngineersData } = useQuery({
+    queryKey: ["salesEngineers"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/team/group/client");
+      if (!response) throw new Error("No response from server");
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message || "Failed to fetch sales engineers");
+      return data.data;
+    },
+    enabled: status === "authenticated",
+  });
+
   // Create project mutation
   const createProjectMutation = useMutation({
     mutationFn: async (projectData: CreateProjectData) => {
@@ -171,6 +192,7 @@ export default function ProjectsContainer() {
         address: "",
         client_id: "",
         mother_plant_id: "",
+        sales_engineer_id: "",
         contact_name: "",
         contact_number: "",
         coordinates: "",
@@ -247,6 +269,7 @@ export default function ProjectsContainer() {
       address: project.address,
       client_id: project.client_id,
       mother_plant_id: project.mother_plant_id,
+      sales_engineer_id: project.sales_engineer_id,
       contact_name: project.contact_name,
       contact_number: project.contact_number,
       coordinates: project.coordinates,
@@ -347,6 +370,23 @@ export default function ProjectsContainer() {
       mother_plant_id: plantId,
     }));
     setIsEditPlantDropdownOpen(false);
+  };
+
+  // Sales engineer dropdown handlers
+  const handleCreateEngineerSelect = (engineerId: string) => {
+    setNewProject((prev) => ({
+      ...prev,
+      sales_engineer_id: engineerId,
+    }));
+    setIsCreateEngineerDropdownOpen(false);
+  };
+
+  const handleEditEngineerSelect = (engineerId: string) => {
+    setEditedProject((prev) => ({
+      ...prev,
+      sales_engineer_id: engineerId,
+    }));
+    setIsEditEngineerDropdownOpen(false);
   };
 
   // Date range options
@@ -513,6 +553,7 @@ export default function ProjectsContainer() {
                   onDelete={handleDelete}
                   clients={clientsData || []}
                   plants={plantsData || []}
+                  teamMembers={salesEngineersData || []}
                 />
               )}
             </div>
@@ -636,6 +677,47 @@ export default function ProjectsContainer() {
                     className="text-sm py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
                   >
                     {plant.name}
+                  </DropdownItem>
+                ))}
+              </Dropdown>
+            </div>
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Sales Engineer</label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsCreateEngineerDropdownOpen(!isCreateEngineerDropdownOpen)}
+                className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
+              >
+                <span
+                  className={
+                    newProject.sales_engineer_id
+                      ? "text-gray-800 dark:text-white/90"
+                      : "text-gray-400 dark:text-white/30"
+                  }
+                >
+                  {newProject.sales_engineer_id
+                    ? salesEngineersData?.find(
+                        (eng: { _id: string; name: string }) => eng._id === newProject.sales_engineer_id
+                      )?.name || "Select a sales engineer"
+                    : "Select a sales engineer"}
+                </span>
+                <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+              </button>
+
+              <Dropdown
+                isOpen={isCreateEngineerDropdownOpen}
+                onClose={() => setIsCreateEngineerDropdownOpen(false)}
+                className="w-full min-w-[300px] max-h-60 overflow-y-auto"
+              >
+                {salesEngineersData?.map((eng: { _id: string; name: string }) => (
+                  <DropdownItem
+                    key={eng._id}
+                    onClick={() => handleCreateEngineerSelect(eng._id)}
+                    className="text-sm py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    {eng.name}
                   </DropdownItem>
                 ))}
               </Dropdown>
@@ -786,6 +868,49 @@ export default function ProjectsContainer() {
                       className="text-sm py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
                     >
                       {plant.name}
+                    </DropdownItem>
+                  ))}
+                </Dropdown>
+              </div>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Sales Engineer
+              </label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsEditEngineerDropdownOpen(!isEditEngineerDropdownOpen)}
+                  className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
+                >
+                  <span
+                    className={
+                      editedProject.sales_engineer_id
+                        ? "text-gray-800 dark:text-white/90"
+                        : "text-gray-400 dark:text-white/30"
+                    }
+                  >
+                    {editedProject.sales_engineer_id
+                      ? salesEngineersData?.find(
+                          (eng: { _id: string; name: string }) => eng._id === editedProject.sales_engineer_id
+                        )?.name || "Select a sales engineer"
+                      : "Select a sales engineer"}
+                  </span>
+                  <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+                </button>
+
+                <Dropdown
+                  isOpen={isEditEngineerDropdownOpen}
+                  onClose={() => setIsEditEngineerDropdownOpen(false)}
+                  className="w-full min-w-[300px] max-h-60 overflow-y-auto"
+                >
+                  {salesEngineersData?.map((eng: { _id: string; name: string }) => (
+                    <DropdownItem
+                      key={eng._id}
+                      onClick={() => handleEditEngineerSelect(eng._id)}
+                      className="text-sm py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      {eng.name}
                     </DropdownItem>
                   ))}
                 </Dropdown>
