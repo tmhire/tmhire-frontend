@@ -126,6 +126,7 @@ interface Project {
   address: string;
   contact_name: string;
   contact_number: string;
+  mother_plant_id: string;
   coordinates: string;
 }
 
@@ -785,7 +786,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           ? "Select a client first"
                           : projects.length === 0
                           ? "Please create a project for this client."
-                          : projects.find((p: Project) => p._id === selectedProject)?.name || "Select a project"}
+                          : (() => {
+                              const selectedProj = projects.find((p: Project) => p._id === selectedProject);
+                              if (!selectedProj) return "Select a project";
+                              const name = selectedProj.name;
+                              const truncated = name.length > 15 ? name.slice(0, 15) + "..." : name;
+                              return <span title={name}>{truncated}</span>;
+                            })()}
                       </button>
 
                       <Dropdown
@@ -835,17 +842,35 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   {selectedProject && projects.find((p) => p._id === selectedProject) && (
                     <div className="w-1/2 flex flex-col justify-end">
                       <p className="mt-2 text-sm text-gray-400 dark:text-gray-400">
-                        {projects.find((p) => p._id === selectedProject)?.contact_name} -{" "}
-                        {projects.find((p) => p._id === selectedProject)?.contact_number}
+                        <span
+                          title={
+                            (projects.find((p) => p._id === selectedProject)?.contact_name || "") +
+                            " - " +
+                            (projects.find((p) => p._id === selectedProject)?.contact_number || "")
+                          }
+                        >
+                          {(() => {
+                            const contactName = projects.find((p) => p._id === selectedProject)?.contact_name || "";
+                            const contactNumber = projects.find((p) => p._id === selectedProject)?.contact_number || "";
+                            const displayName =
+                              contactName.length > 15 ? contactName.slice(0, 15) + "..." : contactName;
+                            const displayNumber =
+                              contactNumber.length > 15 ? contactNumber.slice(0, 15) + "..." : contactNumber;
+                            return `${displayName} - ${displayNumber}`;
+                          })()}
+                        </span>
                       </p>
                       <p className="text-sm text-gray-400 dark:text-gray-400">
                         {projects.find((p) => p._id === selectedProject)?.address}
                       </p>
-                      {projects.find((p) => p._id === selectedProject)?.coordinates && (
+                      {/* {projects.find((p) => p._id === selectedProject)?.mother_plant_id && (
                         <p className="text-sm text-gray-400 dark:text-gray-400">
-                          Coordinates: {projects.find((p) => p._id === selectedProject)?.coordinates}
+                          Mother Plant:{" "}
+                          {(plantsData || []).find(
+                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
+                          )?.name || "Unknown Plant"}
                         </p>
-                      )}
+                      )} */}
                     </div>
                   )}
                 </div>
@@ -890,7 +915,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="text"
                     name="motherPlant"
-                    value={projects.find((p) => p._id === selectedProject)?.name || ""}
+                    value={
+                      selectedProject && projects.find((p) => p._id === selectedProject)?.mother_plant_id
+                        ? (plantsData || []).find(
+                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
+                          )?.name || "Unknown Plant"
+                        : ""
+                    }
                     disabled
                     placeholder="Auto filled from project"
                   />
@@ -1575,6 +1606,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       return groupOrder.map((plant) => {
                         const pumps = grouped[plant];
                         const isOpen = openPlantGroups[plant] ?? true;
+                        const motherPlantName = (() => {
+                          const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
+                          return motherId ? plantIdToName[motherId] || "" : "";
+                        })();
                         return (
                           <div key={plant} className="mb-4">
                             <button
@@ -1587,7 +1622,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               <span className="mr-2">
                                 {isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                               </span>
-                              <span className="flex-1 text-left">{plant}</span>
+                              <span className="flex-1 text-left flex items-center gap-2">
+                                <span>{plant}</span>
+                                {plant && motherPlantName && plant === motherPlantName && (
+                                  <span className="px-2 py-0.5 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 rounded-full">
+                                    Mother Plant
+                                  </span>
+                                )}
+                              </span>
                               <span className="ml-2 text-xs font-semibold text-brand-500 dark:text-brand-300 bg-brand-100 dark:bg-brand-900/40 px-2 py-0.5 rounded-full">
                                 {pumps.length}
                               </span>
@@ -1811,6 +1853,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         return groupOrder.map((plant) => {
                           const tms = grouped[plant];
                           const isOpen = openPlantGroups[plant] ?? true;
+                          const motherPlantName = (() => {
+                            const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
+                            return motherId ? plantIdToName[motherId] || "" : "";
+                          })();
                           return (
                             <div key={plant} className="mb-4">
                               <button
@@ -1823,7 +1869,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="mr-2">
                                   {isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                                 </span>
-                                <span className="flex-1 text-left">{plant}</span>
+                                <span className="flex-1 text-left flex items-center gap-2">
+                                  <span>{plant}</span>
+                                  {plant && motherPlantName && plant === motherPlantName && (
+                                    <span className="px-2 py-0.5 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 rounded-full">
+                                      Mother Plant
+                                    </span>
+                                  )}
+                                </span>
                                 <span className="ml-2 text-xs font-semibold text-brand-500 dark:text-brand-300 bg-brand-100 dark:bg-brand-900/40 px-2 py-0.5 rounded-full">
                                   {tms.length}
                                 </span>

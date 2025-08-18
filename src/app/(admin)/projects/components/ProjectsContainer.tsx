@@ -20,6 +20,7 @@ interface Project {
   name: string;
   address: string;
   client_id: string;
+  mother_plant_id: string;
   contact_name: string;
   contact_number: string;
   coordinates: string;
@@ -37,10 +38,26 @@ interface Client {
   last_updated: string;
 }
 
+interface Plant {
+  _id: string;
+  user_id: string;
+  name: string;
+  location: string;
+  address: string;
+  coordinates: string | null;
+  contact_name1: string | null;
+  contact_number1: string | null;
+  contact_name2: string | null;
+  contact_number2: string | null;
+  remarks: string | null;
+  created_at: string;
+}
+
 interface CreateProjectData {
   name: string;
   address: string;
   client_id: string;
+  mother_plant_id: string;
   contact_name: string;
   contact_number: string;
   coordinates: string;
@@ -64,6 +81,7 @@ export default function ProjectsContainer() {
     name: "",
     address: "",
     client_id: "",
+    mother_plant_id: "",
     contact_name: "",
     contact_number: "",
     coordinates: "",
@@ -73,6 +91,7 @@ export default function ProjectsContainer() {
     name: "",
     address: "",
     client_id: "",
+    mother_plant_id: "",
     contact_name: "",
     contact_number: "",
     coordinates: "",
@@ -91,6 +110,10 @@ export default function ProjectsContainer() {
   // Dropdown states for client selection
   const [isCreateClientDropdownOpen, setIsCreateClientDropdownOpen] = useState(false);
   const [isEditClientDropdownOpen, setIsEditClientDropdownOpen] = useState(false);
+
+  // Dropdown states for plant selection
+  const [isCreatePlantDropdownOpen, setIsCreatePlantDropdownOpen] = useState(false);
+  const [isEditPlantDropdownOpen, setIsEditPlantDropdownOpen] = useState(false);
 
   const { data: projectsData, isLoading: isLoadingProjects } = useQuery({
     queryKey: ["projects"],
@@ -116,6 +139,18 @@ export default function ProjectsContainer() {
     enabled: status === "authenticated",
   });
 
+  const { data: plantsData } = useQuery({
+    queryKey: ["plants"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/plants");
+      if (!response) throw new Error("No response from server");
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message || "Failed to fetch plants");
+      return data.data as Plant[];
+    },
+    enabled: status === "authenticated",
+  });
+
   // Create project mutation
   const createProjectMutation = useMutation({
     mutationFn: async (projectData: CreateProjectData) => {
@@ -135,6 +170,7 @@ export default function ProjectsContainer() {
         name: "",
         address: "",
         client_id: "",
+        mother_plant_id: "",
         contact_name: "",
         contact_number: "",
         coordinates: "",
@@ -210,6 +246,7 @@ export default function ProjectsContainer() {
       name: project.name,
       address: project.address,
       client_id: project.client_id,
+      mother_plant_id: project.mother_plant_id,
       contact_name: project.contact_name,
       contact_number: project.contact_number,
       coordinates: project.coordinates,
@@ -293,6 +330,23 @@ export default function ProjectsContainer() {
       client_id: clientId,
     }));
     setIsEditClientDropdownOpen(false);
+  };
+
+  // Plant dropdown handlers
+  const handleCreatePlantSelect = (plantId: string) => {
+    setNewProject((prev) => ({
+      ...prev,
+      mother_plant_id: plantId,
+    }));
+    setIsCreatePlantDropdownOpen(false);
+  };
+
+  const handleEditPlantSelect = (plantId: string) => {
+    setEditedProject((prev) => ({
+      ...prev,
+      mother_plant_id: plantId,
+    }));
+    setIsEditPlantDropdownOpen(false);
   };
 
   // Date range options
@@ -458,6 +512,7 @@ export default function ProjectsContainer() {
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   clients={clientsData || []}
+                  plants={plantsData || []}
                 />
               )}
             </div>
@@ -466,11 +521,7 @@ export default function ProjectsContainer() {
       </div>
 
       {/* Create Modal */}
-      <Modal
-        isOpen={isCreateModalOpen}
-        onClose={handleCloseCreateModal}
-        className="max-w-[800px] p-5 lg:p-10"
-      >
+      <Modal isOpen={isCreateModalOpen} onClose={handleCloseCreateModal} className="max-w-[800px] p-5 lg:p-10">
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Project</h4>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -551,6 +602,44 @@ export default function ProjectsContainer() {
               onChange={handleInputChange}
             />
             {contactNumberError && <p className="text-red-500 text-xs mt-1">{contactNumberError}</p>}
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Mother Plant</label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsCreatePlantDropdownOpen(!isCreatePlantDropdownOpen)}
+                className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
+              >
+                <span
+                  className={
+                    newProject.mother_plant_id ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-white/30"
+                  }
+                >
+                  {newProject.mother_plant_id
+                    ? plantsData?.find((plant: Plant) => plant._id === newProject.mother_plant_id)?.name ||
+                      "Select a mother plant"
+                    : "Select a mother plant"}
+                </span>
+                <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+              </button>
+
+              <Dropdown
+                isOpen={isCreatePlantDropdownOpen}
+                onClose={() => setIsCreatePlantDropdownOpen(false)}
+                className="w-full min-w-[300px] max-h-60 overflow-y-auto"
+              >
+                {plantsData?.map((plant: Plant) => (
+                  <DropdownItem
+                    key={plant._id}
+                    onClick={() => handleCreatePlantSelect(plant._id)}
+                    className="text-sm py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    {plant.name}
+                  </DropdownItem>
+                ))}
+              </Dropdown>
+            </div>
           </div>
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Coordinates</label>
@@ -661,6 +750,46 @@ export default function ProjectsContainer() {
                 onChange={handleEditInputChange}
               />
               {editContactNumberError && <p className="text-red-500 text-xs mt-1">{editContactNumberError}</p>}
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Mother Plant</label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsEditPlantDropdownOpen(!isEditPlantDropdownOpen)}
+                  className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
+                >
+                  <span
+                    className={
+                      editedProject.mother_plant_id
+                        ? "text-gray-800 dark:text-white/90"
+                        : "text-gray-400 dark:text-white/30"
+                    }
+                  >
+                    {editedProject.mother_plant_id
+                      ? plantsData?.find((plant: Plant) => plant._id === editedProject.mother_plant_id)?.name ||
+                        "Select a mother plant"
+                      : "Select a mother plant"}
+                  </span>
+                  <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+                </button>
+
+                <Dropdown
+                  isOpen={isEditPlantDropdownOpen}
+                  onClose={() => setIsEditPlantDropdownOpen(false)}
+                  className="w-full min-w-[300px] max-h-60 overflow-y-auto"
+                >
+                  {plantsData?.map((plant: Plant) => (
+                    <DropdownItem
+                      key={plant._id}
+                      onClick={() => handleEditPlantSelect(plant._id)}
+                      className="text-sm py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      {plant.name}
+                    </DropdownItem>
+                  ))}
+                </Dropdown>
+              </div>
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Coordinates</label>

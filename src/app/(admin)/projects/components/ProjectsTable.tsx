@@ -3,6 +3,21 @@ import React, { useState } from "react";
 import Button from "@/components/ui/button/Button";
 import { Edit, Trash, Copy, Check } from "lucide-react";
 
+interface Project {
+  _id: string;
+  user_id: string;
+  name: string;
+  address: string;
+  client_id: string;
+  mother_plant_id: string;
+  contact_name: string;
+  contact_number: string;
+  coordinates: string;
+  remarks: string;
+  created_at: string;
+  last_updated: string;
+}
+
 interface Client {
   _id: string;
   user_id: string;
@@ -12,18 +27,19 @@ interface Client {
   last_updated: string;
 }
 
-interface Project {
+interface Plant {
   _id: string;
   user_id: string;
   name: string;
+  location: string;
   address: string;
-  client_id: string;
-  contact_name: string;
-  contact_number: string;
-  coordinates: string;
-  remarks: string;
+  coordinates: string | null;
+  contact_name1: string | null;
+  contact_number1: string | null;
+  contact_name2: string | null;
+  contact_number2: string | null;
+  remarks: string | null;
   created_at: string;
-  last_updated: string;
 }
 
 interface ProjectsTableProps {
@@ -31,14 +47,20 @@ interface ProjectsTableProps {
   onEdit: (project: Project) => void;
   onDelete: (project: Project) => void;
   clients: Client[];
+  plants: Plant[];
 }
 
-export default function ProjectsTable({ data, onEdit, onDelete, clients }: ProjectsTableProps) {
+export default function ProjectsTable({ data, onEdit, onDelete, clients, plants }: ProjectsTableProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const getClientName = (clientId: string) => {
     const client = clients.find((c) => c._id === clientId);
     return client ? client.name : "Unknown Client";
+  };
+
+  const getPlantName = (plantId: string) => {
+    const plant = plants.find((p) => p._id === plantId);
+    return plant ? plant.name : "Unknown Plant";
   };
 
   const handleCopyCoordinates = async (coordinates: string, projectId: string) => {
@@ -47,7 +69,7 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients }: Proje
       setCopiedId(projectId);
       setTimeout(() => setCopiedId(null), 2000);
     } catch (err) {
-      console.error('Failed to copy coordinates:', err);
+      console.error("Failed to copy coordinates:", err);
     }
   };
 
@@ -81,6 +103,12 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients }: Proje
                   className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-20"
                 >
                   Client
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-20"
+                >
+                  Mother Plant
                 </TableCell>
                 <TableCell
                   isHeader
@@ -135,6 +163,9 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients }: Proje
                     <span className="truncate block">{getClientName(project.client_id)}</span>
                   </TableCell>
                   <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-20">
+                    <span className="truncate block">{getPlantName(project.mother_plant_id)}</span>
+                  </TableCell>
+                  <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-20">
                     <span className="truncate block">{project.address}</span>
                   </TableCell>
                   <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-20">
@@ -146,13 +177,8 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients }: Proje
                   <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-20">
                     {project.coordinates ? (
                       <div className="flex items-center gap-1">
-                        <div 
-                          className="group relative cursor-pointer"
-                          title={project.coordinates}
-                        >
-                          <span className="group-hover:hidden truncate block">
-                            {truncateText(project.coordinates)}
-                          </span>
+                        <div className="group relative cursor-pointer" title={project.coordinates}>
+                          <span className="group-hover:hidden truncate block">{truncateText(project.coordinates)}</span>
                           <span className="hidden group-hover:block absolute z-10 bg-gray-800 text-white p-2 rounded text-xs max-w-xs break-all">
                             {project.coordinates}
                           </span>
@@ -175,13 +201,8 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients }: Proje
                   </TableCell>
                   <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-20">
                     {project.remarks ? (
-                      <div 
-                        className="group relative cursor-pointer"
-                        title={project.remarks}
-                      >
-                        <span className="group-hover:hidden truncate block">
-                          {truncateText(project.remarks)}
-                        </span>
+                      <div className="group relative cursor-pointer" title={project.remarks}>
+                        <span className="group-hover:hidden truncate block">{truncateText(project.remarks)}</span>
                         <span className="hidden group-hover:block absolute z-10 bg-gray-800 text-white p-2 rounded text-xs max-w-xs break-all">
                           {project.remarks}
                         </span>
@@ -196,7 +217,12 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients }: Proje
                         <Edit size={10} />
                         Edit
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => onDelete(project)} className="px-2 py-1 text-xs">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onDelete(project)}
+                        className="px-2 py-1 text-xs"
+                      >
                         <Trash size={10} />
                         Delete
                       </Button>

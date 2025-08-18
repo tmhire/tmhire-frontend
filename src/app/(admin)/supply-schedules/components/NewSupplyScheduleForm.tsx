@@ -32,6 +32,7 @@ interface Project {
   address: string;
   contact_name: string;
   contact_number: string;
+  mother_plant_id: string;
   coordinates: string;
 }
 
@@ -670,10 +671,41 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                           Coordinates: {projects.find((p) => p._id === selectedProject)?.coordinates}
                         </p>
                       )}
+                      {projects.find((p) => p._id === selectedProject)?.mother_plant_id && (
+                        <p className="text-sm text-gray-400 dark:text-gray-400">
+                          Mother Plant:{" "}
+                          {(plantsData || []).find(
+                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
+                          )?.name || "Unknown Plant"}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
+              {/* Mother Plant Field */}
+              {selectedProject && (
+                <div className="grid grid-cols-3 gap-6 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Mother Plant
+                    </label>
+                    <Input
+                      type="text"
+                      name="motherPlant"
+                      value={
+                        projects.find((p) => p._id === selectedProject)?.mother_plant_id
+                          ? (plantsData || []).find(
+                              (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
+                            )?.name || "Unknown Plant"
+                          : ""
+                      }
+                      disabled
+                      placeholder="Auto filled from project"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
@@ -1069,6 +1101,10 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                         return groupOrder.map((plant) => {
                           const tms = grouped[plant];
                           const isOpen = openPlantGroups[plant] ?? true;
+                          const motherPlantName = (() => {
+                            const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
+                            return motherId ? plantIdToName[motherId] || "" : "";
+                          })();
                           return (
                             <div key={plant} className="mb-4">
                               <button
@@ -1081,7 +1117,14 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                 <span className="mr-2">
                                   {isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                                 </span>
-                                <span className="flex-1 text-left">{plant}</span>
+                                <span className="flex-1 text-left flex items-center gap-2">
+                                  <span>{plant}</span>
+                                  {plant && motherPlantName && plant === motherPlantName && (
+                                    <span className="px-2 py-0.5 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 rounded-full">
+                                      Mother Plant
+                                    </span>
+                                  )}
+                                </span>
                                 <span className="ml-2 text-xs font-semibold text-brand-500 dark:text-brand-300 bg-brand-100 dark:bg-brand-900/40 px-2 py-0.5 rounded-full">
                                   {tms.length}
                                 </span>
