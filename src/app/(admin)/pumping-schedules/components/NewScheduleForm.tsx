@@ -99,6 +99,7 @@ interface GeneratedSchedule {
   user_id: string;
   client_id: string;
   client_name: string;
+  project_name: string;
   site_address: string;
   created_at: string;
   last_updated: string;
@@ -312,6 +313,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           available_pumps: data?.data?.available_pumps,
         };
         setCalculatedTMs(tm_suggestions || null);
+        setCustomTMCount(data?.data?.tm_overrule || data?.data?.tm_count || 1);
+        setOverruleTMCount(
+          data?.data?.tm_overrule && data?.data?.tm_count ? data?.data?.tm_overrule !== data?.data?.tm_count : false
+        );
         return true;
       }
       return false;
@@ -352,6 +357,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           pumping_job: formData.pumpingJob,
           floor_height: parseFloat(formData.floorHeight),
           pump_site_reach_time: formData.pumpSiteReachTime,
+          tm_overrule: customTMCount > 0 ? customTMCount : undefined,
         }),
       });
 
@@ -446,6 +452,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             pumping_job: formData.pumpingJob,
             floor_height: parseFloat(formData.floorHeight),
             pump_site_reach_time: formData.pumpSiteReachTime,
+            tm_overrule: customTMCount > 0 ? customTMCount : undefined,
           }),
         });
 
@@ -2062,22 +2069,26 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
             {generatedSchedule ? (
               <>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-3 gap-6">
                   <div className="space-y-4">
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Client</h4>
                       <p className="text-gray-800 dark:text-white/90">{generatedSchedule.client_name}</p>
                     </div>
                     <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Project Name</h4>
+                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.project_name}</p>
+                    </div>
+                    <div>
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Site Location</h4>
                       <p className="text-gray-800 dark:text-white/90">{generatedSchedule.site_address}</p>
                     </div>
+                  </div>
+                  <div className="space-y-4">
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Schedule Date</h4>
                       <p className="text-gray-800 dark:text-white/90">{generatedSchedule.input_params.schedule_date}</p>
                     </div>
-                  </div>
-                  <div className="space-y-4">
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Quantity</h4>
                       <p className="text-gray-800 dark:text-white/90">{generatedSchedule.input_params.quantity} m³</p>
@@ -2088,6 +2099,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         {generatedSchedule.input_params.pumping_speed} m³/hr
                       </p>
                     </div>
+                  </div>
+                  <div className="space-y-4">
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</h4>
                       <Badge size="sm" color={generatedSchedule.status === "generated" ? "success" : "warning"}>

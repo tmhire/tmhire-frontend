@@ -14,6 +14,7 @@ interface Schedule {
   _id: string;
   user_id: string;
   project_id: string;
+  project_name: string;
   client_name: string;
   client_id: string;
   site_address: string;
@@ -129,7 +130,12 @@ export default function ScheduleViewPage() {
   return (
     <div className="w-full mx-">
       <div className="mb-3">
-        <h2 className="text-xl font-semibold text-black dark:text-white">Concrete Pumping - Schedule Summary</h2>
+        <h2 className="text-xl font-semibold text-black dark:text-white flex gap-3">
+          <span>Concrete Pumping - Schedule Summary</span>
+          <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
+            {schedule.status}
+          </Badge>
+        </h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
@@ -160,8 +166,12 @@ export default function ScheduleViewPage() {
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.pumping_speed} m³/hr</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Client & Project Name</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Client Name</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.client_name}</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Project Name</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.project_name}</p>
             </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Site Location</h4>
@@ -207,12 +217,12 @@ export default function ScheduleViewPage() {
               </h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.cycle_time?.toFixed(2)} hrs</p>
             </div>
-            <div>
+            {/* <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</h4>
               <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
                 {schedule.status}
               </Badge>
-            </div>
+            </div> */}
           </div>
         </div>
         {/* TM Trip Distribution Card */}
