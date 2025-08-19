@@ -39,8 +39,8 @@ const TimeInput: FC<TimeInputProps> = ({
   // Determine container styles based on state
   const containerClasses = `relative ${className}`;
   
-  // Determine picker wrapper styles
-  let pickerWrapperClasses = `
+  // Base picker wrapper styles
+  const basePickerStyles = `
     [&_.react-time-picker]:h-11 
     [&_.react-time-picker]:w-full 
     [&_.react-time-picker]:rounded-lg 
@@ -58,49 +58,54 @@ const TimeInput: FC<TimeInputProps> = ({
     [&_.react-time-picker__inputGroup__divider]:color-inherit
   `;
 
-  // Add styles for the different states
-  if (disabled) {
-    pickerWrapperClasses += ` 
-      [&_.react-time-picker]:text-gray-500 
-      [&_.react-time-picker]:border-gray-300 
-      [&_.react-time-picker]:cursor-not-allowed 
-      [&_.react-time-picker]:bg-gray-50
-      dark:[&_.react-time-picker]:bg-gray-800 
-      dark:[&_.react-time-picker]:text-gray-400 
-      dark:[&_.react-time-picker]:border-gray-700
-    `;
-  } else if (error) {
-    pickerWrapperClasses += ` 
-      [&_.react-time-picker]:text-error-800 
-      [&_.react-time-picker]:border-error-500 
-      [&_.react-time-picker]:focus-within:ring-3 
-      [&_.react-time-picker]:focus-within:ring-error-500/10
-      dark:[&_.react-time-picker]:text-error-400 
-      dark:[&_.react-time-picker]:border-error-500
-    `;
-  } else if (success) {
-    pickerWrapperClasses += ` 
-      [&_.react-time-picker]:text-success-500 
-      [&_.react-time-picker]:border-success-400 
-      [&_.react-time-picker]:focus-within:ring-success-500/10 
-      [&_.react-time-picker]:focus-within:border-success-300
-      dark:[&_.react-time-picker]:text-success-400 
-      dark:[&_.react-time-picker]:border-success-500
-    `;
-  } else {
-    pickerWrapperClasses += ` 
-      [&_.react-time-picker]:bg-transparent 
-      [&_.react-time-picker]:text-gray-800 
-      [&_.react-time-picker]:border-gray-300 
-      [&_.react-time-picker]:focus-within:border-brand-300 
-      [&_.react-time-picker]:focus-within:ring-3 
-      [&_.react-time-picker]:focus-within:ring-brand-500/10
-      dark:[&_.react-time-picker]:border-gray-700 
-      dark:[&_.react-time-picker]:bg-gray-900 
-      dark:[&_.react-time-picker]:text-white/90 
-      dark:[&_.react-time-picker]:focus-within:border-brand-800
-    `;
-  }
+  // Determine state-specific styles
+  const getStateStyles = () => {
+    if (disabled) {
+      return `
+        [&_.react-time-picker]:text-gray-500 
+        [&_.react-time-picker]:border-gray-300 
+        [&_.react-time-picker]:cursor-not-allowed 
+        [&_.react-time-picker]:bg-gray-50
+        dark:[&_.react-time-picker]:bg-gray-800 
+        dark:[&_.react-time-picker]:text-gray-400 
+        dark:[&_.react-time-picker]:border-gray-700
+      `;
+    } else if (error) {
+      return `
+        [&_.react-time-picker]:text-error-800 
+        [&_.react-time-picker]:border-error-500 
+        [&_.react-time-picker]:focus-within:ring-3 
+        [&_.react-time-picker]:focus-within:ring-error-500/10
+        dark:[&_.react-time-picker]:text-error-400 
+        dark:[&_.react-time-picker]:border-error-500
+      `;
+    } else if (success) {
+      return `
+        [&_.react-time-picker]:text-success-500 
+        [&_.react-time-picker]:border-success-400 
+        [&_.react-time-picker]:focus-within:ring-success-500/10 
+        [&_.react-time-picker]:focus-within:border-success-300
+        dark:[&_.react-time-picker]:text-success-400 
+        dark:[&_.react-time-picker]:border-success-500
+      `;
+    } else {
+      return `
+        [&_.react-time-picker]:bg-transparent 
+        [&_.react-time-picker]:text-gray-800 
+        [&_.react-time-picker]:border-gray-300 
+        [&_.react-time-picker]:focus-within:border-brand-300 
+        [&_.react-time-picker]:focus-within:ring-3 
+        [&_.react-time-picker]:focus-within:ring-brand-500/10
+        dark:[&_.react-time-picker]:border-gray-700 
+        dark:[&_.react-time-picker]:bg-gray-900 
+        dark:[&_.react-time-picker]:text-white/90 
+        dark:[&_.react-time-picker]:focus-within:border-brand-800
+      `;
+    }
+  };
+
+  // Combine all styles
+  const pickerWrapperClasses = `${basePickerStyles} ${getStateStyles()}`;
 
   // Fix the format - use HH:mm for 24-hour format
   const timeFormat = format === "hh:mm" ? "HH:mm" : format;
