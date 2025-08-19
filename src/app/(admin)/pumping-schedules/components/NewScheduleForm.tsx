@@ -162,13 +162,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     returnTime: "",
     productionTime: "",
     concreteGrade: "",
-    pump_start_time_from_plant: "",
+    pump_start_time_from_plant: "",   
     pumpFixingTime: "",
     pumpRemovalTime: "",
     unloadingTime: "",
     pumpingJob: "",
     floorHeight: "",
     pumpSiteReachTime: "",
+    scheduleName: "",
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [formDataRetrieved, setFormDataRetrieved] = useState(true);
@@ -264,6 +265,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         const pumping_speed = data.data.input_params.pumping_speed;
         setFormData({
           scheduleDate: data.data.input_params.schedule_date,
+          scheduleName: data.data.schedule_name,
           startTime: data.data.input_params.pump_start.split("T")[1],
           quantity: data.data.input_params.quantity.toString(),
           speed: pumping_speed.toString(),
@@ -271,8 +273,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             data.data.input_params.unloading_time && data.data.input_params.unloading_time !== 0
               ? data.data.input_params.unloading_time.toString()
               : pumping_speed && avgTMCap
-              ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
-              : "",
+                ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
+                : "",
           pumpOnwardTime: data.data.input_params.pump_onward_time.toString(),
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
@@ -338,6 +340,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           pump: selectedPump,
           concreteGrade: formData.concreteGrade,
           pumping_speed: formData.speed,
+          schedule_name: formData.scheduleName,
           pump_type: pumpType,
           input_params: {
             quantity: parseFloat(formData.quantity),
@@ -434,6 +437,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             concreteGrade: formData.concreteGrade,
             pumping_speed: formData.speed,
             pump_type: pumpType,
+            schedule_name: formData.scheduleName,
             input_params: {
               quantity: parseFloat(formData.quantity),
               pumping_speed: parseFloat(formData.speed),
@@ -599,6 +603,56 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     );
   }
 
+  const prod = parseFloat(formData.productionTime) || 0;
+  const onward = parseFloat(formData.onwardTime) || 0;
+  const unload = parseFloat(formData.unloadingTime) || 0;
+  const ret = parseFloat(formData.returnTime) || 0;
+
+  const pieOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+  };
+
+  const pieData = {
+    labels: ["Loading & Buffer", "Onward", "Unloading", "Return"],
+    datasets: [
+      {
+        data: [prod, onward, unload, ret],
+        backgroundColor: ["#3b82f6", "#f59e0b", "#10b981", "#ef4444"],
+      },
+    ],
+  };
+
+  const quantity = parseFloat(formData.quantity) || 0;
+  const speed = parseFloat(formData.speed) || 0;
+
+  const cycleTimeMin = [formData.productionTime, formData.onwardTime, formData.unloadingTime, formData.returnTime]
+    .map((v) => parseFloat(v) || 0)
+    .reduce((a, b) => a + b, 0);
+
+  const cycleTimeHr = cycleTimeMin / 60;
+  const totalPumpingHours = speed > 0 ? quantity / speed : 0;
+  const tripsPerTM = cycleTimeHr > 0 ? totalPumpingHours / cycleTimeHr : 0;
+  const m3PerTM = tripsPerTM * (avgTMCap && avgTMCap > 0 ? avgTMCap : 1);
+  const tmReq = m3PerTM > 0 ? Math.ceil(quantity / m3PerTM) : 0;
+  const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
+  const [startHour, startMin] = (formData.startTime || "00:00")
+    .split(":")
+    .map((n) => parseInt(n, 10));
+
+  const startTotalMin = startHour * 60 + startMin;
+  const pumpMinutes = Math.round(totalPumpingHours * 60); // from earlier calculation
+  const endTotalMin = startTotalMin + pumpMinutes;
+
+  // keep it within 24h
+  const endHour = Math.floor(endTotalMin / 60) % 24;
+  const endMin = endTotalMin % 60;
+
+  // format back to HH:mm
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  const pumpEndTime = pumpMinutes ? `${pad(endHour)}:${pad(endMin)}` : `${0}:${0}`;
+
   return (
     <div className="w-full mx">
       <div className="flex flex-row w-full mb-4 items-center">
@@ -631,11 +685,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 >
                   {/* Step Circle */}
                   <motion.div
-                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${
-                      step >= s.id
+                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${step >= s.id
                         ? "border-brand-500 bg-brand-500 text-white shadow-lg"
                         : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                    }`}
+                      }`}
                     animate={{
                       scale: step === s.id ? 1.1 : 1,
                       boxShadow: step === s.id ? "0 0 20px rgba(var(--brand-500-rgb, 59, 130, 246), 0.5)" : "none",
@@ -664,9 +717,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                   {/* Step Name */}
                   <motion.span
-                    className={`mt-2 text-xs text-center ${
-                      step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
-                    }`}
+                    className={`mt-2 text-xs text-center ${step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
+                      }`}
                     animate={{
                       fontWeight: step >= s.id ? 500 : 400,
                     }}
@@ -707,14 +759,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900/40 py-1 px-3 rounded-full">
                   Company Timings -
                   {profile?.preferred_format === "12h"
-                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${
-                        (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
-                      } TODAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${
-                        (profile?.custom_start_hour ?? 0) + 12 < 24 ? "PM" : "AM"
-                      } TOMORROW`
+                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
+                    } TODAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) + 12 < 24 ? "PM" : "AM"
+                    } TOMORROW`
                     : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 TODAY TO ${String(
-                        ((profile?.custom_start_hour ?? 0) + 12) % 24
-                      ).padStart(2, "0")}:00 TOMORROW`}
+                      ((profile?.custom_start_hour ?? 0) + 12) % 24
+                    ).padStart(2, "0")}:00 TOMORROW`}
                 </span>
               </div>
 
@@ -727,9 +777,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <div className="relative">
                     <button
                       type="button"
-                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
-                        selectedClient ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
-                      }`}
+                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${selectedClient ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
+                        }`}
                       onClick={() => setIsClientDropdownOpen((open) => !open)}
                       aria-haspopup="listbox"
                       aria-expanded={isClientDropdownOpen}
@@ -777,13 +826,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <div className="relative">
                       <button
                         type="button"
-                        className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
-                          selectedProject
+                        className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${selectedProject
                             ? "text-gray-800 dark:text-white/90"
                             : projects.length === 0 && !!selectedClient
-                            ? "text-red-500"
-                            : "text-gray-400 dark:text-gray-400"
-                        }`}
+                              ? "text-red-500"
+                              : "text-gray-400 dark:text-gray-400"
+                          }`}
                         onClick={() => setIsProjectDropdownOpen((open) => !open)}
                         aria-haspopup="listbox"
                         aria-expanded={isProjectDropdownOpen}
@@ -792,8 +840,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         {!selectedClient
                           ? "Select a client first"
                           : projects.length === 0
-                          ? "Please create a project for this client."
-                          : (() => {
+                            ? "Please create a project for this client."
+                            : (() => {
                               const selectedProj = projects.find((p: Project) => p._id === selectedProject);
                               if (!selectedProj) return "Select a project";
                               const name = selectedProj.name;
@@ -925,8 +973,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     value={
                       selectedProject && projects.find((p) => p._id === selectedProject)?.mother_plant_id
                         ? (plantsData || []).find(
-                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                          )?.name || "Unknown Plant"
+                          (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
+                        )?.name || "Unknown Plant"
                         : ""
                     }
                     disabled
@@ -936,11 +984,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                 {/* SCH No + Prepared By */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">SCH No</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Schedule No.</label>
                   <Input
                     type="text"
-                    name="schNo"
-                    value={formData.pumpingJob || ""}
+                    name="scheduleName"
+                    value={formData?.scheduleName || ""}
                     onChange={handleInputChange}
                     placeholder="Plant Name - CP 1"
                   />
@@ -972,9 +1020,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <div className="relative">
                     <button
                       type="button"
-                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
-                        formData.pumpingJob ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
-                      }`}
+                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${formData.pumpingJob ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
+                        }`}
                       onClick={() => setIsPumpingJobDropdownOpen((open) => !open)}
                       aria-haspopup="listbox"
                       aria-expanded={isPumpingJobDropdownOpen}
@@ -1094,7 +1141,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <TimeInput
                       type="time"
                       name="startTime"
-                      format={profile?.preferred_format === "12h" ? "h:mm a" : "HH:MM"}
+                      format={profile?.preferred_format === "12h" ? "h:mm a" : "hh:mm"}
                       isOpen
                       value={formData.startTime}
                       onChange={(val) => handleTimeChange("startTime", val)}
@@ -1111,10 +1158,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     Pump End Time
                   </label>
                   <div className="relative">
-                    <Input
+                    <TimeInput
                       type="time"
                       name="endTime"
-                      value={formData.startTime}
+                      format={profile?.preferred_format === "12h" ? "h:mm a" : "hh:mm"}
+                      value={pumpEndTime}
                       disabled
                       className="cursor-not-allowed bg-gray-100 dark:bg-gray-800"
                     />
@@ -1348,205 +1396,153 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                 {/* Column 4: Pie Chart */}
                 <div className="col-span-2">
-                  {(() => {
-                    const prod = parseFloat(formData.productionTime) || 0;
-                    const onward = parseFloat(formData.onwardTime) || 0;
-                    const unload = parseFloat(formData.unloadingTime) || 0;
-                    const ret = parseFloat(formData.returnTime) || 0;
-
-                    const options = {
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          display: false, // hide built-in legend
-                        },
-                      },
-                    };
-
-                    const data = {
-                      labels: ["Loading & Buffer", "Onward", "Unloading", "Return"],
-                      datasets: [
-                        {
-                          data: [prod, onward, unload, ret],
-                          backgroundColor: ["#3b82f6", "#f59e0b", "#10b981", "#ef4444"],
-                        },
-                      ],
-                    };
-
-                    return (
-                      <div className="w-full h-64">
-                        <Pie data={data} options={options} />
-                      </div>
-                    );
-                  })()}
+                  <div className="w-full h-64">
+                    <Pie data={pieData} options={pieOptions} />
+                  </div>
                 </div>
 
                 {/* Column 3: Calculated Values */}
                 <div className="col-span-6 flex flex-row gap-6">
-                  {(() => {
-                    const quantity = parseFloat(formData.quantity) || 0;
-                    const speed = parseFloat(formData.speed) || 0;
-                    const avgTMCap =
-                      typeof avgTMCapData?.average_capacity === "number" ? avgTMCapData.average_capacity : 0;
 
-                    const cycleTimeMin = [
-                      formData.productionTime,
-                      formData.onwardTime,
-                      formData.unloadingTime,
-                      formData.returnTime,
-                    ]
-                      .map((v) => parseFloat(v) || 0)
-                      .reduce((a, b) => a + b, 0);
-
-                    const cycleTimeHr = cycleTimeMin / 60;
-                    const totalPumpingHours = speed > 0 ? quantity / speed : 0;
-                    const tripsPerTM = cycleTimeHr > 0 ? totalPumpingHours / cycleTimeHr : 0;
-                    const m3PerTM = tripsPerTM * avgTMCap;
-                    const tmReq = m3PerTM > 0 ? Math.ceil(quantity / m3PerTM) : 0;
-                    const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
-
-                    return (
-                      <>
-                        {/* Calculation Table */}
-                        <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
-                          <tbody>
-                            <tr className="border-b border-gray-100 dark:border-gray-700">
-                              <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                                Total pumping hours
-                                <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                                  Pumping quantity / Pumping speed
-                                </div>
-                              </td>
-                              <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                                {totalPumpingHours > 0 ? totalPumpingHours.toFixed(2) : "-"}
-                              </td>
-                            </tr>
-                            <tr className="border-b border-gray-100 dark:border-gray-700">
-                              <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                                Trips per TM
-                                <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                                  Total pumping hours / Cycle time
-                                </div>
-                              </td>
-                              <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                                {tripsPerTM > 0 ? tripsPerTM.toFixed(2) : "-"}
-                              </td>
-                            </tr>
-                            <tr className="border-b border-gray-100 dark:border-gray-700">
-                              <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                                Quantity transported per TM
-                                <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                                  Trips per TM × TM avg capacity
-                                </div>
-                              </td>
-                              <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                                {m3PerTM > 0 ? m3PerTM.toFixed(2) : "-"}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                                Optimum TM Required
-                                <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                                  roundUp(Pumping quantity / m³ transported per TM)
-                                </div>
-                              </td>
-                              <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                                {tmReq > 0 ? tmReq : "-"}
-                              </td>
-                            </tr>
-                            <tr className="border-b border-gray-100 dark:border-gray-700">
-                              <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                                Total trips (approx.)
-                                <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                                  roundUp(Trips per TM × TM required)
-                                </div>
-                              </td>
-                              <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                                {totalTrips > 0 ? totalTrips : "-"}
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-
-                        {/* TM Control Card */}
-                        <div className="col-span-2">
-                          <div className="h-full p-6 rounded-lg bg-blue-300 dark:bg-blue-900/40 flex flex-col justify-between">
-                            {/* Heading + explanation */}
-                            <div>
-                              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                                Optimum Required TMs
-                              </h2>
-                              <p className="text-sm text-gray-700 dark:text-gray-300 mb-4 leading-relaxed">
-                                The Optimum TM Required Count is calculated as{" "}
-                                {tmReq > 0 ? tmReq : "(fill in to calculate)"}. This value can be overridden using the
-                                inputs below.
-                              </p>
+                  <>
+                    {/* Calculation Table */}
+                    <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
+                      <tbody>
+                        <tr className="border-b border-gray-100 dark:border-gray-700">
+                          <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
+                            Total pumping hours
+                            <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                              Pumping quantity / Pumping speed
                             </div>
+                          </td>
+                          <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
+                            {totalPumpingHours > 0 ? totalPumpingHours.toFixed(2) : "-"}
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-700">
+                          <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
+                            Trips per TM
+                            <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                              Total pumping hours / Cycle time
+                            </div>
+                          </td>
+                          <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
+                            {tripsPerTM > 0 ? tripsPerTM.toFixed(2) : "-"}
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-700">
+                          <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
+                            Quantity transported per TM
+                            <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                              Trips per TM × TM avg capacity
+                            </div>
+                          </td>
+                          <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
+                            {m3PerTM > 0 ? m3PerTM.toFixed(2) : "-"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
+                            Optimum TM Required
+                            <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                              roundUp(Pumping quantity / m³ transported per TM)
+                            </div>
+                          </td>
+                          <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
+                            {tmReq > 0 ? tmReq : "-"}
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-700">
+                          <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
+                            Total trips (approx.)
+                            <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                              roundUp(Trips per TM × TM required)
+                            </div>
+                          </td>
+                          <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
+                            {totalTrips > 0 ? totalTrips : "-"}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
 
-                            {/* Plus/Minus Controls */}
-                            {tmReq > 0 && (
-                              <div className="flex flex-col items-center mt-2">
-                                <div className="flex items-center justify-center space-x-4">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOverruleTMCount(true);
-
-                                      setCustomTMCount((prev) => {
-                                        const base = prev || tmReq || 1;
-                                        return Math.max(1, base - 1);
-                                      });
-
-                                      setHasChanged(true);
-                                    }}
-                                    className="px-4 py-2 bg-white dark:bg-gray-700 rounded text-lg font-bold"
-                                  >
-                                    -
-                                  </button>
-
-                                  <span className="text-4xl font-bold text-gray-900 dark:text-white min-w-[3rem] text-center">
-                                    {overruleTMCount ? customTMCount ?? tmReq ?? "-" : tmReq || "-"}
-                                  </span>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOverruleTMCount(true);
-
-                                      setCustomTMCount((prev) => {
-                                        const base = prev || tmReq || 1;
-                                        return base + 1;
-                                      });
-
-                                      setHasChanged(true);
-                                    }}
-                                    className="px-4 py-2 bg-white dark:bg-gray-700 rounded text-lg font-bold"
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Extra Trucks Section */}
-                            {overruleTMCount && customTMCount > tmReq && (
-                              <div className="mt-3">
-                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
-                                  Queue Accumulated:
-                                </p>
-                                <div className="flex flex-wrap gap-3">
-                                  {Array.from({ length: customTMCount - tmReq }).map((_, idx) => (
-                                    <Truck key={idx} className="w-8 h-8 dark:text-white text-black" strokeWidth={2.5} />
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                    {/* TM Control Card */}
+                    <div className="col-span-2">
+                      <div className="h-full p-6 rounded-lg bg-blue-300 dark:bg-blue-900/40 flex flex-col justify-between">
+                        {/* Heading + explanation */}
+                        <div>
+                          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                            Optimum Required TMs
+                          </h2>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 mb-4 leading-relaxed">
+                            The Optimum TM Required Count is calculated as{" "}
+                            {tmReq > 0 ? tmReq : "(fill in to calculate)"}. This value can be overridden using the
+                            inputs below.
+                          </p>
                         </div>
-                      </>
-                    );
-                  })()}
+
+                        {/* Plus/Minus Controls */}
+                        {tmReq > 0 && (
+                          <div className="flex flex-col items-center mt-2">
+                            <div className="flex items-center justify-center space-x-4">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOverruleTMCount(true);
+
+                                  setCustomTMCount((prev) => {
+                                    const base = prev || tmReq || 1;
+                                    return Math.max(1, base - 1);
+                                  });
+
+                                  setHasChanged(true);
+                                }}
+                                className="px-4 py-2 bg-white dark:bg-gray-700 rounded text-lg font-bold"
+                              >
+                                -
+                              </button>
+
+                              <span className="text-4xl font-bold text-gray-900 dark:text-white min-w-[3rem] text-center">
+                                {overruleTMCount ? customTMCount ?? tmReq ?? "-" : tmReq || "-"}
+                              </span>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOverruleTMCount(true);
+
+                                  setCustomTMCount((prev) => {
+                                    const base = prev || tmReq || 1;
+                                    return base + 1;
+                                  });
+
+                                  setHasChanged(true);
+                                }}
+                                className="px-4 py-2 bg-white dark:bg-gray-700 rounded text-lg font-bold"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Extra Trucks Section */}
+                        {overruleTMCount && customTMCount > tmReq && (
+                          <div className="mt-3">
+                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
+                              Queue Accumulated:
+                            </p>
+                            <div className="flex flex-wrap gap-3">
+                              {Array.from({ length: customTMCount - tmReq }).map((_, idx) => (
+                                <Truck key={idx} className="w-8 h-8 dark:text-white text-black" strokeWidth={2.5} />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+
                 </div>
               </div>
             </div>
@@ -1655,11 +1651,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                     {pumps.map((pump, idx) => (
                                       <label
                                         key={pump.id}
-                                        className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
-                                          !pump.availability
+                                        className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${!pump.availability
                                             ? "opacity-50 cursor-not-allowed"
                                             : "cursor-pointer hover:bg-gray-100"
-                                        } `}
+                                          } `}
                                       >
                                         <div className="flex flex-row items-center space-x-4 w-full">
                                           <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
@@ -1782,28 +1777,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Opt Required TMs</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Required TMs</p>
                       <p className="text-lg font-medium text-gray-900 dark:text-white">
                         {overruleTMCount ? `${customTMCount} (overruled)` : calculatedTMs.tm_count || "N/A"}
                       </p>
                     </div>
 
-                    <div>
-                      {overruleTMCount && (
-                        <input
-                          type="number"
-                          min={1}
-                          value={customTMCount}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value, 10);
-                            setCustomTMCount(isNaN(val) ? 1 : val);
-                            setHasChanged(true);
-                          }}
-                          className="mt-1 w-20 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                          placeholder="TM count"
-                        />
-                      )}
-                    </div>
+                   
                     <div>
                       {overruleTMCount && (
                         <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -1902,11 +1882,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                       {tms.map((tm, idx) => (
                                         <label
                                           key={tm.id}
-                                          className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
-                                            !tm.availability
+                                          className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${!tm.availability
                                               ? "opacity-50 cursor-not-allowed"
                                               : "cursor-pointer hover:bg-gray-100"
-                                          } `}
+                                            } `}
                                         >
                                           <div className="flex flex-row items-center space-x-4 w-full">
                                             <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
@@ -2208,9 +2187,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {trip.plant_load
                                     ? new Date(trip.plant_load).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })
                                     : "-"}
                                 </span>
                               </TableCell>
@@ -2218,9 +2197,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {trip.plant_start
                                     ? new Date(trip.plant_start).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })
                                     : "-"}
                                 </span>
                               </TableCell>
@@ -2228,9 +2207,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {trip.pump_start
                                     ? new Date(trip.pump_start).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })
                                     : "-"}
                                 </span>
                               </TableCell>
@@ -2239,9 +2218,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {trip.unloading_time
                                     ? new Date(trip.unloading_time).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })
                                     : "-"}
                                 </span>
                               </TableCell>
@@ -2249,9 +2228,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {trip.return
                                     ? new Date(trip.return).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })
                                     : "-"}
                                 </span>
                               </TableCell>

@@ -13,6 +13,7 @@ import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { ChevronDownIcon } from "lucide-react";
+import { validateMobile } from "@/lib/utils";
 
 interface Project {
   _id: string;
@@ -103,13 +104,6 @@ export default function ProjectsContainer() {
   });
   const [contactNumberError, setContactNumberError] = useState("");
   const [editContactNumberError, setEditContactNumberError] = useState("");
-
-  const validateMobileNumber = (number: string): boolean => {
-    // Remove all non-digits
-    const digitsOnly = number.replace(/\D/g, "");
-    // Check if it's a valid Indian mobile number (10 digits starting with 6-9)
-    return /^[6-9]\d{9}$/.test(digitsOnly);
-  };
 
   // Dropdown states for client selection
   const [isCreateClientDropdownOpen, setIsCreateClientDropdownOpen] = useState(false);
@@ -313,7 +307,7 @@ export default function ProjectsContainer() {
 
     // Validate contact number if it's being changed
     if (name === "contact_number") {
-      if (value && !validateMobileNumber(value)) {
+      if (value && !validateMobile(value)) {
         setContactNumberError("Please enter a valid 10-digit mobile number starting with 6-9");
       } else {
         setContactNumberError("");
@@ -330,7 +324,7 @@ export default function ProjectsContainer() {
 
     // Validate contact number if it's being changed in edit modal
     if (name === "contact_number") {
-      if (value && !validateMobileNumber(value)) {
+      if (value && !validateMobile(value)) {
         setEditContactNumberError("Please enter a valid 10-digit mobile number starting with 6-9");
       } else {
         setEditContactNumberError("");

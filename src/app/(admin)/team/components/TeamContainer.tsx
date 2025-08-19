@@ -11,6 +11,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
+import { validateMobile } from "@/lib/utils";
 
 type Designation = "sales-engineer" | "pump-operator" | "pipeline-gang" | "site-supervisor";
 
@@ -131,11 +132,6 @@ export default function TeamContainer() {
 
   const handleAddTeam = () => {
     setIsCreateModalOpen(true);
-  };
-
-  // Validate mobile number (10 digits, numeric)
-  const validateMobile = (value: string) => {
-    return /^\d{10}$/.test(value);
   };
 
   // Validate name (at least 2 letters, letters and spaces only)

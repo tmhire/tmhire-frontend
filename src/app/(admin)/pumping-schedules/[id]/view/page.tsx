@@ -16,6 +16,7 @@ interface Schedule {
   project_id: string;
   project_name: string;
   client_name: string;
+  schedule_name: string;
   client_id: string;
   site_address: string;
   status: string;
@@ -135,6 +136,10 @@ export default function ScheduleViewPage() {
           <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
             {schedule.status}
           </Badge>
+          {schedule.schedule_name && (<Badge size="sm" color={"info"}>
+            {schedule.schedule_name}
+          </Badge>)}
+
         </h2>
       </div>
 
@@ -151,9 +156,9 @@ export default function ScheduleViewPage() {
               <p className="text-base text-gray-800 dark:text-white/90">
                 {schedule.input_params.pump_start
                   ? new Date(schedule.input_params.pump_start).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
                   : "N/A"}
               </p>
             </div>
@@ -626,9 +631,9 @@ export default function ScheduleViewPage() {
                             <td key={i} className="px-2 py-2 text-left text-gray-800 dark:text-white/90">
                               {trip
                                 ? `${formatTimeByPreference(
-                                    trip.plant_start,
-                                    profile?.preferred_format
-                                  )} - ${formatTimeByPreference(trip.return, profile?.preferred_format)}`
+                                  trip.plant_start,
+                                  profile?.preferred_format
+                                )} - ${formatTimeByPreference(trip.return, profile?.preferred_format)}`
                                 : "-"}
                             </td>
                           );

@@ -19,3 +19,7 @@ export function formatTimeByPreference(date: string | number | Date, preferredFo
     hour12: is12h,
   });
 }
+
+export const validateMobile = (value: string) => {
+    return /^\d{10}$/.test(value);
+};

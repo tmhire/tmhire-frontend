@@ -12,6 +12,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
+import { validateMobile } from "@/lib/utils";
 
 interface Plant {
   _id: string;
@@ -93,13 +94,6 @@ export default function PumpsContainer() {
   const [error, setError] = useState("");
   const [driverContactError, setDriverContactError] = useState("");
   const [editDriverContactError, setEditDriverContactError] = useState("");
-
-  const validateMobileNumber = (number: string): boolean => {
-    // Remove all non-digits
-    const digitsOnly = number.replace(/\D/g, "");
-    // Check if it's a valid Indian mobile number (10 digits starting with 6-9)
-    return /^[6-9]\d{9}$/.test(digitsOnly);
-  };
 
   const handleIdentifierInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.toUpperCase();
@@ -334,7 +328,7 @@ export default function PumpsContainer() {
 
     // Validate driver contact if it's being changed in edit modal
     if (name === "driver_contact") {
-      if (value && !validateMobileNumber(value)) {
+      if (value && !validateMobile(value)) {
         setEditDriverContactError("Please enter a valid 10-digit mobile number starting with 6-9");
       } else {
         setEditDriverContactError("");
@@ -351,7 +345,7 @@ export default function PumpsContainer() {
 
     // Validate driver contact if it's being changed
     if (name === "driver_contact") {
-      if (value && !validateMobileNumber(value)) {
+      if (value && !validateMobile(value)) {
         setDriverContactError("Please enter a valid 10-digit mobile number starting with 6-9");
       } else {
         setDriverContactError("");
