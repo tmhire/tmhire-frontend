@@ -37,10 +37,10 @@ const TimeInput: FC<TimeInputProps> = ({
   hint,
 }) => {
   // Determine container styles based on state
-  let containerClasses = `relative ${className}`;
+  const containerClasses = `relative ${className}`;
   
   // Determine picker wrapper styles
-  let pickerWrapperClasses = `
+  const pickerWrapperClasses = `
     [&_.react-time-picker]:h-11 
     [&_.react-time-picker]:w-full 
     [&_.react-time-picker]:rounded-lg 
