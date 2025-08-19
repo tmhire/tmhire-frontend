@@ -18,6 +18,9 @@ interface Schedule {
   client_name: string;
   schedule_name: string;
   client_id: string;
+  site_supervisor_id: string;
+  site_supervisor_name: string;
+  mother_plant_name: string;
   site_address: string;
   status: string;
   pump: string;
@@ -30,6 +33,8 @@ interface Schedule {
   total_trips: number;
   trips_per_tm: number;
   type: string;
+  slump_at_site: number;
+  mother_plant_km: number;
   created_at: string;
   last_updated: string;
   input_params: {
@@ -136,10 +141,11 @@ export default function ScheduleViewPage() {
           <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
             {schedule.status}
           </Badge>
-          {schedule.schedule_name && (<Badge size="sm" color={"info"}>
-            {schedule.schedule_name}
-          </Badge>)}
-
+          {schedule.schedule_name && (
+            <Badge size="sm" color={"info"}>
+              {schedule.schedule_name}
+            </Badge>
+          )}
         </h2>
       </div>
 
@@ -156,9 +162,9 @@ export default function ScheduleViewPage() {
               <p className="text-base text-gray-800 dark:text-white/90">
                 {schedule.input_params.pump_start
                   ? new Date(schedule.input_params.pump_start).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
                   : "N/A"}
               </p>
             </div>
@@ -185,6 +191,24 @@ export default function ScheduleViewPage() {
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Placement Zone</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.pumping_job}</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Mother Plant</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.mother_plant_name}</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Site Supervisor</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.site_supervisor_name}</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Slump at Site</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.slump_at_site}</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                One way Km from Mother Plant
+              </h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.mother_plant_km}</p>
             </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Floor Height</h4>
@@ -631,9 +655,9 @@ export default function ScheduleViewPage() {
                             <td key={i} className="px-2 py-2 text-left text-gray-800 dark:text-white/90">
                               {trip
                                 ? `${formatTimeByPreference(
-                                  trip.plant_start,
-                                  profile?.preferred_format
-                                )} - ${formatTimeByPreference(trip.return, profile?.preferred_format)}`
+                                    trip.plant_start,
+                                    profile?.preferred_format
+                                  )} - ${formatTimeByPreference(trip.return, profile?.preferred_format)}`
                                 : "-"}
                             </td>
                           );

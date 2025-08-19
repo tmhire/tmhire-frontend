@@ -67,6 +67,11 @@ interface AvailablePump {
   plant_id: string;
   plant_name: string;
 }
+type TeamMember = {
+  _id: string;
+  name: string;
+  designation?: string;
+};
 interface CalculateTMResponse {
   tm_count: number;
   schedule_id: string;
@@ -103,6 +108,9 @@ interface GeneratedSchedule {
   site_address: string;
   created_at: string;
   last_updated: string;
+  slump_at_site?: number;
+  mother_plant_km?: number;
+  site_supervisor_id?: string;
   input_params: {
     quantity: number;
     pumping_speed: number;
@@ -152,7 +160,30 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasChanged, setHasChanged] = useState(false);
   const { profile } = useProfile();
-  const [formData, setFormData] = useState({
+  interface Step1FormData {
+    scheduleDate: string;
+    startTime: string;
+    quantity: string;
+    speed: string;
+    onwardTime: string;
+    pumpOnwardTime: string;
+    returnTime: string;
+    productionTime: string;
+    concreteGrade: string;
+    pump_start_time_from_plant: string;
+    pumpFixingTime: string;
+    pumpRemovalTime: string;
+    unloadingTime: string;
+    pumpingJob: string;
+    floorHeight: string;
+    pumpSiteReachTime: string;
+    scheduleName: string;
+    slumpAtSite: string;
+    oneWayKm: string;
+    siteSupervisorId: string;
+  }
+
+  const [formData, setFormData] = useState<Step1FormData>({
     scheduleDate: "",
     startTime: "",
     quantity: "",
@@ -162,7 +193,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     returnTime: "",
     productionTime: "",
     concreteGrade: "",
-    pump_start_time_from_plant: "",   
+    pump_start_time_from_plant: "",
     pumpFixingTime: "",
     pumpRemovalTime: "",
     unloadingTime: "",
@@ -170,6 +201,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     floorHeight: "",
     pumpSiteReachTime: "",
     scheduleName: "",
+    slumpAtSite: "160",
+    oneWayKm: "",
+    siteSupervisorId: "",
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [formDataRetrieved, setFormDataRetrieved] = useState(true);
@@ -186,6 +220,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
   // Add state for pumping job dropdown open/close
   const [isPumpingJobDropdownOpen, setIsPumpingJobDropdownOpen] = useState(false);
+  // Site supervisor dropdown open/close
+  const [isSupervisorDropdownOpen, setIsSupervisorDropdownOpen] = useState(false);
 
   const { data: clientsData } = useQuery<Client[]>({
     queryKey: ["clients"],
@@ -218,6 +254,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       const data = await response.json();
       if (data.success) {
         return data.data;
+      }
+      return [];
+    },
+  });
+
+  // Site supervisors (schedule team)
+  const { data: scheduleTeamMembers } = useQuery<TeamMember[]>({
+    queryKey: ["schedule-team"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/team/group/schedule");
+      const data = await response.json();
+      if (data.success) {
+        return data.data as TeamMember[];
       }
       return [];
     },
@@ -273,8 +322,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             data.data.input_params.unloading_time && data.data.input_params.unloading_time !== 0
               ? data.data.input_params.unloading_time.toString()
               : pumping_speed && avgTMCap
-                ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
-                : "",
+              ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
+              : "",
           pumpOnwardTime: data.data.input_params.pump_onward_time.toString(),
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
@@ -292,6 +341,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           pumpingJob: data.data.pumping_job,
           floorHeight: data.data.floor_height ? data.data.floor_height.toString() : "",
           pumpSiteReachTime: data.data.pump_site_reach_time ? data.data.pump_site_reach_time.toString() : "",
+          slumpAtSite: data.data.slump_at_site?.toString?.() || "160",
+          oneWayKm: data.data.mother_plant_km?.toString?.() || "",
+          siteSupervisorId: data.data.site_supervisor_id || "",
         });
         const tm_ids = new Set();
         const tmSequence: string[] = [];
@@ -361,6 +413,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           floor_height: parseFloat(formData.floorHeight),
           pump_site_reach_time: formData.pumpSiteReachTime,
           tm_overrule: customTMCount > 0 ? customTMCount : undefined,
+          slump_at_site: formData.slumpAtSite ? parseFloat(formData.slumpAtSite) : undefined,
+          mother_plant_km: formData.oneWayKm ? parseFloat(formData.oneWayKm) : undefined,
+          site_supervisor_id: formData.siteSupervisorId || undefined,
         }),
       });
 
@@ -457,6 +512,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             floor_height: parseFloat(formData.floorHeight),
             pump_site_reach_time: formData.pumpSiteReachTime,
             tm_overrule: customTMCount > 0 ? customTMCount : undefined,
+            slump_at_site: formData.slumpAtSite ? parseFloat(formData.slumpAtSite) : undefined,
+            mother_plant_km: formData.oneWayKm ? parseFloat(formData.oneWayKm) : undefined,
+            site_supervisor_id: formData.siteSupervisorId || undefined,
           }),
         });
 
@@ -563,7 +621,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       !!formData.unloadingTime &&
       !!formData.pumpingJob &&
       !!formData.floorHeight &&
-      !!formData.pumpOnwardTime
+      !!formData.pumpOnwardTime &&
+      !!formData.slumpAtSite &&
+      !!formData.oneWayKm &&
+      !!formData.siteSupervisorId
     );
   };
 
@@ -637,9 +698,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const m3PerTM = tripsPerTM * (avgTMCap && avgTMCap > 0 ? avgTMCap : 1);
   const tmReq = m3PerTM > 0 ? Math.ceil(quantity / m3PerTM) : 0;
   const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
-  const [startHour, startMin] = (formData.startTime || "00:00")
-    .split(":")
-    .map((n) => parseInt(n, 10));
+  const [startHour, startMin] = (formData.startTime || "00:00").split(":").map((n) => parseInt(n, 10));
 
   const startTotalMin = startHour * 60 + startMin;
   const pumpMinutes = Math.round(totalPumpingHours * 60); // from earlier calculation
@@ -685,10 +744,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 >
                   {/* Step Circle */}
                   <motion.div
-                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${step >= s.id
+                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${
+                      step >= s.id
                         ? "border-brand-500 bg-brand-500 text-white shadow-lg"
                         : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                      }`}
+                    }`}
                     animate={{
                       scale: step === s.id ? 1.1 : 1,
                       boxShadow: step === s.id ? "0 0 20px rgba(var(--brand-500-rgb, 59, 130, 246), 0.5)" : "none",
@@ -717,8 +777,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                   {/* Step Name */}
                   <motion.span
-                    className={`mt-2 text-xs text-center ${step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
-                      }`}
+                    className={`mt-2 text-xs text-center ${
+                      step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
+                    }`}
                     animate={{
                       fontWeight: step >= s.id ? 500 : 400,
                     }}
@@ -759,12 +820,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900/40 py-1 px-3 rounded-full">
                   Company Timings -
                   {profile?.preferred_format === "12h"
-                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
-                    } TODAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) + 12 < 24 ? "PM" : "AM"
-                    } TOMORROW`
+                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${
+                        (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
+                      } TODAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${
+                        (profile?.custom_start_hour ?? 0) + 12 < 24 ? "PM" : "AM"
+                      } TOMORROW`
                     : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 TODAY TO ${String(
-                      ((profile?.custom_start_hour ?? 0) + 12) % 24
-                    ).padStart(2, "0")}:00 TOMORROW`}
+                        ((profile?.custom_start_hour ?? 0) + 12) % 24
+                      ).padStart(2, "0")}:00 TOMORROW`}
                 </span>
               </div>
 
@@ -777,8 +840,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <div className="relative">
                     <button
                       type="button"
-                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${selectedClient ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
-                        }`}
+                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
+                        selectedClient ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
+                      }`}
                       onClick={() => setIsClientDropdownOpen((open) => !open)}
                       aria-haspopup="listbox"
                       aria-expanded={isClientDropdownOpen}
@@ -826,12 +890,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <div className="relative">
                       <button
                         type="button"
-                        className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${selectedProject
+                        className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
+                          selectedProject
                             ? "text-gray-800 dark:text-white/90"
                             : projects.length === 0 && !!selectedClient
-                              ? "text-red-500"
-                              : "text-gray-400 dark:text-gray-400"
-                          }`}
+                            ? "text-red-500"
+                            : "text-gray-400 dark:text-gray-400"
+                        }`}
                         onClick={() => setIsProjectDropdownOpen((open) => !open)}
                         aria-haspopup="listbox"
                         aria-expanded={isProjectDropdownOpen}
@@ -840,8 +905,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         {!selectedClient
                           ? "Select a client first"
                           : projects.length === 0
-                            ? "Please create a project for this client."
-                            : (() => {
+                          ? "Please create a project for this client."
+                          : (() => {
                               const selectedProj = projects.find((p: Project) => p._id === selectedProject);
                               if (!selectedProj) return "Select a project";
                               const name = selectedProj.name;
@@ -959,9 +1024,42 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     placeholder="Enter quantity"
                   />
                 </div>
-              </div>
-              {/* New grid row */}
-              <div className="grid grid-cols-4 gap-6 mt-6">
+                {/* Slump at Site */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Slump at Site (mm)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      name="slumpAtSite"
+                      value={parseFloat(formData.slumpAtSite)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setFormData((prev) => ({ ...prev, slumpAtSite: v }));
+                        setHasChanged(true);
+                      }}
+                      placeholder="160"
+                    />
+                  </div>
+                </div>
+                {/* One way Km from Mother Plant */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    One way Km from Mother Plant (km)
+                  </label>
+                  <Input
+                    type="number"
+                    name="oneWayKm"
+                    value={formData.oneWayKm ? parseFloat(formData.oneWayKm) : ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFormData((prev) => ({ ...prev, oneWayKm: v }));
+                      setHasChanged(true);
+                    }}
+                    placeholder="Enter kilometers"
+                  />
+                </div>
                 {/* Mother Plant */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -973,18 +1071,73 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     value={
                       selectedProject && projects.find((p) => p._id === selectedProject)?.mother_plant_id
                         ? (plantsData || []).find(
-                          (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                        )?.name || "Unknown Plant"
+                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
+                          )?.name || "Unknown Plant"
                         : ""
                     }
                     disabled
                     placeholder="Auto filled from project"
                   />
                 </div>
-
+                {/* Site Supervisor */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Site Supervisor
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
+                        formData.siteSupervisorId
+                          ? "text-gray-800 dark:text-white/90"
+                          : "text-gray-400 dark:text-gray-400"
+                      }`}
+                      onClick={() => setIsSupervisorDropdownOpen((open) => !open)}
+                      aria-haspopup="listbox"
+                      aria-expanded={isSupervisorDropdownOpen}
+                    >
+                      {scheduleTeamMembers?.find((m) => m._id === formData.siteSupervisorId)?.name ||
+                        "Select supervisor"}
+                    </button>
+                    <Dropdown
+                      isOpen={isSupervisorDropdownOpen}
+                      onClose={() => setIsSupervisorDropdownOpen(false)}
+                      className="w-full mt-1"
+                    >
+                      <DropdownItem
+                        className="text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => {
+                          setFormData((prev) => ({ ...prev, siteSupervisorId: "" }));
+                          setHasChanged(true);
+                          setIsSupervisorDropdownOpen(false);
+                        }}
+                      >
+                        Select supervisor
+                      </DropdownItem>
+                      {(scheduleTeamMembers || []).map((option) => (
+                        <DropdownItem
+                          key={option._id}
+                          className="text-gray-800 dark:text-white/90 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          onClick={() => {
+                            setFormData((prev) => ({ ...prev, siteSupervisorId: option._id }));
+                            setHasChanged(true);
+                            setIsSupervisorDropdownOpen(false);
+                          }}
+                        >
+                          {option.name}
+                        </DropdownItem>
+                      ))}
+                    </Dropdown>
+                  </div>
+                </div>
+              </div>
+              {/* New grid row */}
+              <div className="grid grid-cols-4 gap-6 mt-6">
                 {/* SCH No + Prepared By */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Schedule No.</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Schedule No.
+                  </label>
                   <Input
                     type="text"
                     name="scheduleName"
@@ -1020,8 +1173,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <div className="relative">
                     <button
                       type="button"
-                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${formData.pumpingJob ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
-                        }`}
+                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
+                        formData.pumpingJob ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
+                      }`}
                       onClick={() => setIsPumpingJobDropdownOpen((open) => !open)}
                       aria-haspopup="listbox"
                       aria-expanded={isPumpingJobDropdownOpen}
@@ -1403,7 +1557,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                 {/* Column 3: Calculated Values */}
                 <div className="col-span-6 flex flex-row gap-6">
-
                   <>
                     {/* Calculation Table */}
                     <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
@@ -1542,7 +1695,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       </div>
                     </div>
                   </>
-
                 </div>
               </div>
             </div>
@@ -1651,10 +1803,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                     {pumps.map((pump, idx) => (
                                       <label
                                         key={pump.id}
-                                        className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${!pump.availability
+                                        className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
+                                          !pump.availability
                                             ? "opacity-50 cursor-not-allowed"
                                             : "cursor-pointer hover:bg-gray-100"
-                                          } `}
+                                        } `}
                                       >
                                         <div className="flex flex-row items-center space-x-4 w-full">
                                           <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
@@ -1783,7 +1936,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       </p>
                     </div>
 
-                   
                     <div>
                       {overruleTMCount && (
                         <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -1882,10 +2034,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                       {tms.map((tm, idx) => (
                                         <label
                                           key={tm.id}
-                                          className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${!tm.availability
+                                          className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
+                                            !tm.availability
                                               ? "opacity-50 cursor-not-allowed"
                                               : "cursor-pointer hover:bg-gray-100"
-                                            } `}
+                                          } `}
                                         >
                                           <div className="flex flex-row items-center space-x-4 w-full">
                                             <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
@@ -2062,6 +2215,36 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Site Location</h4>
                       <p className="text-gray-800 dark:text-white/90">{generatedSchedule.site_address}</p>
                     </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Slump at Site</h4>
+                      <p className="text-gray-800 dark:text-white/90">
+                        {generatedSchedule?.slump_at_site
+                          ? `${generatedSchedule.slump_at_site} mm`
+                          : `${formData.slumpAtSite} mm`}
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        One-way from Mother Plant
+                      </h4>
+                      <p className="text-gray-800 dark:text-white/90">
+                        {typeof generatedSchedule?.mother_plant_km !== "undefined"
+                          ? `${generatedSchedule.mother_plant_km} km`
+                          : formData.oneWayKm
+                          ? `${formData.oneWayKm} km`
+                          : "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Site Supervisor</h4>
+                      <p className="text-gray-800 dark:text-white/90">
+                        {(() => {
+                          const id = generatedSchedule?.site_supervisor_id || formData.siteSupervisorId;
+                          const member = (scheduleTeamMembers || []).find((m) => m._id === id);
+                          return member?.name || "-";
+                        })()}
+                      </p>
+                    </div>
                   </div>
                   <div className="space-y-4">
                     <div>
@@ -2187,9 +2370,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {trip.plant_load
                                     ? new Date(trip.plant_load).toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
                                     : "-"}
                                 </span>
                               </TableCell>
@@ -2197,9 +2380,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {trip.plant_start
                                     ? new Date(trip.plant_start).toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
                                     : "-"}
                                 </span>
                               </TableCell>
@@ -2207,9 +2390,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {trip.pump_start
                                     ? new Date(trip.pump_start).toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
                                     : "-"}
                                 </span>
                               </TableCell>
@@ -2218,9 +2401,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {trip.unloading_time
                                     ? new Date(trip.unloading_time).toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
                                     : "-"}
                                 </span>
                               </TableCell>
@@ -2228,9 +2411,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {trip.return
                                     ? new Date(trip.return).toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
                                     : "-"}
                                 </span>
                               </TableCell>
