@@ -2215,6 +2215,24 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Site Location</h4>
                       <p className="text-gray-800 dark:text-white/90">{generatedSchedule.site_address}</p>
                     </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Schedule Date</h4>
+                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.input_params.schedule_date}</p>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Quantity</h4>
+                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.input_params.quantity} m³</p>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Pumping Speed</h4>
+                      <p className="text-gray-800 dark:text-white/90">
+                        {generatedSchedule.input_params.pumping_speed} m³/hr
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Slump at Site</h4>
                       <p className="text-gray-800 dark:text-white/90">
@@ -2243,22 +2261,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           const member = (scheduleTeamMembers || []).find((m) => m._id === id);
                           return member?.name || "-";
                         })()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Schedule Date</h4>
-                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.input_params.schedule_date}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Quantity</h4>
-                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.input_params.quantity} m³</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Pumping Speed</h4>
-                      <p className="text-gray-800 dark:text-white/90">
-                        {generatedSchedule.input_params.pumping_speed} m³/hr
                       </p>
                     </div>
                   </div>
