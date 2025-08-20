@@ -1,6 +1,7 @@
 import ThemeTogglerTwo from "@/components/common/ThemeTogglerTwo";
 
 import { ThemeProvider } from "@/context/ThemeContext";
+import Image from "next/image";
 // import Image from "next/image";
 import React from "react";
 
@@ -11,18 +12,26 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="relative flex lg:flex-row w-full h-screen justify-center flex-col  dark:bg-gray-900 sm:p-0">
           {children}
           <div className="lg:w-1/2 w-full h-full bg-brand-950 dark:bg-white/5 lg:grid items-center hidden">
-            <div className="relative items-center justify-center  flex z-1">
-              <div className="flex flex-col items-center max-w-xs">
-                {/* <Image
-                  src="/images/illustration.png"
-                  width={500}
-                  height={300}
-                  className="h-full w-auto"
-                  alt="Illustration"
-                  unoptimized
+            <div className="w-full relative items-center justify-center  flex z-1">
+              <div className="flex flex-col items-center">
+                {/* Logo */}
+                <Image
+                  src="https://i.ibb.co/BKdpb07B/logo.png"
+                  width={120}
+                  height={20}
+                  alt="TM Grid Logo"
+                  className="mb-6"
                   priority
-                /> */}
-                <p className="text-center text-gray-400 dark:text-white/60">TM Grid</p>
+                />
+                {/* Illustration */}
+                <Image
+                  src="https://i.ibb.co/gZGNnfPT/login-placeholder.png"
+                  width={550}
+                  height={200}
+                  alt="Login Illustration"
+                  className="mb-4 rounded-lg shadow"
+                  priority
+                />
               </div>
             </div>
           </div>

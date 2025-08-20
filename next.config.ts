@@ -12,7 +12,8 @@ const nextConfig: NextConfig = {
   reactStrictMode:false,
     images:{
         domains:[
-            'lh3.googleusercontent.com'
+            'lh3.googleusercontent.com',
+            'i.ibb.co'
         ]
     },
 };
