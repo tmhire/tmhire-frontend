@@ -1,22 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Button from "@/components/ui/button/Button";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import Radio from "@/components/form/input/Radio";
 import Input from "@/components/form/input/InputField";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Clock,
-  CheckCircle2,
-  GripVertical,
-  ChevronDown,
-  ChevronRight,
-  Truck,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, CheckCircle2, GripVertical, ChevronDown, ChevronRight } from "lucide-react";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useQuery } from "@tanstack/react-query";
@@ -26,11 +17,8 @@ import { useRouter } from "next/navigation";
 import { RadioGroup } from "@/components/ui/radio";
 import { useProfile } from "@/hooks/useProfile";
 import TimeInput from "@/components/form/input/TimeInput";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-import { Pie } from "react-chartjs-2";
-
-// must register arc for Pie/Doughnut charts
-ChartJS.register(ArcElement, Tooltip, Legend);
+// Removed Chart.js pie in favor of custom SVG DonutChart
+import { Spinner } from "@/components/ui/spinner";
 
 interface Client {
   contact_phone: number;
@@ -285,6 +273,38 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   });
   const avgTMCap = avgTMCapData?.average_capacity ?? null;
 
+  // Count schedules for the selected date to generate schedule number
+  type ScheduleForCount = { input_params?: { schedule_date?: string } };
+  const scheduleDateForCount = formData.scheduleDate;
+  const { data: schedulesForDayCount } = useQuery<number>({
+    queryKey: ["schedules-for-day", scheduleDateForCount],
+    enabled: !!scheduleDateForCount,
+    queryFn: async () => {
+      try {
+        const response = await fetchWithAuth("/schedules");
+        const data = await response.json();
+        if (data.success && Array.isArray(data.data)) {
+          return (data.data as ScheduleForCount[]).filter(
+            (s) => s?.input_params?.schedule_date === scheduleDateForCount
+          ).length;
+        }
+        return 0;
+      } catch {
+        return 0;
+      }
+    },
+  });
+
+  // Build schedule name: MotherPlantName-DD/MM/YY-Count
+  const formatDateAsDDMMYY = (dateStr: string) => {
+    if (!dateStr) return "";
+    const [y, m, d] = dateStr.split("-");
+    return `${d}/${m}/${y.slice(2)}`;
+  };
+
+  // Keep schedule name in form data for API payloads (only auto-set for new schedules)
+  // NOTE: defined after computedScheduleName
+
   // Fix type inference for projects useQuery
   const queryProjects = useQuery<Project[]>({
     queryKey: ["projects", selectedClient],
@@ -301,7 +321,31 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   });
   const projects: Project[] = queryProjects.data ?? [];
 
-  const fetchSchedule = async () => {
+  // Mother plant name from selected project (computed after projects are available)
+  const motherPlantId = selectedProject ? projects.find((p) => p._id === selectedProject)?.mother_plant_id : "";
+  const motherPlantName = motherPlantId
+    ? (plantsData || []).find((plant) => plant._id === motherPlantId)?.name || "Unknown Plant"
+    : "";
+
+  // Build computed and displayed schedule names
+  const computedScheduleName =
+    selectedClient && selectedProject && formData.scheduleDate && motherPlantName
+      ? `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
+      : "";
+
+  const displayedScheduleName = schedule_id
+    ? formData.scheduleName || computedScheduleName
+    : computedScheduleName || formData.scheduleName;
+
+  // Keep schedule name in form data for API payloads (only auto-set for new schedules)
+  useEffect(() => {
+    if (!schedule_id && computedScheduleName && formData.scheduleName !== computedScheduleName) {
+      setFormData((prev) => ({ ...prev, scheduleName: computedScheduleName }));
+      setHasChanged(true);
+    }
+  }, [computedScheduleName, schedule_id, formData.scheduleName]);
+
+  const fetchSchedule = useCallback(async () => {
     try {
       const response = await fetchWithAuth(`/schedules/${schedule_id}`);
       const data = await response.json();
@@ -379,7 +423,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       console.error("Error fetching schedule:", error);
       return false;
     }
-  };
+  }, [schedule_id, fetchWithAuth, avgTMCap]);
 
   const updateSchedule = async () => {
     if (!schedule_id) return false;
@@ -436,7 +480,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     if (schedule_id && clientsData && pumpsData) {
       fetchSchedule();
     }
-  }, [schedule_id, clientsData, pumpsData]);
+  }, [schedule_id, clientsData, pumpsData, fetchSchedule]);
 
   useEffect(() => {
     setIsDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -669,20 +713,122 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const unload = parseFloat(formData.unloadingTime) || 0;
   const ret = parseFloat(formData.returnTime) || 0;
 
-  const pieOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-  };
+  // Custom SVG Donut Chart
+  const cycleTimeData = [
+    { label: "Loading & Buffer", shortLabel: "Load", value: prod, color: "#3b82f6" },
+    { label: "Onward Journey", shortLabel: "Onward", value: onward, color: "#f59e0b" },
+    { label: "TM Unloading", shortLabel: "Unload", value: unload, color: "#10b981" },
+    { label: "Return Journey", shortLabel: "Return", value: ret, color: "#ef4444" },
+  ];
 
-  const pieData = {
-    labels: ["Loading & Buffer", "Onward", "Unloading", "Return"],
-    datasets: [
-      {
-        data: [prod, onward, unload, ret],
-        backgroundColor: ["#3b82f6", "#f59e0b", "#10b981", "#ef4444"],
-      },
-    ],
+  const DonutChart = ({
+    data,
+    size = 280,
+  }: {
+    data: { shortLabel: string; label: string; value: number; color: string }[];
+    size?: number;
+  }) => {
+    const center = size / 2;
+    const radius = size * 0.5;
+    const innerRadius = radius * 0.6;
+    const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
+    if (total === 0) return <div className="flex items-center justify-center h-64">No data</div>;
+    let currentAngle = -Math.PI / 2;
+    return (
+      <div className="relative w-fit">
+        <svg width={size} height={size} className="transform rotate-0">
+          {data.map((item, index) => {
+            const safeVal = item.value || 0;
+            if (safeVal === 0) return null;
+            const percentage = (safeVal / total) * 100;
+            const angle = (safeVal / total) * 2 * Math.PI;
+            const startAngle = currentAngle;
+            const endAngle = currentAngle + angle;
+            const x1 = center + radius * Math.cos(startAngle);
+            const y1 = center + radius * Math.sin(startAngle);
+            const x2 = center + radius * Math.cos(endAngle);
+            const y2 = center + radius * Math.sin(endAngle);
+            const x3 = center + innerRadius * Math.cos(endAngle);
+            const y3 = center + innerRadius * Math.sin(endAngle);
+            const x4 = center + innerRadius * Math.cos(startAngle);
+            const y4 = center + innerRadius * Math.sin(startAngle);
+            const largeArcFlag = angle > Math.PI ? 1 : 0;
+            const pathData = [
+              `M ${x1} ${y1}`,
+              `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+              `L ${x3} ${y3}`,
+              `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x4} ${y4}`,
+              "Z",
+            ].join(" ");
+            const labelAngle = startAngle + angle / 2;
+            const labelRadius = (radius + innerRadius) / 2;
+            const labelX = center + labelRadius * Math.cos(labelAngle);
+            const labelY = center + labelRadius * Math.sin(labelAngle);
+            currentAngle = endAngle;
+            return (
+              <g key={index}>
+                <path
+                  d={pathData}
+                  fill={item.color}
+                  stroke="#ffffff"
+                  strokeWidth="2"
+                  className="hover:opacity-80 transition-opacity cursor-pointer"
+                />
+                {percentage > 8 && (
+                  <>
+                    <text
+                      x={labelX}
+                      y={labelY - 6}
+                      textAnchor="middle"
+                      fill="white"
+                      fontSize="12"
+                      fontWeight=""
+                      className="pointer-events-none"
+                    >
+                      {safeVal}min
+                    </text>
+                    <text
+                      x={labelX}
+                      y={labelY + 8}
+                      textAnchor="middle"
+                      fill="white"
+                      fontSize="12"
+                      fontWeight="bold"
+                      className="pointer-events-none"
+                    >
+                      {item.shortLabel}
+                      {/* {percentage.toFixed(0)}% */}
+                    </text>
+                  </>
+                )}
+              </g>
+            );
+          })}
+          <text
+            x={center}
+            y={center - 8}
+            textAnchor="middle"
+            fill="#374151"
+            fontSize="16"
+            fontWeight="bold"
+            className="pointer-events-none"
+          >
+            Total
+          </text>
+          <text
+            x={center}
+            y={center + 12}
+            textAnchor="middle"
+            fill="#374151"
+            fontSize="18"
+            fontWeight="bold"
+            className="pointer-events-none"
+          >
+            {total} min
+          </text>
+        </svg>
+      </div>
+    );
   };
 
   const quantity = parseFloat(formData.quantity) || 0;
@@ -697,6 +843,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const tripsPerTM = cycleTimeHr > 0 ? totalPumpingHours / cycleTimeHr : 0;
   const m3PerTM = tripsPerTM * (avgTMCap && avgTMCap > 0 ? avgTMCap : 1);
   const tmReq = m3PerTM > 0 ? Math.ceil(quantity / m3PerTM) : 0;
+  const additionalTMValue = overruleTMCount ? Math.max(0, (customTMCount || 0) - tmReq) : 0;
+  const totalTMRequired = overruleTMCount ? customTMCount : tmReq;
   const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
   const [startHour, startMin] = (formData.startTime || "00:00").split(":").map((n) => parseInt(n, 10));
 
@@ -711,6 +859,17 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   // format back to HH:mm
   const pad = (n: number) => n.toString().padStart(2, "0");
   const pumpEndTime = pumpMinutes ? `${pad(endHour)}:${pad(endMin)}` : `${0}:${0}`;
+
+  // Estimated TM trip distribution for Step 1 (pre-generation)
+  const tripsPerTMExact = tripsPerTM > 0 ? tripsPerTM : 0;
+  const floorTripsPerTM = Math.floor(tripsPerTMExact);
+  const ceilTripsPerTM = Math.ceil(tripsPerTMExact);
+  // const totalTripsApprox = totalTMRequired > 0 ? Math.max(0, Math.round(tripsPerTMExact * totalTMRequired)) : 0;
+  const numCeilTms =
+    totalTMRequired > 0
+      ? Math.min(totalTMRequired, Math.max(0, totalTrips - floorTripsPerTM * totalTMRequired))
+      : 0;
+  const numFloorTms = totalTMRequired > 0 ? Math.max(0, totalTMRequired - numCeilTms) : 0;
 
   return (
     <div className="w-full mx">
@@ -822,16 +981,44 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   {profile?.preferred_format === "12h"
                     ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${
                         (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
-                      } TODAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${
+                      } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${
                         (profile?.custom_start_hour ?? 0) + 12 < 24 ? "PM" : "AM"
-                      } TOMORROW`
+                      } NEXT DAY`
                     : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 TODAY TO ${String(
                         ((profile?.custom_start_hour ?? 0) + 12) % 24
                       ).padStart(2, "0")}:00 TOMORROW`}
                 </span>
               </div>
 
-              <div className="grid grid-cols-4 gap-6">
+              {/* Summary Row: Schedule No., Current Date, Current Time */}
+              <div className="grid grid-cols-3 gap-6 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Schedule No.
+                  </label>
+                  <div className="h-11 flex items-center px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white/90 cursor-not-allowed">
+                    {displayedScheduleName || "Select Project and Schedule Date first"}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Current Date
+                  </label>
+                  <div className="h-11 flex items-center px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white/90 cursor-not-allowed">
+                    {new Date().toLocaleDateString()}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Current Time
+                  </label>
+                  <div className="h-11 flex items-center px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white/90 cursor-not-allowed">
+                    {new Date().toLocaleTimeString()}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-5 gap-6">
                 {/* Client Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -881,9 +1068,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   </div>
                 </div>
                 {/* Project Selection */}
-                <div className={`flex gap-4 ${selectedProject ? "w-full" : "w-full"}`}>
+                <div className={`flex gap-4 w-full}`}>
                   {/* Project Dropdown */}
-                  <div className={`${selectedProject ? "w-1/2" : "w-full"}`}>
+                  <div className={` "w-full"}`}>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Choose Project
                     </label>
@@ -910,8 +1097,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               const selectedProj = projects.find((p: Project) => p._id === selectedProject);
                               if (!selectedProj) return "Select a project";
                               const name = selectedProj.name;
-                              const truncated = name.length > 15 ? name.slice(0, 15) + "..." : name;
-                              return <span title={name}>{truncated}</span>;
+                              // const truncated = name.length > 15 ? name.slice(0, 15) + "..." : name;
+                              return <span title={name}>{name}</span>;
                             })()}
                       </button>
 
@@ -957,10 +1144,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       </Dropdown>
                     </div>
                   </div>
-
+                </div>
+                <div className={`flex gap-4 w-full}`}>
                   {/* Project Details */}
                   {selectedProject && projects.find((p) => p._id === selectedProject) && (
-                    <div className="w-1/2 flex flex-col justify-end">
+                    <div className="w-full flex flex-col justify-end">
                       <p className="mt-2 text-sm text-gray-400 dark:text-gray-400">
                         <span
                           title={
@@ -1130,41 +1318,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </Dropdown>
                   </div>
                 </div>
-              </div>
-              {/* New grid row */}
-              <div className="grid grid-cols-4 gap-6 mt-6">
-                {/* SCH No + Prepared By */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Schedule No.
-                  </label>
-                  <Input
-                    type="text"
-                    name="scheduleName"
-                    value={formData?.scheduleName || ""}
-                    onChange={handleInputChange}
-                    placeholder="Plant Name - CP 1"
-                  />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Prepared by TM Grid</p>
-                </div>
-
-                {/* Current Date */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Current Date
-                  </label>
-                  <Input type="text" name="currentDate" value={new Date().toLocaleDateString()} disabled />
-                </div>
-
-                {/* Current Time */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Current Time
-                  </label>
-                  <Input type="text" name="currentTime" value={new Date().toLocaleTimeString()} disabled />
-                </div>
-              </div>
-              <div className="grid grid-cols-8 gap-6 mt-6">
                 {/* Placement Zone */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1215,7 +1368,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </Dropdown>
                   </div>
                 </div>
+              </div>
 
+              <div className="grid grid-cols-6 gap-6 mt-6">
                 {/* Floor Height (Pumping) */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1239,9 +1394,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 </div>
 
                 {/* Pump Type Selection */}
-                <div className="col-span-2">
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Pump Type</label>
-                  <div className="flex flex-wrap items-center gap-8">
+                  <div className="flex flex-wrap items-center flex-row gap-6">
                     <Radio
                       id="line-pump"
                       name="pump-type"
@@ -1252,7 +1407,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         setSelectedPump("");
                         setHasChanged(true);
                       }}
-                      label="Line Pump"
+                      label="Line"
                     />
                     <Radio
                       id="boom-pump"
@@ -1264,13 +1419,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         setSelectedPump("");
                         setHasChanged(true);
                       }}
-                      label="Boom Pump"
+                      label="Boom"
                     />
                   </div>
                 </div>
 
                 {/* Schedule Date of Pumping */}
-                <div className="col-span-2">
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Schedule Date of Pumping
                   </label>
@@ -1289,7 +1444,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 {/* Pump Start Time */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pump Start Time
+                    Pump Start Time ({profile?.preferred_format})
                   </label>
                   <div className="relative">
                     <TimeInput
@@ -1306,10 +1461,24 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   </div>
                 </div>
 
+                {/* Pumping Hours (read-only) */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pumping Hours
+                  </label>
+                  <Input
+                    type="text"
+                    name="pumpingHours"
+                    value={totalPumpingHours > 0 ? `${totalPumpingHours.toFixed(2)} hr` : "-"}
+                    disabled
+                    className="cursor-not-allowed bg-gray-100 dark:bg-gray-800"
+                  />
+                </div>
+
                 {/* Pump End Time (Auto Calculated) */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pump End Time
+                    Pump End Time ({profile?.preferred_format})
                   </label>
                   <div className="relative">
                     <TimeInput
@@ -1451,250 +1620,330 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               </div>
             </div>
 
-            {/* Transit Mixer Details Section */}
+            {/* Transit Mixer Trip Log Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
-              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Transit Mixer Details</h3>
+              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Transit Mixer Trip Log</h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-13 gap-6 items-start">
-                {/* Column 1: Labels with custom legend colors */}
-                <div className="space-y-4 col-span-2">
-                  <div className="h-11 flex items-center">
-                    <span className="w-3 h-3 rounded-sm mr-2" style={{ backgroundColor: "#3b82f6" }}></span>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Loading and Buffer Time (min)
-                    </label>
-                  </div>
-                  <div className="h-11 flex items-center">
-                    <span className="w-3 h-3 rounded-sm mr-2" style={{ backgroundColor: "#f59e0b" }}></span>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Onward Time (min)
-                    </label>
-                  </div>
-                  <div className="h-11 flex flex-col items-left">
-                    <div className="flex items-center">
-                      <span className="w-3 h-3 rounded-sm mr-2" style={{ backgroundColor: "#10b981" }}></span>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        TM Unloading Time (min)
-                      </label>
-                    </div>
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Auto-filled from Pumping Speed.</p>
-                  </div>
-                  <div className="h-11 flex items-center">
-                    <span className="w-3 h-3 rounded-sm mr-2" style={{ backgroundColor: "#ef4444" }}></span>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Return Time (min)
-                    </label>
-                  </div>
-                  <div className="h-11 flex items-center">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Total Cycle Time (min)
-                    </label>
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Left Section: Input Controls */}
+                <div className="lg:col-span-4 space-y-6">
+                  {/* Input Form Section */}
+                  <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                    <h3 className="text-base font-semibold text-gray-800 dark:text-white/90 mb-4">
+                      Cycle Time Parameters
+                    </h3>
 
-                {/* Column 2: Input Fields */}
-                <div className="space-y-4  col-span-3">
-                  <div className="h-11">
-                    <Input
-                      type="number"
-                      name="productionTime"
-                      value={parseFloat(formData.productionTime)}
-                      onChange={handleInputChange}
-                      placeholder="Enter production time"
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="h-11">
-                    <Input
-                      type="number"
-                      name="onwardTime"
-                      value={parseFloat(formData.onwardTime)}
-                      onChange={handleInputChange}
-                      placeholder="Enter onward time"
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="h-11">
-                    <Input
-                      type="number"
-                      name="unloadingTime"
-                      value={parseFloat(formData.unloadingTime)}
-                      onChange={handleInputChange}
-                      placeholder="Enter unloading time"
-                      disabled
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="h-11">
-                    <Input
-                      type="number"
-                      name="returnTime"
-                      value={parseFloat(formData.returnTime)}
-                      onChange={handleInputChange}
-                      placeholder="Enter return time"
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="h-11">
-                    <Input
-                      type="number"
-                      value={[formData.productionTime, formData.onwardTime, formData.unloadingTime, formData.returnTime]
-                        .map((v) => parseFloat(v) || 0)
-                        .reduce((a, b) => a + b, 0)}
-                      disabled
-                      className="bg-gray-100 dark:bg-gray-800 font-semibold w-full"
-                      placeholder="Auto-calculated"
-                    />
-                  </div>
-                </div>
+                    <div className="space-y-2.5">
+                      {/* Loading and Buffer Time */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center min-w-0 flex-1">
+                          <span
+                            className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
+                            style={{ backgroundColor: "#3b82f6" }}
+                          ></span>
+                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                            Loading and Buffer Time (min)
+                          </label>
+                        </div>
+                        <div className="w-20 flex-shrink-0">
+                          <Input
+                            type="number"
+                            name="productionTime"
+                            value={parseFloat(formData.productionTime)}
+                            onChange={handleInputChange}
+                            placeholder="0"
+                            className="w-full text-right text-xs h-7"
+                          />
+                        </div>
+                      </div>
 
-                {/* Column 4: Pie Chart */}
-                <div className="col-span-2">
-                  <div className="w-full h-64">
-                    <Pie data={pieData} options={pieOptions} />
-                  </div>
-                </div>
+                      {/* Onward Time */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center min-w-0 flex-1">
+                          <span
+                            className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
+                            style={{ backgroundColor: "#f59e0b" }}
+                          ></span>
+                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                            Onward Time (min)
+                          </label>
+                        </div>
+                        <div className="w-20 flex-shrink-0">
+                          <Input
+                            type="number"
+                            name="onwardTime"
+                            value={parseFloat(formData.onwardTime)}
+                            onChange={handleInputChange}
+                            placeholder="0"
+                            className="w-full text-right text-xs h-7"
+                          />
+                        </div>
+                      </div>
 
-                {/* Column 3: Calculated Values */}
-                <div className="col-span-6 flex flex-row gap-6">
-                  <>
-                    {/* Calculation Table */}
-                    <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
-                      <tbody>
-                        <tr className="border-b border-gray-100 dark:border-gray-700">
-                          <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                            Total pumping hours
-                            <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                              Pumping quantity / Pumping speed
-                            </div>
-                          </td>
-                          <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                            {totalPumpingHours > 0 ? totalPumpingHours.toFixed(2) : "-"}
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-700">
-                          <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                            Trips per TM
-                            <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                              Total pumping hours / Cycle time
-                            </div>
-                          </td>
-                          <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                            {tripsPerTM > 0 ? tripsPerTM.toFixed(2) : "-"}
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-700">
-                          <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                            Quantity transported per TM
-                            <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                              Trips per TM × TM avg capacity
-                            </div>
-                          </td>
-                          <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                            {m3PerTM > 0 ? m3PerTM.toFixed(2) : "-"}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                            Optimum TM Required
-                            <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                              roundUp(Pumping quantity / m³ transported per TM)
-                            </div>
-                          </td>
-                          <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                            {tmReq > 0 ? tmReq : "-"}
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-700">
-                          <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">
-                            Total trips (approx.)
-                            <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                              roundUp(Trips per TM × TM required)
-                            </div>
-                          </td>
-                          <td className="px-4 py-2 text-right text-gray-900 dark:text-white">
-                            {totalTrips > 0 ? totalTrips : "-"}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-
-                    {/* TM Control Card */}
-                    <div className="col-span-2">
-                      <div className="h-full p-6 rounded-lg bg-blue-300 dark:bg-blue-900/40 flex flex-col justify-between">
-                        {/* Heading + explanation */}
-                        <div>
-                          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                            Optimum Required TMs
-                          </h2>
-                          <p className="text-sm text-gray-700 dark:text-gray-300 mb-4 leading-relaxed">
-                            The Optimum TM Required Count is calculated as{" "}
-                            {tmReq > 0 ? tmReq : "(fill in to calculate)"}. This value can be overridden using the
-                            inputs below.
+                      {/* TM Unloading Time */}
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center">
+                            <span
+                              className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
+                              style={{ backgroundColor: "#10b981" }}
+                            ></span>
+                            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                              TM Unloading Time (min)
+                            </label>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 ml-4.5 mt-0.5">
+                            Auto-filled from Pumping Speed.
                           </p>
                         </div>
+                        <div className="w-20 flex-shrink-0">
+                          <Input
+                            type="number"
+                            name="unloadingTime"
+                            value={parseFloat(formData.unloadingTime)}
+                            onChange={handleInputChange}
+                            placeholder="0"
+                            disabled
+                            className="w-full text-right bg-gray-50 dark:bg-gray-800 text-xs h-7"
+                          />
+                        </div>
+                      </div>
 
-                        {/* Plus/Minus Controls */}
-                        {tmReq > 0 && (
-                          <div className="flex flex-col items-center mt-2">
-                            <div className="flex items-center justify-center space-x-4">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setOverruleTMCount(true);
+                      {/* Return Time */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center min-w-0 flex-1">
+                          <span
+                            className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
+                            style={{ backgroundColor: "#ef4444" }}
+                          ></span>
+                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                            Return Time (min)
+                          </label>
+                        </div>
+                        <div className="w-20 flex-shrink-0">
+                          <Input
+                            type="number"
+                            name="returnTime"
+                            value={parseFloat(formData.returnTime)}
+                            onChange={handleInputChange}
+                            placeholder="0"
+                            className="w-full text-right text-xs h-7"
+                          />
+                        </div>
+                      </div>
 
-                                  setCustomTMCount((prev) => {
-                                    const base = prev || tmReq || 1;
-                                    return Math.max(1, base - 1);
-                                  });
-
-                                  setHasChanged(true);
-                                }}
-                                className="px-4 py-2 bg-white dark:bg-gray-700 rounded text-lg font-bold"
-                              >
-                                -
-                              </button>
-
-                              <span className="text-4xl font-bold text-gray-900 dark:text-white min-w-[3rem] text-center">
-                                {overruleTMCount ? customTMCount ?? tmReq ?? "-" : tmReq || "-"}
-                              </span>
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setOverruleTMCount(true);
-
-                                  setCustomTMCount((prev) => {
-                                    const base = prev || tmReq || 1;
-                                    return base + 1;
-                                  });
-
-                                  setHasChanged(true);
-                                }}
-                                className="px-4 py-2 bg-white dark:bg-gray-700 rounded text-lg font-bold"
-                              >
-                                +
-                              </button>
-                            </div>
+                      {/* Total Cycle Time */}
+                      <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center min-w-0 flex-1">
+                            <div className="w-2.5 h-2.5 mr-2 flex-shrink-0"></div>
+                            <label className="text-xs font-semibold text-gray-800 dark:text-gray-200 min-w-0">
+                              Total Cycle Time (min)
+                            </label>
                           </div>
-                        )}
-
-                        {/* Extra Trucks Section */}
-                        {overruleTMCount && customTMCount > tmReq && (
-                          <div className="mt-3">
-                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
-                              Queue Accumulated:
-                            </p>
-                            <div className="flex flex-wrap gap-3">
-                              {Array.from({ length: customTMCount - tmReq }).map((_, idx) => (
-                                <Truck key={idx} className="w-8 h-8 dark:text-white text-black" strokeWidth={2.5} />
-                              ))}
-                            </div>
+                          <div className="w-20 flex-shrink-0">
+                            <Input
+                              type="number"
+                              value={[
+                                formData.productionTime,
+                                formData.onwardTime,
+                                formData.unloadingTime,
+                                formData.returnTime,
+                              ]
+                                .map((v) => parseFloat(v) || 0)
+                                .reduce((a, b) => a + b, 0)}
+                              disabled
+                              className="bg-blue-50 dark:bg-blue-900/30 font-semibold w-full text-right border-blue-200 dark:border-blue-700 text-xs h-7"
+                              placeholder="Auto-calculated"
+                            />
                           </div>
-                        )}
+                        </div>
                       </div>
                     </div>
-                  </>
+                  </div>
+
+                  {/* Fleet Sizing Section moved to right column */}
+                </div>
+
+                {/* Center Section: Donut Chart */}
+                <div className="lg:col-span-4 flex items-center justify-center">
+                  <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-6 w-full">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-6 text-center">
+                      Cycle Time Breakdown
+                    </h3>
+                    <div className="flex justify-center">
+                      <DonutChart data={cycleTimeData} size={280} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Section: Fleet Sizing + TM Trip Distribution (stacked) */}
+                <div className="lg:col-span-4 space-y-6">
+                  {/* Fleet Sizing Section (moved here) */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Fleet Sizing</h3>
+
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between py-2 border-b border-blue-200/60 dark:border-blue-800/60">
+                        <span className="text-xs font-medium text-gray-900 dark:text-white">
+                          Optimum Fleet: Zero Wait, Non-Stop Pour
+                        </span>
+                        <span className="text-sm font-bold text-gray-900 dark:text-white min-w-[2rem] text-right">
+                          {tmReq > 0 ? tmReq : "-"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2 border-b border-blue-200/60 dark:border-blue-800/60">
+                        <span className="text-xs font-medium text-gray-900 dark:text-white">TMs Additional</span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                            onClick={() => {
+                              if (tmReq <= 0) return;
+                              const nextAdditional = Math.max(0, additionalTMValue - 1);
+                              const nextTotal = Math.max(1, tmReq + nextAdditional);
+                              setOverruleTMCount(nextAdditional > 0);
+                              setCustomTMCount(nextTotal);
+                              setHasChanged(true);
+                            }}
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            min={0}
+                            className="h-6 w-12 text-center px-1 rounded border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
+                            value={tmReq > 0 ? additionalTMValue : 0}
+                            onChange={(e) => {
+                              const raw = parseInt(e.target.value || "0", 10);
+                              const add = isNaN(raw) ? 0 : Math.max(0, raw);
+                              if (tmReq <= 0) return;
+                              const nextTotal = Math.max(1, tmReq + add);
+                              setOverruleTMCount(add > 0);
+                              setCustomTMCount(nextTotal);
+                              setHasChanged(true);
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                            onClick={() => {
+                              if (tmReq <= 0) return;
+                              const nextAdditional = additionalTMValue + 1;
+                              const nextTotal = Math.max(1, tmReq + nextAdditional);
+                              setOverruleTMCount(true);
+                              setCustomTMCount(nextTotal);
+                              setHasChanged(true);
+                            }}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-xs font-semibold text-gray-900 dark:text-white">Total TM Required</span>
+                        <span className="text-base font-bold text-blue-600 dark:text-blue-400 min-w-[2rem] text-right">
+                          {totalTMRequired > 0 ? totalTMRequired : "-"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TM Trip Distribution */}
+                  <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-3">
+                      TM Trip Distribution
+                    </h3>
+                    {(() => {
+                      if (totalTMRequired <= 0 || tripsPerTMExact <= 0) {
+                        return (
+                          <div className="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400 text-sm">
+                            Enter inputs to see estimated distribution.
+                          </div>
+                        );
+                      }
+                      const rows = [];
+                      if (floorTripsPerTM === ceilTripsPerTM) {
+                        const tmCount = totalTMRequired;
+                        const trips = floorTripsPerTM;
+                        rows.push({ tmCount, trips, totalTrips: tmCount * trips });
+                      } else {
+                        if (numCeilTms > 0)
+                          rows.push({
+                            tmCount: numCeilTms,
+                            trips: ceilTripsPerTM,
+                            totalTrips: numCeilTms * ceilTripsPerTM,
+                          });
+                        if (numFloorTms > 0)
+                          rows.push({
+                            tmCount: numFloorTms,
+                            trips: floorTripsPerTM,
+                            totalTrips: numFloorTms * floorTripsPerTM,
+                          });
+                        rows.sort((a, b) => b.trips - a.trips);
+                      }
+                      const totalTMs = rows.reduce((s, r) => s + r.tmCount, 0);
+                      const totalTrips = rows.reduce((s, r) => s + r.totalTrips, 0);
+
+                      return (
+                        <div>
+                          <table className="w-full table-fixed border-collapse border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
+                            <thead>
+                              <tr className="bg-gray-50 dark:bg-gray-800/60">
+                                <th className="w-1/6 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                  Sl.
+                                </th>
+                                <th className="w-1/4 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                  TMs (A)
+                                </th>
+                                <th className="w-1/4 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                  Trips/TM (B)
+                                </th>
+                                <th className="w-1/3 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                  Total (A × B)
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {rows.map((row, idx) => (
+                                <tr
+                                  key={idx}
+                                  className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors"
+                                >
+                                  <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50">
+                                    {idx + 1}
+                                  </td>
+                                  <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-medium">
+                                    {row.tmCount}
+                                  </td>
+                                  <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-medium">
+                                    {row.trips}
+                                  </td>
+                                  <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-semibold">
+                                    {row.totalTrips}
+                                  </td>
+                                </tr>
+                              ))}
+                              <tr className="bg-gray-50 dark:bg-gray-800/40 border-t border-gray-300 dark:border-gray-600">
+                                <td className="px-2 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">
+                                  Total
+                                </td>
+                                <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+                                  {totalTMs}
+                                </td>
+                                <td className="px-2 py-2 text-xs text-gray-400 dark:text-gray-500">—</td>
+                                <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+                                  {totalTrips}
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1711,6 +1960,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             </div>
           </div>
         ) : step === 2 ? (
+          !calculatedTMs || !plantsData ? (
+            <div className="flex justify-center items-center py-12">
+              <Spinner text="Loading pumps..." />
+            </div>
+          ) : (
           <div className="space-y-6">
             {calculatedTMs && calculatedTMs.available_pumps && (
               <>
@@ -1905,11 +2159,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               </div>
             </div>
           </div>
+          )
         ) : step === 3 ? (
           // Loader for Step 3
           !calculatedTMs || !plantsData ? (
             <div className="flex justify-center items-center py-12">
-              <span className="text-gray-500 dark:text-gray-400 text-lg">Loading...</span>
+              <Spinner text="Loading TMs..." />
             </div>
           ) : (
             <div className="space-y-6">
@@ -2277,7 +2532,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 <div className="mt-8">
                   <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Schedule Details</h4>
                   <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-                    <div className="max-w-full overflow-x-auto">
+                    <div className="w-full overflow-x-auto">
                       <Table>
                         <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                           <TableRow>
