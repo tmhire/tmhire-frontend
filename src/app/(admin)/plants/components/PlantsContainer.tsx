@@ -16,6 +16,7 @@ interface Plant {
   _id: string;
   user_id: string;
   name: string;
+  capacity: number | null;
   location: string;
   address: string;
   coordinates: string | null;
@@ -29,6 +30,7 @@ interface Plant {
 
 interface CreatePlantData {
   name: string;
+  capacity?: number;
   location: string;
   address: string;
   coordinates?: string;
@@ -159,6 +161,7 @@ export default function PlantsContainer() {
     setSelectedPlant(plant);
     setEditedPlant({
       name: plant.name,
+      capacity: plant.capacity || undefined,
       location: plant.location,
       address: plant.address,
       coordinates: plant.coordinates || "",
@@ -224,10 +227,7 @@ export default function PlantsContainer() {
   const contactNames = useMemo(() => {
     if (!plantsData) return [];
     const names = plantsData
-      .flatMap((plant) => [
-        plant.contact_name1,
-        plant.contact_name2
-      ])
+      .flatMap((plant) => [plant.contact_name1, plant.contact_name2])
       .filter((name): name is string => name !== null && name !== "");
     const uniqueNames = Array.from(new Set(names));
     return uniqueNames.sort();
@@ -267,9 +267,8 @@ export default function PlantsContainer() {
       const matchesLocation = !selectedLocation || plant.location === selectedLocation;
 
       // Contact filter
-      const matchesContact = !selectedContact || 
-        plant.contact_name1 === selectedContact || 
-        plant.contact_name2 === selectedContact;
+      const matchesContact =
+        !selectedContact || plant.contact_name1 === selectedContact || plant.contact_name2 === selectedContact;
 
       // Date filter
       const plantDate = new Date(plant.created_at);
@@ -288,7 +287,7 @@ export default function PlantsContainer() {
 
       return matchesSearch && matchesLocation && matchesContact && matchesDate;
     });
-      }, [plantsData, searchQuery, selectedLocation, selectedContact, selectedDate, dateRanges]);
+  }, [plantsData, searchQuery, selectedLocation, selectedContact, selectedDate, dateRanges]);
 
   return (
     <div>
@@ -462,6 +461,16 @@ export default function PlantsContainer() {
               onChange={handleInputChange}
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity</label>
+            <Input
+              type="number"
+              name="capacity"
+              placeholder="Enter plant capacity"
+              value={newPlant.capacity}
+              onChange={handleInputChange}
+            />
+          </div>
           <div className="flex flex-row w-full gap-2">
             <div className="w-full">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location</label>
@@ -582,18 +591,41 @@ export default function PlantsContainer() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
-              <Input type="text" name="name" value={editedPlant.name} onChange={handleEditInputChange} />
+              <Input
+                type="text"
+                name="name"
+                value={editedPlant.name}
+                onChange={handleEditInputChange}
+                placeholder="Enter plant name (add prefix as your brand name)"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity</label>
+              <Input
+                type="number"
+                name="capacity"
+                value={editedPlant.capacity}
+                onChange={handleEditInputChange}
+                placeholder="Enter plant capacity"
+              />
             </div>
             <div className="flex flex-row w-full gap-2">
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location</label>
-                <Input type="text" name="location" value={editedPlant.location} onChange={handleEditInputChange} />
+                <Input
+                  type="text"
+                  name="location"
+                  value={editedPlant.location}
+                  onChange={handleEditInputChange}
+                  placeholder="Enter plant location"
+                />
               </div>
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Coordinates</label>
                 <Input
                   type="text"
                   name="coordinates"
+                  placeholder="Enter coordinates (optional)"
                   value={editedPlant.coordinates || ""}
                   onChange={handleEditInputChange}
                 />
@@ -601,7 +633,13 @@ export default function PlantsContainer() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address</label>
-              <Input type="text" name="address" value={editedPlant.address} onChange={handleEditInputChange} />
+              <Input
+                type="text"
+                name="address"
+                value={editedPlant.address}
+                onChange={handleEditInputChange}
+                placeholder="Enter plant address"
+              />
             </div>
 
             <div className="flex flex-row w-full gap-2">
@@ -612,6 +650,7 @@ export default function PlantsContainer() {
                 <Input
                   type="text"
                   name="contact_name1"
+                  placeholder="Enter contact 1 name"
                   value={editedPlant.contact_name1 || ""}
                   onChange={handleEditInputChange}
                 />
@@ -623,6 +662,7 @@ export default function PlantsContainer() {
                 <Input
                   type="text"
                   name="contact_number1"
+                  placeholder="Enter contact 1 number"
                   value={editedPlant.contact_number1 || ""}
                   onChange={handleEditInputChange}
                 />
@@ -636,6 +676,7 @@ export default function PlantsContainer() {
                 <Input
                   type="text"
                   name="contact_name2"
+                  placeholder="Enter contact 2 name (optional)"
                   value={editedPlant.contact_name2 || ""}
                   onChange={handleEditInputChange}
                 />
@@ -647,6 +688,7 @@ export default function PlantsContainer() {
                 <Input
                   type="text"
                   name="contact_number2"
+                  placeholder="Enter contact 2 number (optional)"
                   value={editedPlant.contact_number2 || ""}
                   onChange={handleEditInputChange}
                 />
@@ -654,7 +696,13 @@ export default function PlantsContainer() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
-              <Input type="text" name="remarks" value={editedPlant.remarks || ""} onChange={handleEditInputChange} />
+              <Input
+                type="text"
+                name="remarks"
+                value={editedPlant.remarks || ""}
+                onChange={handleEditInputChange}
+                placeholder="Enter remarks (optional)"
+              />
             </div>
           </div>
         )}

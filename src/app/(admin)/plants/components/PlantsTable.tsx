@@ -10,6 +10,7 @@ interface Plant {
   location: string;
   address: string;
   coordinates: string | null;
+  capacity: number | null;
   contact_name1: string | null;
   contact_number1: string | null;
   contact_name2: string | null;
@@ -38,6 +39,12 @@ export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps
                   className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Name
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Capacity
                 </TableCell>
                 <TableCell
                   isHeader
@@ -96,6 +103,9 @@ export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps
                         </span>
                       </div>
                     </div>
+                  </TableCell>
+                  <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {plant.capacity ? plant.capacity : "-"}
                   </TableCell>
                   <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     <div className="max-w-[120px] truncate" title={plant.location}>
