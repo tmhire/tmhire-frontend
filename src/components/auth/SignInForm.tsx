@@ -74,7 +74,7 @@ export default function SignInForm() {
             width={120}
             height={20}
             alt="TM Grid Logo"
-            className="mb-6 invert"
+            className="mb-6 dark:invert-0 invert"
             priority
           />
           <div className="mb-5 sm:mb-8">
