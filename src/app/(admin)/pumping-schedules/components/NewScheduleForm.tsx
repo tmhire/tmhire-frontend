@@ -1851,7 +1851,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           <input
                             type="number"
                             min={0}
-                            className="h-6 w-12 text-center px-1 rounded border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
+                            className="no-spinner h-6 w-8 text-center px-1 rounded border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
                             value={tmReq > 0 ? additionalTMValue : 0}
                             onChange={(e) => {
                               const raw = parseInt(e.target.value || "0", 10);
@@ -1863,6 +1863,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               setHasChanged(true);
                             }}
                           />
+
                           <button
                             type="button"
                             className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
