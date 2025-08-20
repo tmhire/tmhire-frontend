@@ -374,8 +374,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           pumpOnwardTime: data.data.input_params.pump_onward_time.toString(),
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
-          bufferTime: data.data.input_params.buffer_time.toString(),
-          loadTime: data.data.input_params.load_time.toString(),
+          bufferTime: data?.data?.input_params?.buffer_time?.toString(),
+          loadTime: data?.data?.input_params?.load_time?.toString(),
           concreteGrade: data.data.concreteGrade,
           pump_start_time_from_plant: data.data.input_params.pump_start_time_from_plant
             ? data.data.input_params.pump_start_time_from_plant
@@ -882,9 +882,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const ceilTripsPerTM = Math.ceil(tripsPerTMExact);
   // const totalTripsApprox = totalTMRequired > 0 ? Math.max(0, Math.round(tripsPerTMExact * totalTMRequired)) : 0;
   const numCeilTms =
-    totalTMRequired > 0
-      ? Math.min(totalTMRequired, Math.max(0, totalTrips - floorTripsPerTM * totalTMRequired))
-      : 0;
+    totalTMRequired > 0 ? Math.min(totalTMRequired, Math.max(0, totalTrips - floorTripsPerTM * totalTMRequired)) : 0;
   const numFloorTms = totalTMRequired > 0 ? Math.max(0, totalTMRequired - numCeilTms) : 0;
 
   return (
@@ -2005,200 +2003,203 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               <Spinner text="Loading pumps..." />
             </div>
           ) : (
-          <div className="space-y-6">
-            {calculatedTMs && calculatedTMs.available_pumps && (
-              <>
-                {calculatedTMs.available_pumps.length < 1 ? (
-                  <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center justify-between">
-                    <span>Not enough available Pumps to fulfill the requirement. Please add more Pumps.</span>
-                    <a
-                      href="/pumps"
-                      className="ml-4 px-3 py-1 bg-brand-500 text-white rounded hover:bg-brand-600 transition-colors text-sm font-medium"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Add Pumps
-                    </a>
-                  </div>
-                ) : null}
-              </>
-            )}
+            <div className="space-y-6">
+              {calculatedTMs && calculatedTMs.available_pumps && (
+                <>
+                  {calculatedTMs.available_pumps.length < 1 ? (
+                    <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center justify-between">
+                      <span>Not enough available Pumps to fulfill the requirement. Please add more Pumps.</span>
+                      <a
+                        href="/pumps"
+                        className="ml-4 px-3 py-1 bg-brand-500 text-white rounded hover:bg-brand-600 transition-colors text-sm font-medium"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Add Pumps
+                      </a>
+                    </div>
+                  ) : null}
+                </>
+              )}
 
-            <div className="grid grid-cols-2 gap-6">
-              {/* Left Column - Pump Selection */}
-              <div className="space-y-6">
-                <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select Pump</h3>
-                <RadioGroup
-                  value={selectedPump}
-                  onValueChange={(val) => {
-                    setSelectedPump(val);
-                    setHasChanged(true);
-                  }}
-                  className="space-y-4"
-                >
-                  {calculatedTMs && calculatedTMs.available_pumps && calculatedTMs.available_pumps.length > 0 ? (
-                    (() => {
-                      const plantIdToName = (plantsData || []).reduce((acc, plant) => {
-                        acc[plant._id] = plant.name;
-                        return acc;
-                      }, {} as Record<string, string>);
-                      const grouped: Record<string, typeof calculatedTMs.available_pumps> = {};
-                      calculatedTMs.available_pumps.forEach((pump) => {
-                        const group = pump.plant_id ? plantIdToName[pump.plant_id] || "Unassigned" : "Unassigned";
-                        if (!grouped[group]) grouped[group] = [];
-                        grouped[group].push(pump);
-                      });
-                      const groupOrder = Object.keys(grouped)
-                        .filter((g) => g !== "Unassigned")
-                        .sort((a, b) => a.localeCompare(b))
-                        .concat(Object.keys(grouped).includes("Unassigned") ? ["Unassigned"] : []);
-                      return groupOrder.map((plant) => {
-                        const pumps = grouped[plant];
-                        const isOpen = openPlantGroups[plant] ?? true;
-                        const motherPlantName = (() => {
-                          const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
-                          return motherId ? plantIdToName[motherId] || "" : "";
-                        })();
-                        return (
-                          <div key={plant} className="mb-4">
-                            <button
-                              type="button"
-                              className={`flex items-center w-full px-4 py-2 bg-brand-50 dark:bg-brand-900/30 border-l-4 border-brand-500 dark:border-brand-400 font-semibold text-brand-700 dark:text-brand-300 text-base focus:outline-none transition-all duration-200
+              <div className="grid grid-cols-2 gap-6">
+                {/* Left Column - Pump Selection */}
+                <div className="space-y-6">
+                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select Pump</h3>
+                  <RadioGroup
+                    value={selectedPump}
+                    onValueChange={(val) => {
+                      setSelectedPump(val);
+                      setHasChanged(true);
+                    }}
+                    className="space-y-4"
+                  >
+                    {calculatedTMs && calculatedTMs.available_pumps && calculatedTMs.available_pumps.length > 0 ? (
+                      (() => {
+                        const plantIdToName = (plantsData || []).reduce((acc, plant) => {
+                          acc[plant._id] = plant.name;
+                          return acc;
+                        }, {} as Record<string, string>);
+                        const grouped: Record<string, typeof calculatedTMs.available_pumps> = {};
+                        calculatedTMs.available_pumps.forEach((pump) => {
+                          const group = pump.plant_id ? plantIdToName[pump.plant_id] || "Unassigned" : "Unassigned";
+                          if (!grouped[group]) grouped[group] = [];
+                          grouped[group].push(pump);
+                        });
+                        const groupOrder = Object.keys(grouped)
+                          .filter((g) => g !== "Unassigned")
+                          .sort((a, b) => a.localeCompare(b))
+                          .concat(Object.keys(grouped).includes("Unassigned") ? ["Unassigned"] : []);
+                        return groupOrder.map((plant) => {
+                          const pumps = grouped[plant];
+                          const isOpen = openPlantGroups[plant] ?? true;
+                          const motherPlantName = (() => {
+                            const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
+                            return motherId ? plantIdToName[motherId] || "" : "";
+                          })();
+                          return (
+                            <div key={plant} className="mb-4">
+                              <button
+                                type="button"
+                                className={`flex items-center w-full px-4 py-2 bg-brand-50 dark:bg-brand-900/30 border-l-4 border-brand-500 dark:border-brand-400 font-semibold text-brand-700 dark:text-brand-300 text-base focus:outline-none transition-all duration-200
                                 ${isOpen ? "rounded-t-lg rounded-b-none" : "rounded-lg"}`}
-                              onClick={() => setOpenPlantGroups((prev) => ({ ...prev, [plant]: !isOpen }))}
-                              aria-expanded={isOpen}
-                            >
-                              <span className="mr-2">
-                                {isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                              </span>
-                              <span className="flex-1 text-left flex items-center gap-2">
-                                <span>{plant}</span>
-                                {plant && motherPlantName && plant === motherPlantName && (
-                                  <span className="px-2 py-0.5 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 rounded-full">
-                                    Mother Plant
-                                  </span>
-                                )}
-                              </span>
-                              <span className="ml-2 text-xs font-semibold text-brand-500 dark:text-brand-300 bg-brand-100 dark:bg-brand-900/40 px-2 py-0.5 rounded-full">
-                                {pumps.length}
-                              </span>
-                            </button>
-                            <AnimatePresence initial={false}>
-                              {isOpen && (
-                                <motion.div
-                                  key="content"
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: "auto", opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  transition={{ duration: 0.3, ease: "easeInOut" }}
-                                  className="overflow-hidden"
-                                >
-                                  <div className="bg-white dark:bg-gray-900/30 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-lg p-2 pl-6">
-                                    {pumps.map((pump, idx) => (
-                                      <label
-                                        key={pump.id}
-                                        className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
-                                          !pump.availability
-                                            ? "opacity-50 cursor-not-allowed"
-                                            : "cursor-pointer hover:bg-gray-100"
-                                        } `}
-                                      >
-                                        <div className="flex flex-row items-center space-x-4 w-full">
-                                          <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
-                                          <input
-                                            type="checkbox"
-                                            checked={selectedPump === pump.id}
-                                            disabled={!pump.availability}
-                                            onChange={(e) => {
-                                              if (e.target.checked) {
-                                                setSelectedPump(pump.id);
-                                              } else {
-                                                setSelectedPump("");
-                                              }
-                                              setHasChanged(true);
-                                            }}
-                                            className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
-                                          />
-                                          <div className="flex flex-row w-full justify-between">
-                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                              {pump.identifier}
-                                            </p>
-                                            <div className="flex flex-row items-end gap-2">
-                                              {!pump.availability && (
-                                                <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
-                                                  Unavailable -
-                                                </p>
-                                              )}
-                                              {/* <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                onClick={() => setOpenPlantGroups((prev) => ({ ...prev, [plant]: !isOpen }))}
+                                aria-expanded={isOpen}
+                              >
+                                <span className="mr-2">
+                                  {isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                                </span>
+                                <span className="flex-1 text-left flex items-center gap-2">
+                                  <span>{plant}</span>
+                                  {plant && motherPlantName && plant === motherPlantName && (
+                                    <span className="px-2 py-0.5 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 rounded-full">
+                                      Mother Plant
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="ml-2 text-xs font-semibold text-brand-500 dark:text-brand-300 bg-brand-100 dark:bg-brand-900/40 px-2 py-0.5 rounded-full">
+                                  {pumps.length}
+                                </span>
+                              </button>
+                              <AnimatePresence initial={false}>
+                                {isOpen && (
+                                  <motion.div
+                                    key="content"
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                                    className="overflow-hidden"
+                                  >
+                                    <div className="bg-white dark:bg-gray-900/30 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-lg p-2 pl-6">
+                                      {pumps.map((pump, idx) => (
+                                        <label
+                                          key={pump.id}
+                                          className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
+                                            !pump.availability
+                                              ? "opacity-50 cursor-not-allowed"
+                                              : "cursor-pointer hover:bg-gray-100"
+                                          } `}
+                                        >
+                                          <div className="flex flex-row items-center space-x-4 w-full">
+                                            <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
+                                            <input
+                                              type="checkbox"
+                                              checked={selectedPump === pump.id}
+                                              disabled={!pump.availability}
+                                              onChange={(e) => {
+                                                if (e.target.checked) {
+                                                  setSelectedPump(pump.id);
+                                                } else {
+                                                  setSelectedPump("");
+                                                }
+                                                setHasChanged(true);
+                                              }}
+                                              className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
+                                            />
+                                            <div className="flex flex-row w-full justify-between">
+                                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                {pump.identifier}
+                                              </p>
+                                              <div className="flex flex-row items-end gap-2">
+                                                {!pump.availability && (
+                                                  <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                                    Unavailable -
+                                                  </p>
+                                                )}
+                                                {/* <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
                                                 {pump.capacity}m³
                                               </p> */}
+                                              </div>
                                             </div>
                                           </div>
-                                        </div>
-                                      </label>
-                                    ))}
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
+                                        </label>
+                                      ))}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          );
+                        });
+                      })()
+                    ) : (
+                      <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                        No pumps available for selection
+                      </div>
+                    )}
+                  </RadioGroup>
+                </div>
+
+                {/* Right Column - Chosen Pump */}
+                <div className="space-y-6">
+                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Chosen Pump</h3>
+                  <div className="space-y-2">
+                    {selectedPump && calculatedTMs && calculatedTMs.available_pumps ? (
+                      (() => {
+                        const pump = calculatedTMs.available_pumps.find((p) => p.id.toString() === selectedPump);
+                        if (!pump) return <div className="text-gray-500 dark:text-gray-400">Pump not found</div>;
+                        const plantName =
+                          (plantsData || []).find((pl) => pl._id === pump.plant_id)?.name || "Unassigned";
+                        return (
+                          <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
+                                <span className="text-xs px-2 py-1 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full">
+                                  {plantName}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                Capacity: {pump.capacity} m³
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                Availability: {pump.availability ? "Available" : "Unavailable"}
+                              </div>
+                            </div>
                           </div>
                         );
-                      });
-                    })()
-                  ) : (
-                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                      No pumps available for selection
-                    </div>
-                  )}
-                </RadioGroup>
+                      })()
+                    ) : (
+                      <div className="text-center py-4 text-gray-500 dark:text-gray-400">No pump selected</div>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* Right Column - Chosen Pump */}
-              <div className="space-y-6">
-                <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Chosen Pump</h3>
-                <div className="space-y-2">
-                  {selectedPump && calculatedTMs && calculatedTMs.available_pumps ? (
-                    (() => {
-                      const pump = calculatedTMs.available_pumps.find((p) => p.id.toString() === selectedPump);
-                      if (!pump) return <div className="text-gray-500 dark:text-gray-400">Pump not found</div>;
-                      const plantName = (plantsData || []).find((pl) => pl._id === pump.plant_id)?.name || "Unassigned";
-                      return (
-                        <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                          <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
-                              <span className="text-xs px-2 py-1 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full">
-                                {plantName}
-                              </span>
-                            </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">Capacity: {pump.capacity} m³</div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              Availability: {pump.availability ? "Available" : "Unavailable"}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()
-                  ) : (
-                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">No pump selected</div>
-                  )}
+              <div className="flex justify-between items-center mt-8">
+                <Button variant="outline" onClick={handleBack} className="flex items-center gap-2">
+                  <ArrowLeft size={16} />
+                  Back
+                </Button>
+                <div className="flex items-end gap-4">
+                  <Button onClick={handleNext} className="flex items-center gap-2" disabled={!selectedPump}>
+                    Next Step
+                    <ArrowRight size={16} />
+                  </Button>
                 </div>
               </div>
             </div>
-
-            <div className="flex justify-between items-center mt-8">
-              <Button variant="outline" onClick={handleBack} className="flex items-center gap-2">
-                <ArrowLeft size={16} />
-                Back
-              </Button>
-              <div className="flex items-end gap-4">
-                <Button onClick={handleNext} className="flex items-center gap-2" disabled={!selectedPump}>
-                  Next Step
-                  <ArrowRight size={16} />
-                </Button>
-              </div>
-            </div>
-          </div>
           )
         ) : step === 3 ? (
           // Loader for Step 3
@@ -2749,6 +2750,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           </div>
         )}
       </div>
-  </div>
+    </div>
   );
 }
