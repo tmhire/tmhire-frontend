@@ -105,6 +105,7 @@ interface GeneratedSchedule {
     onward_time: number;
     return_time: number;
     buffer_time: number;
+    load_time: number;
     pump_start: string;
     schedule_date: string;
     pump_start_time_from_plant: string;
@@ -156,7 +157,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     onwardTime: string;
     pumpOnwardTime: string;
     returnTime: string;
-    productionTime: string;
+    bufferTime: string;
+    loadTime: string;
     concreteGrade: string;
     pump_start_time_from_plant: string;
     pumpFixingTime: string;
@@ -179,7 +181,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     onwardTime: "",
     pumpOnwardTime: "",
     returnTime: "",
-    productionTime: "",
+    bufferTime: "",
+    loadTime: "",
     concreteGrade: "",
     pump_start_time_from_plant: "",
     pumpFixingTime: "",
@@ -371,7 +374,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           pumpOnwardTime: data.data.input_params.pump_onward_time.toString(),
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
-          productionTime: data.data.input_params.buffer_time.toString(),
+          bufferTime: data.data.input_params.buffer_time.toString(),
+          loadTime: data.data.input_params.load_time.toString(),
           concreteGrade: data.data.concreteGrade,
           pump_start_time_from_plant: data.data.input_params.pump_start_time_from_plant
             ? data.data.input_params.pump_start_time_from_plant
@@ -445,7 +449,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             onward_time: parseFloat(formData.onwardTime),
             pump_onward_time: parseFloat(formData.pumpOnwardTime),
             return_time: parseFloat(formData.returnTime),
-            buffer_time: parseFloat(formData.productionTime),
+            buffer_time: parseFloat(formData.bufferTime),
+            load_time: parseFloat(formData.loadTime),
             pump_start: `${formData.scheduleDate}T${formData.startTime}`,
             schedule_date: formData.scheduleDate,
             pump_start_time_from_plant: formData.pump_start_time_from_plant,
@@ -480,7 +485,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     if (schedule_id && clientsData && pumpsData) {
       fetchSchedule();
     }
-  }, [schedule_id, clientsData, pumpsData, fetchSchedule]);
+  }, [schedule_id, clientsData, pumpsData]);
 
   useEffect(() => {
     setIsDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -520,7 +525,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       !formData.onwardTime ||
       !formData.pumpOnwardTime ||
       !formData.returnTime ||
-      !formData.productionTime
+      !formData.bufferTime ||
+      !formData.loadTime
     ) {
       return false;
     }
@@ -543,7 +549,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               onward_time: parseFloat(formData.onwardTime),
               pump_onward_time: parseFloat(formData.pumpOnwardTime),
               return_time: parseFloat(formData.returnTime),
-              buffer_time: parseFloat(formData.productionTime),
+              buffer_time: parseFloat(formData.bufferTime),
+              load_time: parseFloat(formData.loadTime),
               pump_start: `${formData.scheduleDate}T${formData.startTime}`,
               schedule_date: formData.scheduleDate,
               pump_start_time_from_plant: formData.pump_start_time_from_plant,
@@ -658,7 +665,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       !!formData.concreteGrade &&
       !!formData.onwardTime &&
       !!formData.returnTime &&
-      !!formData.productionTime &&
+      !!formData.bufferTime &&
+      !!formData.loadTime &&
       !!formData.speed &&
       !!formData.pumpFixingTime &&
       !!formData.pumpRemovalTime &&
@@ -708,17 +716,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     );
   }
 
-  const prod = parseFloat(formData.productionTime) || 0;
+  const buffer = parseFloat(formData.bufferTime) || 0;
+  const load = parseFloat(formData.loadTime) || 0;
   const onward = parseFloat(formData.onwardTime) || 0;
   const unload = parseFloat(formData.unloadingTime) || 0;
   const ret = parseFloat(formData.returnTime) || 0;
 
   // Custom SVG Donut Chart
   const cycleTimeData = [
-    { label: "Loading & Buffer", shortLabel: "Load", value: prod, color: "#3b82f6" },
+    { label: "Buffer", shortLabel: "Load", value: buffer, color: "#3b82f6" },
+    { label: "Loading", shortLabel: "Load", value: load, color: "#ef4444" },
     { label: "Onward Journey", shortLabel: "Onward", value: onward, color: "#f59e0b" },
     { label: "TM Unloading", shortLabel: "Unload", value: unload, color: "#10b981" },
-    { label: "Return Journey", shortLabel: "Return", value: ret, color: "#ef4444" },
+    { label: "Return Journey", shortLabel: "Return", value: ret, color: "#8b5cf6" },
   ];
 
   const DonutChart = ({
@@ -834,7 +844,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const quantity = parseFloat(formData.quantity) || 0;
   const speed = parseFloat(formData.speed) || 0;
 
-  const cycleTimeMin = [formData.productionTime, formData.onwardTime, formData.unloadingTime, formData.returnTime]
+  const cycleTimeMin = [
+    formData.bufferTime,
+    formData.loadTime,
+    formData.onwardTime,
+    formData.unloadingTime,
+    formData.returnTime,
+  ]
     .map((v) => parseFloat(v) || 0)
     .reduce((a, b) => a + b, 0);
 
@@ -1634,7 +1650,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </h3>
 
                     <div className="space-y-2.5">
-                      {/* Loading and Buffer Time */}
+                      {/* Buffer Time */}
                       <div className="flex items-center gap-2">
                         <div className="flex items-center min-w-0 flex-1">
                           <span
@@ -1642,14 +1658,38 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             style={{ backgroundColor: "#3b82f6" }}
                           ></span>
                           <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
-                            Loading and Buffer Time (min)
+                            Buffer Time (min)
                           </label>
                         </div>
                         <div className="w-20 flex-shrink-0">
                           <Input
                             type="number"
-                            name="productionTime"
-                            value={parseFloat(formData.productionTime)}
+                            name="bufferTime"
+                            value={parseFloat(formData.bufferTime)}
+                            onChange={handleInputChange}
+                            placeholder="0"
+                            className="w-full text-right text-xs h-7"
+                          />
+                        </div>
+                      </div>
+
+                    <div className="space-y-2.5">
+                      {/* Loading Time */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center min-w-0 flex-1">
+                          <span
+                            className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
+                            style={{ backgroundColor: "#3b82f6" }}
+                          ></span>
+                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                            LoadingTime (min)
+                          </label>
+                        </div>
+                        <div className="w-20 flex-shrink-0">
+                          <Input
+                            type="number"
+                            name="loadTime"
+                            value={parseFloat(formData.loadTime)}
                             onChange={handleInputChange}
                             placeholder="0"
                             className="w-full text-right text-xs h-7"
@@ -1745,7 +1785,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             <Input
                               type="number"
                               value={[
-                                formData.productionTime,
+                                formData.bufferTime,
+                                formData.loadTime,
                                 formData.onwardTime,
                                 formData.unloadingTime,
                                 formData.returnTime,
@@ -2709,6 +2750,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           </div>
         )}
       </div>
-    </div>
+  </div>
   );
 }
