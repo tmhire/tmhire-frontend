@@ -7,6 +7,7 @@ import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
+import Image from "next/image";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -20,7 +21,7 @@ export default function SignInForm() {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-    
+
     if (email === "") {
       setIsLoading(false);
       return setError("Email should not be empty");
@@ -29,14 +30,14 @@ export default function SignInForm() {
       setIsLoading(false);
       return setError("Password should not be empty");
     }
-    
+
     try {
       const res = await signIn("signin", {
         email: email,
         password: password,
         redirect: true,
       });
-      
+
       if (!res?.ok) {
         setError("Invalid credentials");
       }
@@ -50,7 +51,7 @@ export default function SignInForm() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError("");
-    
+
     try {
       const res = await signIn("google");
       if (!res?.ok) {
@@ -67,6 +68,15 @@ export default function SignInForm() {
     <div className="flex flex-col flex-1 lg:w-1/2 w-full">
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
+          {/* Logo */}
+          <Image
+            src="https://i.ibb.co/BKdpb07B/logo.png"
+            width={120}
+            height={20}
+            alt="TM Grid Logo"
+            className="mb-6 invert"
+            priority
+          />
           <div className="mb-5 sm:mb-8">
             <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
               Sign In
