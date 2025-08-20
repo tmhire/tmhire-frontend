@@ -1673,7 +1673,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         </div>
                       </div>
 
-                    <div className="space-y-2.5">
                       {/* Loading Time */}
                       <div className="flex items-center gap-2">
                         <div className="flex items-center min-w-0 flex-1">
