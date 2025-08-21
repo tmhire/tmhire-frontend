@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Button from "@/components/ui/button/Button";
-import { Dropdown } from "@/components/ui/dropdown/Dropdown";
-import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import Radio from "@/components/form/input/Radio";
 import Input from "@/components/form/input/InputField";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
+import SearchableDropdown from "@/components/form/SearchableDropdown";
 import { ArrowLeft, ArrowRight, Clock, CheckCircle2, GripVertical, ChevronDown, ChevronRight } from "lucide-react";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
@@ -199,7 +198,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [formDataRetrieved, setFormDataRetrieved] = useState(true);
   // Dropdown open state for custom dropdowns
-  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+
   // const [isPumpDropdownOpen, setIsPumpDropdownOpen] = useState(false);
   // Add state for open/closed plant groups
   const [openPlantGroups, setOpenPlantGroups] = useState<Record<string, boolean>>({});
@@ -208,13 +207,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   // 1. Add state for selectedProject and projects
   const [selectedProject, setSelectedProject] = useState<string>("");
   // Add state for project dropdown open/close
-  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
-  // Add state for pumping job dropdown open/close
-  const [isPumpingJobDropdownOpen, setIsPumpingJobDropdownOpen] = useState(false);
-  // Site supervisor dropdown open/close
-  const [isSupervisorDropdownOpen, setIsSupervisorDropdownOpen] = useState(false);
 
-  const { data: clientsData } = useQuery<Client[]>({
+  // Add state for pumping job dropdown open/close
+
+
+  const { data: clientsData, isLoading: clientsLoading } = useQuery<Client[]>({
     queryKey: ["clients"],
     queryFn: async () => {
       const response = await fetchWithAuth("/clients/");
@@ -309,7 +306,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   // NOTE: defined after computedScheduleName
 
   // Fix type inference for projects useQuery
-  const queryProjects = useQuery<Project[]>({
+  const { data: projectsData, isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ["projects", selectedClient],
     queryFn: async () => {
       if (!selectedClient) return [];
@@ -322,7 +319,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     },
     enabled: !!selectedClient,
   });
-  const projects: Project[] = queryProjects.data ?? [];
+  const projects: Project[] = projectsData ?? [];
 
   // Mother plant name from selected project (computed after projects are available)
   const motherPlantId = selectedProject ? projects.find((p) => p._id === selectedProject)?.mother_plant_id : "";
@@ -1034,131 +1031,65 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
               <div className="grid grid-cols-5 gap-6">
                 {/* Client Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Choose Client
-                  </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
-                        selectedClient ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
-                      }`}
-                      onClick={() => setIsClientDropdownOpen((open) => !open)}
-                      aria-haspopup="listbox"
-                      aria-expanded={isClientDropdownOpen}
-                    >
-                      {clientsData?.find((c: Client) => c._id === selectedClient)?.name || "Select a client"}
-                    </button>
-                    <Dropdown
-                      isOpen={isClientDropdownOpen}
-                      onClose={() => setIsClientDropdownOpen(false)}
-                      className="w-full mt-1"
-                    >
-                      <DropdownItem
-                        className="text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        onClick={() => {
-                          setSelectedClient("");
-                          setHasChanged(true);
-                          setIsClientDropdownOpen(false);
-                        }}
-                      >
-                        Select a client
-                      </DropdownItem>
-                      {(clientsData || []).map((option: Client) => (
-                        <DropdownItem
-                          key={option._id}
-                          className="text-gray-800 dark:text-white/90 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          onClick={() => {
-                            setSelectedClient(option._id);
-                            setHasChanged(true);
-                            setIsClientDropdownOpen(false);
-                          }}
-                        >
-                          {option.name}
-                        </DropdownItem>
-                      ))}
-                    </Dropdown>
+                {clientsLoading ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Choose Client
+                    </label>
+                    <div className="h-11 w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                      Loading clients...
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <SearchableDropdown
+                    options={clientsData || []}
+                    value={selectedClient}
+                    onChange={(value) => {
+                      setSelectedClient(value);
+                      setHasChanged(true);
+                    }}
+                    getOptionLabel={(client: Client) => client.name}
+                    getOptionValue={(client: Client) => client._id}
+                    placeholder="Select a client"
+                    label="Choose Client"
+                    required
+                  />
+                )}
                 {/* Project Selection */}
-                <div className={`flex gap-4 w-full}`}>
-                  {/* Project Dropdown */}
-                  <div className={` "w-full"}`}>
+                {!selectedClient ? (
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Choose Project
                     </label>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
-                          selectedProject
-                            ? "text-gray-800 dark:text-white/90"
-                            : projects.length === 0 && !!selectedClient
-                            ? "text-red-500"
-                            : "text-gray-400 dark:text-gray-400"
-                        }`}
-                        onClick={() => setIsProjectDropdownOpen((open) => !open)}
-                        aria-haspopup="listbox"
-                        aria-expanded={isProjectDropdownOpen}
-                        disabled={!selectedClient || projects.length === 0}
-                      >
-                        {!selectedClient
-                          ? "Select a client first"
-                          : projects.length === 0
-                          ? "Please create a project for this client."
-                          : (() => {
-                              const selectedProj = projects.find((p: Project) => p._id === selectedProject);
-                              if (!selectedProj) return "Select a project";
-                              const name = selectedProj.name;
-                              // const truncated = name.length > 15 ? name.slice(0, 15) + "..." : name;
-                              return <span title={name}>{name}</span>;
-                            })()}
-                      </button>
-
-                      <Dropdown
-                        isOpen={isProjectDropdownOpen}
-                        onClose={() => setIsProjectDropdownOpen(false)}
-                        className="w-full mt-1"
-                      >
-                        {projects.length === 0 ? (
-                          <DropdownItem
-                            className="text-red-500 dark:text-red-400 cursor-not-allowed"
-                            onClick={() => setIsProjectDropdownOpen(false)}
-                          >
-                            No projects found. Please create a project for this client.
-                          </DropdownItem>
-                        ) : (
-                          <>
-                            <DropdownItem
-                              className="text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                              onClick={() => {
-                                setSelectedProject("");
-                                setHasChanged(true);
-                                setIsProjectDropdownOpen(false);
-                              }}
-                            >
-                              Select a project
-                            </DropdownItem>
-                            {(projects || []).map((option: Project) => (
-                              <DropdownItem
-                                key={option._id}
-                                className="text-gray-800 dark:text-white/90 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                onClick={() => {
-                                  setSelectedProject(option._id);
-                                  setHasChanged(true);
-                                  setIsProjectDropdownOpen(false);
-                                }}
-                              >
-                                {option.name}
-                              </DropdownItem>
-                            ))}
-                          </>
-                        )}
-                      </Dropdown>
+                    <div className="h-11 w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                      Select a client first
                     </div>
                   </div>
-                </div>
+                ) : projectsLoading ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Choose Project
+                    </label>
+                    <div className="h-11 w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                      Loading projects...
+                    </div>
+                  </div>
+                ) : (
+                  <SearchableDropdown
+                    options={projects || []}
+                    value={selectedProject}
+                    onChange={(value) => {
+                      setSelectedProject(value);
+                      setHasChanged(true);
+                    }}
+                    getOptionLabel={(project: Project) => project.name}
+                    getOptionValue={(project: Project) => project._id}
+                    placeholder={projects.length === 0 ? "No projects available" : "Select a project"}
+                    label="Choose Project"
+                    disabled={projects.length === 0}
+                    required
+                  />
+                )}
                 <div className={`flex gap-4 w-full}`}>
                   {/* Project Details */}
                   {selectedProject && projects.find((p) => p._id === selectedProject) && (
@@ -1282,106 +1213,31 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   />
                 </div>
                 {/* Site Supervisor */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Site Supervisor
-                  </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
-                        formData.siteSupervisorId
-                          ? "text-gray-800 dark:text-white/90"
-                          : "text-gray-400 dark:text-gray-400"
-                      }`}
-                      onClick={() => setIsSupervisorDropdownOpen((open) => !open)}
-                      aria-haspopup="listbox"
-                      aria-expanded={isSupervisorDropdownOpen}
-                    >
-                      {scheduleTeamMembers?.find((m) => m._id === formData.siteSupervisorId)?.name ||
-                        "Select supervisor"}
-                    </button>
-                    <Dropdown
-                      isOpen={isSupervisorDropdownOpen}
-                      onClose={() => setIsSupervisorDropdownOpen(false)}
-                      className="w-full mt-1"
-                    >
-                      <DropdownItem
-                        className="text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        onClick={() => {
-                          setFormData((prev) => ({ ...prev, siteSupervisorId: "" }));
-                          setHasChanged(true);
-                          setIsSupervisorDropdownOpen(false);
-                        }}
-                      >
-                        Select supervisor
-                      </DropdownItem>
-                      {(scheduleTeamMembers || []).map((option) => (
-                        <DropdownItem
-                          key={option._id}
-                          className="text-gray-800 dark:text-white/90 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          onClick={() => {
-                            setFormData((prev) => ({ ...prev, siteSupervisorId: option._id }));
-                            setHasChanged(true);
-                            setIsSupervisorDropdownOpen(false);
-                          }}
-                        >
-                          {option.name}
-                        </DropdownItem>
-                      ))}
-                    </Dropdown>
-                  </div>
-                </div>
+                <SearchableDropdown
+                  options={scheduleTeamMembers || []}
+                  value={formData.siteSupervisorId}
+                  onChange={(value) => {
+                    setFormData((prev) => ({ ...prev, siteSupervisorId: value }));
+                    setHasChanged(true);
+                  }}
+                  getOptionLabel={(member: TeamMember) => member.name}
+                  getOptionValue={(member: TeamMember) => member._id}
+                  placeholder="Select supervisor"
+                  label="Site Supervisor"
+                />
                 {/* Placement Zone */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Placement Zone
-                  </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      className={`h-11 w-full appearance-none rounded-lg border border-gray-300 px-4 py-2.5 pr-11 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 text-left ${
-                        formData.pumpingJob ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
-                      }`}
-                      onClick={() => setIsPumpingJobDropdownOpen((open) => !open)}
-                      aria-haspopup="listbox"
-                      aria-expanded={isPumpingJobDropdownOpen}
-                    >
-                      {formData.pumpingJob || "Select Zone"}
-                    </button>
-                    <Dropdown
-                      isOpen={isPumpingJobDropdownOpen}
-                      onClose={() => setIsPumpingJobDropdownOpen(false)}
-                      className="w-full mt-1"
-                    >
-                      <DropdownItem
-                        className="text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        onClick={() => {
-                          setFormData((prev) => ({ ...prev, pumpingJob: "" }));
-                          setHasChanged(true);
-                          setIsPumpingJobDropdownOpen(false);
-                        }}
-                      >
-                        Select Pumping Job
-                      </DropdownItem>
-                      {["SLAB", "Raft", "PCC / Footing", "Road", "Piling", "Screed", "Colomn / Beam", "Wall"].map(
-                        (option) => (
-                          <DropdownItem
-                            key={option}
-                            className="text-gray-800 dark:text-white/90 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            onClick={() => {
-                              setFormData((prev) => ({ ...prev, pumpingJob: option }));
-                              setHasChanged(true);
-                              setIsPumpingJobDropdownOpen(false);
-                            }}
-                          >
-                            {option}
-                          </DropdownItem>
-                        )
-                      )}
-                    </Dropdown>
-                  </div>
-                </div>
+                <SearchableDropdown
+                  options={["SLAB", "Raft", "PCC / Footing", "Road", "Piling", "Screed", "Colomn / Beam", "Wall"]}
+                  value={formData.pumpingJob}
+                  onChange={(value) => {
+                    setFormData((prev) => ({ ...prev, pumpingJob: value }));
+                    setHasChanged(true);
+                  }}
+                  getOptionLabel={(option: string) => option}
+                  getOptionValue={(option: string) => option}
+                  placeholder="Select Zone"
+                  label="Placement Zone"
+                />
               </div>
 
               <div className="grid grid-cols-6 gap-6 mt-6">

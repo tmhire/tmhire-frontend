@@ -462,7 +462,7 @@ export default function PlantsContainer() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity m³/hr</label>
             <Input
               type="number"
               name="capacity"
@@ -600,7 +600,7 @@ export default function PlantsContainer() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity m³/hr</label>
               <Input
                 type="number"
                 name="capacity"
