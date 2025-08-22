@@ -210,7 +210,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   // Add state for pumping job dropdown open/close
 
-
   const { data: clientsData, isLoading: clientsLoading } = useQuery<Client[]>({
     queryKey: ["clients"],
     queryFn: async () => {
@@ -416,6 +415,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         setOverruleTMCount(
           data?.data?.tm_overrule && data?.data?.tm_count ? data?.data?.tm_overrule !== data?.data?.tm_count : false
         );
+        console.log(
+          data?.data?.tm_overrule,
+          data?.data?.tm_count,
+          data?.data?.tm_overrule && data?.data?.tm_count ? data?.data?.tm_overrule !== data?.data?.tm_count : false
+        );
         return true;
       }
       return false;
@@ -458,7 +462,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           pumping_job: formData.pumpingJob,
           floor_height: parseFloat(formData.floorHeight),
           pump_site_reach_time: formData.pumpSiteReachTime,
-          tm_overrule: customTMCount > 0 ? customTMCount : undefined,
+          tm_overrule: customTMCount > 0 && overruleTMCount ? customTMCount : undefined,
           slump_at_site: formData.slumpAtSite ? parseFloat(formData.slumpAtSite) : undefined,
           mother_plant_km: formData.oneWayKm ? parseFloat(formData.oneWayKm) : undefined,
           site_supervisor_id: formData.siteSupervisorId || undefined,
@@ -496,7 +500,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    
+
     // Special handling for quantity field to enforce 1-9999 range and no decimals
     if (name === "quantity") {
       const numValue = parseFloat(value);
@@ -505,7 +509,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         return;
       }
     }
-    
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -540,6 +544,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     if (!schedule_id) {
       setIsCalculating(true);
       try {
+        console.log(customTMCount > 0 && overruleTMCount ? customTMCount : undefined);
         const response = await fetchWithAuth("/schedules", {
           method: "POST",
           body: JSON.stringify({
@@ -569,7 +574,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             pumping_job: formData.pumpingJob,
             floor_height: parseFloat(formData.floorHeight),
             pump_site_reach_time: formData.pumpSiteReachTime,
-            tm_overrule: customTMCount > 0 ? customTMCount : undefined,
+            tm_overrule: customTMCount > 0 && overruleTMCount ? customTMCount : undefined,
             slump_at_site: formData.slumpAtSite ? parseFloat(formData.slumpAtSite) : undefined,
             mother_plant_km: formData.oneWayKm ? parseFloat(formData.oneWayKm) : undefined,
             site_supervisor_id: formData.siteSupervisorId || undefined,
@@ -865,7 +870,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const totalPumpingHours = speed > 0 ? quantity / speed : 0;
   const tripsPerTM = cycleTimeHr > 0 ? totalPumpingHours / cycleTimeHr : 0;
   const m3PerTM = tripsPerTM * (avgTMCap && avgTMCap > 0 ? avgTMCap : 1);
-  const tmReq = m3PerTM > 0 ? Math.ceil(quantity / m3PerTM) : 0;
+  const tmReq = cycleTimeMin > 0 ? Math.ceil(cycleTimeMin / parseFloat(formData.unloadingTime)) : 0;
   const additionalTMValue = overruleTMCount ? Math.max(0, (customTMCount || 0) - tmReq) : 0;
   const totalTMRequired = overruleTMCount ? customTMCount : tmReq;
   const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
@@ -1055,6 +1060,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     options={clientsData || []}
                     value={selectedClient}
                     onChange={(value) => {
+                      console.log("Selected client:", value);
                       setSelectedClient(value);
                       setHasChanged(true);
                     }}
