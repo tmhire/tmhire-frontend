@@ -415,11 +415,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         setOverruleTMCount(
           data?.data?.tm_overrule && data?.data?.tm_count ? data?.data?.tm_overrule !== data?.data?.tm_count : false
         );
-        console.log(
-          data?.data?.tm_overrule,
-          data?.data?.tm_count,
-          data?.data?.tm_overrule && data?.data?.tm_count ? data?.data?.tm_overrule !== data?.data?.tm_count : false
-        );
         return true;
       }
       return false;
@@ -544,7 +539,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     if (!schedule_id) {
       setIsCalculating(true);
       try {
-        console.log(customTMCount > 0 && overruleTMCount ? customTMCount : undefined);
         const response = await fetchWithAuth("/schedules", {
           method: "POST",
           body: JSON.stringify({
@@ -653,13 +647,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   const handleSubmit = () => {
     // Handle form submission
-    console.log({
-      client: selectedClient,
-      pumpType,
-      selectedPump,
-      tmSequence,
-      ...formData,
-    });
     router.push(`/pumping-schedules/${schedule_id}/view`);
   };
 
@@ -1060,7 +1047,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     options={clientsData || []}
                     value={selectedClient}
                     onChange={(value) => {
-                      console.log("Selected client:", value);
                       setSelectedClient(value);
                       setHasChanged(true);
                     }}
