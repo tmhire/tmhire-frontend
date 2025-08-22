@@ -109,16 +109,17 @@ const othersItems: NavItem[] = [
 ];
 
 const AppSidebar: React.FC = () => {
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  // const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
 
-  const handleToggle = () => {
-    if (window.innerWidth >= 1024) {
-      toggleSidebar();
-    } else {
-      toggleMobileSidebar();
-    }
-  };
+  // const handleToggle = () => {
+  //   if (window.innerWidth >= 1024) {
+  //     toggleSidebar();
+  //   } else {
+  //     toggleMobileSidebar();
+  //   }
+  // };
 
   const renderMenuItems = (navItems: NavItem[], menuType: "main" | "others") => (
     <ul
@@ -305,7 +306,7 @@ const AppSidebar: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Sidebar Toggle Button - Only show when expanded or on mobile */}
-      {(isExpanded || isHovered || isMobileOpen) && (
+      {/* {(isExpanded || isHovered || isMobileOpen) && (
         <div className="flex justify-end pt-4 pb-2">
           <button
             className="items-center justify-center w-10 h-10 text-gray-500 border-gray-200 rounded-lg z-99999 dark:border-gray-800 lg:flex dark:text-gray-400 lg:h-11 lg:w-11 lg:border hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -335,7 +336,7 @@ const AppSidebar: React.FC = () => {
             )}
           </button>
         </div>
-      )}
+      )} */}
 
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
