@@ -137,11 +137,9 @@ export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps
                     <div className="flex items-center gap-2">
                       <Button size="sm" variant="outline" onClick={() => onEdit(plant)}>
                         <Edit size={"12px"} />
-                        Edit
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => onDelete(plant)}>
                         <Trash size={"12px"} />
-                        Delete
                       </Button>
                     </div>
                   </TableCell>

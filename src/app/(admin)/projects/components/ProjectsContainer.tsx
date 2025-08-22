@@ -13,7 +13,7 @@ import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { ChevronDownIcon } from "lucide-react";
-import { validateMobile } from "@/lib/utils";
+import { validateMobile, validateName } from "@/lib/utils";
 
 interface Project {
   _id: string;
@@ -104,6 +104,42 @@ export default function ProjectsContainer() {
   });
   const [contactNumberError, setContactNumberError] = useState("");
   const [editContactNumberError, setEditContactNumberError] = useState("");
+  const [contactNameError, setContactNameError] = useState("");
+  const [editContactNameError, setEditContactNameError] = useState("");
+
+  // Form validation for create modal
+  const isCreateFormValid = useMemo(() => {
+    return (
+      newProject.name.trim() !== "" &&
+      newProject.address.trim() !== "" &&
+      newProject.client_id.trim() !== "" &&
+      newProject.mother_plant_id.trim() !== "" &&
+      newProject.sales_engineer_id.trim() !== "" &&
+      newProject.contact_name.trim() !== "" &&
+      newProject.contact_number.trim() !== "" &&
+      validateName(newProject.contact_name.trim()) &&
+      validateMobile(newProject.contact_number.trim()) &&
+      !contactNameError &&
+      !contactNumberError
+    );
+  }, [newProject, contactNameError, contactNumberError]);
+
+  // Form validation for edit modal
+  const isEditFormValid = useMemo(() => {
+    return (
+      editedProject.name.trim() !== "" &&
+      editedProject.address.trim() !== "" &&
+      editedProject.client_id.trim() !== "" &&
+      editedProject.mother_plant_id.trim() !== "" &&
+      editedProject.sales_engineer_id.trim() !== "" &&
+      editedProject.contact_name.trim() !== "" &&
+      editedProject.contact_number.trim() !== "" &&
+      validateName(editedProject.contact_name.trim()) &&
+      validateMobile(editedProject.contact_number.trim()) &&
+      !editContactNameError &&
+      !editContactNumberError
+    );
+  }, [editedProject, editContactNameError, editContactNumberError]);
 
   // Dropdown states for client selection
   const [isCreateClientDropdownOpen, setIsCreateClientDropdownOpen] = useState(false);
@@ -300,36 +336,60 @@ export default function ProjectsContainer() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setNewProject((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    // Validate contact number if it's being changed
+    
+    // Handle contact name field with validation
+    if (name === "contact_name") {
+      if (value.length > 25) return; // Prevent typing more than 25 characters
+      if (value && !validateName(value)) {
+        setContactNameError("Contact name must be 1-25 alphanumeric characters");
+      } else {
+        setContactNameError("");
+      }
+    }
+    
+    // Handle contact number field with validation
     if (name === "contact_number") {
+      if (value.length > 10) return; // Prevent typing more than 10 digits
       if (value && !validateMobile(value)) {
         setContactNumberError("Please enter a valid 10-digit mobile number starting with 6-9");
       } else {
         setContactNumberError("");
       }
     }
+    
+    setNewProject((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setEditedProject((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    // Validate contact number if it's being changed in edit modal
+    
+    // Handle contact name field with validation
+    if (name === "contact_name") {
+      if (value.length > 25) return; // Prevent typing more than 25 characters
+      if (value && !validateName(value)) {
+        setEditContactNameError("Contact name must be 1-25 alphanumeric characters");
+      } else {
+        setEditContactNameError("");
+      }
+    }
+    
+    // Handle contact number field with validation
     if (name === "contact_number") {
+      if (value.length > 10) return; // Prevent typing more than 10 digits
       if (value && !validateMobile(value)) {
         setEditContactNumberError("Please enter a valid 10-digit mobile number starting with 6-9");
       } else {
         setEditContactNumberError("");
       }
     }
+    
+    setEditedProject((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   // Client dropdown handlers
@@ -622,23 +682,26 @@ export default function ProjectsContainer() {
             <Input
               type="text"
               name="contact_name"
-              placeholder="Enter contact name"
+              placeholder="Enter contact name (max 25 characters)"
               value={newProject.contact_name}
               onChange={handleInputChange}
+              maxLength={25}
             />
+            {contactNameError && <p className="text-red-500 text-xs mt-1">{contactNameError}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Number</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Mobile Number</label>
             <Input
               type="tel"
               name="contact_number"
-              placeholder="Enter contact number"
+              placeholder="Enter 10-digit mobile number"
               value={newProject.contact_number}
               onChange={handleInputChange}
+              maxLength={10}
             />
             {contactNumberError && <p className="text-red-500 text-xs mt-1">{contactNumberError}</p>}
           </div>
-          <div className="col-span-2">
+          <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Mother Plant</label>
             <div className="relative">
               <button
@@ -676,7 +739,7 @@ export default function ProjectsContainer() {
               </Dropdown>
             </div>
           </div>
-          <div className="col-span-2">
+          <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Sales Engineer</label>
             <div className="relative">
               <button
@@ -742,7 +805,7 @@ export default function ProjectsContainer() {
           <Button size="sm" variant="outline" onClick={handleCloseCreateModal}>
             Cancel
           </Button>
-          <Button size="sm" onClick={handleCreateProject} disabled={createProjectMutation.isPending}>
+          <Button size="sm" onClick={handleCreateProject} disabled={createProjectMutation.isPending || !isCreateFormValid}>
             {createProjectMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />
@@ -813,21 +876,24 @@ export default function ProjectsContainer() {
                 name="contact_name"
                 value={editedProject.contact_name}
                 onChange={handleEditInputChange}
+                maxLength={25}
               />
+              {editContactNameError && <p className="text-red-500 text-xs mt-1">{editContactNameError}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Contact Number
+                Contact Mobile Number
               </label>
               <Input
                 type="tel"
                 name="contact_number"
                 value={editedProject.contact_number}
                 onChange={handleEditInputChange}
+                maxLength={10}
               />
               {editContactNumberError && <p className="text-red-500 text-xs mt-1">{editContactNumberError}</p>}
             </div>
-            <div className="col-span-2">
+            <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Mother Plant</label>
               <div className="relative">
                 <button
@@ -867,7 +933,7 @@ export default function ProjectsContainer() {
                 </Dropdown>
               </div>
             </div>
-            <div className="col-span-2">
+            <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Sales Engineer
               </label>
@@ -929,7 +995,7 @@ export default function ProjectsContainer() {
           <Button size="sm" variant="outline" onClick={handleCloseEditModal}>
             Cancel
           </Button>
-          <Button size="sm" onClick={handleSaveEdit} disabled={editProjectMutation.isPending}>
+          <Button size="sm" onClick={handleSaveEdit} disabled={editProjectMutation.isPending || !isEditFormValid}>
             {editProjectMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />

@@ -188,11 +188,9 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembe
                     <div className="flex items-center gap-2">
                       <Button size="sm" variant="outline" onClick={() => onEdit(pump)}>
                         <Edit size={"12px"} />
-                        Edit
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => onDelete(pump)}>
                         <Trash size={"12px"} />
-                        Delete
                       </Button>
                     </div>
                   </TableCell>

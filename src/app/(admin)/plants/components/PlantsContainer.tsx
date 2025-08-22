@@ -11,6 +11,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
+import { validateMobile, validateName } from "@/lib/utils";
 
 interface Plant {
   _id: string;
@@ -70,6 +71,70 @@ export default function PlantsContainer() {
     contact_name1: "",
     contact_number1: "",
   });
+
+  // Validation state variables
+  const [nameError, setNameError] = useState<string>("");
+  const [contactName1Error, setContactName1Error] = useState<string>("");
+  const [contactName2Error, setContactName2Error] = useState<string>("");
+  const [contactNumber1Error, setContactNumber1Error] = useState<string>("");
+  const [contactNumber2Error, setContactNumber2Error] = useState<string>("");
+  const [editNameError, setEditNameError] = useState<string>("");
+  const [editContactName1Error, setEditContactName1Error] = useState<string>("");
+  const [editContactName2Error, setEditContactName2Error] = useState<string>("");
+  const [editContactNumber1Error, setEditContactNumber1Error] = useState<string>("");
+  const [editContactNumber2Error, setEditContactNumber2Error] = useState<string>("");
+
+  // Form validation for create modal
+  const isCreateFormValid = useMemo(() => {
+    return (
+      newPlant.name.trim() !== "" &&
+      newPlant.location.trim() !== "" &&
+      newPlant.address.trim() !== "" &&
+      newPlant.contact_name1.trim() !== "" &&
+      newPlant.contact_number1.trim() !== "" &&
+      validateName(newPlant.name.trim()) &&
+      validateName(newPlant.contact_name1.trim()) &&
+      validateMobile(newPlant.contact_number1.trim()) &&
+      (newPlant.contact_name2 === "" || (newPlant.contact_name2 && validateName(newPlant.contact_name2.trim()))) &&
+      (newPlant.contact_number2 === "" ||
+        (newPlant.contact_number2 && validateMobile(newPlant.contact_number2.trim()))) &&
+      !nameError &&
+      !contactName1Error &&
+      !contactName2Error &&
+      !contactNumber1Error &&
+      !contactNumber2Error
+    );
+  }, [newPlant, nameError, contactName1Error, contactName2Error, contactNumber1Error, contactNumber2Error]);
+
+  // Form validation for edit modal
+  const isEditFormValid = useMemo(() => {
+    return (
+      editedPlant.name.trim() !== "" &&
+      editedPlant.location.trim() !== "" &&
+      editedPlant.address.trim() !== "" &&
+      editedPlant.contact_name1.trim() !== "" &&
+      editedPlant.contact_number1.trim() !== "" &&
+      validateName(editedPlant.name.trim()) &&
+      validateName(editedPlant.contact_name1.trim()) &&
+      validateMobile(editedPlant.contact_number1.trim()) &&
+      (editedPlant.contact_name2 === "" ||
+        (editedPlant.contact_name2 && validateName(editedPlant.contact_name2.trim()))) &&
+      (editedPlant.contact_number2 === "" ||
+        (editedPlant.contact_number2 && validateMobile(editedPlant.contact_number2.trim()))) &&
+      !editNameError &&
+      !editContactName1Error &&
+      !editContactName2Error &&
+      !editContactNumber1Error &&
+      !editContactNumber2Error
+    );
+  }, [
+    editedPlant,
+    editNameError,
+    editContactName1Error,
+    editContactName2Error,
+    editContactNumber1Error,
+    editContactNumber2Error,
+  ]);
 
   const { data: plantsData, isLoading: isLoadingPlants } = useQuery({
     queryKey: ["plants"],
@@ -202,6 +267,33 @@ export default function PlantsContainer() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+
+    // Handle name fields with validation
+    if (name === "name" || name === "contact_name1" || name === "contact_name2") {
+      if (value.length > 25) return; // Prevent typing more than 25 characters
+      if (value && !validateName(value)) {
+        if (name === "name") setNameError("Name must be 1-25 alphanumeric characters");
+        else if (name === "contact_name1") setContactName1Error("Contact name must be 1-25 alphanumeric characters");
+        else if (name === "contact_name2") setContactName2Error("Contact name must be 1-25 alphanumeric characters");
+      } else {
+        if (name === "name") setNameError("");
+        else if (name === "contact_name1") setContactName1Error("");
+        else if (name === "contact_name2") setContactName2Error("");
+      }
+    }
+
+    // Handle contact number fields with validation
+    if (name === "contact_number1" || name === "contact_number2") {
+      if (value.length > 10) return; // Prevent typing more than 10 digits
+      if (value && !validateMobile(value)) {
+        if (name === "contact_number1") setContactNumber1Error("Please enter a valid 10-digit mobile number");
+        else if (name === "contact_number2") setContactNumber2Error("Please enter a valid 10-digit mobile number");
+      } else {
+        if (name === "contact_number1") setContactNumber1Error("");
+        else if (name === "contact_number2") setContactNumber2Error("");
+      }
+    }
+
     setNewPlant((prev) => ({
       ...prev,
       [name]: value,
@@ -210,6 +302,35 @@ export default function PlantsContainer() {
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+
+    // Handle name fields with validation
+    if (name === "name" || name === "contact_name1" || name === "contact_name2") {
+      if (value.length > 25) return; // Prevent typing more than 25 characters
+      if (value && !validateName(value)) {
+        if (name === "name") setEditNameError("Name must be 1-25 alphanumeric characters");
+        else if (name === "contact_name1")
+          setEditContactName1Error("Contact name must be 1-25 alphanumeric characters");
+        else if (name === "contact_name2")
+          setEditContactName2Error("Contact name must be 1-25 alphanumeric characters");
+      } else {
+        if (name === "name") setEditNameError("");
+        else if (name === "contact_name1") setEditContactName1Error("");
+        else if (name === "contact_name2") setEditContactName2Error("");
+      }
+    }
+
+    // Handle contact number fields with validation
+    if (name === "contact_number1" || name === "contact_number2") {
+      if (value.length > 10) return; // Prevent typing more than 10 digits
+      if (value && !validateMobile(value)) {
+        if (name === "contact_number1") setEditContactNumber1Error("Please enter a valid 10-digit mobile number");
+        else if (name === "contact_number2") setEditContactNumber2Error("Please enter a valid 10-digit mobile number");
+      } else {
+        if (name === "contact_number1") setEditContactNumber1Error("");
+        else if (name === "contact_number2") setEditContactNumber2Error("");
+      }
+    }
+
     setEditedPlant((prev) => ({
       ...prev,
       [name]: value,
@@ -447,29 +568,35 @@ export default function PlantsContainer() {
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        className="max-w-[600px] p-5 lg:p-10"
+        className="max-w-[850px] p-5 lg:p-10"
       >
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Plant</h4>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
-            <Input
-              type="text"
-              name="name"
-              placeholder="Enter plant name (add prefix as your brand name)"
-              value={newPlant.name}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity m³/hr</label>
-            <Input
-              type="number"
-              name="capacity"
-              placeholder="Enter plant capacity"
-              value={newPlant.capacity}
-              onChange={handleInputChange}
-            />
+          <div className="flex flex-row w-full gap-2">
+            <div className="w-full">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
+              <Input
+                type="text"
+                name="name"
+                placeholder="Enter plant name (add prefix as your brand name)"
+                value={newPlant.name}
+                onChange={handleInputChange}
+                maxLength={25}
+              />
+              {nameError && <span className="text-xs text-red-600 mt-1 block">{nameError}</span>}
+            </div>
+            <div className="w-full">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Capacity m³/hr
+              </label>
+              <Input
+                type="number"
+                name="capacity"
+                placeholder="Enter plant capacity"
+                value={newPlant.capacity}
+                onChange={handleInputChange}
+              />
+            </div>
           </div>
           <div className="flex flex-row w-full gap-2">
             <div className="w-full">
@@ -512,22 +639,26 @@ export default function PlantsContainer() {
               <Input
                 type="text"
                 name="contact_name1"
-                placeholder="Enter contact 1 name"
+                placeholder="Enter contact 1 name (max 25 characters)"
                 value={newPlant.contact_name1}
                 onChange={handleInputChange}
+                maxLength={25}
               />
+              {contactName1Error && <span className="text-xs text-red-600 mt-1 block">{contactName1Error}</span>}
             </div>
             <div className="w-full">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Contact 1 Number
+                Contact 1 Mobile Number
               </label>
               <Input
                 type="text"
                 name="contact_number1"
-                placeholder="Enter contact 1 number"
+                placeholder="Enter 10-digit mobile number"
                 value={newPlant.contact_number1}
                 onChange={handleInputChange}
+                maxLength={10}
               />
+              {contactNumber1Error && <span className="text-xs text-red-600 mt-1 block">{contactNumber1Error}</span>}
             </div>
           </div>
           <div className="flex flex-row w-full gap-2">
@@ -538,22 +669,26 @@ export default function PlantsContainer() {
               <Input
                 type="text"
                 name="contact_name2"
-                placeholder="Enter contact 2 name (optional)"
+                placeholder="Enter contact 2 name (optional, max 25 characters)"
                 value={newPlant.contact_name2 || ""}
                 onChange={handleInputChange}
+                maxLength={25}
               />
+              {contactName2Error && <span className="text-xs text-red-600 mt-1 block">{contactName2Error}</span>}
             </div>
             <div className="w-full">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Contact 2 Number
+                Contact 2 Mobile Number
               </label>
               <Input
                 type="text"
                 name="contact_number2"
-                placeholder="Enter contact 2 number (optional)"
+                placeholder="Enter 10-digit mobile number (optional)"
                 value={newPlant.contact_number2 || ""}
                 onChange={handleInputChange}
+                maxLength={10}
               />
+              {contactNumber2Error && <span className="text-xs text-red-600 mt-1 block">{contactNumber2Error}</span>}
             </div>
           </div>
           <div>
@@ -571,7 +706,7 @@ export default function PlantsContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
             Cancel
           </Button>
-          <Button size="sm" onClick={handleCreatePlant} disabled={createPlantMutation.isPending}>
+          <Button size="sm" onClick={handleCreatePlant} disabled={createPlantMutation.isPending || !isCreateFormValid}>
             {createPlantMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />
@@ -585,29 +720,35 @@ export default function PlantsContainer() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-[600px] p-5 lg:p-10">
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-[850px] p-5 lg:p-10">
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Edit Plant</h4>
         {selectedPlant && (
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
-              <Input
-                type="text"
-                name="name"
-                value={editedPlant.name}
-                onChange={handleEditInputChange}
-                placeholder="Enter plant name (add prefix as your brand name)"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity m³/hr</label>
-              <Input
-                type="number"
-                name="capacity"
-                value={editedPlant.capacity}
-                onChange={handleEditInputChange}
-                placeholder="Enter plant capacity"
-              />
+            <div className="flex flex-row w-full gap-2">
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
+                <Input
+                  type="text"
+                  name="name"
+                  value={editedPlant.name}
+                  onChange={handleEditInputChange}
+                  placeholder="Enter plant name (add prefix as your brand name)"
+                  maxLength={25}
+                />
+                {editNameError && <span className="text-xs text-red-600 mt-1 block">{editNameError}</span>}
+              </div>
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Capacity m³/hr
+                </label>
+                <Input
+                  type="number"
+                  name="capacity"
+                  value={editedPlant.capacity}
+                  onChange={handleEditInputChange}
+                  placeholder="Enter plant capacity"
+                />
+              </div>
             </div>
             <div className="flex flex-row w-full gap-2">
               <div className="w-full">
@@ -650,22 +791,30 @@ export default function PlantsContainer() {
                 <Input
                   type="text"
                   name="contact_name1"
-                  placeholder="Enter contact 1 name"
+                  placeholder="Enter contact 1 name (max 25 characters)"
                   value={editedPlant.contact_name1 || ""}
                   onChange={handleEditInputChange}
+                  maxLength={25}
                 />
+                {editContactName1Error && (
+                  <span className="text-xs text-red-600 mt-1 block">{editContactName1Error}</span>
+                )}
               </div>
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Contact 1 Number
+                  Contact 1 Mobile Number
                 </label>
                 <Input
                   type="text"
                   name="contact_number1"
-                  placeholder="Enter contact 1 number"
+                  placeholder="Enter 10-digit mobile number"
                   value={editedPlant.contact_number1 || ""}
                   onChange={handleEditInputChange}
+                  maxLength={10}
                 />
+                {editContactNumber1Error && (
+                  <span className="text-xs text-red-600 mt-1 block">{editContactNumber1Error}</span>
+                )}
               </div>
             </div>
             <div className="flex flex-row w-full gap-2">
@@ -676,22 +825,30 @@ export default function PlantsContainer() {
                 <Input
                   type="text"
                   name="contact_name2"
-                  placeholder="Enter contact 2 name (optional)"
+                  placeholder="Enter contact 2 name (optional, max 25 characters)"
                   value={editedPlant.contact_name2 || ""}
                   onChange={handleEditInputChange}
+                  maxLength={25}
                 />
+                {editContactName2Error && (
+                  <span className="text-xs text-red-600 mt-1 block">{editContactName2Error}</span>
+                )}
               </div>
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Contact 2 Number
+                  Contact 2 Mobile Number
                 </label>
                 <Input
                   type="text"
                   name="contact_number2"
-                  placeholder="Enter contact 2 number (optional)"
+                  placeholder="Enter 10-digit mobile number (optional)"
                   value={editedPlant.contact_number2 || ""}
                   onChange={handleEditInputChange}
+                  maxLength={10}
                 />
+                {editContactNumber2Error && (
+                  <span className="text-xs text-red-600 mt-1 block">{editContactNumber2Error}</span>
+                )}
               </div>
             </div>
             <div>
@@ -710,7 +867,7 @@ export default function PlantsContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsEditModalOpen(false)}>
             Cancel
           </Button>
-          <Button size="sm" onClick={handleSaveEdit} disabled={editPlantMutation.isPending}>
+          <Button size="sm" onClick={handleSaveEdit} disabled={editPlantMutation.isPending || !isEditFormValid}>
             {editPlantMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />

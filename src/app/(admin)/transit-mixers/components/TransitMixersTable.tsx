@@ -140,11 +140,9 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                     <div className="flex items-center gap-2">
                       <Button size="sm" variant="outline" onClick={() => onEdit(mixer)}>
                         <Edit size={"12px"} />
-                        Edit
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => onDelete(mixer)}>
                         <Trash size={"12px"} />
-                        Delete
                       </Button>
                     </div>
                   </TableCell>

@@ -12,7 +12,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
-import { validateMobile } from "@/lib/utils";
+import { validateMobile, validateName } from "@/lib/utils";
 
 interface Plant {
   _id: string;
@@ -94,6 +94,38 @@ export default function PumpsContainer() {
   const [error, setError] = useState("");
   const [driverContactError, setDriverContactError] = useState("");
   const [editDriverContactError, setEditDriverContactError] = useState("");
+  const [driverNameError, setDriverNameError] = useState("");
+  const [editDriverNameError, setEditDriverNameError] = useState("");
+
+  // Form validation for create modal
+  const isCreateFormValid = useMemo(() => {
+    return (
+      newPump.identifier.trim() !== "" &&
+      newPump.capacity > 0 &&
+      newPump.plant_id.trim() !== "" &&
+      newPump.make.trim() !== "" &&
+      !error &&
+      (newPump.driver_name === "" || (newPump.driver_name && validateName(newPump.driver_name.trim()))) &&
+      (newPump.driver_contact === "" || (newPump.driver_contact && validateMobile(newPump.driver_contact.trim()))) &&
+      !driverNameError &&
+      !driverContactError
+    );
+  }, [newPump, error, driverNameError, driverContactError]);
+
+  // Form validation for edit modal
+  const isEditFormValid = useMemo(() => {
+    return (
+      editedPump.identifier.trim() !== "" &&
+      editedPump.capacity > 0 &&
+      editedPump.plant_id.trim() !== "" &&
+      editedPump.make.trim() !== "" &&
+      (editedPump.driver_name === "" || (editedPump.driver_name && validateName(editedPump.driver_name.trim()))) &&
+      (editedPump.driver_contact === "" ||
+        (editedPump.driver_contact && validateMobile(editedPump.driver_contact.trim()))) &&
+      !editDriverNameError &&
+      !editDriverContactError
+    );
+  }, [editedPump, editDriverNameError, editDriverContactError]);
 
   const handleIdentifierInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.toUpperCase();
@@ -320,37 +352,60 @@ export default function PumpsContainer() {
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
-    const newValue = name === "capacity" ? Number(value) : value;
-    setEditedPump((prev) => ({
-      ...prev,
-      [name]: newValue,
-    }));
+    // Handle driver name field with validation
+    if (name === "driver_name") {
+      if (value.length > 25) return; // Prevent typing more than 25 characters
+      if (value && !validateName(value)) {
+        setEditDriverNameError("Driver name must be 1-25 alphanumeric characters");
+      } else {
+        setEditDriverNameError("");
+      }
+    }
 
     // Validate driver contact if it's being changed in edit modal
     if (name === "driver_contact") {
+      if (value.length > 10) return; // Prevent typing more than 10 digits
       if (value && !validateMobile(value)) {
         setEditDriverContactError("Please enter a valid 10-digit mobile number starting with 6-9");
       } else {
         setEditDriverContactError("");
       }
     }
+
+    const newValue = name === "capacity" ? Number(value) : value;
+    setEditedPump((prev) => ({
+      ...prev,
+      [name]: newValue,
+    }));
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setNewPump((prev) => ({
-      ...prev,
-      [name]: name === "capacity" ? Number(value) : value,
-    }));
+
+    // Handle driver name field with validation
+    if (name === "driver_name") {
+      if (value.length > 25) return; // Prevent typing more than 25 characters
+      if (value && !validateName(value)) {
+        setDriverNameError("Driver name must be 1-25 alphanumeric characters");
+      } else {
+        setDriverNameError("");
+      }
+    }
 
     // Validate driver contact if it's being changed
     if (name === "driver_contact") {
+      if (value.length > 10) return; // Prevent typing more than 10 digits
       if (value && !validateMobile(value)) {
         setDriverContactError("Please enter a valid 10-digit mobile number starting with 6-9");
       } else {
         setDriverContactError("");
       }
     }
+
+    setNewPump((prev) => ({
+      ...prev,
+      [name]: name === "capacity" ? Number(value) : value,
+    }));
   };
 
   // Handlers for selecting operator and pipeline gang
@@ -674,8 +729,8 @@ export default function PumpsContainer() {
             </label>
           </div>
         </div>{" "}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
+        <div className="grid grid-cols-4 gap-4">
+          <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pump No.</label>
             <Input
               type="text"
@@ -736,19 +791,24 @@ export default function PumpsContainer() {
             <Input
               type="text"
               name="driver_name"
-              placeholder="Enter driver name"
+              placeholder="Enter driver name (max 25 characters)"
               value={newPump.driver_name || ""}
               onChange={handleInputChange}
+              maxLength={25}
             />
+            {driverNameError && <p className="text-red-500 text-xs mt-1">{driverNameError}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Contact</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Driver Mobile Number
+            </label>
             <Input
               type="text"
               name="driver_contact"
-              placeholder="Enter driver contact"
+              placeholder="Enter 10-digit mobile number"
               value={newPump.driver_contact || ""}
               onChange={handleInputChange}
+              maxLength={10}
             />
             {driverContactError && <p className="text-red-500 text-xs mt-1">{driverContactError}</p>}
           </div>
@@ -826,7 +886,7 @@ export default function PumpsContainer() {
               </Dropdown>
             </div>
           </div>
-          <div>
+          <div className="col-span-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
             <Input
               type="text"
@@ -836,11 +896,11 @@ export default function PumpsContainer() {
               onChange={handleInputChange}
             />
           </div>
-          <div className="col-span-2 flex justify-end gap-3 mt-6">
+          <div className="col-span-4 justify-end flex flex-row gap-4">
             <Button variant="outline" onClick={handleCloseCreateModal}>
               Cancel
             </Button>
-            <Button onClick={handleCreatePump} disabled={createPumpMutation.isPending || !newPump.identifier}>
+            <Button onClick={handleCreatePump} disabled={createPumpMutation.isPending || !isCreateFormValid}>
               {createPumpMutation.isPending ? (
                 <div className="flex items-center gap-2">
                   <Spinner size="sm" />
@@ -858,8 +918,8 @@ export default function PumpsContainer() {
       <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal} className="max-w-[800px] p-5 lg:p-10">
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Edit Pump</h4>
         {selectedPump && (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          <div className="grid grid-cols-4 gap-4">
+            <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pump No.</label>
               <Input type="text" name="identifier" value={editedPump.identifier} onChange={handleEditInputChange} />
             </div>
@@ -909,17 +969,20 @@ export default function PumpsContainer() {
                 name="driver_name"
                 value={editedPump.driver_name || ""}
                 onChange={handleEditInputChange}
+                maxLength={25}
               />
+              {editDriverNameError && <p className="text-red-500 text-xs mt-1">{editDriverNameError}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Driver Contact
+                Driver Mobile Number
               </label>
               <Input
                 type="text"
                 name="driver_contact"
                 value={editedPump.driver_contact || ""}
                 onChange={handleEditInputChange}
+                maxLength={10}
               />
               {editDriverContactError && <p className="text-red-500 text-xs mt-1">{editDriverContactError}</p>}
             </div>
@@ -1001,15 +1064,15 @@ export default function PumpsContainer() {
                 </Dropdown>
               </div>
             </div>
-            <div>
+            <div className="col-span-4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
               <Input type="text" name="remarks" value={editedPump.remarks || ""} onChange={handleEditInputChange} />
             </div>
-            <div className="col-span-2 flex justify-end gap-3 mt-6">
+            <div className="col-span-4 justify-end flex flex-row gap-4">
               <Button variant="outline" onClick={handleCloseEditModal}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveEdit} disabled={editPumpMutation.isPending}>
+              <Button onClick={handleSaveEdit} disabled={editPumpMutation.isPending || !isEditFormValid}>
                 {editPumpMutation.isPending ? (
                   <div className="flex items-center gap-2">
                     <Spinner size="sm" />
@@ -1034,7 +1097,7 @@ export default function PumpsContainer() {
         <p className="text-gray-600 dark:text-gray-400 mb-6">
           Are you sure you want to delete this pump? This action cannot be undone.
         </p>
-        <div className="flex justify-end gap-3">
+        <div className="col-span-4 justify-end flex flex-row gap-4">
           <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
             Cancel
           </Button>

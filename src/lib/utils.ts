@@ -23,3 +23,7 @@ export function formatTimeByPreference(date: string | number | Date, preferredFo
 export const validateMobile = (value: string) => {
     return /^\d{10}$/.test(value);
 };
+
+export const validateName = (value: string) => {
+    return /^[A-Za-z0-9 ]{1,25}$/.test(value.trim());
+};

@@ -11,7 +11,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
-import { validateMobile } from "@/lib/utils";
+import { validateMobile, validateName } from "@/lib/utils";
 
 type Designation = "sales-engineer" | "pump-operator" | "pipeline-gang" | "site-supervisor";
 
@@ -57,6 +57,38 @@ export default function TeamContainer() {
   });
   const [contactError, setContactError] = useState<string>("");
   const [nameError, setNameError] = useState<string>("");
+  const [editContactError, setEditContactError] = useState<string>("");
+  const [editNameError, setEditNameError] = useState<string>("");
+
+  // Form validation for create modal
+  const isCreateFormValid = useMemo(() => {
+    const name = newTeam.name || "";
+    const contact = newTeam.contact || "";
+    
+    return (
+      // name.trim() !== "" &&
+      // contact.trim() !== "" &&
+      validateName(name.trim()) &&
+      validateMobile(contact.trim()) &&
+      !nameError &&
+      !contactError
+    );
+  }, [newTeam, nameError, contactError]);
+
+  // Form validation for edit modal
+  const isEditFormValid = useMemo(() => {
+    // const name = editedTeam.name || "";
+    // const contact = editedTeam.contact || "";
+    
+    return (
+      // name.trim() !== "" &&
+      // contact.trim() !== "" &&
+      // validateName(name.trim()) &&
+      // validateMobile(contact.trim()) &&
+      !editNameError &&
+      !editContactError
+    );
+  }, [editedTeam, editNameError, editContactError]);
 
   const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
     queryKey: ["team"],
@@ -134,62 +166,71 @@ export default function TeamContainer() {
     setIsCreateModalOpen(true);
   };
 
-  // Validate name (at least 2 letters, letters and spaces only)
-  const validateName = (value: string) => {
-    return /^[A-Za-z ]{2,}$/.test(value.trim());
-  };
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // Handle name field with validation
+    if (name === "name") {
+      if (value.length > 25) return; // Prevent typing more than 25 characters
+      if (value && !validateName(value)) {
+        setNameError("Name must be 1-25 alphanumeric characters");
+      } else {
+        setNameError("");
+      }
+    }
+    
+    // Handle contact field with validation
+    if (name === "contact") {
+      if (value.length > 10) return; // Prevent typing more than 10 digits
+      if (value && !validateMobile(value)) {
+        setContactError("Please enter a valid 10-digit mobile number");
+      } else {
+        setContactError("");
+      }
+    }
+    
     setNewTeam((prev) => ({
       ...prev,
       [name]: value,
     }));
-    if (name === "contact") {
-      if (!validateMobile(value)) {
-        setContactError("Please enter a valid 10-digit mobile number.");
-      } else {
-        setContactError("");
-      }
-    }
-    if (name === "name") {
-      if (!validateName(value)) {
-        setNameError("Name must be at least 2 letters and contain only letters and spaces.");
-      } else {
-        setNameError("");
-      }
-    }
   };
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // Handle name field with validation
+    if (name === "name") {
+      if (value.length > 25) return; // Prevent typing more than 25 characters
+      if (value && !validateName(value)) {
+        setEditNameError("Name must be 1-25 alphanumeric characters");
+      } else {
+        setEditNameError("");
+      }
+    }
+    
+    // Handle contact field with validation
+    if (name === "contact") {
+      if (value.length > 10) return; // Prevent typing more than 10 digits
+      if (value && !validateMobile(value)) {
+        setEditContactError("Please enter a valid 10-digit mobile number");
+      } else {
+        setEditContactError("");
+      }
+    }
+    
     setEditedTeam((prev) => ({
       ...prev,
       [name]: value,
     }));
-    if (name === "contact") {
-      if (!validateMobile(value)) {
-        setContactError("Please enter a valid 10-digit mobile number.");
-      } else {
-        setContactError("");
-      }
-    }
-    if (name === "name") {
-      if (!validateName(value)) {
-        setNameError("Name must be at least 2 letters and contain only letters and spaces.");
-      } else {
-        setNameError("");
-      }
-    }
   };
 
   const handleCreateTeam = async () => {
     if (!validateName(newTeam.name)) {
-      setNameError("Name must be at least 2 letters and contain only letters and spaces.");
+      setNameError("Name must be 1-25 alphanumeric characters");
       return;
     }
     if (!validateMobile(newTeam.contact)) {
-      setContactError("Please enter a valid 10-digit mobile number.");
+      setContactError("Please enter a valid 10-digit mobile number");
       return;
     }
     setNameError("");
@@ -219,15 +260,15 @@ export default function TeamContainer() {
   const handleSaveEdit = async () => {
     if (!selectedTeam) return;
     if (!validateName(editedTeam.name)) {
-      setNameError("Name must be at least 2 letters and contain only letters and spaces.");
+      setEditNameError("Name must be 1-25 alphanumeric characters");
       return;
     }
     if (!validateMobile(editedTeam.contact)) {
-      setContactError("Please enter a valid 10-digit mobile number.");
+      setEditContactError("Please enter a valid 10-digit mobile number");
       return;
     }
-    setNameError("");
-    setContactError("");
+    setEditNameError("");
+    setEditContactError("");
     try {
       await editTeamMutation.mutateAsync({
         id: selectedTeam._id,
@@ -489,9 +530,10 @@ export default function TeamContainer() {
             <Input
               type="text"
               name="name"
-              placeholder="Enter team member name"
+              placeholder="Enter team member name (max 25 characters)"
               value={newTeam.name}
               onChange={handleInputChange}
+              maxLength={25}
             />
             {nameError && <span className="text-xs text-red-600 mt-1 block">{nameError}</span>}
           </div>
@@ -510,7 +552,7 @@ export default function TeamContainer() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Mobile Number</label>
             <Input
               type="text"
               name="contact"
@@ -529,7 +571,7 @@ export default function TeamContainer() {
           <Button
             size="sm"
             onClick={handleCreateTeam}
-            disabled={createTeamMutation.isPending || !!contactError || !!nameError}
+            disabled={createTeamMutation.isPending || !isCreateFormValid}
           >
             {createTeamMutation.isPending ? (
               <div className="flex items-center gap-2">
@@ -550,8 +592,14 @@ export default function TeamContainer() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
-              <Input type="text" name="name" value={editedTeam.name} onChange={handleEditInputChange} />
-              {nameError && <span className="text-xs text-red-600 mt-1 block">{nameError}</span>}
+              <Input 
+                type="text" 
+                name="name" 
+                value={editedTeam.name} 
+                onChange={handleEditInputChange}
+                maxLength={25}
+              />
+              {editNameError && <span className="text-xs text-red-600 mt-1 block">{editNameError}</span>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Designation</label>
@@ -568,7 +616,7 @@ export default function TeamContainer() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Mobile Number</label>
               <Input
                 type="text"
                 name="contact"
@@ -577,7 +625,7 @@ export default function TeamContainer() {
                 onChange={handleEditInputChange}
                 maxLength={10}
               />
-              {contactError && <span className="text-xs text-red-600 mt-1 block">{contactError}</span>}
+              {editContactError && <span className="text-xs text-red-600 mt-1 block">{editContactError}</span>}
             </div>
           </div>
         )}
@@ -588,7 +636,7 @@ export default function TeamContainer() {
           <Button
             size="sm"
             onClick={handleSaveEdit}
-            disabled={editTeamMutation.isPending || !!contactError || !!nameError}
+            disabled={editTeamMutation.isPending || !isEditFormValid}
           >
             {editTeamMutation.isPending ? (
               <div className="flex items-center gap-2">

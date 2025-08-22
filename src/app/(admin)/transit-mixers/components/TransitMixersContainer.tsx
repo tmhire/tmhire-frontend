@@ -3,7 +3,7 @@
 import TransitMixersTable from "./TransitMixersTable";
 import { PlusIcon, Search, Truck } from "lucide-react";
 import Button from "@/components/ui/button/Button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
@@ -11,7 +11,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
-import { validateMobile } from "@/lib/utils";
+import { validateMobile, validateName } from "@/lib/utils";
 
 interface TransitMixer {
   _id: string;
@@ -64,6 +64,33 @@ export default function TransitMixersContainer() {
   const [error, setError] = useState("");
   const [driverContactError, setDriverContactError] = useState("");
   const [editDriverContactError, setEditDriverContactError] = useState("");
+  const [driverNameError, setDriverNameError] = useState("");
+  const [editDriverNameError, setEditDriverNameError] = useState("");
+
+  // Form validation for create modal
+  const isCreateFormValid = useMemo(() => {
+    return (
+      newMixer.identifier.trim() !== "" &&
+      newMixer.capacity > 0 &&
+      !error &&
+      (newMixer.driver_name === "" || (newMixer.driver_name && validateName(newMixer.driver_name.trim()))) &&
+      (newMixer.driver_contact === "" || (newMixer.driver_contact && validateMobile(newMixer.driver_contact.trim()))) &&
+      !driverNameError &&
+      !driverContactError
+    );
+  }, [newMixer, error, driverNameError, driverContactError]);
+
+  // Form validation for edit modal
+  const isEditFormValid = useMemo(() => {
+    return (
+      selectedMixer?.identifier.trim() !== "" &&
+    // selectedMixer?.capacity > 0 &&
+      (selectedMixer?.driver_name === "" || (selectedMixer?.driver_name && validateName(selectedMixer.driver_name.trim()))) &&
+      (selectedMixer?.driver_contact === "" || (selectedMixer?.driver_contact && validateMobile(selectedMixer.driver_contact.trim()))) &&
+      !editDriverNameError &&
+      !editDriverContactError
+    );
+  }, [selectedMixer, editDriverNameError, editDriverContactError]);
 
   const handleIdentifierInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.toUpperCase();
@@ -246,38 +273,62 @@ export default function TransitMixersContainer() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setNewMixer((prev) => ({
-      ...prev,
-      [name]: name === "capacity" ? Number(value) : value,
-    }));
-
-    // Validate driver contact if it's being changed
+    
+    // Handle driver name field with validation
+    if (name === "driver_name") {
+      if (value.length > 25) return; // Prevent typing more than 25 characters
+      if (value && !validateName(value)) {
+        setDriverNameError("Driver name must be 1-25 alphanumeric characters");
+      } else {
+        setDriverNameError("");
+      }
+    }
+    
+    // Handle driver contact field with validation
     if (name === "driver_contact") {
+      if (value.length > 10) return; // Prevent typing more than 10 digits
       if (value && !validateMobile(value)) {
         setDriverContactError("Please enter a valid 10-digit mobile number starting with 6-9");
       } else {
         setDriverContactError("");
       }
     }
+    
+    setNewMixer((prev) => ({
+      ...prev,
+      [name]: name === "capacity" ? Number(value) : value,
+    }));
   };
 
   // For edit modal, add a handler for all fields
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (!selectedMixer) return;
-    setSelectedMixer({
-      ...selectedMixer,
-      [name]: name === "capacity" ? Number(value) : value,
-    });
-
+    
+    // Handle driver name field with validation
+    if (name === "driver_name") {
+      if (value.length > 25) return; // Prevent typing more than 25 characters
+      if (value && !validateName(value)) {
+        setEditDriverNameError("Driver name must be 1-25 alphanumeric characters");
+      } else {
+        setEditDriverNameError("");
+      }
+    }
+    
     // Validate driver contact if it's being changed in edit modal
     if (name === "driver_contact") {
+      if (value.length > 10) return; // Prevent typing more than 10 digits
       if (value && !validateMobile(value)) {
         setEditDriverContactError("Please enter a valid 10-digit mobile number starting with 6-9");
       } else {
         setEditDriverContactError("");
       }
     }
+    
+    setSelectedMixer({
+      ...selectedMixer,
+      [name]: name === "capacity" ? Number(value) : value,
+    });
   };
 
   // const plantsOptions = ["Main Plant", "North Plant", "South Plant", "East Plant"];
@@ -569,23 +620,26 @@ export default function TransitMixersContainer() {
             <Input
               type="text"
               name="driver_name"
-              placeholder="Enter driver name"
+              placeholder="Enter driver name (max 25 characters)"
               value={newMixer.driver_name || ""}
               onChange={handleInputChange}
+              maxLength={25}
             />
+            {driverNameError && <p className="text-red-500 text-xs mt-1">{driverNameError}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Contact</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Mobile Number</label>
             <Input
               type="text"
               name="driver_contact"
-              placeholder="Enter driver contact"
+              placeholder="Enter 10-digit mobile number"
               value={newMixer.driver_contact || ""}
               onChange={handleInputChange}
+              maxLength={10}
             />
             {driverContactError && <p className="text-red-500 text-xs mt-1">{driverContactError}</p>}
           </div>
-          <div>
+          <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
             <Input
               type="text"
@@ -600,7 +654,7 @@ export default function TransitMixersContainer() {
           <Button variant="outline" onClick={handleCloseCreateModal}>
             Cancel
           </Button>
-          <Button onClick={handleCreateMixer} disabled={createTransitMixerMutation.isPending}>
+          <Button onClick={handleCreateMixer} disabled={createTransitMixerMutation.isPending || !isCreateFormValid}>
             {createTransitMixerMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />
@@ -663,22 +717,25 @@ export default function TransitMixersContainer() {
                 name="driver_name"
                 value={selectedMixer.driver_name || ""}
                 onChange={handleEditInputChange}
+                maxLength={25}
               />
+              {editDriverNameError && <p className="text-red-500 text-xs mt-1">{editDriverNameError}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Driver Contact
+                Driver Mobile Number
               </label>
               <Input
                 type="text"
                 name="driver_contact"
                 value={selectedMixer.driver_contact || ""}
                 onChange={handleEditInputChange}
+                maxLength={10}
               />
               {editDriverContactError && <p className="text-red-500 text-xs mt-1">{editDriverContactError}</p>}
             </div>
 
-            <div>
+            <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
               <Input type="text" name="remarks" value={selectedMixer.remarks || ""} onChange={handleEditInputChange} />
             </div>
@@ -686,7 +743,7 @@ export default function TransitMixersContainer() {
               <Button variant="outline" onClick={handleCloseEditModal}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveEdit} disabled={editTransitMixerMutation.isPending}>
+              <Button onClick={handleSaveEdit} disabled={editTransitMixerMutation.isPending || !isEditFormValid}>
                 {editTransitMixerMutation.isPending ? (
                   <div className="flex items-center gap-2">
                     <Spinner size="sm" />
