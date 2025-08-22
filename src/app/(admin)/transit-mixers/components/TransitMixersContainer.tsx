@@ -66,31 +66,37 @@ export default function TransitMixersContainer() {
   const [editDriverContactError, setEditDriverContactError] = useState("");
   const [driverNameError, setDriverNameError] = useState("");
   const [editDriverNameError, setEditDriverNameError] = useState("");
+  const [capacityError, setCapacityError] = useState("");
+  const [editCapacityError, setEditCapacityError] = useState("");
 
   // Form validation for create modal
   const isCreateFormValid = useMemo(() => {
     return (
       newMixer.identifier.trim() !== "" &&
       newMixer.capacity > 0 &&
+      newMixer.capacity <= 99 &&
       !error &&
+      !capacityError &&
       (newMixer.driver_name === "" || (newMixer.driver_name && validateName(newMixer.driver_name.trim()))) &&
       (newMixer.driver_contact === "" || (newMixer.driver_contact && validateMobile(newMixer.driver_contact.trim()))) &&
       !driverNameError &&
       !driverContactError
     );
-  }, [newMixer, error, driverNameError, driverContactError]);
+  }, [newMixer, error, capacityError, driverNameError, driverContactError]);
 
   // Form validation for edit modal
   const isEditFormValid = useMemo(() => {
     return (
       selectedMixer?.identifier.trim() !== "" &&
-    // selectedMixer?.capacity > 0 &&
+      (selectedMixer?.capacity ?? 0) > 0 &&
+      (selectedMixer?.capacity ?? 0) <= 99 &&
+      !editCapacityError &&
       (selectedMixer?.driver_name === "" || (selectedMixer?.driver_name && validateName(selectedMixer.driver_name.trim()))) &&
       (selectedMixer?.driver_contact === "" || (selectedMixer?.driver_contact && validateMobile(selectedMixer.driver_contact.trim()))) &&
       !editDriverNameError &&
       !editDriverContactError
     );
-  }, [selectedMixer, editDriverNameError, editDriverContactError]);
+  }, [selectedMixer, editCapacityError, editDriverNameError, editDriverContactError]);
 
   const handleIdentifierInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.toUpperCase();
@@ -251,7 +257,7 @@ export default function TransitMixersContainer() {
         id: selectedMixer._id,
         data: {
           identifier: selectedMixer.identifier,
-          capacity: selectedMixer.capacity,
+          capacity: Number(selectedMixer.capacity),
           plant_id: selectedMixer.plant_id,
           status: selectedMixer.status,
           remarks: selectedMixer.remarks, // <-- Added
@@ -273,6 +279,23 @@ export default function TransitMixersContainer() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // Handle capacity field with validation
+    if (name === "capacity") {
+      // Strictly prevent entering values greater than 99
+      if (Number(value) > 99) {
+        return; // Don't update the state if value exceeds 99
+      }
+      
+      const numValue = Number(value);
+      if (numValue < 1 || numValue > 99) {
+        setCapacityError("Capacity must be between 1 and 99 m³");
+      } else if (!Number.isInteger(numValue * 10)) {
+        setCapacityError("Capacity can have maximum one decimal place");
+      } else {
+        setCapacityError("");
+      }
+    }
     
     // Handle driver name field with validation
     if (name === "driver_name") {
@@ -304,6 +327,23 @@ export default function TransitMixersContainer() {
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (!selectedMixer) return;
+    
+    // Handle capacity field with validation
+    if (name === "capacity") {
+      // Strictly prevent entering values greater than 99
+      if (Number(value) > 99) {
+        return; // Don't update the state if value exceeds 99
+      }
+      
+      const numValue = Number(value);
+      if (numValue < 1 || numValue > 99) {
+        setEditCapacityError("Capacity must be between 1 and 99 m³");
+      } else if (!Number.isInteger(numValue * 10)) {
+        setEditCapacityError("Capacity can have maximum one decimal place");
+      } else {
+        setEditCapacityError("");
+      }
+    }
     
     // Handle driver name field with validation
     if (name === "driver_name") {
@@ -582,10 +622,14 @@ export default function TransitMixersContainer() {
             <Input
               type="number"
               name="capacity"
-              placeholder="Enter capacity"
+              placeholder="Enter capacity (1-99)"
               value={newMixer.capacity}
               onChange={handleInputChange}
+              step={0.1}
+              min="1"
+              max="99"
             />
+            {capacityError && <p className="text-red-500 text-xs mt-1">{capacityError}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plant</label>
@@ -644,9 +688,10 @@ export default function TransitMixersContainer() {
             <Input
               type="text"
               name="remarks"
-              placeholder="Enter remarks"
+              placeholder="Enter remarks (max 50 characters)"
               value={newMixer.remarks || ""}
               onChange={handleInputChange}
+              maxLength={50}
             />
           </div>
         </div>
@@ -680,7 +725,16 @@ export default function TransitMixersContainer() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity (m³)</label>
-              <Input type="number" name="capacity" value={selectedMixer.capacity} onChange={handleEditInputChange} />
+              <Input 
+                type="number" 
+                name="capacity" 
+                value={selectedMixer.capacity || 0} 
+                onChange={handleEditInputChange}
+                step={0.1}
+                min="1"
+                max="99"
+              />
+              {editCapacityError && <p className="text-red-500 text-xs mt-1">{editCapacityError}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plant</label>
@@ -737,7 +791,13 @@ export default function TransitMixersContainer() {
 
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
-              <Input type="text" name="remarks" value={selectedMixer.remarks || ""} onChange={handleEditInputChange} />
+              <Input 
+                type="text" 
+                name="remarks" 
+                value={selectedMixer.remarks || ""} 
+                onChange={handleEditInputChange}
+                maxLength={50}
+              />
             </div>
             <div className="col-span-2 flex justify-end gap-3 mt-6">
               <Button variant="outline" onClick={handleCloseEditModal}>

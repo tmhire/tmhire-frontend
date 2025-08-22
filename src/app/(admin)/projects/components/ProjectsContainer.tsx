@@ -795,9 +795,10 @@ export default function ProjectsContainer() {
             <Input
               type="text"
               name="remarks"
-              placeholder="Enter any additional remarks"
+              placeholder="Enter any additional remarks (max 50 characters)"
               value={newProject.remarks}
               onChange={handleInputChange}
+              maxLength={50}
             />
           </div>
         </div>
@@ -987,7 +988,13 @@ export default function ProjectsContainer() {
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
-              <Input type="text" name="remarks" value={editedProject.remarks} onChange={handleEditInputChange} />
+              <Input 
+                type="text" 
+                name="remarks" 
+                value={editedProject.remarks} 
+                onChange={handleEditInputChange}
+                maxLength={50}
+              />
             </div>
           </div>
         )}

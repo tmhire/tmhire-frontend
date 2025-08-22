@@ -83,6 +83,8 @@ export default function PlantsContainer() {
   const [editContactName2Error, setEditContactName2Error] = useState<string>("");
   const [editContactNumber1Error, setEditContactNumber1Error] = useState<string>("");
   const [editContactNumber2Error, setEditContactNumber2Error] = useState<string>("");
+  const [capacityError, setCapacityError] = useState<string>("");
+  const [editCapacityError, setEditCapacityError] = useState<string>("");
 
   // Form validation for create modal
   const isCreateFormValid = useMemo(() => {
@@ -92,6 +94,7 @@ export default function PlantsContainer() {
       newPlant.address.trim() !== "" &&
       newPlant.contact_name1.trim() !== "" &&
       newPlant.contact_number1.trim() !== "" &&
+      (!newPlant.capacity || (newPlant.capacity > 0 && newPlant.capacity <= 99)) &&
       validateName(newPlant.name.trim()) &&
       validateName(newPlant.contact_name1.trim()) &&
       validateMobile(newPlant.contact_number1.trim()) &&
@@ -102,9 +105,10 @@ export default function PlantsContainer() {
       !contactName1Error &&
       !contactName2Error &&
       !contactNumber1Error &&
-      !contactNumber2Error
+      !contactNumber2Error &&
+      !capacityError
     );
-  }, [newPlant, nameError, contactName1Error, contactName2Error, contactNumber1Error, contactNumber2Error]);
+  }, [newPlant, nameError, contactName1Error, contactName2Error, contactNumber1Error, contactNumber2Error, capacityError]);
 
   // Form validation for edit modal
   const isEditFormValid = useMemo(() => {
@@ -114,6 +118,7 @@ export default function PlantsContainer() {
       editedPlant.address.trim() !== "" &&
       editedPlant.contact_name1.trim() !== "" &&
       editedPlant.contact_number1.trim() !== "" &&
+      (!editedPlant.capacity || (editedPlant.capacity > 0 && editedPlant.capacity <= 99)) &&
       validateName(editedPlant.name.trim()) &&
       validateName(editedPlant.contact_name1.trim()) &&
       validateMobile(editedPlant.contact_number1.trim()) &&
@@ -125,7 +130,8 @@ export default function PlantsContainer() {
       !editContactName1Error &&
       !editContactName2Error &&
       !editContactNumber1Error &&
-      !editContactNumber2Error
+      !editContactNumber2Error &&
+      !editCapacityError
     );
   }, [
     editedPlant,
@@ -134,6 +140,7 @@ export default function PlantsContainer() {
     editContactName2Error,
     editContactNumber1Error,
     editContactNumber2Error,
+    editCapacityError,
   ]);
 
   const { data: plantsData, isLoading: isLoadingPlants } = useQuery({
@@ -268,6 +275,27 @@ export default function PlantsContainer() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
+    // Handle capacity field with validation
+    if (name === "capacity") {
+      // Strictly prevent entering values greater than 99
+      if (value !== "" && Number(value) > 99) {
+        return; // Don't update the state if value exceeds 99
+      }
+      
+      if (value === "") {
+        setCapacityError(""); // Allow empty capacity
+      } else {
+        const numValue = Number(value);
+        if (numValue < 1 || numValue > 99) {
+          setCapacityError("Capacity must be between 1 and 99 m³/hr");
+        } else if (!Number.isInteger(numValue * 10)) {
+          setCapacityError("Capacity can have maximum one decimal place");
+        } else {
+          setCapacityError("");
+        }
+      }
+    }
+
     // Handle name fields with validation
     if (name === "name" || name === "contact_name1" || name === "contact_name2") {
       if (value.length > 25) return; // Prevent typing more than 25 characters
@@ -296,12 +324,33 @@ export default function PlantsContainer() {
 
     setNewPlant((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === "capacity" ? (value === "" ? undefined : Number(value)) : value,
     }));
   };
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+
+    // Handle capacity field with validation
+    if (name === "capacity") {
+      // Strictly prevent entering values greater than 99
+      if (value !== "" && Number(value) > 99) {
+        return; // Don't update the state if value exceeds 99
+      }
+      
+      if (value === "") {
+        setEditCapacityError(""); // Allow empty capacity
+      } else {
+        const numValue = Number(value);
+        if (numValue < 1 || numValue > 99) {
+          setEditCapacityError("Capacity must be between 1 and 99 m³/hr");
+        } else if (!Number.isInteger(numValue * 10)) {
+          setEditCapacityError("Capacity can have maximum one decimal place");
+        } else {
+          setEditCapacityError("");
+        }
+      }
+    }
 
     // Handle name fields with validation
     if (name === "name" || name === "contact_name1" || name === "contact_name2") {
@@ -333,7 +382,7 @@ export default function PlantsContainer() {
 
     setEditedPlant((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === "capacity" ? (value === "" ? undefined : Number(value)) : value,
     }));
   };
 
@@ -592,10 +641,14 @@ export default function PlantsContainer() {
               <Input
                 type="number"
                 name="capacity"
-                placeholder="Enter plant capacity"
-                value={newPlant.capacity}
+                placeholder="Enter plant capacity (1-99)"
+                value={newPlant.capacity || ""}
                 onChange={handleInputChange}
+                step={0.1}
+                min="1"
+                max="99"
               />
+              {capacityError && <span className="text-xs text-red-600 mt-1 block">{capacityError}</span>}
             </div>
           </div>
           <div className="flex flex-row w-full gap-2">
@@ -696,9 +749,10 @@ export default function PlantsContainer() {
             <Input
               type="text"
               name="remarks"
-              placeholder="Enter remarks (optional)"
+              placeholder="Enter remarks (optional, max 50 characters)"
               value={newPlant.remarks || ""}
               onChange={handleInputChange}
+              maxLength={50}
             />
           </div>
         </div>
@@ -744,10 +798,14 @@ export default function PlantsContainer() {
                 <Input
                   type="number"
                   name="capacity"
-                  value={editedPlant.capacity}
+                  value={editedPlant.capacity || ""}
                   onChange={handleEditInputChange}
-                  placeholder="Enter plant capacity"
+                  placeholder="Enter plant capacity (1-99)"
+                  step={0.1}
+                  min="1"
+                  max="99"
                 />
+                {editCapacityError && <span className="text-xs text-red-600 mt-1 block">{editCapacityError}</span>}
               </div>
             </div>
             <div className="flex flex-row w-full gap-2">
@@ -858,7 +916,8 @@ export default function PlantsContainer() {
                 name="remarks"
                 value={editedPlant.remarks || ""}
                 onChange={handleEditInputChange}
-                placeholder="Enter remarks (optional)"
+                placeholder="Enter remarks (optional, max 50 characters)"
+                maxLength={50}
               />
             </div>
           </div>

@@ -496,6 +496,16 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    
+    // Special handling for quantity field to enforce 1-9999 range and no decimals
+    if (name === "quantity") {
+      const numValue = parseFloat(value);
+      if (isNaN(numValue) || numValue < 1 || numValue > 9999 || !Number.isInteger(numValue)) {
+        // If invalid, don't update the field
+        return;
+      }
+    }
+    
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -1154,7 +1164,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     name="quantity"
                     value={parseFloat(formData.quantity)}
                     onChange={handleInputChange}
-                    placeholder="Enter quantity"
+                    placeholder="Enter quantity (1-9999)"
+                    min="1"
+                    max="9999"
+                    step={1}
+                    hint="Enter a whole number between 1 and 9999"
                   />
                 </div>
                 {/* Slump at Site */}

@@ -96,36 +96,43 @@ export default function PumpsContainer() {
   const [editDriverContactError, setEditDriverContactError] = useState("");
   const [driverNameError, setDriverNameError] = useState("");
   const [editDriverNameError, setEditDriverNameError] = useState("");
+  const [capacityError, setCapacityError] = useState("");
+  const [editCapacityError, setEditCapacityError] = useState("");
 
   // Form validation for create modal
   const isCreateFormValid = useMemo(() => {
     return (
       newPump.identifier.trim() !== "" &&
       newPump.capacity > 0 &&
+      newPump.capacity <= 999 &&
       newPump.plant_id.trim() !== "" &&
       newPump.make.trim() !== "" &&
       !error &&
+      !capacityError &&
       (newPump.driver_name === "" || (newPump.driver_name && validateName(newPump.driver_name.trim()))) &&
       (newPump.driver_contact === "" || (newPump.driver_contact && validateMobile(newPump.driver_contact.trim()))) &&
       !driverNameError &&
       !driverContactError
     );
-  }, [newPump, error, driverNameError, driverContactError]);
+  }, [newPump, error, capacityError, driverNameError, driverContactError]);
 
   // Form validation for edit modal
   const isEditFormValid = useMemo(() => {
     return (
       editedPump.identifier.trim() !== "" &&
       editedPump.capacity > 0 &&
+      editedPump.capacity <= 999 &&
       editedPump.plant_id.trim() !== "" &&
       editedPump.make.trim() !== "" &&
-      (editedPump.driver_name === "" || (editedPump.driver_name && validateName(editedPump.driver_name.trim()))) &&
+      !editCapacityError &&
+      (editedPump.driver_name === "" ||
+        (editedPump.driver_name && validateName(editedPump.driver_name.trim()))) &&
       (editedPump.driver_contact === "" ||
         (editedPump.driver_contact && validateMobile(editedPump.driver_contact.trim()))) &&
       !editDriverNameError &&
       !editDriverContactError
     );
-  }, [editedPump, editDriverNameError, editDriverContactError]);
+  }, [editedPump, editCapacityError, editDriverNameError, editDriverContactError]);
 
   const handleIdentifierInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.toUpperCase();
@@ -352,6 +359,23 @@ export default function PumpsContainer() {
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
+    // Handle capacity field with validation
+    if (name === "capacity") {
+      // Strictly prevent entering values greater than 999
+      if (Number(value) > 999) {
+        return; // Don't update the state if value exceeds 999
+      }
+      
+      const numValue = Number(value);
+      if (numValue < 1 || numValue > 999) {
+        setEditCapacityError("Capacity must be between 1 and 999 m³");
+      } else if (!Number.isInteger(numValue * 10)) {
+        setEditCapacityError("Capacity can have maximum one decimal place");
+      } else {
+        setEditCapacityError("");
+      }
+    }
+
     // Handle driver name field with validation
     if (name === "driver_name") {
       if (value.length > 25) return; // Prevent typing more than 25 characters
@@ -382,6 +406,23 @@ export default function PumpsContainer() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
+    // Handle capacity field with validation
+    if (name === "capacity") {
+      // Strictly prevent entering values greater than 999
+      if (Number(value) > 999) {
+        return; // Don't update the state if value exceeds 999
+      }
+      
+      const numValue = Number(value);
+      if (numValue < 1 || numValue > 999) {
+        setCapacityError("Capacity must be between 1 and 999 m³");
+      } else if (!Number.isInteger(numValue * 10)) {
+        setCapacityError("Capacity can have maximum one decimal place");
+      } else {
+        setCapacityError("");
+      }
+    }
+
     // Handle driver name field with validation
     if (name === "driver_name") {
       if (value.length > 25) return; // Prevent typing more than 25 characters
@@ -392,7 +433,7 @@ export default function PumpsContainer() {
       }
     }
 
-    // Validate driver contact if it's being changed
+    // Handle driver contact field with validation
     if (name === "driver_contact") {
       if (value.length > 10) return; // Prevent typing more than 10 digits
       if (value && !validateMobile(value)) {
@@ -746,10 +787,14 @@ export default function PumpsContainer() {
             <Input
               type="number"
               name="capacity"
-              placeholder="Enter capacity"
+              placeholder="Enter capacity (1-999)"
               value={newPump.capacity}
               onChange={handleInputChange}
+              step={0.1}
+              min="1"
+              max="999"
             />
+            {capacityError && <p className="text-red-500 text-xs mt-1">{capacityError}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plant</label>
@@ -886,16 +931,17 @@ export default function PumpsContainer() {
               </Dropdown>
             </div>
           </div>
-          <div className="col-span-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
-            <Input
-              type="text"
-              name="remarks"
-              placeholder="Enter remarks"
-              value={newPump.remarks || ""}
-              onChange={handleInputChange}
-            />
-          </div>
+                      <div className="col-span-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
+              <Input
+                type="text"
+                name="remarks"
+                placeholder="Enter remarks (max 50 characters)"
+                value={newPump.remarks || ""}
+                onChange={handleInputChange}
+                maxLength={50}
+              />
+            </div>
           <div className="col-span-4 justify-end flex flex-row gap-4">
             <Button variant="outline" onClick={handleCloseCreateModal}>
               Cancel
@@ -925,7 +971,16 @@ export default function PumpsContainer() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity</label>
-              <Input type="number" name="capacity" value={editedPump.capacity} onChange={handleEditInputChange} />
+              <Input 
+                type="number" 
+                name="capacity" 
+                value={editedPump.capacity} 
+                onChange={handleEditInputChange}
+                step={0.1}
+                min="1"
+                max="999"
+              />
+              {editCapacityError && <p className="text-red-500 text-xs mt-1">{editCapacityError}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plant</label>
@@ -1066,7 +1121,13 @@ export default function PumpsContainer() {
             </div>
             <div className="col-span-4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
-              <Input type="text" name="remarks" value={editedPump.remarks || ""} onChange={handleEditInputChange} />
+              <Input 
+                type="text" 
+                name="remarks" 
+                value={editedPump.remarks || ""} 
+                onChange={handleEditInputChange}
+                maxLength={50}
+              />
             </div>
             <div className="col-span-4 justify-end flex flex-row gap-4">
               <Button variant="outline" onClick={handleCloseEditModal}>
