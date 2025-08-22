@@ -869,7 +869,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const cycleTimeHr = cycleTimeMin / 60;
   const totalPumpingHours = speed > 0 ? quantity / speed : 0;
   const tripsPerTM = cycleTimeHr > 0 ? totalPumpingHours / cycleTimeHr : 0;
-  const m3PerTM = tripsPerTM * (avgTMCap && avgTMCap > 0 ? avgTMCap : 1);
+  // const m3PerTM = tripsPerTM * (avgTMCap && avgTMCap > 0 ? avgTMCap : 1);
   const tmReq = cycleTimeMin > 0 ? Math.ceil(cycleTimeMin / parseFloat(formData.unloadingTime)) : 0;
   const additionalTMValue = overruleTMCount ? Math.max(0, (customTMCount || 0) - tmReq) : 0;
   const totalTMRequired = overruleTMCount ? customTMCount : tmReq;
@@ -1109,8 +1109,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 <div className={`flex gap-4 w-full}`}>
                   {/* Project Details */}
                   {selectedProject && projects.find((p) => p._id === selectedProject) && (
-                    <div className="w-full flex flex-col justify-end">
-                      <p className="mt-2 text-sm text-gray-400 dark:text-gray-400">
+                    <div className="w-full flex flex-col justify-start">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Project Details
+                      </label>
+                      <p className=" text-sm text-gray-600 dark:text-gray-600">
                         <span
                           title={
                             (projects.find((p) => p._id === selectedProject)?.contact_name || "") +
@@ -1129,7 +1132,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           })()}
                         </span>
                       </p>
-                      <p className="text-sm text-gray-400 dark:text-gray-400">
+                      <p className="text-sm text-gray-600 dark:text-gray-600">
                         {projects.find((p) => p._id === selectedProject)?.address}
                       </p>
                       {/* {projects.find((p) => p._id === selectedProject)?.mother_plant_id && (

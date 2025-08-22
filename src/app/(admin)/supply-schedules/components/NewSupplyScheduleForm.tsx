@@ -466,7 +466,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   }
 
   return (
-    <div className="w-full mx-">
+    <div className="w-full mx">
       <div className="flex flex-row w-full mb-4 items-center">
         <div className="w-1/3">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">New Supply Schedule</h2>
@@ -474,13 +474,18 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
         </div>
         <div className="w-full">
           <div className="relative">
+            {/* Background Bar */}
             <div className="absolute top-3 left-0 right-3 h-0.5 bg-gray-300 dark:bg-gray-600 rounded-full" />
+
+            {/* Animated Progress Bar */}
             <motion.div
               className="absolute top-3 left-0 h-0.5 bg-brand-500 rounded-full"
               initial={{ width: "0%" }}
               animate={{ width: `${progressPercentage}%` }}
               transition={{ duration: 0.8, ease: "easeInOut" }}
             />
+
+            {/* Steps */}
             <div className="relative flex justify-between">
               {steps.map((s, index) => (
                 <motion.div
@@ -490,6 +495,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.5 }}
                 >
+                  {/* Step Circle */}
                   <motion.div
                     className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${
                       step >= s.id
@@ -521,6 +527,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                       </motion.span>
                     )}
                   </motion.div>
+
+                  {/* Step Name */}
                   <motion.span
                     className={`mt-2 text-xs text-center ${
                       step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
@@ -542,9 +550,56 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       <div>
         {step === 1 ? (
           <div className="space-y-4">
+            {/* Schedule Details Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
-              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Project Details</h3>
-              <div className="grid grid-cols-3 gap-6">
+              <div className="flex justify-between items-center mb-4 w-full">
+                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Schedule Details</h3>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900/40 py-1 px-3 rounded-full">
+                  Company Timings -
+                  {profile?.preferred_format === "12h"
+                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${
+                        (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
+                      } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${
+                        (profile?.custom_start_hour ?? 0) + 12 < 24 ? "PM" : "AM"
+                      } NEXT DAY`
+                    : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 TODAY TO ${String(
+                        ((profile?.custom_start_hour ?? 0) + 12) % 24
+                      ).padStart(2, "0")}:00 TOMORROW`}
+                </span>
+              </div>
+
+              {/* Summary Row: Schedule No., Current Date, Current Time */}
+              <div className="grid grid-cols-3 gap-6 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Schedule No.
+                  </label>
+                  <div className="h-11 flex items-center px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white/90 cursor-not-allowed">
+                    {selectedClient && selectedProject && formData.scheduleDate
+                      ? "Auto-generated"
+                      : "Select Project and Schedule Date first"}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Current Date
+                  </label>
+                  <div className="h-11 flex items-center px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white/90 cursor-not-allowed">
+                    {new Date().toLocaleDateString()}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Current Time
+                  </label>
+                  <div className="h-11 flex items-center px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white/90 cursor-not-allowed">
+                    {new Date().toLocaleTimeString()}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-5 gap-6">
+                {/* Client Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Choose Client
@@ -590,6 +645,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                     </Dropdown>
                   </div>
                 </div>
+
+                {/* Project Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Choose Project
@@ -655,79 +712,58 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                     </Dropdown>
                   </div>
                 </div>
+
                 {/* Project Details */}
                 {selectedProject && projects.find((p) => p._id === selectedProject) && (
-                  <div className="flex justify-start items-end">
-                    <div className="flex flex-col gap-0">
-                      <p className="mt-2 text-sm text-gray-400 dark:text-gray-400">
-                        {projects.find((p) => p._id === selectedProject)?.contact_name} -{" "}
-                        {projects.find((p) => p._id === selectedProject)?.contact_number}
+                  <div className="flex gap-4 w-full">
+                    <div className="w-full flex flex-col justify-start">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Project Details
+                      </label>
+                      <p className="text-sm text-gray-600 dark:text-gray-600">
+                        <span
+                          title={
+                            (projects.find((p) => p._id === selectedProject)?.contact_name || "") +
+                            " - " +
+                            (projects.find((p) => p._id === selectedProject)?.contact_number || "")
+                          }
+                        >
+                          {(() => {
+                            const contactName = projects.find((p) => p._id === selectedProject)?.contact_name || "";
+                            const contactNumber = projects.find((p) => p._id === selectedProject)?.contact_number || "";
+                            const displayName =
+                              contactName.length > 15 ? contactName.slice(0, 15) + "..." : contactName;
+                            const displayNumber =
+                              contactNumber.length > 15 ? contactNumber.slice(0, 15) + "..." : contactNumber;
+                            return `${displayName} - ${displayNumber}`;
+                          })()}
+                        </span>
                       </p>
-                      <p className="text-sm text-gray-400 dark:text-gray-400">
+                      <p className="text-sm text-gray-600 dark:text-gray-600">
                         {projects.find((p) => p._id === selectedProject)?.address}
                       </p>
-                      {projects.find((p) => p._id === selectedProject)?.coordinates && (
-                        <p className="text-sm text-gray-400 dark:text-gray-400">
-                          Coordinates: {projects.find((p) => p._id === selectedProject)?.coordinates}
-                        </p>
-                      )}
-                      {projects.find((p) => p._id === selectedProject)?.mother_plant_id && (
-                        <p className="text-sm text-gray-400 dark:text-gray-400">
-                          Mother Plant:{" "}
-                          {(plantsData || []).find(
-                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                          )?.name || "Unknown Plant"}
-                        </p>
-                      )}
                     </div>
                   </div>
                 )}
-              </div>
-              {/* Mother Plant Field */}
-              {selectedProject && (
-                <div className="grid grid-cols-3 gap-6 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Mother Plant
-                    </label>
+
+                {/* Grade of Concrete */}
+                <div className="w-full">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">RMC Grade</label>
+                  <div className="flex items-center w-full">
+                    <span className="w-6 text-gray-700 dark:text-gray-300 font-medium">M</span>
                     <Input
-                      type="text"
-                      name="motherPlant"
-                      value={
-                        projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                          ? (plantsData || []).find(
-                              (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                            )?.name || "Unknown Plant"
-                          : ""
-                      }
-                      disabled
-                      placeholder="Auto filled from project"
+                      type="number"
+                      name="concreteGrade"
+                      value={parseFloat(formData.concreteGrade)}
+                      onChange={handleInputChange}
+                      placeholder="Enter RMC grade"
+                      className="flex-1 min-w-full"
                     />
                   </div>
                 </div>
-              )}
-            </div>
 
-            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
-              <div className="flex justify-between items-center mb-4 w-full">
-                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4 flex justify-between items-center">
-                  Supply Details
-                </h3>
-                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
-                  Schedule timings:
-                  {profile?.preferred_format === "12h"
-                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12} ${
-                        (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
-                      } - ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12} ${
-                        (profile?.custom_start_hour ?? 0) + 12 < 24 ? "PM" : "AM"
-                      }`
-                    : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 - ${String(
-                        ((profile?.custom_start_hour ?? 0) + 12) % 24
-                      ).padStart(2, "0")}:00`}
-                </span>
-              </div>{" "}
-              <div className="grid grid-cols-3 gap-6 mb-6">
-                <div>
+                {/* Supply Quantity */}
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Supply Quantity (m³)
                   </label>
@@ -739,7 +775,11 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                     placeholder="Enter quantity"
                   />
                 </div>
-                <div>
+              </div>
+
+              <div className="grid grid-cols-6 gap-6 mt-6">
+                {/* Schedule Date */}
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Schedule Date
                   </label>
@@ -755,29 +795,56 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                     placeholder="Select a date"
                   />
                 </div>
-                <div>
+
+                {/* Site Reach Time */}
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Site Reach Time
+                    Site Reach Time ({profile?.preferred_format})
                   </label>
                   <div className="relative">
                     <TimeInput
                       type="time"
                       name="startTime"
-                      format={profile?.preferred_format === "12h" ? "h:mm a" : "HH:MM"}
+                      format={profile?.preferred_format === "12h" ? "h:mm a" : "hh:mm"}
                       isOpen
                       value={formData.startTime}
                       onChange={(val) => handleTimeChange("startTime", val)}
                     />
-                    {/* <Input type="time" name="startTime" value={formData.startTime} onChange={handleInputChange} /> */}
                     <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
                       <Clock className="size-5" />
                     </span>
                   </div>
                 </div>
+
+                {/* Mother Plant */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Mother Plant
+                  </label>
+                  <Input
+                    type="text"
+                    name="motherPlant"
+                    value={
+                      selectedProject && projects.find((p) => p._id === selectedProject)?.mother_plant_id
+                        ? (plantsData || []).find(
+                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
+                          )?.name || "Unknown Plant"
+                        : ""
+                    }
+                    disabled
+                    placeholder="Auto filled from project"
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-[1fr_auto_1fr] gap-6 mb-4">
-                {/* Pumping Speed */}
-                <div className="col-span-1">
+            </div>
+
+            {/* Supply Speed Section */}
+            <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+              <h3 className="text-base font-semibold text-gray-800 dark:text-white/90 mb-4">Supply Speed Parameters</h3>
+
+              <div className="flex flex-row gap-4">
+                {/* Supply Speed */}
+                <div className="w-full">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Supply Speed (m³/hr)
                   </label>
@@ -789,98 +856,467 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                     placeholder="Enter speed"
                   />
                 </div>
-                <div className="col-span-1 flex items-center justify-center text-sm text-gray-600 pt-6">or</div>
+
+                {/* OR separator */}
+                <div className="flex items-center justify-center">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">or</span>
+                </div>
+
                 {/* Unloading Time */}
-                <div className="col-span-1">
+                <div className="w-full">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Unloading Time (min)
                   </label>
-                  <div className="flex flex-row gap-2 w-full">
-                    <div className="w-3/4">
-                      <Input
-                        type="number"
-                        name="unloadingTime"
-                        value={parseFloat(formData.unloadingTime)}
-                        onChange={setPumpingSpeedAndUnloadingTime}
-                        placeholder={
-                          avgTMCap !== null ? "Auto-calculated from supply speed" : "Enter supply speed to calculate"
-                        }
-                      />
-                    </div>
-                    <div className="w-1/4 flex items-center">
-                      {avgTMCap !== null && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Auto-calculated based on avg. TM cpty: {avgTMCap?.toFixed(0)} m³
-                        </p>
-                      )}
+                  <Input
+                    type="number"
+                    name="unloadingTime"
+                    value={parseFloat(formData.unloadingTime)}
+                    onChange={setPumpingSpeedAndUnloadingTime}
+                    placeholder={
+                      avgTMCap !== null ? "Auto-calculated from supply speed" : "Enter supply speed to calculate"
+                    }
+                  />
+                  {avgTMCap !== null && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Auto-calculated based on avg. TM cpty: {avgTMCap?.toFixed(0)} m³
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+            {/* Supply Details Section */}
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
+              <div className="flex justify-between items-center mb-4 w-full">
+                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4 flex justify-between items-center">
+                  Supply Details
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Left Section: Input Controls */}
+                <div className="lg:col-span-4 space-y-6">
+                  {/* Input Form Section */}
+                  <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                    <h3 className="text-base font-semibold text-gray-800 dark:text-white/90 mb-4">
+                      Cycle Time Parameters
+                    </h3>
+
+                    <div className="space-y-2.5">
+                      {/* Buffer Time */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center min-w-0 flex-1">
+                          <span
+                            className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
+                            style={{ backgroundColor: "#3b82f6" }}
+                          ></span>
+                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                            Buffer Time (min)
+                          </label>
+                        </div>
+                        <div className="w-20 flex-shrink-0">
+                          <Input
+                            type="number"
+                            name="productionTime"
+                            value={parseFloat(formData.productionTime)}
+                            onChange={handleInputChange}
+                            placeholder="0"
+                            className="w-full text-right text-xs h-7"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Onward Time */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center min-w-0 flex-1">
+                          <span
+                            className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
+                            style={{ backgroundColor: "#f59e0b" }}
+                          ></span>
+                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                            Onward Time (min)
+                          </label>
+                        </div>
+                        <div className="w-20 flex-shrink-0">
+                          <Input
+                            type="number"
+                            name="onwardTime"
+                            value={parseFloat(formData.onwardTime)}
+                            onChange={handleInputChange}
+                            placeholder="0"
+                            className="w-full text-right text-xs h-7"
+                          />
+                        </div>
+                      </div>
+
+                      {/* TM Unloading Time */}
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center">
+                            <span
+                              className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
+                              style={{ backgroundColor: "#10b981" }}
+                            ></span>
+                            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                              TM Unloading Time (min)
+                            </label>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 ml-4.5 mt-0.5">
+                            Auto-filled from Supply Speed.
+                          </p>
+                        </div>
+                        <div className="w-20 flex-shrink-0">
+                          <Input
+                            type="number"
+                            name="unloadingTime"
+                            value={parseFloat(formData.unloadingTime)}
+                            onChange={handleInputChange}
+                            placeholder="0"
+                            disabled
+                            className="w-full text-right bg-gray-50 dark:bg-gray-800 text-xs h-7"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Return Time */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center min-w-0 flex-1">
+                          <span
+                            className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
+                            style={{ backgroundColor: "#8b5cf6" }}
+                          ></span>
+                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                            Return Time (min)
+                          </label>
+                        </div>
+                        <div className="w-20 flex-shrink-0">
+                          <Input
+                            type="number"
+                            name="returnTime"
+                            value={parseFloat(formData.returnTime)}
+                            onChange={handleInputChange}
+                            placeholder="0"
+                            className="w-full text-right text-xs h-7"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Total Cycle Time */}
+                      <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center min-w-0 flex-1">
+                            <div className="w-2.5 h-2.5 mr-2 flex-shrink-0"></div>
+                            <label className="text-xs font-semibold text-gray-800 dark:text-gray-200 min-w-0">
+                              Total Cycle Time (min)
+                            </label>
+                          </div>
+                          <div className="w-20 flex-shrink-0">
+                            <Input
+                              type="number"
+                              value={[
+                                formData.productionTime,
+                                formData.onwardTime,
+                                formData.unloadingTime,
+                                formData.returnTime,
+                              ]
+                                .map((v) => parseFloat(v) || 0)
+                                .reduce((a, b) => a + b, 0)}
+                              disabled
+                              className="bg-blue-50 dark:bg-blue-900/30 font-semibold w-full text-right border-blue-200 dark:border-blue-700 text-xs h-7"
+                              placeholder="Auto-calculated"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">RMC Grade</label>
 
-                  <Input
-                    type="number"
-                    name="concreteGrade"
-                    value={parseFloat(formData.concreteGrade)}
-                    onChange={handleInputChange}
-                    placeholder="Enter RMC grade"
-                  />
+                {/* Center Section: Donut Chart */}
+                <div className="lg:col-span-4 flex items-center justify-center">
+                  <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-6 w-full">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-6 text-center">
+                      Cycle Time Breakdown
+                    </h3>
+                    <div className="flex justify-center">
+                      {/* Custom SVG Donut Chart */}
+                      <div className="relative w-fit">
+                        <svg width={280} height={280} className="transform rotate-0">
+                          {(() => {
+                            const center = 280 / 2;
+                            const radius = 280 * 0.5;
+                            const innerRadius = radius * 0.6;
+                            const data = [
+                              {
+                                label: "Buffer",
+                                shortLabel: "Buffer",
+                                value: parseFloat(formData.productionTime) || 0,
+                                color: "#3b82f6",
+                              },
+                              {
+                                label: "Onward Journey",
+                                shortLabel: "Onward",
+                                value: parseFloat(formData.onwardTime) || 0,
+                                color: "#f59e0b",
+                              },
+                              {
+                                label: "TM Unloading",
+                                shortLabel: "Unload",
+                                value: parseFloat(formData.unloadingTime) || 0,
+                                color: "#10b981",
+                              },
+                              {
+                                label: "Return Journey",
+                                shortLabel: "Return",
+                                value: parseFloat(formData.returnTime) || 0,
+                                color: "#8b5cf6",
+                              },
+                            ];
+                            const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
+                            if (total === 0)
+                              return (
+                                <text key="no-data" x={center} y={center} textAnchor="middle" fill="#6b7280">
+                                  No data
+                                </text>
+                              );
+
+                            let currentAngle = -Math.PI / 2;
+                            return data.map((item, index) => {
+                              const safeVal = item.value || 0;
+                              if (safeVal === 0) return null;
+                              const percentage = (safeVal / total) * 100;
+                              const angle = (safeVal / total) * 2 * Math.PI;
+                              const startAngle = currentAngle;
+                              const endAngle = currentAngle + angle;
+                              const x1 = center + radius * Math.cos(startAngle);
+                              const y1 = center + radius * Math.sin(startAngle);
+                              const x2 = center + radius * Math.cos(endAngle);
+                              const y2 = center + radius * Math.sin(endAngle);
+                              const x3 = center + innerRadius * Math.cos(endAngle);
+                              const y3 = center + innerRadius * Math.sin(endAngle);
+                              const x4 = center + innerRadius * Math.cos(startAngle);
+                              const y4 = center + innerRadius * Math.sin(startAngle);
+                              const largeArcFlag = angle > Math.PI ? 1 : 0;
+                              const pathData = [
+                                `M ${x1} ${y1}`,
+                                `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+                                `L ${x3} ${y3}`,
+                                `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x4} ${y4}`,
+                                "Z",
+                              ].join(" ");
+                              const labelAngle = startAngle + angle / 2;
+                              const labelRadius = (radius + innerRadius) / 2;
+                              const labelX = center + labelRadius * Math.cos(labelAngle);
+                              const labelY = center + labelRadius * Math.sin(labelAngle);
+                              currentAngle = endAngle;
+
+                              return (
+                                <g key={index}>
+                                  <path
+                                    d={pathData}
+                                    fill={item.color}
+                                    stroke="#ffffff"
+                                    strokeWidth="2"
+                                    className="hover:opacity-80 transition-opacity cursor-pointer"
+                                  />
+                                  {percentage > 8 && (
+                                    <>
+                                      <text
+                                        x={labelX}
+                                        y={labelY - 6}
+                                        textAnchor="middle"
+                                        fill="white"
+                                        fontSize="12"
+                                        className="pointer-events-none"
+                                      >
+                                        {safeVal}min
+                                      </text>
+                                      <text
+                                        x={labelX}
+                                        y={labelY + 8}
+                                        textAnchor="middle"
+                                        fill="white"
+                                        fontSize="12"
+                                        fontWeight="bold"
+                                        className="pointer-events-none"
+                                      >
+                                        {item.shortLabel}
+                                      </text>
+                                    </>
+                                  )}
+                                </g>
+                              );
+                            });
+                          })()}
+                          {Number(formData.productionTime) +
+                            Number(formData.onwardTime) +
+                            Number(formData.unloadingTime) +
+                            Number(formData.returnTime) >
+                            0 && (
+                            <>
+                              <text
+                                x={140}
+                                y={132}
+                                textAnchor="middle"
+                                fill="#374151"
+                                fontSize="16"
+                                fontWeight="bold"
+                                className="pointer-events-none"
+                              >
+                                Total
+                              </text>
+                              <text
+                                x={140}
+                                y={152}
+                                textAnchor="middle"
+                                fill="#374151"
+                                fontSize="18"
+                                fontWeight="bold"
+                                className="pointer-events-none"
+                              >
+                                {[
+                                  formData.productionTime,
+                                  formData.onwardTime,
+                                  formData.unloadingTime,
+                                  formData.returnTime,
+                                ]
+                                  .map((v) => Number(v) || 0)
+                                  .reduce((a, b) => a + b, 0)}{" "}
+                                min
+                              </text>
+                            </>
+                          )}
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Onward Time (min)
-                  </label>
-                  <Input
-                    type="number"
-                    name="onwardTime"
-                    value={parseFloat(formData.onwardTime)}
-                    onChange={handleInputChange}
-                    placeholder="Enter onward time"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Return Time (min)
-                  </label>
-                  <Input
-                    type="number"
-                    name="returnTime"
-                    value={parseFloat(formData.returnTime)}
-                    onChange={handleInputChange}
-                    placeholder="Enter return time"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-6 mt-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Buffer Time (min)
-                  </label>
-                  <Input
-                    type="number"
-                    name="productionTime"
-                    value={parseFloat(formData.productionTime)}
-                    onChange={handleInputChange}
-                    placeholder="Enter buffer time"
-                  />
-                </div>
-                <div className="flex items-end">
-                  <div className="w-full">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Total Cycle Time (min)
-                    </label>
-                    <Input
-                      type="number"
-                      value={[formData.productionTime, formData.onwardTime, formData.unloadingTime, formData.returnTime]
+
+                {/* Right Section: Fleet Sizing + TM Trip Distribution (stacked) */}
+                <div className="lg:col-span-4 space-y-6">
+                  {/* Fleet Sizing Section */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Fleet Sizing</h3>
+
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between py-2 border-b border-blue-200/60 dark:border-blue-800/60">
+                        <span className="text-xs font-medium text-gray-900 dark:text-white">
+                          Optimum Fleet: Zero Wait, Non-Stop Supply
+                        </span>
+                        <span className="text-sm font-bold text-gray-900 dark:text-white min-w-[2rem] text-right">
+                          {(() => {
+                            const cycleTime = [
+                              formData.productionTime,
+                              formData.onwardTime,
+                              formData.unloadingTime,
+                              formData.returnTime,
+                            ]
+                              .map((v) => parseFloat(v) || 0)
+                              .reduce((a, b) => a + b, 0);
+                            const unloadingTime = parseFloat(formData.unloadingTime) || 1;
+                            return cycleTime > 0 ? Math.ceil(cycleTime / unloadingTime) : 0;
+                          })()}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-xs font-semibold text-gray-900 dark:text-white">Total TM Required</span>
+                        <span className="text-base font-bold text-blue-600 dark:text-blue-400 min-w-[2rem] text-right">
+                          {(() => {
+                            const cycleTime = [
+                              formData.productionTime,
+                              formData.onwardTime,
+                              formData.unloadingTime,
+                              formData.returnTime,
+                            ]
+                              .map((v) => parseFloat(v) || 0)
+                              .reduce((a, b) => a + b, 0);
+                            const unloadingTime = parseFloat(formData.unloadingTime) || 1;
+                            return cycleTime > 0 ? Math.ceil(cycleTime / unloadingTime) : 0;
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TM Trip Distribution */}
+                  <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-3">
+                      TM Trip Distribution
+                    </h3>
+                    {(() => {
+                      const cycleTime = [
+                        formData.productionTime,
+                        formData.onwardTime,
+                        formData.unloadingTime,
+                        formData.returnTime,
+                      ]
                         .map((v) => parseFloat(v) || 0)
-                        .reduce((a, b) => a + b, 0)}
-                      disabled
-                      className="bg-gray-100 dark:bg-gray-800 font-semibold"
-                      placeholder="Auto-calculated"
-                    />
+                        .reduce((a, b) => a + b, 0);
+                      const unloadingTime = parseFloat(formData.unloadingTime) || 1;
+                      const tmRequired = cycleTime > 0 ? Math.ceil(cycleTime / unloadingTime) : 0;
+                      const quantity = parseFloat(formData.quantity) || 0;
+                      const avgCapacity = avgTMCap || 1;
+                      const tripsPerTM = tmRequired > 0 ? Math.ceil(quantity / (tmRequired * avgCapacity)) : 0;
+
+                      if (tmRequired <= 0 || tripsPerTM <= 0) {
+                        return (
+                          <div className="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400 text-sm">
+                            Enter inputs to see estimated distribution.
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div>
+                          <table className="w-full table-fixed border-collapse border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
+                            <thead>
+                              <tr className="bg-gray-50 dark:bg-gray-800/60">
+                                <th className="w-1/6 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                  Sl.
+                                </th>
+                                <th className="w-1/4 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                  TMs (A)
+                                </th>
+                                <th className="w-1/4 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                  Trips/TM (B)
+                                </th>
+                                <th className="w-1/3 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                  Total (A × B)
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                                <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50">
+                                  1
+                                </td>
+                                <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-medium">
+                                  {tmRequired}
+                                </td>
+                                <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-medium">
+                                  {tripsPerTM}
+                                </td>
+                                <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-semibold">
+                                  {tmRequired * tripsPerTM}
+                                </td>
+                              </tr>
+                              <tr className="bg-gray-50 dark:bg-gray-800/40 border-t border-gray-300 dark:border-gray-600">
+                                <td className="px-2 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">
+                                  Total
+                                </td>
+                                <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+                                  {tmRequired}
+                                </td>
+                                <td className="px-2 py-2 text-xs text-gray-400 dark:text-gray-500">—</td>
+                                <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+                                  {tmRequired * tripsPerTM}
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
