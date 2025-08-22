@@ -714,8 +714,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 </div>
 
                 {/* Project Details */}
-                {selectedProject && projects.find((p) => p._id === selectedProject) && (
-                  <div className="flex gap-4 w-full">
+                <div className="flex gap-4 w-full">
+                  {selectedProject && projects.find((p) => p._id === selectedProject) && (
                     <div className="w-full flex flex-col justify-start">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Project Details
@@ -743,8 +743,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                         {projects.find((p) => p._id === selectedProject)?.address}
                       </p>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* Grade of Concrete */}
                 <div className="w-full">
@@ -777,7 +777,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 </div>
               </div>
 
-              <div className="grid grid-cols-6 gap-6 mt-6">
+              <div className="grid grid-cols-3 gap-6 mt-6">
                 {/* Schedule Date */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
