@@ -468,6 +468,24 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       if (data.success) {
         setGeneratedSchedule(data.data);
         setHasChanged(false);
+
+        // Update TM suggestions
+        const tm_suggestions = {
+          tm_count: data?.data?.tm_count,
+          schedule_id: data?.data?._id,
+          required_tms: data?.data?.required_tms,
+          total_trips: data?.data?.total_trips,
+          trips_per_tm: data?.data?.trips_per_tm,
+          cycle_time: data?.data?.cycle_time,
+          available_tms: data?.data?.available_tms,
+          available_pumps: data?.data?.available_pumps,
+        };
+        setCalculatedTMs(tm_suggestions || null);
+        setCustomTMCount(data?.data?.tm_overrule || data?.data?.tm_count || 1);
+        setOverruleTMCount(
+          data?.data?.tm_overrule && data?.data?.tm_count ? data?.data?.tm_overrule !== data?.data?.tm_count : false
+        );
+
         return true;
       }
       return false;
@@ -855,11 +873,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   const cycleTimeHr = cycleTimeMin / 60;
   const totalPumpingHours = speed > 0 ? quantity / speed : 0;
-  const tripsPerTM = cycleTimeHr > 0 ? totalPumpingHours / cycleTimeHr : 0;
+  const loads = Math.ceil((parseFloat(formData.quantity) || 0) / (avgTMCap && avgTMCap > 0 ? avgTMCap : 1));
   // const m3PerTM = tripsPerTM * (avgTMCap && avgTMCap > 0 ? avgTMCap : 1);
   const tmReq = cycleTimeMin > 0 ? Math.ceil(cycleTimeMin / parseFloat(formData.unloadingTime)) : 0;
   const additionalTMValue = overruleTMCount ? Math.max(0, (customTMCount || 0) - tmReq) : 0;
   const totalTMRequired = overruleTMCount ? customTMCount : tmReq;
+  const tripsPerTM = tmReq > 0 ? loads / totalTMRequired : 0;
   const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
   const [startHour, startMin] = (formData.startTime || "00:00").split(":").map((n) => parseInt(n, 10));
 
@@ -880,8 +899,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const floorTripsPerTM = Math.floor(tripsPerTMExact);
   const ceilTripsPerTM = Math.ceil(tripsPerTMExact);
   // const totalTripsApprox = totalTMRequired > 0 ? Math.max(0, Math.round(tripsPerTMExact * totalTMRequired)) : 0;
-  const numCeilTms =
-    totalTMRequired > 0 ? Math.min(totalTMRequired, Math.max(0, totalTrips - floorTripsPerTM * totalTMRequired)) : 0;
+  const numCeilTms = loads - floorTripsPerTM * totalTMRequired;
   const numFloorTms = totalTMRequired > 0 ? Math.max(0, totalTMRequired - numCeilTms) : 0;
 
   return (
