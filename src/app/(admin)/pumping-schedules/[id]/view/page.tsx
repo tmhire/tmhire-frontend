@@ -417,76 +417,74 @@ export default function ScheduleViewPage() {
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-100/20 dark:border-white/[0.05] dark:bg-white/[0.03]">
             <div className="max-w-full overflow-x-auto">
               <Table>
-                <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-                  <TableRow>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
+                <thead className="border-b border-gray-100 dark:border-white/[0.05]">
+                  {/* Main header row with merged columns */}
+                  <tr>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                       Trip No
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                       TM No
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                    </th>
+                    <th
+                      colSpan={2}
+                      className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
                     >
-                      Plant Name
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      Plant
+                    </th>
+                    <th
+                      colSpan={2}
+                      className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
                     >
-                      Plant Load Time
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Plant Start Time
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Pump Start Time
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Pump End Time
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
+                      Pump
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                       Return Time
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                       Cum. Volume
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                       Cycle Time (min)
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                       Cushion Time (min)
-                    </TableCell>
-                  </TableRow>
-                </TableHeader>
+                    </th>
+                  </tr>
+                  {/* Sub-header row with individual column names */}
+                  <tr>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      #
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      #
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                      Name
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
+                      Load Time
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                      Start Time
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
+                      End Time
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      #
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      #
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      #
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      #
+                    </th>
+                  </tr>
+                </thead>
                 <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                   {schedule.output_table.map((trip) => (
                     <TableRow key={trip.trip_no}>
@@ -495,10 +493,32 @@ export default function ScheduleViewPage() {
                       </TableCell>
                       <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">
-                          {trip.tm_no}
-                          {typeof trip.trip_no_for_tm !== "undefined" && (
-                            <span className="text-xs text-gray-500 ml-1">({trip.trip_no_for_tm})</span>
-                          )}
+                          {(() => {
+                            // Calculate total trips for this TM
+                            const tmTotalTrips = schedule.output_table.filter((t) => t.tm_id === trip.tm_id).length;
+                            // Find the current trip number for this TM (1-based index)
+                            const tmTrips = schedule.output_table
+                              .filter((t) => t.tm_id === trip.tm_id)
+                              .sort((a, b) => a.trip_no - b.trip_no);
+                            const currentTripIndex = tmTrips.findIndex((t) => t.trip_no === trip.trip_no) + 1;
+
+                            return (
+                              <>
+                                <div className="flex w-fit rounded-lg border-2 border-black bg-yellow-500 shadow items-center gap-2 pr-2">
+                                  <label className="flex flex-col justify-between bg-blue-700 rounded-l-md p-2 text-[8px]  text-white">
+                                <span className="text-xs text-white-400">
+                                  ({currentTripIndex}/{tmTotalTrips})
+                                </span>
+                                    {/* <img className="h-3" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" /> */}
+                                    {/* IND */}
+                                  </label>
+                                  <label className="p-1 px-1 font-mono text-sm font-medium items-center ">
+                                    {trip.tm_no}
+                                  </label>
+                                </div>
+                              </>
+                            );
+                          })()}
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-4 text-start">

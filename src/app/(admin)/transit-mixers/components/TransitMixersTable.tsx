@@ -98,7 +98,7 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                   </TableCell>
                   <TableCell className="px-3 py-2 text-start">
                     <div className="flex w-full rounded-lg border-2 border-black bg-yellow-500 shadow items-center gap-2">
-                      <label className="flex flex-col justify-between bg-blue-700 rounded-l p-2 text-[8px]  text-white">
+                      <label className="flex flex-col justify-between bg-blue-700 rounded-l-md p-2 text-[8px]  text-white">
                         <img className="h-3" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" />
                         IND
                       </label>
