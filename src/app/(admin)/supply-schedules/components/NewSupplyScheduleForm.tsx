@@ -119,6 +119,12 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     productionTime: "",
     concreteGrade: "",
   });
+
+  const [fleetOptions, setFleetOptions] = useState({
+    tripsNeeded: 0,
+    useRoundTrip: true,
+    vehicleCount: 1,
+  });
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [formDataRetrieved, setFormDataRetrieved] = useState(true);
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
@@ -164,6 +170,18 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   });
   const avgTMCap = avgTMCapData?.average_capacity ?? null;
 
+  // Calculate default trips needed when quantity or average capacity changes
+  useEffect(() => {
+    if (avgTMCap && formData.quantity) {
+      const quantity = parseFloat(formData.quantity) || 0;
+      const defaultTrips = Math.ceil(quantity / avgTMCap);
+      setFleetOptions((prev) => ({
+        ...prev,
+        tripsNeeded: defaultTrips,
+      }));
+    }
+  }, [avgTMCap, formData.quantity]);
+
   const queryProjects = useQuery<Project[]>({
     queryKey: ["projects", selectedClient],
     queryFn: async () => {
@@ -187,12 +205,11 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
         setGeneratedSchedule(data.data);
         setSelectedClient(data.data.client_id);
         setSelectedProject(data.data.project_id);
-        const pumping_speed = data.data.input_params.pumping_speed;
         setFormData({
           scheduleDate: data.data.input_params.schedule_date,
           startTime: data.data.input_params.pump_start.split("T")[1],
           quantity: data.data.input_params.quantity.toString(),
-          speed: pumping_speed.toString(),
+          speed: "",
           unloadingTime: data.data.input_params.unloading_time?.toString() || "",
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
@@ -239,11 +256,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
           client_id: selectedClient,
           project_id: selectedProject,
           concreteGrade: formData.concreteGrade,
-          pumping_speed: formData.speed,
           type: "supply",
           input_params: {
             quantity: parseFloat(formData.quantity),
-            pumping_speed: parseFloat(formData.speed),
             unloading_time: Math.round(parseFloat(formData.unloadingTime)),
             onward_time: parseFloat(formData.onwardTime),
             return_time: parseFloat(formData.returnTime),
@@ -299,30 +314,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     setHasChanged(true);
   };
 
-  const setPumpingSpeedAndUnloadingTime = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleInputChange(e);
-    const { name, value } = e.target;
-    if (!avgTMCap || !value) return;
-    if (name === "speed") {
-      const speed = parseFloat(value);
-      if (!isNaN(speed) && speed > 0) {
-        return setFormData((prev) => ({
-          ...prev,
-          unloadingTime: ((avgTMCap / speed) * 60).toFixed(0),
-        }));
-      }
-    }
-    if (name === "unloadingTime") {
-      const unloading_time = parseFloat(value);
-      if (!isNaN(unloading_time) && unloading_time > 0) {
-        return setFormData((prev) => ({
-          ...prev,
-          speed: (avgTMCap / (unloading_time / 60)).toFixed(0),
-        }));
-      }
-    }
-  };
-
   const calculateRequiredTMs = async () => {
     if (!hasChanged) return true;
     if (
@@ -330,7 +321,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       !formData.scheduleDate ||
       !formData.startTime ||
       !formData.quantity ||
-      !formData.speed ||
       !formData.unloadingTime ||
       !formData.onwardTime ||
       !formData.returnTime ||
@@ -347,11 +337,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
             client_id: selectedClient,
             project_id: selectedProject,
             concreteGrade: formData.concreteGrade,
-            pumping_speed: formData.speed,
             type: "supply",
             input_params: {
               quantity: parseFloat(formData.quantity),
-              pumping_speed: parseFloat(formData.speed),
               unloading_time: Math.round(parseFloat(formData.unloadingTime)),
               onward_time: parseFloat(formData.onwardTime),
               return_time: parseFloat(formData.returnTime),
@@ -448,7 +436,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       !!formData.onwardTime &&
       !!formData.returnTime &&
       !!formData.productionTime &&
-      !!formData.speed &&
       !!formData.unloadingTime
     );
   };
@@ -799,7 +786,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 {/* Site Reach Time */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Site Reach Time ({profile?.preferred_format})
+                    Supply Start Time ({profile?.preferred_format})
                   </label>
                   <div className="relative">
                     <TimeInput
@@ -838,52 +825,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
               </div>
             </div>
 
-            {/* Supply Speed Section */}
-            <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-              <h3 className="text-base font-semibold text-gray-800 dark:text-white/90 mb-4">Supply Speed Parameters</h3>
-
-              <div className="flex flex-row gap-4">
-                {/* Supply Speed */}
-                <div className="w-full">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Supply Speed (m³/hr)
-                  </label>
-                  <Input
-                    type="number"
-                    name="speed"
-                    value={parseFloat(formData.speed)}
-                    onChange={setPumpingSpeedAndUnloadingTime}
-                    placeholder="Enter speed"
-                  />
-                </div>
-
-                {/* OR separator */}
-                <div className="flex items-center justify-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">or</span>
-                </div>
-
-                {/* Unloading Time */}
-                <div className="w-full">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Unloading Time (min)
-                  </label>
-                  <Input
-                    type="number"
-                    name="unloadingTime"
-                    value={parseFloat(formData.unloadingTime)}
-                    onChange={setPumpingSpeedAndUnloadingTime}
-                    placeholder={
-                      avgTMCap !== null ? "Auto-calculated from supply speed" : "Enter supply speed to calculate"
-                    }
-                  />
-                  {avgTMCap !== null && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Auto-calculated based on avg. TM cpty: {avgTMCap?.toFixed(0)} m³
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
             {/* Supply Details Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
               <div className="flex justify-between items-center mb-4 w-full">
@@ -949,20 +890,15 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                       </div>
 
                       {/* TM Unloading Time */}
-                      <div className="flex items-start gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center">
-                            <span
-                              className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
-                              style={{ backgroundColor: "#10b981" }}
-                            ></span>
-                            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
-                              TM Unloading Time (min)
-                            </label>
-                          </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 ml-4.5 mt-0.5">
-                            Auto-filled from Supply Speed.
-                          </p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center min-w-0 flex-1">
+                          <span
+                            className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
+                            style={{ backgroundColor: "#10b981" }}
+                          ></span>
+                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                            TM Unloading Time (min)
+                          </label>
                         </div>
                         <div className="w-20 flex-shrink-0">
                           <Input
@@ -971,8 +907,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                             value={parseFloat(formData.unloadingTime)}
                             onChange={handleInputChange}
                             placeholder="0"
-                            disabled
-                            className="w-full text-right bg-gray-50 dark:bg-gray-800 text-xs h-7"
+                            className="w-full text-right text-xs h-7"
                           />
                         </div>
                       </div>
@@ -1197,126 +1132,125 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
                     <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Fleet Sizing</h3>
 
-                    <div className="space-y-2.5">
-                      <div className="flex items-center justify-between py-2 border-b border-blue-200/60 dark:border-blue-800/60">
-                        <span className="text-xs font-medium text-gray-900 dark:text-white">
-                          Optimum Fleet: Zero Wait, Non-Stop Supply
-                        </span>
-                        <span className="text-sm font-bold text-gray-900 dark:text-white min-w-[2rem] text-right">
-                          {(() => {
-                            const cycleTime = [
-                              formData.productionTime,
-                              formData.onwardTime,
-                              formData.unloadingTime,
-                              formData.returnTime,
-                            ]
-                              .map((v) => parseFloat(v) || 0)
-                              .reduce((a, b) => a + b, 0);
-                            const unloadingTime = parseFloat(formData.unloadingTime) || 1;
-                            return cycleTime > 0 ? Math.ceil(cycleTime / unloadingTime) : 0;
-                          })()}
-                        </span>
+                    <div className="space-y-4">
+                      {/* Trips Needed Input */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-900 dark:text-white">
+                          For this supply of {formData.quantity || 0} m³, how many trips are needed?
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            className="flex-1 h-8 px-3 rounded border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                            value={fleetOptions.tripsNeeded}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 1;
+                              setFleetOptions((prev) => ({
+                                ...prev,
+                                tripsNeeded: Math.max(1, value),
+                              }));
+                            }}
+                          />
+                          {avgTMCap && (
+                            <span className="text-xs text-gray-600 dark:text-gray-400">
+                              (Suggested: {Math.ceil((parseFloat(formData.quantity) || 0) / avgTMCap)})
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="flex items-center justify-between py-2">
-                        <span className="text-xs font-semibold text-gray-900 dark:text-white">Total TM Required</span>
-                        <span className="text-base font-bold text-blue-600 dark:text-blue-400 min-w-[2rem] text-right">
-                          {(() => {
-                            const cycleTime = [
-                              formData.productionTime,
-                              formData.onwardTime,
-                              formData.unloadingTime,
-                              formData.returnTime,
-                            ]
-                              .map((v) => parseFloat(v) || 0)
-                              .reduce((a, b) => a + b, 0);
-                            const unloadingTime = parseFloat(formData.unloadingTime) || 1;
-                            return cycleTime > 0 ? Math.ceil(cycleTime / unloadingTime) : 0;
-                          })()}
-                        </span>
+                      {/* Round Trip vs Separate Vehicle Option */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-900 dark:text-white">
+                          Do you want to use round trip or separate vehicle per trip?
+                        </label>
+                        <div className="flex items-center gap-4">
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              checked={fleetOptions.useRoundTrip}
+                              onChange={() => setFleetOptions((prev) => ({ ...prev, useRoundTrip: true }))}
+                              className="text-blue-600"
+                            />
+                            <span className="text-xs text-gray-900 dark:text-white">Round Trip</span>
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              checked={!fleetOptions.useRoundTrip}
+                              onChange={() => setFleetOptions((prev) => ({ ...prev, useRoundTrip: false }))}
+                              className="text-blue-600"
+                            />
+                            <span className="text-xs text-gray-900 dark:text-white">Separate Vehicle</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Vehicle Count Input (only show if round trip selected) */}
+                      {fleetOptions.useRoundTrip && (
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-gray-900 dark:text-white">
+                            Number of vehicles to use:
+                          </label>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                              onClick={() => {
+                                if (fleetOptions.vehicleCount > 1) {
+                                  setFleetOptions((prev) => ({
+                                    ...prev,
+                                    vehicleCount: prev.vehicleCount - 1,
+                                  }));
+                                }
+                              }}
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              min={1}
+                              className="no-spinner h-6 w-8 text-center px-1 rounded border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
+                              value={fleetOptions.vehicleCount}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value) || 1;
+                                setFleetOptions((prev) => ({
+                                  ...prev,
+                                  vehicleCount: Math.max(1, value),
+                                }));
+                              }}
+                            />
+                            <button
+                              type="button"
+                              className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                              onClick={() => {
+                                setFleetOptions((prev) => ({
+                                  ...prev,
+                                  vehicleCount: prev.vehicleCount + 1,
+                                }));
+                              }}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Original Fleet Sizing Info */}
+                      <div className="pt-2 border-t border-blue-200/60 dark:border-blue-800/60">
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between py-2">
+                            <span className="text-xs font-semibold text-gray-900 dark:text-white">
+                              Total TMs to be used
+                            </span>
+                            <span className="text-base font-bold text-blue-600 dark:text-blue-400 min-w-[2rem] text-right">
+                              {fleetOptions.vehicleCount}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  {/* TM Trip Distribution */}
-                  <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-3">
-                      TM Trip Distribution
-                    </h3>
-                    {(() => {
-                      const cycleTime = [
-                        formData.productionTime,
-                        formData.onwardTime,
-                        formData.unloadingTime,
-                        formData.returnTime,
-                      ]
-                        .map((v) => parseFloat(v) || 0)
-                        .reduce((a, b) => a + b, 0);
-                      const unloadingTime = parseFloat(formData.unloadingTime) || 1;
-                      const tmRequired = cycleTime > 0 ? Math.ceil(cycleTime / unloadingTime) : 0;
-                      const quantity = parseFloat(formData.quantity) || 0;
-                      const avgCapacity = avgTMCap || 1;
-                      const tripsPerTM = tmRequired > 0 ? Math.ceil(quantity / (tmRequired * avgCapacity)) : 0;
-
-                      if (tmRequired <= 0 || tripsPerTM <= 0) {
-                        return (
-                          <div className="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400 text-sm">
-                            Enter inputs to see estimated distribution.
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div>
-                          <table className="w-full table-fixed border-collapse border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
-                            <thead>
-                              <tr className="bg-gray-50 dark:bg-gray-800/60">
-                                <th className="w-1/6 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
-                                  Sl.
-                                </th>
-                                <th className="w-1/4 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
-                                  TMs (A)
-                                </th>
-                                <th className="w-1/4 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
-                                  Trips/TM (B)
-                                </th>
-                                <th className="w-1/3 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
-                                  Total (A × B)
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
-                                <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50">
-                                  1
-                                </td>
-                                <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-medium">
-                                  {tmRequired}
-                                </td>
-                                <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-medium">
-                                  {tripsPerTM}
-                                </td>
-                                <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-semibold">
-                                  {tmRequired * tripsPerTM}
-                                </td>
-                              </tr>
-                              <tr className="bg-gray-50 dark:bg-gray-800/40 border-t border-gray-300 dark:border-gray-600">
-                                <td className="px-2 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">
-                                  Total
-                                </td>
-                                <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">
-                                  {tmRequired}
-                                </td>
-                                <td className="px-2 py-2 text-xs text-gray-400 dark:text-gray-500">—</td>
-                                <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">
-                                  {tmRequired * tripsPerTM}
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      );
-                    })()}
                   </div>
                 </div>
               </div>
@@ -1741,12 +1675,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Quantity</h4>
                       <p className="text-gray-800 dark:text-white/90">{generatedSchedule.input_params.quantity} m³</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Supply Speed</h4>
-                      <p className="text-gray-800 dark:text-white/90">
-                        {generatedSchedule.input_params.pumping_speed} m³/hr
-                      </p>
                     </div>
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</h4>
