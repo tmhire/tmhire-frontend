@@ -69,6 +69,7 @@ interface GeneratedSchedule {
     onward_time: number;
     return_time: number;
     buffer_time: number;
+    load_time: number;
     pump_start: string;
     schedule_date: string;
   };
@@ -116,7 +117,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     unloadingTime: "",
     onwardTime: "",
     returnTime: "",
-    productionTime: "",
+    bufferTime: "",
+    loadTime: "",
     concreteGrade: "",
   });
 
@@ -179,6 +181,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
         ...prev,
         tripsNeeded: defaultTrips,
       }));
+      setHasChanged(true);
     }
   }, [avgTMCap, formData.quantity]);
 
@@ -213,8 +216,14 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
           unloadingTime: data.data.input_params.unloading_time?.toString() || "",
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
-          productionTime: data.data.input_params.buffer_time.toString(),
+          bufferTime: data.data.input_params.buffer_time.toString(),
+          loadTime: data?.data?.input_params?.load_time.toString() || "",
           concreteGrade: data.data.concreteGrade,
+        });
+        setFleetOptions({
+          tripsNeeded: data?.data?.trip_count || 0,
+          useRoundTrip: data?.data?.is_round_trip || false,
+          vehicleCount: data?.data?.is_round_trip ? 1 : data?.data?.tm_count,
         });
         const tm_ids = new Set();
         const tmSequence: string[] = [];
@@ -262,11 +271,15 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
             unloading_time: Math.round(parseFloat(formData.unloadingTime)),
             onward_time: parseFloat(formData.onwardTime),
             return_time: parseFloat(formData.returnTime),
-            buffer_time: parseFloat(formData.productionTime),
+            buffer_time: parseFloat(formData.bufferTime),
+            load_time: parseFloat(formData.loadTime),
             pump_start: `${formData.scheduleDate}T${formData.startTime}`,
             schedule_date: formData.scheduleDate,
           },
           site_address: selectedProject ? projects.find((p) => p._id === selectedProject)?.address || "" : "",
+          tm_count: fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount,
+          trip_count: fleetOptions.tripsNeeded,
+          is_round_trip: fleetOptions.useRoundTrip,
         }),
       });
 
@@ -324,7 +337,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       !formData.unloadingTime ||
       !formData.onwardTime ||
       !formData.returnTime ||
-      !formData.productionTime
+      !formData.bufferTime ||
+      !formData.loadTime
     ) {
       return false;
     }
@@ -343,11 +357,15 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
               unloading_time: Math.round(parseFloat(formData.unloadingTime)),
               onward_time: parseFloat(formData.onwardTime),
               return_time: parseFloat(formData.returnTime),
-              buffer_time: parseFloat(formData.productionTime),
+              buffer_time: parseFloat(formData.bufferTime),
+              load_time: parseFloat(formData.loadTime),
               pump_start: `${formData.scheduleDate}T${formData.startTime}`,
               schedule_date: formData.scheduleDate,
             },
             site_address: selectedProject ? projects.find((p) => p._id === selectedProject)?.address || "" : "",
+            tm_count: fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount,
+            trip_count: fleetOptions.tripsNeeded,
+            is_round_trip: fleetOptions.useRoundTrip,
           }),
         });
 
@@ -382,7 +400,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     try {
       const response = await fetchWithAuth(`/schedules/${calculatedTMs.schedule_id}/generate-schedule`, {
         method: "POST",
-        body: JSON.stringify({ selected_tms: tmSequence }),
+        body: JSON.stringify({ selected_tms: tmSequence, type: "supply" }),
       });
 
       const data = await response.json();
@@ -435,7 +453,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       !!formData.concreteGrade &&
       !!formData.onwardTime &&
       !!formData.returnTime &&
-      !!formData.productionTime &&
+      !!formData.bufferTime &&
+      !!formData.loadTime &&
       !!formData.unloadingTime
     );
   };
@@ -857,8 +876,31 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                         <div className="w-20 flex-shrink-0">
                           <Input
                             type="number"
-                            name="productionTime"
-                            value={parseFloat(formData.productionTime)}
+                            name="bufferTime"
+                            value={parseFloat(formData.bufferTime)}
+                            onChange={handleInputChange}
+                            placeholder="0"
+                            className="w-full text-right text-xs h-7"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Load Time */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center min-w-0 flex-1">
+                          <span
+                            className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
+                            style={{ backgroundColor: "#3b82f6" }}
+                          ></span>
+                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                            Loading Time (min)
+                          </label>
+                        </div>
+                        <div className="w-20 flex-shrink-0">
+                          <Input
+                            type="number"
+                            name="loadTime"
+                            value={parseFloat(formData.loadTime)}
                             onChange={handleInputChange}
                             placeholder="0"
                             className="w-full text-right text-xs h-7"
@@ -948,7 +990,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                             <Input
                               type="number"
                               value={[
-                                formData.productionTime,
+                                formData.bufferTime,
+                                formData.loadTime,
                                 formData.onwardTime,
                                 formData.unloadingTime,
                                 formData.returnTime,
@@ -984,8 +1027,14 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                               {
                                 label: "Buffer",
                                 shortLabel: "Buffer",
-                                value: parseFloat(formData.productionTime) || 0,
+                                value: parseFloat(formData.bufferTime) || 0,
                                 color: "#3b82f6",
+                              },
+                              {
+                                label: "Loading Time",
+                                shortLabel: "Loading",
+                                value: parseFloat(formData.loadTime) || 0,
+                                color: "#ef4444",
                               },
                               {
                                 label: "Onward Journey",
@@ -1082,7 +1131,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                               );
                             });
                           })()}
-                          {Number(formData.productionTime) +
+                          {Number(formData.bufferTime) +
+                            Number(formData.loadTime) +
                             Number(formData.onwardTime) +
                             Number(formData.unloadingTime) +
                             Number(formData.returnTime) >
@@ -1109,7 +1159,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                 className="pointer-events-none"
                               >
                                 {[
-                                  formData.productionTime,
+                                  formData.bufferTime,
+                                  formData.loadTime,
                                   formData.onwardTime,
                                   formData.unloadingTime,
                                   formData.returnTime,
@@ -1150,6 +1201,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                 ...prev,
                                 tripsNeeded: Math.max(1, value),
                               }));
+                              setHasChanged(true);
                             }}
                           />
                           {avgTMCap && (
@@ -1170,7 +1222,10 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                             <input
                               type="radio"
                               checked={fleetOptions.useRoundTrip}
-                              onChange={() => setFleetOptions((prev) => ({ ...prev, useRoundTrip: true }))}
+                              onChange={() => {
+                                setFleetOptions((prev) => ({ ...prev, useRoundTrip: true }));
+                                setHasChanged(true);
+                              }}
                               className="text-blue-600"
                             />
                             <span className="text-xs text-gray-900 dark:text-white">Round Trip</span>
@@ -1179,7 +1234,10 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                             <input
                               type="radio"
                               checked={!fleetOptions.useRoundTrip}
-                              onChange={() => setFleetOptions((prev) => ({ ...prev, useRoundTrip: false }))}
+                              onChange={() => {
+                                setFleetOptions((prev) => ({ ...prev, useRoundTrip: false }));
+                                setHasChanged(true);
+                              }}
                               className="text-blue-600"
                             />
                             <span className="text-xs text-gray-900 dark:text-white">Separate Vehicle</span>
@@ -1188,7 +1246,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                       </div>
 
                       {/* Vehicle Count Input (only show if round trip selected) */}
-                      {fleetOptions.useRoundTrip && (
+                      {!fleetOptions.useRoundTrip && (
                         <div className="space-y-2">
                           <label className="text-xs font-medium text-gray-900 dark:text-white">
                             Number of vehicles to use:
@@ -1203,6 +1261,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                     ...prev,
                                     vehicleCount: prev.vehicleCount - 1,
                                   }));
+                                  setHasChanged(true);
                                 }
                               }}
                             >
@@ -1219,6 +1278,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                   ...prev,
                                   vehicleCount: Math.max(1, value),
                                 }));
+                                setHasChanged(true);
                               }}
                             />
                             <button
@@ -1229,6 +1289,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                   ...prev,
                                   vehicleCount: prev.vehicleCount + 1,
                                 }));
+                                setHasChanged(true);
                               }}
                             >
                               +
@@ -1245,7 +1306,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                               Total TMs to be used
                             </span>
                             <span className="text-base font-bold text-blue-600 dark:text-blue-400 min-w-[2rem] text-right">
-                              {fleetOptions.vehicleCount}
+                              {!fleetOptions.useRoundTrip ? fleetOptions.vehicleCount : 1}
                             </span>
                           </div>
                         </div>
@@ -1500,15 +1561,22 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 </Button>
                 <div className="flex items-center gap-4 justify-end flex-1">
                   {/* Warning message */}
-                  {tmSequence.length === 0 && (
+                  {tmSequence.length !== (fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount) && (
                     <div className="p-2 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg text-xs">
-                      Please select at least <span className="font-semibold">1 TM</span> to proceed.
+                      Please select{" "}
+                      <span className="font-semibold">
+                        {fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount} TM
+                        {(fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount) > 1 ? "s" : ""}
+                      </span>{" "}
+                      to proceed.
                     </div>
                   )}
                   <Button
                     onClick={handleNext}
                     className="flex items-center gap-2 min-w-[140px]"
-                    disabled={isGenerating || tmSequence.length === 0}
+                    disabled={
+                      isGenerating || tmSequence.length !== (fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount)
+                    }
                   >
                     {isGenerating ? "Generating..." : "Next Step"}
                     {!isGenerating && <ArrowRight size={16} />}
