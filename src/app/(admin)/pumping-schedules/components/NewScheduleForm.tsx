@@ -344,6 +344,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     }
   }, [computedScheduleName, schedule_id, formData.scheduleName]);
 
+
   const fetchSchedule = useCallback(async () => {
     try {
       const response = await fetchWithAuth(`/schedules/${schedule_id}`);
@@ -671,6 +672,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   // const filteredPumps = pumpsData?.filter((p: Pump) => p.type === pumpType) || [];
   const progressPercentage = ((step - 1) / (steps.length - 1)) * 100;
 
+  useEffect(() => {
+    // reset project when client changes
+    setSelectedProject("");
+  }, [selectedClient]);
+  
   // Helper to check if all required fields are filled
   const isStep1FormValid = () => {
     return (
@@ -1056,7 +1062,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Choose Client
                     </label>
-                    <div className="h-11 w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                    <div className="h-11  min-w-full max-w-fit rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
                       Loading clients...
                     </div>
                   </div>
@@ -1081,7 +1087,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Choose Project
                     </label>
-                    <div className="h-11 w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                    <div className="h-11 min-w-full max-w-fit rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
                       Select a client first
                     </div>
                   </div>
@@ -1117,36 +1123,27 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Project Details
                       </label>
-                      <p className=" text-sm text-gray-600 dark:text-gray-600">
-                        <span
-                          title={
-                            (projects.find((p) => p._id === selectedProject)?.contact_name || "") +
-                            " - " +
-                            (projects.find((p) => p._id === selectedProject)?.contact_number || "")
-                          }
-                        >
-                          {(() => {
-                            const contactName = projects.find((p) => p._id === selectedProject)?.contact_name || "";
-                            const contactNumber = projects.find((p) => p._id === selectedProject)?.contact_number || "";
-                            const displayName =
-                              contactName.length > 15 ? contactName.slice(0, 15) + "..." : contactName;
-                            const displayNumber =
-                              contactNumber.length > 15 ? contactNumber.slice(0, 15) + "..." : contactNumber;
-                            return `${displayName} - ${displayNumber}`;
-                          })()}
-                        </span>
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-600">
-                        {projects.find((p) => p._id === selectedProject)?.address}
-                      </p>
-                      {/* {projects.find((p) => p._id === selectedProject)?.mother_plant_id && (
-                        <p className="text-sm text-gray-400 dark:text-gray-400">
-                          Mother Plant:{" "}
-                          {(plantsData || []).find(
-                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                          )?.name || "Unknown Plant"}
+                      <div className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                        <p className="text-sm text-gray-600 dark:text-gray-600 whitespace-normal break-words">
+                          <span
+                            title={
+                              (projects.find((p) => p._id === selectedProject)?.contact_name || "") +
+                              " - " +
+                              (projects.find((p) => p._id === selectedProject)?.contact_number || "")
+                            }
+                          >
+                            {(() => {
+                              const contactName = projects.find((p) => p._id === selectedProject)?.contact_name || "";
+                              const contactNumber =
+                                projects.find((p) => p._id === selectedProject)?.contact_number || "";
+                              return `${contactName} - ${contactNumber}`;
+                            })()}
+                          </span>
                         </p>
-                      )} */}
+                        <p className="text-sm text-gray-600 dark:text-gray-600 whitespace-normal break-words">
+                          {projects.find((p) => p._id === selectedProject)?.address}
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1935,7 +1932,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
                           return motherId ? plantIdToName[motherId] || "" : "";
                         })();
-                        
+
                         const groupOrder = Object.keys(grouped)
                           .filter((g) => g !== "Unassigned")
                           .sort((a, b) => {
@@ -1946,7 +1943,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             return a.localeCompare(b);
                           })
                           .concat(Object.keys(grouped).includes("Unassigned") ? ["Unassigned"] : []);
-                        
+
                         return groupOrder.map((plant) => {
                           const pumps = grouped[plant];
                           const isOpen = openPlantGroups[plant] ?? true;
@@ -2178,7 +2175,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
                           return motherId ? plantIdToName[motherId] || "" : "";
                         })();
-                        
+
                         const groupOrder = Object.keys(grouped)
                           .filter((g) => g !== "Unassigned")
                           .sort((a, b) => {
@@ -2189,7 +2186,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             return a.localeCompare(b);
                           })
                           .concat(Object.keys(grouped).includes("Unassigned") ? ["Unassigned"] : []);
-                        
+
                         return groupOrder.map((plant) => {
                           const tms = grouped[plant];
                           const isOpen = openPlantGroups[plant] ?? true;

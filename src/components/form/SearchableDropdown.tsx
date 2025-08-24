@@ -37,16 +37,12 @@ export default function SearchableDropdown<T>({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedOption = options.find(option => getOptionValue(option) === value);
-  
-  // Ensure we have a valid selected option
-  const displayText = selectedOption 
-    ? getOptionLabel(selectedOption) 
-    : value 
-      ? `Selected: ${value}` 
-      : placeholder;
+  const selectedOption = options.find((option) => getOptionValue(option) === value);
 
-  const filteredOptions = options.filter(option =>
+  // Ensure we have a valid selected option
+  const displayText = selectedOption ? getOptionLabel(selectedOption) : value ? `Selected: ${value}` : placeholder;
+
+  const filteredOptions = options.filter((option) =>
     getOptionLabel(option).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -56,8 +52,6 @@ export default function SearchableDropdown<T>({
       setSearchTerm("");
     }
   }, [value, isOpen]);
-
-
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -92,8 +86,6 @@ export default function SearchableDropdown<T>({
     setSearchTerm("");
   };
 
-
-
   const handleClear = () => {
     onChange("");
     setSearchTerm("");
@@ -120,7 +112,7 @@ export default function SearchableDropdown<T>({
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
-      
+
       <div ref={dropdownRef} className="relative">
         <button
           type="button"
@@ -130,15 +122,14 @@ export default function SearchableDropdown<T>({
               : error
               ? "border-red-300 focus:border-red-500 focus:ring-red-500/10 dark:border-red-600"
               : "border-gray-300 focus:border-brand-300 focus:ring-brand-500/10 dark:border-gray-700"
-          } ${
-            selectedOption ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"
-          }`}
-          onClick={handleToggle}
+          } ${selectedOption ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"}`}
+          onMouseDown={handleToggle}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           disabled={disabled}
+          title={displayText}
         >
-          {displayText}
+          <span className="block w-full truncate">{displayText}</span>
         </button>
 
         {value && !disabled && (
@@ -156,12 +147,11 @@ export default function SearchableDropdown<T>({
           className={`absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-transform ${
             isOpen ? "rotate-180" : ""
           }`}
+          onClick={handleToggle}
         />
       </div>
 
-      {error && (
-        <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>
-      )}
+      {error && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       <AnimatePresence>
         {isOpen && (
@@ -174,10 +164,7 @@ export default function SearchableDropdown<T>({
           >
             <div className="p-2">
               <div className="relative">
-                <Search
-                  size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                />
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -209,7 +196,7 @@ export default function SearchableDropdown<T>({
                     <button
                       key={optionValue}
                       type="button"
-                      onClick={() => handleSelect(optionValue)}
+                      onMouseDown={() => handleSelect(optionValue)}
                       className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 ${
                         isSelected
                           ? "bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300"
