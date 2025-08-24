@@ -1336,24 +1336,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
             </div>
           ) : (
             <div className="space-y-6">
-              {calculatedTMs && (
-                <div className="mb-6 p-4 bg-white dark:bg-gray-800/50 rounded-lg">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Calculation Results</h4>
-                  <div className="grid grid-cols-6 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Cycle Time (hours)</p>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">
-                        {calculatedTMs.cycle_time?.toFixed(0) || "N/A"}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Required TMs</p>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">1</p>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {calculatedTMs && calculatedTMs.available_tms && (
                 <>

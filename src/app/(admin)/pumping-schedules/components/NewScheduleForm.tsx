@@ -1930,17 +1930,26 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           if (!grouped[group]) grouped[group] = [];
                           grouped[group].push(pump);
                         });
+                        // Sort groups: mother plant first, then others alphabetically, then unassigned last
+                        const motherPlantName = (() => {
+                          const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
+                          return motherId ? plantIdToName[motherId] || "" : "";
+                        })();
+                        
                         const groupOrder = Object.keys(grouped)
                           .filter((g) => g !== "Unassigned")
-                          .sort((a, b) => a.localeCompare(b))
+                          .sort((a, b) => {
+                            // Mother plant first
+                            if (a === motherPlantName) return -1;
+                            if (b === motherPlantName) return 1;
+                            // Then alphabetically
+                            return a.localeCompare(b);
+                          })
                           .concat(Object.keys(grouped).includes("Unassigned") ? ["Unassigned"] : []);
+                        
                         return groupOrder.map((plant) => {
                           const pumps = grouped[plant];
                           const isOpen = openPlantGroups[plant] ?? true;
-                          const motherPlantName = (() => {
-                            const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
-                            return motherId ? plantIdToName[motherId] || "" : "";
-                          })();
                           return (
                             <div key={plant} className="mb-4">
                               <button
@@ -2164,18 +2173,26 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           if (!grouped[group]) grouped[group] = [];
                           grouped[group].push(tm);
                         });
-                        // Sort group names: all except 'Unassigned' alphabetically, then 'Unassigned' last
+                        // Sort groups: mother plant first, then others alphabetically, then unassigned last
+                        const motherPlantName = (() => {
+                          const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
+                          return motherId ? plantIdToName[motherId] || "" : "";
+                        })();
+                        
                         const groupOrder = Object.keys(grouped)
                           .filter((g) => g !== "Unassigned")
-                          .sort((a, b) => a.localeCompare(b))
+                          .sort((a, b) => {
+                            // Mother plant first
+                            if (a === motherPlantName) return -1;
+                            if (b === motherPlantName) return 1;
+                            // Then alphabetically
+                            return a.localeCompare(b);
+                          })
                           .concat(Object.keys(grouped).includes("Unassigned") ? ["Unassigned"] : []);
+                        
                         return groupOrder.map((plant) => {
                           const tms = grouped[plant];
                           const isOpen = openPlantGroups[plant] ?? true;
-                          const motherPlantName = (() => {
-                            const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
-                            return motherId ? plantIdToName[motherId] || "" : "";
-                          })();
                           return (
                             <div key={plant} className="mb-4">
                               <button
