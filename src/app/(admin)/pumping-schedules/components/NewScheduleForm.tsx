@@ -871,7 +871,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     .map((v) => parseFloat(v) || 0)
     .reduce((a, b) => a + b, 0);
 
-  const cycleTimeHr = cycleTimeMin / 60;
+  // const cycleTimeHr = cycleTimeMin / 60;
   const totalPumpingHours = speed > 0 ? quantity / speed : 0;
   const loads = Math.ceil((parseFloat(formData.quantity) || 0) / (avgTMCap && avgTMCap > 0 ? avgTMCap : 1));
   // const m3PerTM = tripsPerTM * (avgTMCap && avgTMCap > 0 ? avgTMCap : 1);
@@ -879,7 +879,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const additionalTMValue = overruleTMCount ? Math.max(0, (customTMCount || 0) - tmReq) : 0;
   const totalTMRequired = overruleTMCount ? customTMCount : tmReq;
   const tripsPerTM = tmReq > 0 ? loads / totalTMRequired : 0;
-  const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
+  // const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
   const [startHour, startMin] = (formData.startTime || "00:00").split(":").map((n) => parseInt(n, 10));
 
   const startTotalMin = startHour * 60 + startMin;
