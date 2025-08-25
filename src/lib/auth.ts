@@ -73,7 +73,7 @@ async function handleEmailPassword(
       id: json?.data?.id,
       name: json?.data?.name,
       email: json?.data?.email,
-      new_user: json?.data?.new_user || false,
+      new_user: json?.data?.new_user === true || false,
       company: json?.data?.company || "",
       city: json?.data?.city || "",
       contact: json?.data?.contact || undefined,
@@ -128,7 +128,7 @@ async function exchangeGoogleToken(idToken: string): Promise<AuthProps | null> {
       id: "",
       name: "",
       email: "",
-      new_user: data?.data?.new_user || false,
+      new_user: data?.data?.new_user === true || false,
       company: data?.data?.company || "",
       city: data?.data?.city || "",
       contact: data?.data?.contact || undefined,
@@ -238,7 +238,7 @@ export const authOptions: AuthOptions = {
         token.backendRefreshToken = session.backendRefreshToken;
         token.backendRefreshTokenExpires = session.backendRefreshTokenExpires;
         token.backendTokenType = session.backendTokenType;
-        if (session?.new_user !== undefined && session.new_user !== null) token.new_user = session.new_user;
+        if (session?.new_user !== undefined && session.new_user !== null) token.new_user = session.new_user === true;
         if (session?.company) token.company = session.company;
         if (session?.city) token.city = session.city;
         if (session?.contact) token.contact = session.contact;
@@ -268,7 +268,7 @@ export const authOptions: AuthOptions = {
             token.backendAccessToken = backendAuth.accessToken;
             token.backendRefreshToken = backendAuth.refreshToken;
             token.backendTokenType = backendAuth.tokenType;
-            token.new_user = backendAuth.new_user;
+            token.new_user = backendAuth.new_user === true;
             token.company = backendAuth.company;
             token.city = backendAuth.city;
             token.contact = backendAuth.contact;
@@ -293,7 +293,7 @@ export const authOptions: AuthOptions = {
           token.backendAccessToken = user.accessToken;
           token.backendRefreshToken = user.refreshToken;
           token.backendTokenType = user.tokenType;
-          token.new_user = user.new_user;
+          token.new_user = user.new_user === true;
           token.company = user.company;
           token.city = user.city;
           token.contact = user.contact;
@@ -362,7 +362,7 @@ export const authOptions: AuthOptions = {
         session.backendRefreshToken = token.backendRefreshToken as string;
         session.backendTokenType = token.backendTokenType as string;
         console.log("New User", token.new_user);
-        session.new_user = token.new_user as boolean;
+        session.new_user = token.new_user === true;
         session.company = token.company as string;
         session.city = token.city as string;
         session.contact = token.contact as number;
