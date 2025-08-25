@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Tooltip from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
+import SearchableDropdown from "@/components/form/SearchableDropdown";
 
 // Types for better type safety and backend integration
 type ApiTask = {
@@ -24,6 +25,7 @@ type Task = {
   type: string;
   actualStart: string;
   actualEnd: string;
+  project?: string;
 };
 
 type Item = {
@@ -74,6 +76,11 @@ type TransitMixer = {
   plant_id: string | null;
 };
 
+type Project = {
+  _id: string;
+  name: string;
+};
+
 // const timeSlots = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
 
 // Helper function to calculate duration between two times
@@ -104,10 +111,13 @@ const formatDateTimeForTooltip = (dateTimeString: string): string => {
 
 // Task type color map
 const TASK_TYPE_COLORS: Record<string, string> = {
+  buffer: "bg-blue-200",
   fixing: "bg-blue-400",
   load: "bg-blue-400",
   onward: "bg-blue-500",
-  work: "bg-blue-600",
+  unload: "bg-blue-600", // TM unloading at site
+  pump: "bg-blue-600", // Pumping operation
+  removal: "bg-blue-500",
   cushion: "bg-blue-300",
   return: "bg-blue-500",
 };
@@ -149,12 +159,19 @@ const transformApiData = (apiData: ApiResponse, plantMap: Map<string, string>): 
 
   const getMixerOrPump = (item: ApiItem, itemType: "mixer" | "pump"): Item => {
     const transformedTasks: Task[] = item?.tasks?.map((task) => {
-      const type = getTaskType(task.id);
+      const rawType = getTaskType(task.id);
+      // Map legacy 'work' to new names based on item type
+      const mappedType =
+        itemType === "mixer" && rawType === "work"
+          ? "unload"
+          : itemType === "pump" && rawType === "work"
+          ? "pump"
+          : rawType;
       return {
         id: task.id,
-        color: TASK_TYPE_COLORS[type] || "bg-gray-500",
+        color: TASK_TYPE_COLORS[mappedType] || "bg-gray-500",
         client: task.client,
-        type,
+        type: mappedType,
         actualStart: task.start,
         actualEnd: task.end,
       };
@@ -208,10 +225,11 @@ export default function CalendarContainer() {
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedItem, setSelectedItem] = useState<"all" | "mixer" | "pump">("all");
-  const [selectedPlants, setSelectedPlants] = useState<string[]>([]);
-  const [selectedClient, setSelectedClient] = useState("all");
-  const [selectedPumps, setSelectedPumps] = useState<string[]>([]);
-  const [selectedTMs, setSelectedTMs] = useState<string[]>([]);
+  const [selectedPlant, setSelectedPlant] = useState("");
+  const [selectedClient, setSelectedClient] = useState("");
+  const [selectedPump, setSelectedPump] = useState("");
+  const [selectedTM, setSelectedTM] = useState("");
+  const [selectedProject, setSelectedProject] = useState("");
   const [timeFormat, setTimeFormat] = useState<"12h" | "24h" | undefined>(session?.preferred_format);
   const [customStartHour, setCustomStartHour] = useState<number | undefined>(session?.custom_start_hour);
   const [ganttData, setGanttData] = useState<Item[]>([]);
@@ -220,12 +238,8 @@ export default function CalendarContainer() {
 
   // Dropdown states
   const [isItemFilterOpen, setIsItemFilterOpen] = useState(false);
-  const [isPlantFilterOpen, setIsPlantFilterOpen] = useState(false);
-  const [isClientFilterOpen, setIsClientFilterOpen] = useState(false);
   const [isTimeFormatOpen, setIsTimeFormatOpen] = useState(false);
-  const [isPumpFilterOpen, setIsPumpFilterOpen] = useState(false);
   const [isStartHourFilterOpen, setIsStartHourFilterOpen] = useState(false);
-  const [isTMFilterOpen, setIsTMFilterOpen] = useState(false);
 
   const { fetchWithAuth } = useApiClient();
 
@@ -271,6 +285,19 @@ export default function CalendarContainer() {
     queryKey: ["transit-mixers"],
     queryFn: async () => {
       const response = await fetchWithAuth("/tms");
+      const data = await response.json();
+      if (data.success) {
+        return data.data;
+      }
+      return [];
+    },
+    enabled: status === "authenticated",
+  });
+
+  const { data: projectsData } = useQuery<Project[]>({
+    queryKey: ["projects"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/projects");
       const data = await response.json();
       if (data.success) {
         return data.data;
@@ -351,16 +378,20 @@ export default function CalendarContainer() {
   // Filter data based on search term and selected filters
   const filteredData = ganttData.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    // const matchesMixer = selectedMixer === "all" || item.name === selectedMixer;
-    const matchesClient = selectedClient === "all" || item.client === selectedClient;
+    const matchesClient = !selectedClient || item.client === selectedClient;
     const matchesItem = selectedItem === "all" || item.item === selectedItem;
 
-    // Multi-select filters for pumps and TMs
-    const matchesPlant = selectedPlants.length === 0 || selectedPlants.includes(item.plant);
-    const matchesPumps = selectedPumps.length === 0 || (item.item === "pump" && selectedPumps.includes(item.name));
-    const matchesTMs = selectedTMs.length === 0 || (item.item === "mixer" && selectedTMs.includes(item.name));
+    // Single-select filters using SearchableDropdown
+    const matchesPlant = !selectedPlant || item.plant === selectedPlant;
+    const matchesPumps = !selectedPump || (item.item === "pump" && item.name === selectedPump);
+    const matchesTMs = !selectedTM || (item.item === "mixer" && item.name === selectedTM);
+    const matchesProject =
+      !selectedProject ||
+      item.tasks.some((t) => (t.project || t.client) && (t.project || t.client) === selectedProject);
 
-    return matchesSearch && matchesPlant && matchesClient && matchesItem && matchesPumps && matchesTMs;
+    return (
+      matchesSearch && matchesPlant && matchesClient && matchesItem && matchesPumps && matchesTMs && matchesProject
+    );
   });
 
   const formatTime = (hour: number) => {
@@ -374,14 +405,25 @@ export default function CalendarContainer() {
 
   // Get unique values for filter options
   const plants = Array.from(new Set(ganttData.map((item) => item.plant)));
-  // const mixers = Array.from(new Set(ganttData.map((item) => item.name)));
   const clients = Array.from(
-    new Set(ganttData.map((item) => item.client).filter((client): client is string => client !== null))
+    new Set(
+      ganttData.flatMap((item) => item.tasks.map((t) => t.client)).filter((client): client is string => Boolean(client))
+    )
   );
 
   // Get available pumps and TMs from fetched data
   const availablePumps = pumpsData?.map((pump) => pump.identifier) || [];
   const availableTMs = tmsData?.map((tm) => tm.identifier) || [];
+  const derivedTaskProjects = Array.from(
+    new Set(
+      ganttData
+        .flatMap((item) => item.tasks.map((t) => t.project || t.client))
+        .filter((name): name is string => Boolean(name))
+    )
+  );
+  const availableProjects = (projectsData?.map((p) => p.name) || []).length
+    ? (projectsData?.map((p) => p.name) as string[])
+    : derivedTaskProjects;
 
   // Get unique clients with their colors for the legend
   const clientLegend = Object.values(
@@ -475,10 +517,11 @@ export default function CalendarContainer() {
               {/* Filter Toggle */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  showFilters
                     ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
                     : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
-                  } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
+                } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
               >
                 <Filter className="h-4 w-4" />
                 Filters
@@ -487,6 +530,35 @@ export default function CalendarContainer() {
 
             {/* Right side - Date Selection */}
             <div className="flex items-center gap-3">
+              {/* Start Hour Selector moved next to date picker */}
+              <div className="flex flex-row items-center justify-end gap-2 w-full">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Hour</label>{" "}
+                <button
+                  onClick={() => setIsStartHourFilterOpen(!isStartHourFilterOpen)}
+                  className="px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  title="Start Hour"
+                >
+                  {`${String(customStartHour).padStart(2, "0")}:00`}
+                </button>
+                {isStartHourFilterOpen && (
+                  <div className="absolute z-20 mt-1 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-60 overflow-y-auto">
+                    <div className="p-2 text-gray-800 dark:text-white/90">
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <button
+                          key={i}
+                          className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setCustomStartHour(i);
+                            setIsStartHourFilterOpen(false);
+                          }}
+                        >
+                          {`${String(i).padStart(2, "0")}:00`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               <DatePickerInput value={selectedDate} onChange={handleDateChange} className="w-48" />
               <button
                 onClick={() => handleDateChange(new Date().toISOString().split("T")[0])}
@@ -556,10 +628,11 @@ export default function CalendarContainer() {
                 {/* Filter Toggle */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                    showFilters
                       ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
                       : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
-                    } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
+                  } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
                 >
                   <Filter className="h-4 w-4" />
                   Filters
@@ -568,6 +641,34 @@ export default function CalendarContainer() {
 
               {/* Right side - Date Selection */}
               <div className="flex items-center gap-3">
+                <div className="flex flex-row items-center justify-end gap-2 w-full">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Hour</label>
+                  <button
+                    onClick={() => setIsStartHourFilterOpen(!isStartHourFilterOpen)}
+                    className="px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    title="Start Hour"
+                  >
+                    {`${String(customStartHour).padStart(2, "0")}:00`}
+                  </button>
+                  {isStartHourFilterOpen && (
+                    <div className="absolute z-20 mt-1 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-60 overflow-y-auto">
+                      <div className="p-2 text-gray-800 dark:text-white/90">
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <button
+                            key={i}
+                            className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setCustomStartHour(i);
+                              setIsStartHourFilterOpen(false);
+                            }}
+                          >
+                            {`${String(i).padStart(2, "0")}:00`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <DatePickerInput value={selectedDate} onChange={handleDateChange} className="w-48" />
                 <button
                   onClick={() => handleDateChange(new Date().toISOString().split("T")[0])}
@@ -631,180 +732,67 @@ export default function CalendarContainer() {
 
                   {/* Plant Filter */}
                   <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plant</label>
-                    <button
-                      onClick={() => setIsPlantFilterOpen(!isPlantFilterOpen)}
-                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                    >
-                      {selectedPlants.length === 0 ? "All Plants" : `${selectedPlants.length} selected`}
-                    </button>
-                    {isPlantFilterOpen && (
-                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
-                        <div className="p-2 text-gray-800 dark:text-white/90">
-                          <button
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setSelectedPlants([]);
-                              setIsPlantFilterOpen(false);
-                            }}
-                          >
-                            All Plants
-                          </button>
-                          {plants.map((plant) => (
-                            <label
-                              key={plant}
-                              className="flex items-center px-4 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedPlants.includes(plant)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedPlants([...selectedPlants, plant]);
-                                  } else {
-                                    setSelectedPlants(selectedPlants.filter((p) => p !== plant));
-                                  }
-                                }}
-                                className="mr-2"
-                              />
-                              {plant}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <SearchableDropdown
+                      options={plants}
+                      value={selectedPlant}
+                      onChange={setSelectedPlant}
+                      getOptionLabel={(o: string) => o}
+                      getOptionValue={(o: string) => o}
+                      label="Plant"
+                      placeholder="All Plants"
+                    />
                   </div>
 
                   {/* Client Filter */}
                   <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client</label>
-                    <button
-                      onClick={() => setIsClientFilterOpen(!isClientFilterOpen)}
-                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                    >
-                      {selectedClient === "all" ? "All Clients" : selectedClient}
-                    </button>
-                    {isClientFilterOpen && (
-                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
-                        <div className="p-2 text-gray-800 dark:text-white/90">
-                          <button
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setSelectedClient("all");
-                              setIsClientFilterOpen(false);
-                            }}
-                          >
-                            All Clients
-                          </button>
-                          {clients.map((client) => (
-                            <button
-                              key={client}
-                              className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                              onClick={() => {
-                                setSelectedClient(client);
-                                setIsClientFilterOpen(false);
-                              }}
-                            >
-                              {client}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <SearchableDropdown
+                      options={clients}
+                      value={selectedClient}
+                      onChange={setSelectedClient}
+                      getOptionLabel={(o: string) => o}
+                      getOptionValue={(o: string) => o}
+                      label="Client"
+                      placeholder="All Clients"
+                    />
                   </div>
 
                   {/* Pump Filter */}
                   <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Pumps</label>
-                    <button
-                      onClick={() => setIsPumpFilterOpen(!isPumpFilterOpen)}
-                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                    >
-                      {selectedPumps.length === 0 ? "All Pumps" : `${selectedPumps.length} selected`}
-                    </button>
-                    {isPumpFilterOpen && (
-                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-48 overflow-y-auto">
-                        <div className="p-2 text-gray-800 dark:text-white/90">
-                          <button
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setSelectedPumps([]);
-                              setIsPumpFilterOpen(false);
-                            }}
-                          >
-                            All Pumps
-                          </button>
-                          {availablePumps.map((pump) => (
-                            <label
-                              key={pump}
-                              className="flex items-center px-4 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedPumps.includes(pump)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedPumps([...selectedPumps, pump]);
-                                  } else {
-                                    setSelectedPumps(selectedPumps.filter((p) => p !== pump));
-                                  }
-                                }}
-                                className="mr-2"
-                              />
-                              {pump}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <SearchableDropdown
+                      options={availablePumps}
+                      value={selectedPump}
+                      onChange={setSelectedPump}
+                      getOptionLabel={(o: string) => o}
+                      getOptionValue={(o: string) => o}
+                      label="Pumps"
+                      placeholder="All Pumps"
+                    />
                   </div>
 
                   {/* TM Filter */}
                   <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Transit Mixers
-                    </label>
-                    <button
-                      onClick={() => setIsTMFilterOpen(!isTMFilterOpen)}
-                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                    >
-                      {selectedTMs.length === 0 ? "All TMs" : `${selectedTMs.length} selected`}
-                    </button>
-                    {isTMFilterOpen && (
-                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-48 overflow-y-auto">
-                        <div className="p-2 text-gray-800 dark:text-white/90">
-                          <button
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setSelectedTMs([]);
-                              setIsTMFilterOpen(false);
-                            }}
-                          >
-                            All TMs
-                          </button>
-                          {availableTMs.map((tm) => (
-                            <label
-                              key={tm}
-                              className="flex items-center px-4 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedTMs.includes(tm)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedTMs([...selectedTMs, tm]);
-                                  } else {
-                                    setSelectedTMs(selectedTMs.filter((t) => t !== tm));
-                                  }
-                                }}
-                                className="mr-2"
-                              />
-                              {tm}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <SearchableDropdown
+                      options={availableTMs}
+                      value={selectedTM}
+                      onChange={setSelectedTM}
+                      getOptionLabel={(o: string) => o}
+                      getOptionValue={(o: string) => o}
+                      label="Transit Mixers"
+                      placeholder="All TMs"
+                    />
+                  </div>
+
+                  {/* Projects Filter */}
+                  <div className="relative">
+                    <SearchableDropdown
+                      options={availableProjects}
+                      value={selectedProject}
+                      onChange={setSelectedProject}
+                      getOptionLabel={(o: string) => o}
+                      getOptionValue={(o: string) => o}
+                      label="Projects"
+                      placeholder="All Projects"
+                    />
                   </div>
 
                   {/* Time Format Filter */}
@@ -845,36 +833,6 @@ export default function CalendarContainer() {
                       </div>
                     )}
                     {/* Show custom start hour selector if 24h-custom is selected */}
-                  </div>
-                  {/* Start Hour Filter */}
-                  <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Start Hour
-                    </label>
-                    <button
-                      onClick={() => setIsStartHourFilterOpen(!isStartHourFilterOpen)}
-                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                    >
-                      {`${String(customStartHour).padStart(2, "0")}:00`}
-                    </button>
-                    {isStartHourFilterOpen && (
-                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-60 overflow-y-auto">
-                        <div className="p-2 text-gray-800 dark:text-white/90">
-                          {Array.from({ length: 24 }, (_, i) => (
-                            <button
-                              key={i}
-                              className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                              onClick={() => {
-                                setCustomStartHour(i);
-                                setIsStartHourFilterOpen(false);
-                              }}
-                            >
-                              {`${String(i).padStart(2, "0")}:00`}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -1059,8 +1017,9 @@ export default function CalendarContainer() {
                       return (
                         <div
                           key={item.id}
-                          className={`flex hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors  ${(item.item === "pump" && item.type && typeRowColors[item.type]) || ""
-                            }`}
+                          className={`flex hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors  ${
+                            (item.item === "pump" && item.type && typeRowColors[item.type]) || ""
+                          }`}
                         >
                           {/* Serial Number */}
                           <div className="w-16 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
@@ -1125,8 +1084,9 @@ export default function CalendarContainer() {
                                   )} to ${formatDateTimeForTooltip(task.actualEnd)}\nDuration: ${duration}m`}
                                 >
                                   <div
-                                    className={`absolute top-1 h-4 rounded-sm ${TASK_TYPE_COLORS[task.type] || "bg-gray-500"
-                                      } opacity-100 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
+                                    className={`absolute top-1 h-4 rounded-sm ${
+                                      TASK_TYPE_COLORS[task.type] || "bg-gray-500"
+                                    } opacity-100 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
                                     style={{
                                       left: `${(offset / timeSlotsLength) * 100}%`,
                                       width: `${(width / timeSlotsLength) * 100}%`,
@@ -1134,9 +1094,9 @@ export default function CalendarContainer() {
                                     }}
                                   >
                                     <span
-                                      className={`text-white ${task.type === "work" ? "text-[6px]" : "text-[6px]"}`}
+                                      className={`text-white ${task.type === "unload" ? "text-[6px]" : "text-[6px]"}`}
                                     >
-                                      {task.type === "work" && item.item === "mixer" ? null : duration}
+                                      {task.type === "unload" && item.item === "mixer" ? null : duration}
                                     </span>
                                   </div>
                                 </Tooltip>
@@ -1193,9 +1153,9 @@ export default function CalendarContainer() {
                           <div>
                             Mixers Used: <span className="font-medium">{stats ? stats.mixers.size : 0}</span>
                           </div>
-                          <div>
+                          {/* <div>
                             Schedules: <span className="font-medium">{stats ? stats.schedules : 0}</span>
-                          </div>
+                          </div> */}
                         </div>
                       </div>
                     );

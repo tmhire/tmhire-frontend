@@ -123,7 +123,7 @@ export default function SearchableDropdown<T>({
               ? "border-red-300 focus:border-red-500 focus:ring-red-500/10 dark:border-red-600"
               : "border-gray-300 focus:border-brand-300 focus:ring-brand-500/10 dark:border-gray-700"
           } ${selectedOption ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"}`}
-          onMouseDown={handleToggle}
+          onClick={handleToggle}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           disabled={disabled}
