@@ -7,7 +7,7 @@ import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
-import Image from "next/image";
+// import Image from "next/image";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -69,14 +69,14 @@ export default function SignInForm() {
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
           {/* Logo */}
-          <Image
+          {/* <Image
             src="https://i.ibb.co/BKdpb07B/logo.png"
             width={120}
             height={20}
             alt="TM Grid Logo"
             className="mb-6 dark:invert-0 invert"
             priority
-          />
+          /> */}
           <div className="mb-5 sm:mb-8">
             <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
               Sign In

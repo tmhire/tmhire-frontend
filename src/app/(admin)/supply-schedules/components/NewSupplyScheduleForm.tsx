@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Button from "@/components/ui/button/Button";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
@@ -10,8 +10,7 @@ import { ArrowLeft, ArrowRight, Clock, CheckCircle2, ChevronDown, ChevronRight }
 import { motion, AnimatePresence } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useQuery } from "@tanstack/react-query";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import Badge from "@/components/ui/badge/Badge";
+// removed unused table and badge imports
 import { useRouter } from "next/navigation";
 import TimeInput from "@/components/form/input/TimeInput";
 import { useProfile } from "@/hooks/useProfile";
@@ -55,41 +54,7 @@ interface CalculateTMResponse {
   available_tms: AvailableTM[];
 }
 
-interface GeneratedSchedule {
-  _id: string;
-  user_id: string;
-  client_id: string;
-  client_name: string;
-  site_address: string;
-  created_at: string;
-  last_updated: string;
-  input_params: {
-    quantity: number;
-    pumping_speed: number;
-    onward_time: number;
-    return_time: number;
-    buffer_time: number;
-    load_time: number;
-    pump_start: string;
-    schedule_date: string;
-  };
-  output_table: Array<{
-    cushion_time: number;
-    trip_no_for_tm: number;
-    plant_name: string;
-    cycle_time: number;
-    trip_no: number;
-    tm_no: string;
-    tm_id: string;
-    plant_start: string;
-    pump_start: string;
-    unloading_time: string;
-    return: string;
-    completed_capacity: number;
-  }>;
-  tm_count: number;
-  status: string;
-}
+// removed unused GeneratedSchedule interface
 
 const steps = [
   { id: 1, name: "Schedule Details" },
@@ -105,7 +70,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   const [tmSequence, setTMSequence] = useState<string[]>([]);
   const [calculatedTMs, setCalculatedTMs] = useState<CalculateTMResponse | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
-  const [generatedSchedule, setGeneratedSchedule] = useState<GeneratedSchedule | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasChanged, setHasChanged] = useState(false);
   const [formData, setFormData] = useState({
@@ -199,12 +163,11 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   });
   const projects: Project[] = queryProjects.data ?? [];
 
-  const fetchSchedule = async () => {
+  const fetchSchedule = useCallback(async () => {
     try {
       const response = await fetchWithAuth(`/schedules/${schedule_id}`);
       const data = await response.json();
       if (data.success) {
-        setGeneratedSchedule(data.data);
         setSelectedClient(data.data.client_id);
         setSelectedProject(data.data.project_id);
         setFormData({
@@ -253,7 +216,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       console.error("Error fetching schedule:", error);
       return false;
     }
-  };
+  }, [fetchWithAuth, schedule_id]);
 
   const updateSchedule = async () => {
     if (!schedule_id) return false;
@@ -284,7 +247,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
 
       const data = await response.json();
       if (data.success) {
-        setGeneratedSchedule(data.data);
         setHasChanged(false);
         return true;
       }
@@ -299,7 +261,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     if (schedule_id && clientsData) {
       fetchSchedule();
     }
-  }, [schedule_id, clientsData]);
+  }, [schedule_id, clientsData, fetchSchedule]);
 
   useEffect(() => {
     setIsDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -404,7 +366,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
 
       const data = await response.json();
       if (data.success) {
-        setGeneratedSchedule(data.data);
         return true;
       }
       return false;
@@ -435,9 +396,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     setStep(step - 1);
   };
 
-  const handleSubmit = () => {
-    router.push(`/supply-schedules/${schedule_id}/view`);
-  };
+  // removed unused handleSubmit
 
   const progressPercentage = ((step - 1) / (steps.length - 1)) * 100;
 
@@ -1311,6 +1270,90 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                       </div>
                     </div>
                   </div>
+
+                  {/* TM Trip Distribution (only for Separate Vehicle) */}
+                  {!fleetOptions.useRoundTrip && (
+                    <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
+                      <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-3">TM Trip Distribution</h3>
+                      {(() => {
+                        const totalTrips = Math.max(0, fleetOptions.tripsNeeded || 0);
+                        const vehCount = Math.max(0, fleetOptions.vehicleCount || 0);
+                        if (totalTrips <= 0 || vehCount <= 0) {
+                          return (
+                            <div className="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400 text-sm">
+                              Enter inputs to see estimated distribution.
+                            </div>
+                          );
+                        }
+                        const exact = totalTrips / vehCount;
+                        const floorTrips = Math.floor(exact);
+                        const ceilTrips = Math.ceil(exact);
+                        const numCeil = totalTrips - floorTrips * vehCount; // vehicles taking ceil trips
+                        const numFloor = Math.max(0, vehCount - numCeil);
+
+                        type Row = { tmCount: number; trips: number; totalTrips: number };
+                        const rows: Row[] = [];
+                        if (floorTrips === ceilTrips) {
+                          rows.push({ tmCount: vehCount, trips: floorTrips, totalTrips });
+                        } else {
+                          if (numCeil > 0) rows.push({ tmCount: numCeil, trips: ceilTrips, totalTrips: numCeil * ceilTrips });
+                          if (numFloor > 0) rows.push({ tmCount: numFloor, trips: floorTrips, totalTrips: numFloor * floorTrips });
+                          rows.sort((a, b) => b.trips - a.trips);
+                        }
+                        const totalTMs = rows.reduce((s, r) => s + r.tmCount, 0);
+                        const totalTripsCalc = rows.reduce((s, r) => s + r.totalTrips, 0);
+
+                        return (
+                          <div>
+                            <table className="w-full table-fixed border-collapse border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
+                              <thead>
+                                <tr className="bg-gray-50 dark:bg-gray-800/60">
+                                  <th className="w-1/6 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                    Sl.
+                                  </th>
+                                  <th className="w-1/4 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                    TMs (A)
+                                  </th>
+                                  <th className="w-1/4 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                    Trips/TM (B)
+                                  </th>
+                                  <th className="w-1/3 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                    Total (A × B)
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {rows.map((row, idx) => (
+                                  <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                                    <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50">
+                                      {idx + 1}
+                                    </td>
+                                    <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-medium">
+                                      {row.tmCount}
+                                    </td>
+                                    <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-medium">
+                                      {row.trips}
+                                    </td>
+                                    <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-semibold">
+                                      {row.totalTrips}
+                                    </td>
+                                  </tr>
+                                ))}
+                                <tr className="bg-gray-50 dark:bg-gray-800/40 border-t border-gray-300 dark:border-gray-600">
+                                  <td className="px-2 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">
+                                    Total
+                                  </td>
+                                  <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">{totalTMs}</td>
+                                  <td className="px-2 py-2 text-xs text-gray-400 dark:text-gray-500">—</td>
+                                  <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">{totalTripsCalc}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1556,9 +1599,10 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                   {isGenerating ? "Generating..." : "Generate Schedule"}
                   {!isGenerating && <ArrowRight size={16} />}
                 </Button>
+              </div>
             </div>
-          )
-        ) : null}
+          </div>
+        )}
       </div>
     </div>
   );
