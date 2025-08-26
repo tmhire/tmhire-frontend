@@ -7,6 +7,7 @@ import Label from "@/components/form/Label";
 import { useSession } from "next-auth/react";
 import { Factory, Truck, Users, Wrench, Calendar } from "lucide-react";
 import { useApiClient } from "@/hooks/useApiClient";
+import { validateCompanyName, validateCity } from "@/lib/utils";
 
 export default function WelcomeModal() {
   const { data: session, update } = useSession();
@@ -83,6 +84,17 @@ export default function WelcomeModal() {
       return; // Don&apos;t submit if required fields are empty
     }
 
+    // Validate field formats
+    if (!validateCompanyName(formData.company)) {
+      console.error("Invalid company name format");
+      return;
+    }
+
+    if (!validateCity(formData.city)) {
+      console.error("Invalid city format");
+      return;
+    }
+
     try {
       const response = await fetchWithAuth("/auth/update", {
         method: "PUT",
@@ -146,7 +158,14 @@ export default function WelcomeModal() {
               <div className="grid grid-cols-1 gap-y-5">
                 <div>
                   <Label>Company Name</Label>
-                  <Input type="text" name="company" value={formData.company} onChange={handleChange} />
+                  <Input 
+                    type="text" 
+                    name="company" 
+                    value={formData.company} 
+                    onChange={handleChange} 
+                    maxLength={50}
+                    placeholder="Enter company name (max 50 characters, alphanumeric only)"
+                  />
                 </div>
 
                 <div>
@@ -156,7 +175,14 @@ export default function WelcomeModal() {
 
                 <div>
                   <Label>City</Label>
-                  <Input type="text" name="city" value={formData.city} onChange={handleChange} />
+                  <Input 
+                    type="text" 
+                    name="city" 
+                    value={formData.city} 
+                    onChange={handleChange} 
+                    maxLength={20}
+                    placeholder="Enter city (max 20 characters, alphanumeric only)"
+                  />
                 </div>
 
                 <div className="col-span-2 lg:col-span-1">

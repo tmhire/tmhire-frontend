@@ -9,6 +9,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { Spinner } from "../ui/spinner";
 import _ from "lodash";
 import { useSession } from "next-auth/react";
+import { validateCompanyName, validateCity } from "@/lib/utils";
 
 export default function UserInfoCard() {
   const { isOpen, openModal, closeModal } = useModal();
@@ -55,6 +56,18 @@ export default function UserInfoCard() {
 
   const handleSave = async () => {
     if (!hasChanged) return;
+    
+    // Validate field formats
+    if (!validateCompanyName(formData.company)) {
+      console.error("Invalid company name format");
+      return;
+    }
+
+    if (!validateCity(formData.city)) {
+      console.error("Invalid city format");
+      return;
+    }
+    
     try {
       setIsSubmitting(true);
       const response = await fetchWithAuth("/auth/update", {
@@ -170,6 +183,8 @@ export default function UserInfoCard() {
                       value={formData.company}
                       onChange={handleInputChange}
                       disabled={isSubmitting}
+                      maxLength={50}
+                      placeholder="Enter company name (max 50 characters, alphanumeric only)"
                     />
                   </div>
 
@@ -181,6 +196,8 @@ export default function UserInfoCard() {
                       value={formData.city}
                       onChange={handleInputChange}
                       disabled={isSubmitting}
+                      maxLength={20}
+                      placeholder="Enter city (max 20 characters, alphanumeric only)"
                     />
                   </div>
 

@@ -6,7 +6,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
-import { formatTimeByPreference } from "@/lib/utils";
+import { formatTimeByPreference, formatHoursAndMinutes } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
 
 interface Schedule {
@@ -251,7 +251,7 @@ export default function ScheduleViewPage() {
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                 Total TM Cycle Time (hours)/Min (A+B+C+D)
               </h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.cycle_time?.toFixed(2)} hrs</p>
+              <p className="text-base text-gray-800 dark:text-white/90">{formatHoursAndMinutes(schedule.cycle_time)}</p>
             </div>
             {/* <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</h4>
@@ -444,7 +444,7 @@ export default function ScheduleViewPage() {
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
-                        {((schedule.input_params.quantity / schedule.input_params.pumping_speed)).toFixed(0)} hrs
+                        {formatHoursAndMinutes(schedule.input_params.quantity / schedule.input_params.pumping_speed)}
                       </span>
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
@@ -489,7 +489,7 @@ export default function ScheduleViewPage() {
                           const pumpSiteLeave = new Date(pumpEnd.getTime() + (schedule.input_params.pump_removal_time * 60 * 1000));
                           
                           const totalHours = (pumpSiteLeave.getTime() - pumpStartFromPlant.getTime()) / (1000 * 60 * 60);
-                          return `${totalHours.toFixed(0)} hrs`;
+                          return formatHoursAndMinutes(totalHours);
                         })()}
                       </span>
                     </TableCell>
@@ -777,7 +777,7 @@ export default function ScheduleViewPage() {
                         })}
                         <td className="px-4 text-gray-800 dark:text-white/90 py-2 text-left">{overallRange}</td>
                         <td className="px-4 text-gray-800 dark:text-white/90 py-2 text-right">
-                          {totalHours ? totalHours.toFixed(1) : "-"}
+                          {totalHours ? formatHoursAndMinutes(totalHours) : "-"}
                         </td>
                       </tr>
                     );
@@ -790,7 +790,7 @@ export default function ScheduleViewPage() {
                       <td key={i} className="px-2 py-2"></td>
                     ))}
                     <td className="px-2 py-2 text-center"></td>
-                    <td className="px-2 py-2 text-right">{avgTotalHours ? avgTotalHours.toFixed(1) : "-"}</td>
+                    <td className="px-2 py-2 text-right">{avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-"}</td>
                   </tr>
                 </tbody>
               </table>

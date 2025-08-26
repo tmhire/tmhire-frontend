@@ -6,7 +6,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
-import { formatTimeByPreference } from "@/lib/utils";
+import { formatTimeByPreference, formatHoursAndMinutes } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
 
 interface SupplySchedule {
@@ -493,7 +493,7 @@ export default function SupplyScheduleViewPage() {
                         })}
                         <td className="px-4 text-gray-800 dark:text-white/90 py-2 text-left">{overallRange}</td>
                         <td className="px-4 text-gray-800 dark:text-white/90 py-2 text-right">
-                          {totalHours ? totalHours.toFixed(1) : "-"}
+                          {totalHours ? formatHoursAndMinutes(totalHours) : "-"}
                         </td>
                       </tr>
                     );
@@ -506,7 +506,7 @@ export default function SupplyScheduleViewPage() {
                       <td key={i} className="px-2 py-2"></td>
                     ))}
                     <td className="px-2 py-2 text-center"></td>
-                    <td className="px-2 py-2 text-right">{avgTotalHours ? avgTotalHours.toFixed(1) : "-"}</td>
+                    <td className="px-2 py-2 text-right">{avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-"}</td>
                   </tr>
                 </tbody>
               </table>

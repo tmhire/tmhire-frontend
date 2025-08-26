@@ -58,14 +58,8 @@ export default function ClientsContainer() {
     "Partnership",
     "Sole Proprietorship",
     "Limited Liability Partnership (LLP)",
-    "Corporation",
-    "Limited Company (Ltd)",
-    "Unlimited Company",
-    "Cooperative Society",
-    "Trust",
-    "Foundation",
-    "Association",
-    "Other"
+    "Listed Company",
+    "Other",
   ];
 
   // Dropdown states
@@ -73,12 +67,12 @@ export default function ClientsContainer() {
   const [isEditLegalEntityDropdownOpen, setIsEditLegalEntityDropdownOpen] = useState(false);
 
   const { data: clientsData, isLoading: isLoadingClients } = useQuery({
-    queryKey: ['clients'],
+    queryKey: ["clients"],
     queryFn: async () => {
-      const response = await fetchWithAuth('/clients');
-      if (!response) throw new Error('No response from server');
+      const response = await fetchWithAuth("/clients");
+      if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to fetch clients');
+      if (!data.success) throw new Error(data.message || "Failed to fetch clients");
       return data.data as Client[];
     },
     enabled: status === "authenticated",
@@ -87,17 +81,17 @@ export default function ClientsContainer() {
   // Create client mutation
   const createClientMutation = useMutation({
     mutationFn: async (clientData: CreateClientData) => {
-      const response = await fetchWithAuth('/clients', {
-        method: 'POST',
+      const response = await fetchWithAuth("/clients", {
+        method: "POST",
         body: JSON.stringify(clientData),
       });
-      if (!response) throw new Error('No response from server');
+      if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to create client');
+      if (!data.success) throw new Error(data.message || "Failed to create client");
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
       setIsCreateModalOpen(false);
       setNewClient({
         name: "",
@@ -110,16 +104,16 @@ export default function ClientsContainer() {
   const editClientMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: CreateClientData }) => {
       const response = await fetchWithAuth(`/clients/${id}`, {
-        method: 'PUT',
+        method: "PUT",
         body: JSON.stringify(data),
       });
-      if (!response) throw new Error('No response from server');
+      if (!response) throw new Error("No response from server");
       const responseData = await response.json();
-      if (!responseData.success) throw new Error(responseData.message || 'Failed to update client');
+      if (!responseData.success) throw new Error(responseData.message || "Failed to update client");
       return responseData.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
       setIsEditModalOpen(false);
       setSelectedClient(null);
     },
@@ -129,15 +123,15 @@ export default function ClientsContainer() {
   const deleteClientMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await fetchWithAuth(`/clients/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
-      if (!response) throw new Error('No response from server');
+      if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to delete client');
+      if (!data.success) throw new Error(data.message || "Failed to delete client");
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
       setIsDeleteModalOpen(false);
       setSelectedClient(null);
     },
@@ -151,7 +145,7 @@ export default function ClientsContainer() {
     try {
       await createClientMutation.mutateAsync(newClient);
     } catch (error) {
-      console.error('Error creating client:', error);
+      console.error("Error creating client:", error);
     }
   };
 
@@ -177,7 +171,7 @@ export default function ClientsContainer() {
         data: editedClient,
       });
     } catch (error) {
-      console.error('Error updating client:', error);
+      console.error("Error updating client:", error);
     }
   };
 
@@ -186,7 +180,7 @@ export default function ClientsContainer() {
     try {
       await deleteClientMutation.mutateAsync(selectedClient._id);
     } catch (error) {
-      console.error('Error deleting client:', error);
+      console.error("Error deleting client:", error);
     }
   };
 
@@ -208,17 +202,17 @@ export default function ClientsContainer() {
 
   // Legal entity dropdown handlers
   const handleCreateLegalEntitySelect = (entity: string) => {
-    setNewClient(prev => ({
+    setNewClient((prev) => ({
       ...prev,
-      legal_entity: entity
+      legal_entity: entity,
     }));
     setIsCreateLegalEntityDropdownOpen(false);
   };
 
   const handleEditLegalEntitySelect = (entity: string) => {
-    setEditedClient(prev => ({
+    setEditedClient((prev) => ({
       ...prev,
-      legal_entity: entity
+      legal_entity: entity,
     }));
     setIsEditLegalEntityDropdownOpen(false);
   };
@@ -226,7 +220,7 @@ export default function ClientsContainer() {
   // Get unique legal entities from clients data
   const legalEntities = useMemo(() => {
     if (!clientsData) return [];
-    const uniqueEntities = Array.from(new Set(clientsData.map(client => client.legal_entity).filter(Boolean)));
+    const uniqueEntities = Array.from(new Set(clientsData.map((client) => client.legal_entity).filter(Boolean)));
     return uniqueEntities.sort();
   }, [clientsData]);
 
@@ -236,7 +230,7 @@ export default function ClientsContainer() {
       { label: "Last 7 days", days: 7 },
       { label: "Last 30 days", days: 30 },
       { label: "Last 90 days", days: 90 },
-      { label: "All time", days: Infinity }
+      { label: "All time", days: Infinity },
     ];
   }, []);
 
@@ -259,7 +253,7 @@ export default function ClientsContainer() {
       let matchesDate = true;
 
       if (selectedDate) {
-        const selectedRange = dateRanges.find(range => range.label === selectedDate);
+        const selectedRange = dateRanges.find((range) => range.label === selectedDate);
         if (selectedRange) {
           if (selectedRange.days !== Infinity) {
             const cutoffDate = new Date(now.getTime() - selectedRange.days * 24 * 60 * 60 * 1000);
@@ -376,17 +370,15 @@ export default function ClientsContainer() {
                   <Spinner text="Loading session..." />
                 </div>
               ) : status === "unauthenticated" ? (
-                <div className="text-center py-4 text-gray-800 dark:text-white/90">Please sign in again to view clients</div>
+                <div className="text-center py-4 text-gray-800 dark:text-white/90">
+                  Please sign in again to view clients
+                </div>
               ) : isLoadingClients ? (
                 <div className="flex justify-center py-4">
                   <Spinner text="Loading clients..." />
                 </div>
               ) : (
-                <ClientsTable 
-                  data={filteredData} 
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
+                <ClientsTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} />
               )}
             </div>
           </div>
@@ -394,7 +386,11 @@ export default function ClientsContainer() {
       </div>
 
       {/* Create Modal */}
-      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} className="max-w-[800px] p-5 lg:p-10">
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        className="max-w-[800px] p-5 lg:p-10"
+      >
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Client</h4>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -402,9 +398,10 @@ export default function ClientsContainer() {
             <Input
               type="text"
               name="name"
-              placeholder="Enter client name"
+              placeholder="Enter client name (max 30 characters)"
               value={newClient.name}
               onChange={handleInputChange}
+              maxLength={30}
             />
           </div>
           <div>
@@ -415,14 +412,18 @@ export default function ClientsContainer() {
                 onClick={() => setIsCreateLegalEntityDropdownOpen(!isCreateLegalEntityDropdownOpen)}
                 className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
               >
-                <span className={newClient.legal_entity ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-white/30"}>
+                <span
+                  className={
+                    newClient.legal_entity ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-white/30"
+                  }
+                >
                   {newClient.legal_entity || "Select legal entity"}
                 </span>
                 <ChevronDownIcon className="w-4 h-4 text-gray-400" />
               </button>
-              
-              <Dropdown 
-                isOpen={isCreateLegalEntityDropdownOpen} 
+
+              <Dropdown
+                isOpen={isCreateLegalEntityDropdownOpen}
                 onClose={() => setIsCreateLegalEntityDropdownOpen(false)}
                 className="w-full min-w-[300px] max-h-60 overflow-y-auto"
               >
@@ -443,17 +444,15 @@ export default function ClientsContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
             Cancel
           </Button>
-          <Button 
-            size="sm" 
-            onClick={handleCreateClient}
-            disabled={createClientMutation.isPending}
-          >
+          <Button size="sm" onClick={handleCreateClient} disabled={createClientMutation.isPending}>
             {createClientMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />
                 <span>Creating...</span>
               </div>
-            ) : 'Create Client'}
+            ) : (
+              "Create Client"
+            )}
           </Button>
         </div>
       </Modal>
@@ -465,12 +464,7 @@ export default function ClientsContainer() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
-              <Input
-                type="text"
-                name="name"
-                value={editedClient.name}
-                onChange={handleEditInputChange}
-              />
+              <Input type="text" name="name" value={editedClient.name} onChange={handleEditInputChange} maxLength={30} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Legal Entity</label>
@@ -480,14 +474,20 @@ export default function ClientsContainer() {
                   onClick={() => setIsEditLegalEntityDropdownOpen(!isEditLegalEntityDropdownOpen)}
                   className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
                 >
-                  <span className={editedClient.legal_entity ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-white/30"}>
+                  <span
+                    className={
+                      editedClient.legal_entity
+                        ? "text-gray-800 dark:text-white/90"
+                        : "text-gray-400 dark:text-white/30"
+                    }
+                  >
                     {editedClient.legal_entity || "Select legal entity"}
                   </span>
                   <ChevronDownIcon className="w-4 h-4 text-gray-400" />
                 </button>
-                
-                <Dropdown 
-                  isOpen={isEditLegalEntityDropdownOpen} 
+
+                <Dropdown
+                  isOpen={isEditLegalEntityDropdownOpen}
                   onClose={() => setIsEditLegalEntityDropdownOpen(false)}
                   className="w-full min-w-[300px] max-h-60 overflow-y-auto"
                 >
@@ -509,23 +509,25 @@ export default function ClientsContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsEditModalOpen(false)}>
             Cancel
           </Button>
-          <Button 
-            size="sm" 
-            onClick={handleSaveEdit}
-            disabled={editClientMutation.isPending}
-          >
+          <Button size="sm" onClick={handleSaveEdit} disabled={editClientMutation.isPending}>
             {editClientMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />
                 <span>Saving...</span>
               </div>
-            ) : 'Save Changes'}
+            ) : (
+              "Save Changes"
+            )}
           </Button>
         </div>
       </Modal>
 
       {/* Delete Modal */}
-      <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} className="max-w-[500px] p-5 lg:p-10">
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        className="max-w-[500px] p-5 lg:p-10"
+      >
         <h4 className="font-semibold text-gray-800 mb-4 text-title-sm dark:text-white/90">Delete Client</h4>
         {selectedClient && (
           <div className="space-y-4">
@@ -536,9 +538,9 @@ export default function ClientsContainer() {
               <Button size="sm" variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
                 Cancel
               </Button>
-              <Button 
-                size="sm" 
-                variant="warning" 
+              <Button
+                size="sm"
+                variant="warning"
                 onClick={handleConfirmDelete}
                 disabled={deleteClientMutation.isPending}
               >
@@ -547,7 +549,9 @@ export default function ClientsContainer() {
                     <Spinner size="sm" />
                     <span>Deleting...</span>
                   </div>
-                ) : 'Delete'}
+                ) : (
+                  "Delete"
+                )}
               </Button>
             </div>
           </div>

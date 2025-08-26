@@ -13,7 +13,7 @@ import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { ChevronDownIcon } from "lucide-react";
-import { validateMobile, validateName } from "@/lib/utils";
+import { validateMobile, validateName, validateAddress, validateCoordinates } from "@/lib/utils";
 
 interface Project {
   _id: string;
@@ -119,6 +119,8 @@ export default function ProjectsContainer() {
       newProject.contact_number.trim() !== "" &&
       validateName(newProject.contact_name.trim()) &&
       validateMobile(newProject.contact_number.trim()) &&
+      validateAddress(newProject.address.trim()) &&
+      validateCoordinates(newProject.coordinates.trim()) &&
       !contactNameError &&
       !contactNumberError
     );
@@ -136,6 +138,8 @@ export default function ProjectsContainer() {
       editedProject.contact_number.trim() !== "" &&
       validateName(editedProject.contact_name.trim()) &&
       validateMobile(editedProject.contact_number.trim()) &&
+      validateAddress(editedProject.address.trim()) &&
+      validateCoordinates(editedProject.coordinates.trim()) &&
       !editContactNameError &&
       !editContactNumberError
     );
@@ -667,16 +671,17 @@ export default function ProjectsContainer() {
               onChange={handleInputChange}
             />
           </div>
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address</label>
-            <Input
-              type="text"
-              name="address"
-              placeholder="Enter project address"
-              value={newProject.address}
-              onChange={handleInputChange}
-            />
-          </div>
+                      <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address</label>
+              <Input
+                type="text"
+                name="address"
+                placeholder="Enter project address (max 60 characters)"
+                value={newProject.address}
+                onChange={handleInputChange}
+                maxLength={60}
+              />
+            </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Name</label>
             <Input
@@ -785,9 +790,10 @@ export default function ProjectsContainer() {
             <Input
               type="text"
               name="coordinates"
-              placeholder="Enter Google Maps coordinates URL"
+              placeholder="Enter Google Maps coordinates URL (max 60 characters)"
               value={newProject.coordinates}
               onChange={handleInputChange}
+              maxLength={60}
             />
           </div>
           <div className="col-span-2">
@@ -868,7 +874,7 @@ export default function ProjectsContainer() {
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address</label>
-              <Input type="text" name="address" value={editedProject.address} onChange={handleEditInputChange} />
+              <Input type="text" name="address" value={editedProject.address} onChange={handleEditInputChange} maxLength={60} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Name</label>
@@ -984,6 +990,7 @@ export default function ProjectsContainer() {
                 name="coordinates"
                 value={editedProject.coordinates}
                 onChange={handleEditInputChange}
+                maxLength={60}
               />
             </div>
             <div className="col-span-2">

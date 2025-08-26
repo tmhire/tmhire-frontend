@@ -11,7 +11,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
-import { validateMobile, validateName } from "@/lib/utils";
+import { validateMobile, validateName, validateAddress, validateCoordinates } from "@/lib/utils";
 
 interface Plant {
   _id: string;
@@ -98,6 +98,8 @@ export default function PlantsContainer() {
       validateName(newPlant.name.trim()) &&
       validateName(newPlant.contact_name1.trim()) &&
       validateMobile(newPlant.contact_number1.trim()) &&
+      validateAddress(newPlant.address.trim()) &&
+      (newPlant.coordinates === "" || (newPlant.coordinates && validateCoordinates(newPlant.coordinates.trim()))) &&
       (newPlant.contact_name2 === "" || (newPlant.contact_name2 && validateName(newPlant.contact_name2.trim()))) &&
       (newPlant.contact_number2 === "" ||
         (newPlant.contact_number2 && validateMobile(newPlant.contact_number2.trim()))) &&
@@ -122,6 +124,8 @@ export default function PlantsContainer() {
       validateName(editedPlant.name.trim()) &&
       validateName(editedPlant.contact_name1.trim()) &&
       validateMobile(editedPlant.contact_number1.trim()) &&
+      validateAddress(editedPlant.address.trim()) &&
+      (editedPlant.coordinates === "" || (editedPlant.coordinates && validateCoordinates(editedPlant.coordinates.trim()))) &&
       (editedPlant.contact_name2 === "" ||
         (editedPlant.contact_name2 && validateName(editedPlant.contact_name2.trim()))) &&
       (editedPlant.contact_number2 === "" ||
@@ -657,9 +661,11 @@ export default function PlantsContainer() {
               <Input
                 type="text"
                 name="location"
-                placeholder="Enter plant location"
+                placeholder="Enter plant location (max 30 characters)"
                 value={newPlant.location}
                 onChange={handleInputChange}
+                maxLength={30}
+
               />
             </div>
             <div className="w-full">
@@ -667,9 +673,10 @@ export default function PlantsContainer() {
               <Input
                 type="text"
                 name="coordinates"
-                placeholder="Enter coordinates (optional)"
+                placeholder="Enter coordinates (optional, max 60 characters)"
                 value={newPlant.coordinates || ""}
                 onChange={handleInputChange}
+                maxLength={60}
               />
             </div>
           </div>
@@ -678,9 +685,10 @@ export default function PlantsContainer() {
             <Input
               type="text"
               name="address"
-              placeholder="Enter plant address"
+              placeholder="Enter plant address (max 60 characters)"
               value={newPlant.address}
               onChange={handleInputChange}
+              maxLength={60}
             />
           </div>
 
@@ -816,7 +824,8 @@ export default function PlantsContainer() {
                   name="location"
                   value={editedPlant.location}
                   onChange={handleEditInputChange}
-                  placeholder="Enter plant location"
+                  placeholder="Enter plant location (max 30 characters)"
+                  maxLength={30}
                 />
               </div>
               <div className="w-full">
@@ -824,9 +833,10 @@ export default function PlantsContainer() {
                 <Input
                   type="text"
                   name="coordinates"
-                  placeholder="Enter coordinates (optional)"
+                  placeholder="Enter coordinates (optional, max 60 characters)"
                   value={editedPlant.coordinates || ""}
                   onChange={handleEditInputChange}
+                  maxLength={60}
                 />
               </div>
             </div>
@@ -837,7 +847,8 @@ export default function PlantsContainer() {
                 name="address"
                 value={editedPlant.address}
                 onChange={handleEditInputChange}
-                placeholder="Enter plant address"
+                placeholder="Enter plant address (max 60 characters)"
+                maxLength={60}
               />
             </div>
 

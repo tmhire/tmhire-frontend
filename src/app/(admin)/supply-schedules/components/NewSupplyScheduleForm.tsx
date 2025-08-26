@@ -94,7 +94,6 @@ interface GeneratedSchedule {
 const steps = [
   { id: 1, name: "Schedule Details" },
   { id: 2, name: "TM Selection" },
-  { id: 3, name: "Review" },
 ];
 
 export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: string }) {
@@ -426,10 +425,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     } else if (step === 2) {
       const success = await generateSchedule();
       if (success) {
-        setStep(step + 1);
+        // Redirect to view page instead of going to step 3
+        router.push(`/supply-schedules/${calculatedTMs?.schedule_id}/view`);
       }
-    } else {
-      setStep(step + 1);
     }
   };
 
@@ -476,7 +474,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       <div className="flex flex-row w-full mb-4 items-center">
         <div className="w-1/3">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">New Supply Schedule</h2>
-          <p className="text-gray-500 dark:text-gray-400">Step {step} of 3</p>
+          <p className="text-gray-500 dark:text-gray-400">Step {step} of 2</p>
         </div>
         <div className="w-full">
           <div className="relative">
@@ -1328,443 +1326,239 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
               </Button>
             </div>
           </div>
-        ) : step === 2 ? (
-          // Loader for Step 2
-          !calculatedTMs || !plantsData ? (
-            <div className="flex justify-center items-center py-12">
-              <span className="text-gray-500 dark:text-gray-400 text-lg">Loading...</span>
-            </div>
-          ) : (
-            <div className="space-y-6">
-
-              {calculatedTMs && calculatedTMs.available_tms && (
-                <>
-                  {calculatedTMs.available_tms.length === 0 ? (
-                    <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center justify-between">
-                      <span>No available TMs found. Please add TMs to proceed.</span>
-                      <a
-                        href="/transit-mixers"
-                        className="ml-4 px-3 py-1 bg-brand-500 text-white rounded hover:bg-brand-600 transition-colors text-sm font-medium"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Add TMs
-                      </a>
-                    </div>
-                  ) : null}
-                </>
-              )}
-
-              <div className="grid grid-cols-2 gap-6">
-                {/* Left Column - TM Selection */}
-                <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select TM</h3>
-                  <div className="space-y-4">
-                    {calculatedTMs && calculatedTMs.available_tms && calculatedTMs.available_tms.length > 0 ? (
-                      (() => {
-                        // Build plantId to name map
-                        const plantIdToName = (plantsData || []).reduce((acc, plant) => {
-                          acc[plant._id] = plant.name;
-                          return acc;
-                        }, {} as Record<string, string>);
-                        // Group TMs
-                        const grouped: Record<string, typeof calculatedTMs.available_tms> = {};
-                        calculatedTMs.available_tms.forEach((tm) => {
-                          const group = tm.plant_id ? plantIdToName[tm.plant_id] || "Unassigned" : "Unassigned";
-                          if (!grouped[group]) grouped[group] = [];
-                          grouped[group].push(tm);
-                        });
-                        // Sort group names: all except 'Unassigned' alphabetically, then 'Unassigned' last
-                        const groupOrder = Object.keys(grouped)
-                          .filter((g) => g !== "Unassigned")
-                          .sort((a, b) => a.localeCompare(b))
-                          .concat(Object.keys(grouped).includes("Unassigned") ? ["Unassigned"] : []);
-                        return groupOrder.map((plant) => {
-                          const tms = grouped[plant];
-                          const isOpen = openPlantGroups[plant] ?? true;
-                          const motherPlantName = (() => {
-                            const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
-                            return motherId ? plantIdToName[motherId] || "" : "";
-                          })();
-                          return (
-                            <div key={plant} className="mb-4">
-                              <button
-                                type="button"
-                                className={`flex items-center w-full px-4 py-2 bg-brand-50 dark:bg-brand-900/30 border-l-4 border-brand-500 dark:border-brand-400 font-semibold text-brand-700 dark:text-brand-300 text-base focus:outline-none transition-all duration-200
-                                  ${isOpen ? "rounded-t-lg rounded-b-none" : "rounded-lg"}`}
-                                onClick={() => setOpenPlantGroups((prev) => ({ ...prev, [plant]: !isOpen }))}
-                                aria-expanded={isOpen}
-                              >
-                                <span className="mr-2">
-                                  {isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                                </span>
-                                <span className="flex-1 text-left flex items-center gap-2">
-                                  <span>{plant}</span>
-                                  {plant && motherPlantName && plant === motherPlantName && (
-                                    <span className="px-2 py-0.5 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 rounded-full">
-                                      Mother Plant
-                                    </span>
-                                  )}
-                                </span>
-                                <span className="ml-2 text-xs font-semibold text-brand-500 dark:text-brand-300 bg-brand-100 dark:bg-brand-900/40 px-2 py-0.5 rounded-full">
-                                  {tms.length}
-                                </span>
-                              </button>
-                              <AnimatePresence initial={false}>
-                                {isOpen && (
-                                  <motion.div
-                                    key="content"
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: "auto", opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                                    className="overflow-hidden"
-                                  >
-                                    <div className="bg-white dark:bg-gray-900/30 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-lg p-2 pl-6">
-                                      {tms.map((tm, idx) => (
-                                        <label
-                                          key={tm.id}
-                                          className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
-                                            !tm.availability
-                                              ? "opacity-50 cursor-not-allowed"
-                                              : "cursor-pointer hover:bg-gray-100"
-                                          } `}
-                                        >
-                                          <div className="flex flex-row items-center space-x-4 w-full">
-                                            <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
-                                            <input
-                                              type="checkbox"
-                                              checked={tmSequence.includes(tm.id)}
-                                              disabled={!tm.availability}
-                                              onChange={(e) => {
-                                                if (e.target.checked) {
-                                                  setTMSequence((prev) => [...prev, tm.id]);
-                                                } else {
-                                                  setTMSequence((prev) => prev.filter((id) => id !== tm.id));
-                                                }
-                                                setHasChanged(true);
-                                              }}
-                                              className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
-                                            />
-                                            <div className="flex flex-row w-full justify-between">
-                                              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                {tm.identifier}
-                                              </p>
-                                              <div className="flex flex-row items-end gap-2">
-                                                {!tm.availability && (
-                                                  <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
-                                                    Unavailable -
-                                                  </p>
-                                                )}
-                                                <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
-                                                  {tm.capacity}m³
-                                                </p>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </label>
-                                      ))}
-                                    </div>
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                            </div>
-                          );
-                        });
-                      })()
-                    ) : (
-                      <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                        No TMs available for selection
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Right Column - Selected TM */}
-                <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Selected TMs</h3>
-                  <div className="space-y-2">
-                    {tmSequence.length > 0 && calculatedTMs ? (
-                      (() => {
-                        // Build plantId to name map
-                        const plantIdToName = (plantsData || []).reduce((acc, plant) => {
-                          acc[plant._id] = plant.name;
-                          return acc;
-                        }, {} as Record<string, string>);
-
-                        return (
-                          <div className="space-y-2">
-                            {tmSequence.map((tmId, index) => {
-                              const tm = calculatedTMs.available_tms.find((t) => t.id === tmId);
-                              const plant = tm?.plant_id ? plantIdToName[tm.plant_id] || "Unassigned" : "Unassigned";
-
-                              return (
-                                <div
-                                  key={tmId}
-                                  className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-4">
-                                      <span className="text-xs text-brand-600 dark:text-brand-400 font-semibold bg-brand-100 dark:bg-brand-900/30 px-2 py-1 rounded-full">
-                                        {index + 1}
-                                      </span>
-                                      <span className="text-gray-700 dark:text-gray-300 font-medium">
-                                        {tm?.identifier}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      {plant && (
-                                        <span className="px-2 py-1 text-xs font-medium text-brand-600 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-400 rounded-full">
-                                          {plant}
-                                        </span>
-                                      )}
-                                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                                        {tm?.capacity} m³
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()
-                    ) : (
-                      <div className="text-center py-4 text-gray-500 dark:text-gray-400">No TMs selected</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center mt-8 gap-0">
-                <Button variant="outline" onClick={handleBack} className="flex items-center gap-2">
-                  <ArrowLeft size={16} />
-                  Back
-                </Button>
-                <div className="flex items-center gap-4 justify-end flex-1">
-                  {/* Warning message */}
-                  {tmSequence.length !== (fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount) && (
-                    <div className="p-2 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg text-xs">
-                      Please select{" "}
-                      <span className="font-semibold">
-                        {fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount} TM
-                        {(fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount) > 1 ? "s" : ""}
-                      </span>{" "}
-                      to proceed.
-                    </div>
-                  )}
-                  <Button
-                    onClick={handleNext}
-                    className="flex items-center gap-2 min-w-[140px]"
-                    disabled={
-                      isGenerating || tmSequence.length !== (fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount)
-                    }
-                  >
-                    {isGenerating ? "Generating..." : "Next Step"}
-                    {!isGenerating && <ArrowRight size={16} />}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )
         ) : (
           <div className="space-y-6">
-            {/* Step 3 - Review */}
-            <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Review Schedule</h3>
+            {/* Step 2 - TM Selection */}
+            <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select TM</h3>
 
-            {generatedSchedule ? (
+            {calculatedTMs && calculatedTMs.available_tms && (
               <>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Client</h4>
-                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.client_name}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Site Location</h4>
-                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.site_address}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Schedule Date</h4>
-                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.input_params.schedule_date}</p>
-                    </div>
+                {calculatedTMs.available_tms.length === 0 ? (
+                  <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center justify-between">
+                    <span>No available TMs found. Please add TMs to proceed.</span>
+                    <a
+                      href="/transit-mixers"
+                      className="ml-4 px-3 py-1 bg-brand-500 text-white rounded hover:bg-brand-600 transition-colors text-sm font-medium"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Add TMs
+                    </a>
                   </div>
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Quantity</h4>
-                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.input_params.quantity} m³</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</h4>
-                      <Badge size="sm" color={generatedSchedule.status === "generated" ? "success" : "warning"}>
-                        {generatedSchedule.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-8">
-                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Schedule Details</h4>
-                  <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-                    <div className="max-w-full overflow-x-auto">
-                      <Table>
-                        <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-                          <TableRow>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Trip No
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              TM No
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Plant Name
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Plant Start
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Supply Start
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Unloading Time
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Return Time
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Completed Capacity
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Cycle Time (min)
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Cushion Time (min)
-                            </TableCell>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                          {generatedSchedule.output_table.map((trip) => (
-                            <TableRow key={trip.trip_no}>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-800 dark:text-white/90">{trip.trip_no}</span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-800 dark:text-white/90">
-                                  {trip.tm_no}
-                                  {typeof trip.trip_no_for_tm !== "undefined" && (
-                                    <span className="text-xs text-gray-500 ml-1">({trip.trip_no_for_tm})</span>
-                                  )}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-800 dark:text-white/90">
-                                  {trip.plant_name ? trip.plant_name : "N / A"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  {trip.plant_start
-                                    ? new Date(trip.plant_start).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
-                                    : "-"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  {trip.pump_start
-                                    ? new Date(trip.pump_start).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
-                                    : "-"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  {trip.unloading_time
-                                    ? new Date(trip.unloading_time).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
-                                    : "-"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  {trip.return
-                                    ? new Date(trip.return).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
-                                    : "-"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-800 dark:text-white/90">{trip.completed_capacity} m³</span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-800 dark:text-white/90">
-                                  {typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(0) : "-"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-800 dark:text-white/90">
-                                  {typeof trip.cushion_time !== "undefined" ? (trip.cushion_time / 60).toFixed(0) : "-"}
-                                </span>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-                </div>
+                ) : null}
               </>
-            ) : null}
+            )}
 
-            <div className="flex justify-between mt-8">
+            <div className="grid grid-cols-2 gap-6">
+              {/* Left Column - TM Selection */}
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  {calculatedTMs && calculatedTMs.available_tms && calculatedTMs.available_tms.length > 0 ? (
+                    (() => {
+                      // Build plantId to name map
+                      const plantIdToName = (plantsData || []).reduce((acc, plant) => {
+                        acc[plant._id] = plant.name;
+                        return acc;
+                      }, {} as Record<string, string>);
+                      // Group TMs
+                      const grouped: Record<string, typeof calculatedTMs.available_tms> = {};
+                      calculatedTMs.available_tms.forEach((tm) => {
+                        const group = tm.plant_id ? plantIdToName[tm.plant_id] || "Unassigned" : "Unassigned";
+                        if (!grouped[group]) grouped[group] = [];
+                        grouped[group].push(tm);
+                      });
+                      // Sort group names: all except 'Unassigned' alphabetically, then 'Unassigned' last
+                      const groupOrder = Object.keys(grouped)
+                        .filter((g) => g !== "Unassigned")
+                        .sort((a, b) => a.localeCompare(b))
+                        .concat(Object.keys(grouped).includes("Unassigned") ? ["Unassigned"] : []);
+                      return groupOrder.map((plant) => {
+                        const tms = grouped[plant];
+                        const isOpen = openPlantGroups[plant] ?? true;
+                        const motherPlantName = (() => {
+                          const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
+                          return motherId ? plantIdToName[motherId] || "" : "";
+                        })();
+                        return (
+                          <div key={plant} className="mb-4">
+                            <button
+                              type="button"
+                              className={`flex items-center w-full px-4 py-2 bg-brand-50 dark:bg-brand-900/30 border-l-4 border-brand-500 dark:border-brand-400 font-semibold text-brand-700 dark:text-brand-300 text-base focus:outline-none transition-all duration-200
+                                ${isOpen ? "rounded-t-lg rounded-b-none" : "rounded-lg"}`}
+                              onClick={() => setOpenPlantGroups((prev) => ({ ...prev, [plant]: !isOpen }))}
+                              aria-expanded={isOpen}
+                            >
+                              <span className="mr-2">
+                                {isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                              </span>
+                              <span className="flex-1 text-left flex items-center gap-2">
+                                <span>{plant}</span>
+                                {plant && motherPlantName && plant === motherPlantName && (
+                                  <span className="px-2 py-0.5 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 rounded-full">
+                                    Mother Plant
+                                  </span>
+                                )}
+                              </span>
+                              <span className="ml-2 text-xs font-semibold text-brand-500 dark:text-brand-300 bg-brand-100 dark:bg-brand-900/40 px-2 py-0.5 rounded-full">
+                                {tms.length}
+                              </span>
+                            </button>
+                            <AnimatePresence initial={false}>
+                              {isOpen && (
+                                <motion.div
+                                  key="content"
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="bg-white dark:bg-gray-900/30 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-lg p-2 pl-6">
+                                    {tms.map((tm, idx) => (
+                                      <label
+                                        key={tm.id}
+                                        className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
+                                          !tm.availability
+                                            ? "opacity-50 cursor-not-allowed"
+                                            : "cursor-pointer hover:bg-gray-100"
+                                        } `}
+                                      >
+                                        <div className="flex flex-row items-center space-x-4 w-full">
+                                          <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
+                                          <input
+                                            type="checkbox"
+                                            checked={tmSequence.includes(tm.id)}
+                                            disabled={!tm.availability}
+                                            onChange={(e) => {
+                                              if (e.target.checked) {
+                                                setTMSequence((prev) => [...prev, tm.id]);
+                                              } else {
+                                                setTMSequence((prev) => prev.filter((id) => id !== tm.id));
+                                              }
+                                              setHasChanged(true);
+                                            }}
+                                            className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
+                                          />
+                                          <div className="flex flex-row w-full justify-between">
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                              {tm.identifier}
+                                            </p>
+                                            <div className="flex flex-row items-end gap-2">
+                                              {!tm.availability && (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                                  Unavailable -
+                                                </p>
+                                              )}
+                                              <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                                {tm.capacity}m³
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        );
+                      });
+                    })()
+                  ) : (
+                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                      No TMs available for selection
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column - Selected TM */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Selected TMs</h3>
+                <div className="space-y-2">
+                  {tmSequence.length > 0 && calculatedTMs ? (
+                    (() => {
+                      // Build plantId to name map
+                      const plantIdToName = (plantsData || []).reduce((acc, plant) => {
+                        acc[plant._id] = plant.name;
+                        return acc;
+                      }, {} as Record<string, string>);
+
+                      return (
+                        <div className="space-y-2">
+                          {tmSequence.map((tmId, index) => {
+                            const tm = calculatedTMs.available_tms.find((t) => t.id === tmId);
+                            const plant = tm?.plant_id ? plantIdToName[tm.plant_id] || "Unassigned" : "Unassigned";
+
+                            return (
+                              <div
+                                key={tmId}
+                                className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-4">
+                                    <span className="text-xs text-brand-600 dark:text-brand-400 font-semibold bg-brand-100 dark:bg-brand-900/30 px-2 py-1 rounded-full">
+                                      {index + 1}
+                                    </span>
+                                    <span className="text-gray-700 dark:text-gray-300 font-medium">
+                                      {tm?.identifier}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    {plant && (
+                                      <span className="px-2 py-1 text-xs font-medium text-brand-600 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-400 rounded-full">
+                                        {plant}
+                                      </span>
+                                    )}
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                                      {tm?.capacity} m³
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">No TMs selected</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center mt-8 gap-0">
               <Button variant="outline" onClick={handleBack} className="flex items-center gap-2">
                 <ArrowLeft size={16} />
                 Back
               </Button>
-              <Button onClick={handleSubmit} disabled={isGenerating}>
-                {isGenerating ? "Generating Schedule..." : generatedSchedule ? "View Schedule" : "Create Schedule"}
-              </Button>
+              <div className="flex items-center gap-4 justify-end flex-1">
+                {/* Warning message */}
+                {tmSequence.length !== (fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount) && (
+                  <div className="p-2 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg text-xs">
+                    Please select{" "}
+                    <span className="font-semibold">
+                      {fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount} TM
+                      {(fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount) > 1 ? "s" : ""}
+                    </span>{" "}
+                    to proceed.
+                  </div>
+                )}
+                <Button
+                  onClick={handleNext}
+                  className="flex items-center gap-2 min-w-[140px]"
+                  disabled={
+                    isGenerating || tmSequence.length !== (fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount)
+                  }
+                >
+                  {isGenerating ? "Generating..." : "Generate Schedule"}
+                  {!isGenerating && <ArrowRight size={16} />}
+                </Button>
             </div>
-          </div>
-        )}
+          )
+        ) : null}
       </div>
     </div>
   );

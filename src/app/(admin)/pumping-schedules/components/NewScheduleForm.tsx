@@ -10,8 +10,6 @@ import { ArrowLeft, ArrowRight, Clock, CheckCircle2, GripVertical, ChevronDown, 
 import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useQuery } from "@tanstack/react-query";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import Badge from "@/components/ui/badge/Badge";
 import { useRouter } from "next/navigation";
 import { RadioGroup } from "@/components/ui/radio";
 import { useProfile } from "@/hooks/useProfile";
@@ -70,51 +68,9 @@ interface CalculateTMResponse {
   available_pumps: AvailablePump[];
 }
 
-interface ScheduleTrip {
-  trip_no: number;
-  tm_no: string;
-  tm_id: string;
-  plant_load: string;
-  plant_start: string;
-  pump_start: string;
-  unloading_time: string;
-  return: string;
-  completed_capacity: number;
-  cycle_time?: number;
-  trip_no_for_tm?: number;
-  cushion_time?: number;
-  plant_name?: string;
-}
 
-interface GeneratedSchedule {
-  _id: string;
-  user_id: string;
-  client_id: string;
-  client_name: string;
-  project_name: string;
-  site_address: string;
-  created_at: string;
-  last_updated: string;
-  slump_at_site?: number;
-  mother_plant_km?: number;
-  site_supervisor_id?: string;
-  input_params: {
-    quantity: number;
-    pumping_speed: number;
-    onward_time: number;
-    return_time: number;
-    buffer_time: number;
-    load_time: number;
-    pump_start: string;
-    schedule_date: string;
-    pump_start_time_from_plant: string;
-    pump_fixing_time: number;
-  };
-  output_table: ScheduleTrip[];
-  tm_count: number;
-  pumping_time: string | null;
-  status: string;
-}
+
+
 
 interface Project {
   _id: string;
@@ -131,7 +87,6 @@ const steps = [
   { id: 1, name: "Schedule Details" },
   { id: 2, name: "Pump Selection" },
   { id: 3, name: "TM Selection" },
-  { id: 4, name: "Review" },
 ];
 
 export default function NewScheduleForm({ schedule_id }: { schedule_id?: string }) {
@@ -144,7 +99,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [tmSequence, setTMSequence] = useState<string[]>([]);
   const [calculatedTMs, setCalculatedTMs] = useState<CalculateTMResponse | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
-  const [generatedSchedule, setGeneratedSchedule] = useState<GeneratedSchedule | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasChanged, setHasChanged] = useState(false);
   const { profile } = useProfile();
@@ -350,7 +304,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       const response = await fetchWithAuth(`/schedules/${schedule_id}`);
       const data = await response.json();
       if (data.success) {
-        setGeneratedSchedule(data.data);
         setSelectedClient(data.data.client_id);
         setSelectedProject(data.data.project_id);
         setSelectedPump(data.data.pump);
@@ -467,7 +420,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
       const data = await response.json();
       if (data.success) {
-        setGeneratedSchedule(data.data);
         setHasChanged(false);
 
         // Update TM suggestions
@@ -630,7 +582,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
       const data = await response.json();
       if (data.success) {
-        setGeneratedSchedule(data.data);
         return true;
       }
       return false;
@@ -653,10 +604,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     } else if (step === 3) {
       const success = await generateSchedule();
       if (success) {
-        setStep(step + 1);
+        // Redirect to view page instead of going to step 4
+        router.push(`/pumping-schedules/${calculatedTMs?.schedule_id}/view`);
       }
-    } else {
-      setStep(step + 1);
     }
   };
 
@@ -664,10 +614,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     setStep(step - 1);
   };
 
-  const handleSubmit = () => {
-    // Handle form submission
-    router.push(`/pumping-schedules/${schedule_id}/view`);
-  };
+
 
   // const filteredPumps = pumpsData?.filter((p: Pump) => p.type === pumpType) || [];
   const progressPercentage = ((step - 1) / (steps.length - 1)) * 100;
@@ -2388,265 +2335,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               </div>
             </div>
           )
-        ) : (
-          <div className="space-y-6">
-            {/* Step 3 - Review */}
-            <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Review Schedule</h3>
-
-            {generatedSchedule ? (
-              <>
-                <div className="grid grid-cols-3 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Client</h4>
-                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.client_name}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Project Name</h4>
-                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.project_name}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Site Location</h4>
-                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.site_address}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Schedule Date</h4>
-                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.input_params.schedule_date}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Quantity</h4>
-                      <p className="text-gray-800 dark:text-white/90">{generatedSchedule.input_params.quantity} m³</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Pumping Speed</h4>
-                      <p className="text-gray-800 dark:text-white/90">
-                        {generatedSchedule.input_params.pumping_speed} m³/hr
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Slump at Site</h4>
-                      <p className="text-gray-800 dark:text-white/90">
-                        {generatedSchedule?.slump_at_site
-                          ? `${generatedSchedule.slump_at_site} mm`
-                          : `${formData.slumpAtSite} mm`}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                        One-way from Mother Plant
-                      </h4>
-                      <p className="text-gray-800 dark:text-white/90">
-                        {typeof generatedSchedule?.mother_plant_km !== "undefined"
-                          ? `${generatedSchedule.mother_plant_km} km`
-                          : formData.oneWayKm
-                          ? `${formData.oneWayKm} km`
-                          : "-"}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Site Supervisor</h4>
-                      <p className="text-gray-800 dark:text-white/90">
-                        {(() => {
-                          const id = generatedSchedule?.site_supervisor_id || formData.siteSupervisorId;
-                          const member = (scheduleTeamMembers || []).find((m) => m._id === id);
-                          return member?.name || "-";
-                        })()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</h4>
-                      <Badge size="sm" color={generatedSchedule.status === "generated" ? "success" : "warning"}>
-                        {generatedSchedule.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-8">
-                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Schedule Details</h4>
-                  <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-                    <div className="w-full overflow-x-auto">
-                      <Table>
-                        <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-                          <TableRow>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Trip No
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              TM No
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Plant Name
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Plant Load Time
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Plant Start Time
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Pump Start Time
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Pump End Time
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Return Time
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Completed Capacity
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Cycle Time (min)
-                            </TableCell>
-                            <TableCell
-                              isHeader
-                              className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            >
-                              Cushion Time (min)
-                            </TableCell>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                          {generatedSchedule.output_table.map((trip) => (
-                            <TableRow key={trip.trip_no}>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-800 dark:text-white/90">{trip.trip_no}</span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-800 dark:text-white/90">
-                                  {trip.tm_no}
-                                  {typeof trip.trip_no_for_tm !== "undefined" && (
-                                    <span className="text-xs text-gray-500 ml-1">({trip.trip_no_for_tm})</span>
-                                  )}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-800 dark:text-white/90">
-                                  {trip.plant_name ? trip.plant_name : "N / A"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  {trip.plant_load
-                                    ? new Date(trip.plant_load).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
-                                    : "-"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  {trip.plant_start
-                                    ? new Date(trip.plant_start).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
-                                    : "-"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  {trip.pump_start
-                                    ? new Date(trip.pump_start).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
-                                    : "-"}
-                                </span>
-                              </TableCell>
-
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  {trip.unloading_time
-                                    ? new Date(trip.unloading_time).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
-                                    : "-"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  {trip.return
-                                    ? new Date(trip.return).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })
-                                    : "-"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-800 dark:text-white/90">{trip.completed_capacity} m³</span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-800 dark:text-white/90">
-                                  {typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(0) : "-"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-4 text-start">
-                                <span className="text-gray-800 dark:text-white/90">
-                                  {typeof trip.cushion_time !== "undefined" ? (trip.cushion_time / 60).toFixed(0) : "-"}
-                                </span>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : null}
-
-            <div className="flex justify-between mt-8">
-              <Button variant="outline" onClick={handleBack} className="flex items-center gap-2">
-                <ArrowLeft size={16} />
-                Back
-              </Button>
-              <Button onClick={handleSubmit} disabled={isGenerating}>
-                {isGenerating ? "Generating Schedule..." : generatedSchedule ? "View Schedule" : "Create Schedule"}
-              </Button>
-            </div>
-          </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { Spinner } from "../ui/spinner";
 import _ from "lodash";
+import { validateProfileName } from "@/lib/utils";
 
 export default function UserMetaCard() {
   const { isOpen, openModal, closeModal } = useModal();
@@ -53,6 +54,13 @@ export default function UserMetaCard() {
 
   const handleSave = async () => {
     if (!hasChanged) return;
+    
+    // Validate field formats
+    if (!validateProfileName(formData.name)) {
+      console.error("Invalid name format");
+      return;
+    }
+    
     try {
       setIsSubmitting(true);
       const response = await fetchWithAuth("/auth/update", {
@@ -163,6 +171,8 @@ export default function UserMetaCard() {
                       value={formData.name}
                       onChange={handleInputChange}
                       disabled={isSubmitting}
+                      maxLength={30}
+                      placeholder="Enter name (max 30 characters, alphanumeric only)"
                     />
                   </div>
 
