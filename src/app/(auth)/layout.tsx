@@ -1,7 +1,6 @@
 import ThemeTogglerTwo from "@/components/common/ThemeTogglerTwo";
 
 import { ThemeProvider } from "@/context/ThemeContext";
-import Image from "next/image";
 // import Image from "next/image";
 import React from "react";
 
@@ -16,14 +15,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <div className="w-full relative items-center justify-center  flex z-1">
               <div className="flex flex-col items-center">
                 {/* Illustration */}
-                <Image
+                {/* <Image
                   src="https://i.ibb.co/gZGNnfPT/login-placeholder.png"
                   width={650}
                   height={200}
                   alt="Login Illustration"
                   className="mb-4 rounded-lg shadow"
                   priority
-                />
+                /> */}
               </div>
             </div>
           </div>
