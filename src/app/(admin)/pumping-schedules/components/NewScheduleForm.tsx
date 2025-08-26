@@ -6,7 +6,16 @@ import Radio from "@/components/form/input/Radio";
 import Input from "@/components/form/input/InputField";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
 import SearchableDropdown from "@/components/form/SearchableDropdown";
-import { ArrowLeft, ArrowRight, Clock, CheckCircle2, GripVertical, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Clock,
+  CheckCircle2,
+  GripVertical,
+  ChevronDown,
+  ChevronRight,
+  CircleQuestionMark,
+} from "lucide-react";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useQuery } from "@tanstack/react-query";
@@ -16,6 +25,7 @@ import { useProfile } from "@/hooks/useProfile";
 import TimeInput from "@/components/form/input/TimeInput";
 // Removed Chart.js pie in favor of custom SVG DonutChart
 import { Spinner } from "@/components/ui/spinner";
+import Tooltip from "@/components/ui/tooltip";
 
 interface Client {
   contact_phone: number;
@@ -41,6 +51,7 @@ interface AvailableTM {
   availability: boolean;
   plant_id: string;
   plant_name: string;
+  unavailable_times: any;
 }
 
 interface AvailablePump {
@@ -51,6 +62,7 @@ interface AvailablePump {
   availability: boolean;
   plant_id: string;
   plant_name: string;
+  unavailable_times: any;
 }
 type TeamMember = {
   _id: string;
@@ -68,10 +80,6 @@ interface CalculateTMResponse {
   available_pumps: AvailablePump[];
 }
 
-
-
-
-
 interface Project {
   _id: string;
   name: string;
@@ -88,6 +96,36 @@ const steps = [
   { id: 2, name: "Pump Selection" },
   { id: 3, name: "TM Selection" },
 ];
+
+// Helper function to format date and time for tooltips
+const formatDateTimeForTooltip = (dateTimeString: string): string => {
+  const date = new Date(dateTimeString);
+  const dateStr = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    // timeZone: "UTC",
+  });
+  const timeStr = date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    // timeZone: "UTC",
+  });
+  return `${dateStr} ${timeStr}`;
+};
+
+const createTooltip = (unavailable_times: any) => {
+  let tooltip = "";
+  Object.keys(unavailable_times).map((schedule) => {
+    tooltip =
+      tooltip +
+      `Schedule No. : ${unavailable_times[schedule]["schedule_no"]}\nStarts from: ${formatDateTimeForTooltip(
+        unavailable_times[schedule]["start"]
+      )} to: ${formatDateTimeForTooltip(unavailable_times[schedule]["end"])}\n\n`;
+  });
+  return tooltip;
+};
 
 export default function NewScheduleForm({ schedule_id }: { schedule_id?: string }) {
   const router = useRouter();
@@ -281,10 +319,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     : "";
 
   // Build computed and displayed schedule names
-  const computedScheduleName =
-    selectedClient && selectedProject && formData.scheduleDate && motherPlantName
-      ? `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
-      : "";
+  const [computedScheduleName, setComputedScheduleName] = useState("");
+
+  useEffect(() => {
+    if (selectedClient && selectedProject && formData.scheduleDate && motherPlantName)
+      setComputedScheduleName(
+        `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
+      );
+  }, [motherPlantName, formData.scheduleDate, schedulesForDayCount]);
 
   const displayedScheduleName = schedule_id
     ? formData.scheduleName || computedScheduleName
@@ -297,7 +339,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       setHasChanged(true);
     }
   }, [computedScheduleName, schedule_id, formData.scheduleName]);
-
 
   const fetchSchedule = useCallback(async () => {
     try {
@@ -343,6 +384,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           oneWayKm: data.data.mother_plant_km?.toString?.() || "",
           siteSupervisorId: data.data.site_supervisor_id || "",
         });
+        setComputedScheduleName(
+          data?.data?.schedule_no ||
+            `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
+        );
         const tm_ids = new Set();
         const tmSequence: string[] = [];
         if (Array.isArray(data?.data?.output_table)) {
@@ -385,6 +430,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       const response = await fetchWithAuth(`/schedules/${schedule_id}`, {
         method: "PUT",
         body: JSON.stringify({
+          schedule_no: computedScheduleName,
           client_id: selectedClient,
           project_id: selectedProject,
           pump: selectedPump,
@@ -513,6 +559,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         const response = await fetchWithAuth("/schedules", {
           method: "POST",
           body: JSON.stringify({
+            schedule_no: computedScheduleName,
             client_id: selectedClient,
             project_id: selectedProject,
             pump: selectedPump,
@@ -614,16 +661,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     setStep(step - 1);
   };
 
-
-
   // const filteredPumps = pumpsData?.filter((p: Pump) => p.type === pumpType) || [];
   const progressPercentage = ((step - 1) / (steps.length - 1)) * 100;
 
   useEffect(() => {
     // reset project when client changes
-    setSelectedProject("");
+    if (!projects.some((p: Project) => p._id === selectedProject) && projects.length !== 0) setSelectedProject("");
   }, [selectedClient]);
-  
+
   // Helper to check if all required fields are filled
   const isStep1FormValid = () => {
     return (
@@ -1960,9 +2005,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                               </p>
                                               <div className="flex flex-row items-end gap-2">
                                                 {!pump.availability && (
-                                                  <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
-                                                    Unavailable -
-                                                  </p>
+                                                  <>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                                      Unavailable -
+                                                    </p>
+                                                    <Tooltip content={createTooltip(pump.unavailable_times)}>
+                                                      <CircleQuestionMark size={15} />
+                                                    </Tooltip>
+                                                  </>
                                                 )}
                                                 {/* <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
                                                 {pump.capacity}m³
@@ -2204,9 +2254,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                               </p>
                                               <div className="flex flex-row items-end gap-2">
                                                 {!tm.availability && (
-                                                  <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
-                                                    Unavailable -
-                                                  </p>
+                                                  <>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                                      Unavailable -
+                                                    </p>
+                                                    <Tooltip content={createTooltip(tm.unavailable_times)}>
+                                                      <CircleQuestionMark size={15} />
+                                                    </Tooltip>
+                                                  </>
                                                 )}
                                                 <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
                                                   {tm.capacity}m³
