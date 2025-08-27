@@ -736,6 +736,64 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     }
   };
 
+  // Build Date objects for schedule window and TM classification helpers (must be before any early returns)
+  const scheduleStartDate = useMemo(() => {
+    if (!formData.scheduleDate || !formData.startTime) return null;
+    return new Date(`${formData.scheduleDate}T${formData.startTime}`);
+  }, [formData.scheduleDate, formData.startTime]);
+
+  const scheduleEndDate = useMemo(() => {
+    if (!scheduleStartDate) return null;
+    const quantityVal = parseFloat(formData.quantity) || 0;
+    const speedVal = parseFloat(formData.speed) || 0;
+    if (speedVal <= 0) return null;
+    const pumpMinutesLocal = Math.round((quantityVal / speedVal) * 60);
+    if (!pumpMinutesLocal) return null;
+    return new Date(scheduleStartDate.getTime() + pumpMinutesLocal * 60 * 1000);
+  }, [scheduleStartDate, formData.quantity, formData.speed]);
+
+  type TMAvailabilityClass = "available" | "partially_unavailable" | "unavailable";
+  const classifyTMAvailability = useCallback(
+    (tm: AvailableTM, windowStart: Date | null, windowEnd: Date | null): TMAvailabilityClass => {
+      if (tm.availability) return "available";
+      if (!windowStart || !windowEnd) return tm.availability ? "available" : "unavailable";
+
+      const entries: UnavailableTimeEntry[] = tm?.unavailable_times ? Object.values(tm.unavailable_times) : [];
+      if (entries.length === 0) return "available";
+
+      let hasOverlap = false;
+      let isNearWithinHour = false;
+      const oneHourMs = 60 * 60 * 1000;
+
+      for (const entry of entries) {
+        const entryStart = new Date(entry.start);
+        const entryEnd = new Date(entry.end);
+        const latestStart = Math.max(windowStart.getTime(), entryStart.getTime());
+        const earliestEnd = Math.min(windowEnd.getTime(), entryEnd.getTime());
+        const overlap = latestStart < earliestEnd;
+        if (overlap) {
+          hasOverlap = true;
+          break;
+        }
+
+        let gapMs = 0;
+        if (windowEnd.getTime() <= entryStart.getTime()) {
+          gapMs = entryStart.getTime() - windowEnd.getTime();
+        } else if (entryEnd.getTime() <= windowStart.getTime()) {
+          gapMs = windowStart.getTime() - entryEnd.getTime();
+        }
+        if (gapMs > 0 && gapMs < oneHourMs) {
+          isNearWithinHour = true;
+        }
+      }
+
+      if (hasOverlap) return "unavailable";
+      if (isNearWithinHour) return "partially_unavailable";
+      return "available";
+    },
+    []
+  );
+
   if (formDataRetrieved === false) {
     return (
       <div className="max-w-6xl mx-auto p-6">
@@ -908,6 +966,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   // format back to HH:mm
   const pad = (n: number) => n.toString().padStart(2, "0");
   const pumpEndTime = pumpMinutes ? `${pad(endHour)}:${pad(endMin)}` : `${0}:${0}`;
+
+  // REMOVED: duplicate schedule window and classifier (moved earlier to avoid conditional hooks)
 
   // Estimated TM trip distribution for Step 1 (pre-generation)
   const tripsPerTMExact = tripsPerTM > 0 ? tripsPerTM : 0;
@@ -2370,18 +2430,31 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                       {tms.map((tm, idx) => (
                                         <label
                                           key={tm.id}
-                                          className={`flex gap-3 flex-col items-end justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
-                                            !tm.availability
-                                              ? "opacity-50 cursor-not-allowed"
-                                              : "cursor-pointer hover:bg-gray-100"
-                                          } `}
+                                          className={`flex gap-3 flex-col items-end justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${(() => {
+                                            const status = classifyTMAvailability(
+                                              tm as unknown as AvailableTM,
+                                              scheduleStartDate,
+                                              scheduleEndDate
+                                            );
+                                            if (status === "unavailable") return "opacity-50 cursor-not-allowed";
+                                            if (status === "partially_unavailable")
+                                              return "cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20";
+                                            return "cursor-pointer hover:bg-gray-100";
+                                          })()} `}
                                         >
                                           <div className="flex flex-row items-center space-x-4 w-full">
                                             <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
                                             <input
                                               type="checkbox"
                                               checked={tmSequence.includes(tm.id)}
-                                              disabled={!tm.availability}
+                                              disabled={(() => {
+                                                const status = classifyTMAvailability(
+                                                  tm as unknown as AvailableTM,
+                                                  scheduleStartDate,
+                                                  scheduleEndDate
+                                                );
+                                                return status === "unavailable";
+                                              })()}
                                               onChange={(e) => {
                                                 setTMSequence((prev) => {
                                                   const updated = e.target.checked
@@ -2398,29 +2471,70 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                                 {tm.identifier}
                                               </p>
                                               <div className="flex flex-row items-end gap-2">
-                                                {!tm.availability && (
-                                                  <>
-                                                    <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
-                                                      Unavailable -
-                                                    </p>
-                                                    <Tooltip content={createTooltip(tm.unavailable_times)}>
-                                                      <CircleQuestionMark size={15} />
-                                                    </Tooltip>
-                                                  </>
-                                                )}
+                                                {(() => {
+                                                  const status = classifyTMAvailability(
+                                                    tm as unknown as AvailableTM,
+                                                    scheduleStartDate,
+                                                    scheduleEndDate
+                                                  );
+                                                  if (status === "unavailable") {
+                                                    return (
+                                                      <>
+                                                        <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                                          Unavailable -
+                                                        </p>
+                                                        <Tooltip content={createTooltip(tm.unavailable_times)}>
+                                                          <CircleQuestionMark size={15} />
+                                                        </Tooltip>
+                                                      </>
+                                                    );
+                                                  }
+                                                  if (status === "partially_unavailable") {
+                                                    return (
+                                                      <>
+                                                        <p className="text-sm text-yellow-600 dark:text-yellow-400 text-right">
+                                                          Partially Available -
+                                                        </p>
+                                                        <Tooltip content={createTooltip(tm.unavailable_times)}>
+                                                          <CircleQuestionMark size={15} />
+                                                        </Tooltip>
+                                                      </>
+                                                    );
+                                                  }
+                                                  return null;
+                                                })()}
                                                 <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
                                                   {tm.capacity}m³
                                                 </p>
                                               </div>
                                             </div>
                                           </div>
-                                          {!tm.availability && (
-                                            <div className="item-right p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
-                                              <div className="space-y-1">
-                                                {createUnavailableInfo(tm.unavailable_times)}
-                                              </div>
-                                            </div>
-                                          )}
+                                          {(() => {
+                                            const status = classifyTMAvailability(
+                                              tm as unknown as AvailableTM,
+                                              scheduleStartDate,
+                                              scheduleEndDate
+                                            );
+                                            if (status === "unavailable") {
+                                              return (
+                                                <div className="item-right p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+                                                  <div className="space-y-1">
+                                                    {createUnavailableInfo(tm.unavailable_times)}
+                                                  </div>
+                                                </div>
+                                              );
+                                            }
+                                            if (status === "partially_unavailable") {
+                                              return (
+                                                <div className="item-right p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
+                                                  <div className="space-y-1">
+                                                    {createUnavailableInfo(tm.unavailable_times)}
+                                                  </div>
+                                                </div>
+                                              );
+                                            }
+                                            return null;
+                                          })()}
                                         </label>
                                       ))}
                                     </div>
@@ -2441,7 +2555,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                 {/* Right Column - TM Sequence */}
                 <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Arrange TM Sequence</h3>
+                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
+                    {tmSequence.length}/{overruleTMCount ? customTMCount : calculatedTMs.tm_count || "N/A"} selected -
+                    Arrange
+                  </h3>
                   <div className="space-y-2">
                     {tmSequence.length > 0 && calculatedTMs ? (
                       (() => {
