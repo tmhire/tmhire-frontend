@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import Button from "@/components/ui/button/Button";
 import Radio from "@/components/form/input/Radio";
 import Input from "@/components/form/input/InputField";
@@ -17,6 +17,11 @@ import {
   CircleQuestionMark,
   FileText,
   Calendar,
+  Plus,
+  AlertTriangle,
+  Info,
+  CheckCircle,
+  ArrowDown,
 } from "lucide-react";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
@@ -127,7 +132,7 @@ const formatDateTimeForTooltip = (dateTimeString: string): string => {
   return `${dateStr} ${timeStr}`;
 };
 
-const createTooltip = (unavailable_times: any) => {
+const createTooltip = (unavailable_times: UnavailableTimes) => {
   let tooltip = "";
   Object.keys(unavailable_times).map((schedule) => {
     tooltip =
@@ -322,7 +327,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     },
     enabled: !!selectedClient,
   });
-  const projects: Project[] = projectsData ?? [];
+  const projects: Project[] = useMemo(() => projectsData ?? [], [projectsData]);
 
   // Mother plant name from selected project (computed after projects are available)
   const motherPlantId = selectedProject ? projects.find((p) => p._id === selectedProject)?.mother_plant_id : "";
@@ -434,7 +439,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       console.error("Error fetching schedule:", error);
       return false;
     }
-  }, [schedule_id, fetchWithAuth, avgTMCap]);
+  }, [schedule_id, fetchWithAuth, avgTMCap, formData.scheduleDate, motherPlantName, schedulesForDayCount]);
 
   const updateSchedule = async () => {
     if (!schedule_id) return false;
@@ -679,7 +684,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   useEffect(() => {
     // reset project when client changes
     if (!projects.some((p: Project) => p._id === selectedProject) && projects.length !== 0) setSelectedProject("");
-  }, [selectedClient]);
+  }, [selectedClient, projects, selectedProject]);
 
   // Helper to check if all required fields are filled
   const isStep1FormValid = () => {
@@ -912,6 +917,23 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const numCeilTms = loads - floorTripsPerTM * totalTMRequired;
   const numFloorTms = totalTMRequired > 0 ? Math.max(0, totalTMRequired - numCeilTms) : 0;
 
+  const createUnavailableInfo = (unavailableTimes: UnavailableTimes): ReactNode => {
+    const entries: UnavailableTimeEntry[] = unavailableTimes ? Object.values(unavailableTimes) : [];
+    if (!entries || entries.length === 0) return "Full day unavailable";
+
+    return (
+      <>
+        {entries.map((time, index) => (
+          <div key={index} className="text-xs text-red-600 dark:text-red-400">
+            <span className="font-medium">
+              {formatDateTimeForTooltip(time.start)} - {formatDateTimeForTooltip(time.end)}
+            </span>
+            {time.schedule_no ? <span className="ml-1">({time.schedule_no})</span> : null}
+          </div>
+        ))}
+      </>
+    );
+  };
   return (
     <div className="w-full mx">
       <div className="flex flex-row w-full mb-4 items-center">
@@ -2143,34 +2165,109 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           ) : (
             <div className="space-y-6">
               {calculatedTMs && (
-                <div className="mb-6 p-4 bg-white dark:bg-gray-800/50 rounded-lg">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Calculation Results</h4>
-                  <div className="grid grid-cols-6 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Cycle Time (hours)</p>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">
-                        {calculatedTMs.cycle_time?.toFixed(0) || "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Total Trips</p>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">
-                        {calculatedTMs.total_trips || "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Required TMs</p>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">
-                        {overruleTMCount ? `${customTMCount} (overruled)` : calculatedTMs.tm_count || "N/A"}
-                      </p>
+                <div className="mb-6 p-6 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                    TM Selection & Sequencing
+                  </h4>
+
+                  <div className="grid grid-cols-2 gap-8">
+                    {/* Left Half - Selection Instructions */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                          1
+                        </span>
+                        <h5 className="text-lg font-medium text-gray-900 dark:text-white">
+                          Select TMs from the list below
+                        </h5>
+                      </div>
+
+                      {/* Calculation Display */}
+                      <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-center gap-3 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">Required:</span>
+                            <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded-lg font-semibold">
+                              {calculatedTMs.tm_count} TMs
+                            </span>
+                          </div>
+
+                          {overruleTMCount && (
+                            <>
+                              <Plus className="w-4 h-4 text-gray-400" />
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Overrule:</span>
+                                <span className="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400 rounded-lg font-semibold">
+                                  {customTMCount - calculatedTMs.tm_count} Added
+                                </span>
+                              </div>
+                            </>
+                          )}
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">=</span>
+                            <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 rounded-lg font-bold">
+                              {overruleTMCount ? customTMCount : calculatedTMs.tm_count} Total TMs
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Selection Guidelines */}
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-3">
+                          <ArrowDown className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            Select from the dropdown list below
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <Clock className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            Check for partially available TMs - choose them wisely
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            Prioritize fully available TMs first
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
-                    <div>
-                      {overruleTMCount && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {overruleTMCount ? `We are using ${customTMCount} TMs for our calculation.` : ``}
-                        </p>
-                      )}
+                    {/* Right Half - Sequencing Instructions */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                          2
+                        </span>
+                        <h5 className="text-lg font-medium text-gray-900 dark:text-white">Arrange Sequence of TMs</h5>
+                      </div>
+
+                      {/* Sequencing Guidelines */}
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-3">
+                          <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            Drag and arrange TMs in the right panel
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            Check engaged timelines for unavailable/partially available TMs
+                          </span>
+                        </div>
+                        <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
+                          <div className="flex items-start gap-2">
+                            <span className="text-xs font-semibold text-yellow-700 dark:text-yellow-400">TIP:</span>
+                            <span className="text-xs text-yellow-700 dark:text-yellow-400">
+                              Use already in-use TMs later in the order
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2197,7 +2294,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               <div className="grid grid-cols-2 gap-6">
                 {/* Left Column - TM Selection */}
                 <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select TMs</h3>
+                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
+                    Select {overruleTMCount ? customTMCount : calculatedTMs.tm_count || "N/A"} TMs
+                  </h3>
                   <div className="space-y-4">
                     {calculatedTMs && calculatedTMs.available_tms && calculatedTMs.available_tms.length > 0 ? (
                       (() => {
@@ -2271,7 +2370,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                       {tms.map((tm, idx) => (
                                         <label
                                           key={tm.id}
-                                          className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
+                                          className={`flex gap-3 flex-col items-end justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
                                             !tm.availability
                                               ? "opacity-50 cursor-not-allowed"
                                               : "cursor-pointer hover:bg-gray-100"
@@ -2315,6 +2414,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                               </div>
                                             </div>
                                           </div>
+                                          {!tm.availability && (
+                                            <div className="item-right p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+                                              <div className="space-y-1">
+                                                {createUnavailableInfo(tm.unavailable_times)}
+                                              </div>
+                                            </div>
+                                          )}
                                         </label>
                                       ))}
                                     </div>
