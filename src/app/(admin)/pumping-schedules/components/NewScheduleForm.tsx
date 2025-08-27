@@ -22,6 +22,7 @@ import {
   Info,
   CheckCircle,
   ArrowDown,
+  Ban,
 } from "lucide-react";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
@@ -979,21 +980,37 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   const createUnavailableInfo = (unavailableTimes: UnavailableTimes): ReactNode => {
     const entries: UnavailableTimeEntry[] = unavailableTimes ? Object.values(unavailableTimes) : [];
-    if (!entries || entries.length === 0) return "Full day unavailable";
-
+    if (!entries || entries.length === 0) {
+      return (
+        <div className="flex items-center text-xs text-red-600 dark:text-red-400">
+          <Ban className="w-3.5 h-3.5 mr-1" />
+          <span className="font-medium">Full day unavailable</span>
+        </div>
+      );
+    }
+  
     return (
-      <>
+      <div className="space-y-2">
         {entries.map((time, index) => (
-          <div key={index} className="text-xs text-red-600 dark:text-red-400">
-            <span className="font-medium">
-              {formatDateTimeForTooltip(time.start)} - {formatDateTimeForTooltip(time.end)}
-            </span>
-            {time.schedule_no ? <span className="ml-1">({time.schedule_no})</span> : null}
+          <div
+            key={index}
+            className="flex items-center text-xs text-red-600 dark:text-red-400 rounded-md px-2 py-1"
+          >
+            <Clock className="w-3.5 h-3.5 mr-2 shrink-0" />
+            <div className="flex flex-col">
+              <span className="font-medium">
+                {formatDateTimeForTooltip(time.start)} – {formatDateTimeForTooltip(time.end)}
+              </span>
+              {time.schedule_no && (
+                <span className="text-[11px] text-red-500 dark:text-red-300">Schedule #{time.schedule_no}</span>
+              )}
+            </div>
           </div>
         ))}
-      </>
+      </div>
     );
   };
+  
   return (
     <div className="w-full mx">
       <div className="flex flex-row w-full mb-4 items-center">
@@ -2600,6 +2617,25 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                     {/* <span className="text-sm text-gray-500 dark:text-gray-400">({tm?.capacity}m³)</span> */}
                                   </div>
                                   <div className="flex items-center flex-1 justify-end space-x-2">
+                                    {(() => {
+                                      if (!tm) return null;
+                                      const status = classifyTMAvailability(
+                                        tm as unknown as AvailableTM,
+                                        scheduleStartDate,
+                                        scheduleEndDate
+                                      );
+                                      if (status === "partially_unavailable") {
+                                        return (
+                                          <>
+                                            <span className="text-xs text-yellow-700 dark:text-yellow-400">Partially Available</span>
+                                            <Tooltip content={createTooltip((tm).unavailable_times)}>
+                                              <CircleQuestionMark size={15} />
+                                            </Tooltip>
+                                          </>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
                                     {plant && (
                                       <span className="px-2 py-1 text-xs font-medium text-brand-600 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-400 rounded-full ml-2">
                                         {plant}
