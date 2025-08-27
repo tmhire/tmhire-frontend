@@ -6,7 +6,7 @@ import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import Input from "@/components/form/input/InputField";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
-import { ArrowLeft, ArrowRight, Clock, CheckCircle2, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, CheckCircle2, ChevronDown, ChevronRight, Calendar, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useQuery } from "@tanstack/react-query";
@@ -135,6 +135,37 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   });
   const avgTMCap = avgTMCapData?.average_capacity ?? null;
 
+  // Count schedules for the selected date to generate schedule number
+  type ScheduleForCount = { input_params?: { schedule_date?: string } };
+  const scheduleDateForCount = formData.scheduleDate;
+  const { data: schedulesForDayCount } = useQuery<number>({
+    queryKey: ["schedules-for-day", scheduleDateForCount],
+    enabled: !!scheduleDateForCount,
+    queryFn: async () => {
+      try {
+        const response = await fetchWithAuth("/schedules");
+        const data = await response.json();
+        if (data.success && Array.isArray(data.data)) {
+          return (data.data as ScheduleForCount[]).filter(
+            (s) => s?.input_params?.schedule_date === scheduleDateForCount
+          ).length;
+        }
+        return 0;
+      } catch {
+        return 0;
+      }
+    },
+  });
+
+  // Build schedule name: MotherPlantName-DD/MM/YY-Count
+  const formatDateAsDDMMYY = (dateStr: string) => {
+    if (!dateStr) return "";
+    const [y, m, d] = dateStr.split("-");
+    return `${d}/${m}/${y.slice(2)}`;
+  };
+
+  // Mother plant and schedule name will be computed after projects are defined below
+
   // Calculate default trips needed when quantity or average capacity changes
   useEffect(() => {
     if (avgTMCap && formData.quantity) {
@@ -163,6 +194,24 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   });
   const projects: Project[] = queryProjects.data ?? [];
 
+  // Mother plant name from selected project (computed after projects are available)
+  const motherPlantId = selectedProject ? projects.find((p) => p._id === selectedProject)?.mother_plant_id : "";
+  const motherPlantName = motherPlantId
+    ? (plantsData || []).find((plant) => plant._id === motherPlantId)?.name || "Unknown Plant"
+    : "";
+
+  // Build computed and displayed schedule names
+  const [computedScheduleName, setComputedScheduleName] = useState("");
+
+  useEffect(() => {
+    if (selectedClient && selectedProject && formData.scheduleDate && motherPlantName)
+      setComputedScheduleName(
+        `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
+      );
+  }, [motherPlantName, formData.scheduleDate, schedulesForDayCount, selectedClient, selectedProject]);
+
+  const displayedScheduleName = computedScheduleName;
+
   const fetchSchedule = useCallback(async () => {
     try {
       const response = await fetchWithAuth(`/schedules/${schedule_id}`);
@@ -182,6 +231,10 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
           loadTime: data?.data?.input_params?.load_time.toString() || "",
           concreteGrade: data.data.concreteGrade,
         });
+        setComputedScheduleName(
+          data?.data?.schedule_no ||
+            `${motherPlantName}-${formatDateAsDDMMYY(data?.data?.input_params?.schedule_date)}-${(schedulesForDayCount ?? 0) + 1}`
+        );
         setFleetOptions({
           tripsNeeded: data?.data?.trip_count || 0,
           useRoundTrip: data?.data?.is_round_trip || false,
@@ -216,7 +269,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       console.error("Error fetching schedule:", error);
       return false;
     }
-  }, [fetchWithAuth, schedule_id]);
+  }, [fetchWithAuth, schedule_id, motherPlantName, schedulesForDayCount]);
 
   const updateSchedule = async () => {
     if (!schedule_id) return false;
@@ -224,6 +277,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       const response = await fetchWithAuth(`/schedules/${schedule_id}`, {
         method: "PUT",
         body: JSON.stringify({
+          schedule_no: computedScheduleName,
           client_id: selectedClient,
           project_id: selectedProject,
           concreteGrade: formData.concreteGrade,
@@ -309,6 +363,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
         const response = await fetchWithAuth("/schedules", {
           method: "POST",
           body: JSON.stringify({
+            schedule_no: computedScheduleName,
             client_id: selectedClient,
             project_id: selectedProject,
             concreteGrade: formData.concreteGrade,
@@ -532,31 +587,63 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
               </div>
 
               {/* Summary Row: Schedule No., Current Date, Current Time */}
-              <div className="grid grid-cols-3 gap-6 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Schedule No.
-                  </label>
-                  <div className="h-11 flex items-center px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white/90 cursor-not-allowed">
-                    {selectedClient && selectedProject && formData.scheduleDate
-                      ? "Auto-generated"
-                      : "Select Project and Schedule Date first"}
+              <div className="flex items-center justify-between gap-8 py-4 px-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
+                {/* Schedule Number */}
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-center justify-center w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                    <FileText className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      Schedule No.
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                      {displayedScheduleName || "Select Project and Schedule Date first"}
+                    </p>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Current Date
-                  </label>
-                  <div className="h-11 flex items-center px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white/90 cursor-not-allowed">
-                    {new Date().toLocaleDateString()}
+
+                {/* Separator */}
+                <div className="h-8 w-px bg-gray-300 dark:bg-gray-600"></div>
+
+                {/* Current Date */}
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-center justify-center w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                    <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      Current Date
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {new Date().toLocaleDateString("en-US", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "2-digit",
+                      })}
+                    </p>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Current Time
-                  </label>
-                  <div className="h-11 flex items-center px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white/90 cursor-not-allowed">
-                    {new Date().toLocaleTimeString()}
+
+                {/* Separator */}
+                <div className="h-8 w-px bg-gray-300 dark:bg-gray-600"></div>
+
+                {/* Current Time */}
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-center justify-center w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                    <Clock className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      Current Time
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {new Date().toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1274,7 +1361,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                   {/* TM Trip Distribution (only for Separate Vehicle) */}
                   {!fleetOptions.useRoundTrip && (
                     <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
-                      <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-3">TM Trip Distribution</h3>
+                      <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-3">
+                        TM Trip Distribution
+                      </h3>
                       {(() => {
                         const totalTrips = Math.max(0, fleetOptions.tripsNeeded || 0);
                         const vehCount = Math.max(0, fleetOptions.vehicleCount || 0);
@@ -1296,8 +1385,10 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                         if (floorTrips === ceilTrips) {
                           rows.push({ tmCount: vehCount, trips: floorTrips, totalTrips });
                         } else {
-                          if (numCeil > 0) rows.push({ tmCount: numCeil, trips: ceilTrips, totalTrips: numCeil * ceilTrips });
-                          if (numFloor > 0) rows.push({ tmCount: numFloor, trips: floorTrips, totalTrips: numFloor * floorTrips });
+                          if (numCeil > 0)
+                            rows.push({ tmCount: numCeil, trips: ceilTrips, totalTrips: numCeil * ceilTrips });
+                          if (numFloor > 0)
+                            rows.push({ tmCount: numFloor, trips: floorTrips, totalTrips: numFloor * floorTrips });
                           rows.sort((a, b) => b.trips - a.trips);
                         }
                         const totalTMs = rows.reduce((s, r) => s + r.tmCount, 0);
@@ -1324,7 +1415,10 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                               </thead>
                               <tbody>
                                 {rows.map((row, idx) => (
-                                  <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                                  <tr
+                                    key={idx}
+                                    className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors"
+                                  >
                                     <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50">
                                       {idx + 1}
                                     </td>
@@ -1343,9 +1437,13 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                   <td className="px-2 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">
                                     Total
                                   </td>
-                                  <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">{totalTMs}</td>
+                                  <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+                                    {totalTMs}
+                                  </td>
                                   <td className="px-2 py-2 text-xs text-gray-400 dark:text-gray-500">—</td>
-                                  <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">{totalTripsCalc}</td>
+                                  <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+                                    {totalTripsCalc}
+                                  </td>
                                 </tr>
                               </tbody>
                             </table>
@@ -1554,9 +1652,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                         {plant}
                                       </span>
                                     )}
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                                      {tm?.capacity} m³
-                                    </span>
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">{tm?.capacity} m³</span>
                                   </div>
                                 </div>
                               </div>

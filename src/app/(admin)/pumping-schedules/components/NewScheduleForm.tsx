@@ -47,7 +47,7 @@ interface Pump {
 
 interface UnavailableTimeEntry {
   start: string; // ISO date string
-  end: string;   // ISO date string
+  end: string; // ISO date string
   schedule_no: string;
 }
 
