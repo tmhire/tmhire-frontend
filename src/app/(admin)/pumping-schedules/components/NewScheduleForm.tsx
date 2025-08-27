@@ -15,6 +15,8 @@ import {
   ChevronDown,
   ChevronRight,
   CircleQuestionMark,
+  FileText,
+  Calendar,
 } from "lucide-react";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
@@ -43,6 +45,16 @@ interface Pump {
   capacity: number;
 }
 
+interface UnavailableTimeEntry {
+  start: string; // ISO date string
+  end: string;   // ISO date string
+  schedule_no: string;
+}
+
+interface UnavailableTimes {
+  [scheduleId: string]: UnavailableTimeEntry;
+}
+
 interface AvailableTM {
   id: string;
   // _id: string;
@@ -51,7 +63,7 @@ interface AvailableTM {
   availability: boolean;
   plant_id: string;
   plant_name: string;
-  unavailable_times: any;
+  unavailable_times: UnavailableTimes;
 }
 
 interface AvailablePump {
@@ -62,7 +74,7 @@ interface AvailablePump {
   availability: boolean;
   plant_id: string;
   plant_name: string;
-  unavailable_times: any;
+  unavailable_times: UnavailableTimes;
 }
 type TeamMember = {
   _id: string;
@@ -1020,29 +1032,63 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               </div>
 
               {/* Summary Row: Schedule No., Current Date, Current Time */}
-              <div className="grid grid-cols-3 gap-6 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Schedule No.
-                  </label>
-                  <div className="h-11 flex items-center px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white/90 cursor-not-allowed">
-                    {displayedScheduleName || "Select Project and Schedule Date first"}
+              <div className="flex items-center justify-between gap-8 py-4 px-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
+                {/* Schedule Number */}
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-center justify-center w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                    <FileText className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      Schedule No.
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                      {displayedScheduleName || "Select Project and Schedule Date first"}
+                    </p>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Current Date
-                  </label>
-                  <div className="h-11 flex items-center px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white/90 cursor-not-allowed">
-                    {new Date().toLocaleDateString()}
+
+                {/* Separator */}
+                <div className="h-8 w-px bg-gray-300 dark:bg-gray-600"></div>
+
+                {/* Current Date */}
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-center justify-center w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                    <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      Current Date
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {new Date().toLocaleDateString("en-US", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "2-digit",
+                      })}
+                    </p>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Current Time
-                  </label>
-                  <div className="h-11 flex items-center px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white/90 cursor-not-allowed">
-                    {new Date().toLocaleTimeString()}
+
+                {/* Separator */}
+                <div className="h-8 w-px bg-gray-300 dark:bg-gray-600"></div>
+
+                {/* Current Time */}
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-center justify-center w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                    <Clock className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      Current Time
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {new Date().toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </p>
                   </div>
                 </div>
               </div>
