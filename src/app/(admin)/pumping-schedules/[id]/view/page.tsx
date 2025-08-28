@@ -1,13 +1,17 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useParams, useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useApiClient } from "@/hooks/useApiClient";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
+import Button from "@/components/ui/button/Button";
+import { Modal } from "@/components/ui/modal";
+import { Pencil, Trash2 } from "lucide-react";
 import { formatTimeByPreference, formatHoursAndMinutes } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
+import { useState } from "react";
 
 interface Schedule {
   pumping_job: string;
@@ -110,8 +114,45 @@ const calculatePumpSiteReachTime = (schedule: Schedule, preferredFormat?: string
 
 export default function ScheduleViewPage() {
   const params = useParams();
+  const router = useRouter();
   const { fetchWithAuth } = useApiClient();
   const { profile } = useProfile();
+  const queryClient = useQueryClient();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  // Delete schedule mutation
+  const deleteScheduleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetchWithAuth(`/schedules/${id}`, {
+        method: "DELETE",
+      });
+      if (!response) throw new Error("No response from server");
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message || "Failed to delete schedule");
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      setIsDeleteModalOpen(false);
+      router.push("/pumping-schedules");
+    },
+  });
+
+  const handleEdit = () => {
+    router.push(`/pumping-schedules/${params.id}`);
+  };
+
+  const handleDelete = () => {
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteScheduleMutation.mutateAsync(params.id as string);
+    } catch (error) {
+      console.error("Error deleting schedule:", error);
+    }
+  };
 
   const { data: schedule, isLoading } = useQuery<Schedule>({
     queryKey: ["schedule", params.id],
@@ -138,17 +179,39 @@ export default function ScheduleViewPage() {
   return (
     <div className="w-full mx-">
       <div className="mb-3">
-        <h2 className="text-xl font-semibold text-black dark:text-white flex gap-3">
-          <span>Concrete Pumping - Schedule Summary</span>
-          <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
-            {schedule.status}
-          </Badge>
-          {schedule.schedule_name && (
-            <Badge size="sm" color={"info"}>
-              {schedule.schedule_name}
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-black dark:text-white flex gap-3">
+            <span>Concrete Pumping - Schedule Summary</span>
+            <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
+              {schedule.status}
             </Badge>
-          )}
-        </h2>
+            {schedule.schedule_name && (
+              <Badge size="sm" color={"info"}>
+                {schedule.schedule_name}
+              </Badge>
+            )}
+          </h2>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleEdit}
+              className="flex items-center gap-1"
+            >
+              <Pencil size={14} />
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDelete}
+              className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-500 border-red-600 dark:border-red-400"
+            >
+              <Trash2 size={14} />
+              Delete
+            </Button>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
@@ -258,7 +321,7 @@ export default function ScheduleViewPage() {
             </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Total TM Cycle Time (hours)/Min (A+B+C+D+E)
+                Total TM Cycle Time (A+B+C+D+E)
               </h4>
               <p className="text-base text-gray-800 dark:text-white/90">{formatHoursAndMinutes(schedule.cycle_time)}</p>
             </div>
@@ -617,14 +680,14 @@ export default function ScheduleViewPage() {
                             return (
                               <>
                                 <div className="flex w-fit rounded-md border-2 border-black bg-yellow-500 shadow items-center gap-2 pr-2">
-                                  <label className="flex flex-col justify-between bg-blue-700 rounded-l-sm p-2 text-[8px]  text-white">
+                                  <label className="flex flex-col justify-between bg-blue-700 rounded-l-sm p-2 text-[8px] text-white">
                                     <span className="text-xs text-white-400">
                                       ({currentTripIndex}/{tmTotalTrips})
                                     </span>
                                     {/* <img className="h-3" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" /> */}
                                     {/* IND */}
                                   </label>
-                                  <label className="p-1 px-1 font-mono text-sm font-medium items-center ">
+                                  <label className="p-1 px-1 font-mono text-sm font-medium items-center text-white dark:text-black">
                                     {trip.tm_no}
                                   </label>
                                 </div>
@@ -826,6 +889,29 @@ export default function ScheduleViewPage() {
           );
         })()}
       </div>
+
+      {/* Delete Modal */}
+      <Modal className="max-w-[500px] p-5" isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
+        <div className="p-6">
+          <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Delete Schedule</h4>
+          <p className="mb-6 dark:text-white/90">Are you sure you want to delete this schedule? This action cannot be undone.</p>
+          <div className="flex justify-end gap-4">
+            <Button onClick={() => setIsDeleteModalOpen(false)} variant="outline">
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmDelete} variant="warning" disabled={deleteScheduleMutation.isPending}>
+              {deleteScheduleMutation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <Spinner size="sm" />
+                  <span>Deleting...</span>
+                </div>
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
