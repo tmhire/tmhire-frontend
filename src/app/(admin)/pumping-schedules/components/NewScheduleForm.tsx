@@ -769,27 +769,34 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       for (const entry of entries) {
         const entryStart = new Date(entry.start);
         const entryEnd = new Date(entry.end);
-        const latestStart = Math.max(windowStart.getTime(), entryStart.getTime());
-        const earliestEnd = Math.min(windowEnd.getTime(), entryEnd.getTime());
-        const overlap = latestStart < earliestEnd;
-        if (overlap) {
-          hasOverlap = true;
-          break;
-        }
+        if (entryStart.getTime() < windowEnd.getTime() && windowEnd.getTime() <= entryEnd.getTime())
+          return "unavailable";
 
-        let gapMs = 0;
-        if (windowEnd.getTime() <= entryStart.getTime()) {
-          gapMs = entryStart.getTime() - windowEnd.getTime();
-        } else if (entryEnd.getTime() <= windowStart.getTime()) {
-          gapMs = windowStart.getTime() - entryEnd.getTime();
+        if (windowStart.getTime() < entryEnd.getTime() && entryEnd.getTime() <= windowEnd.getTime()) {
+          if ((entryEnd.getTime() - windowStart.getTime()) / 3600000 > 1) return "unavailable";
+          return "partially_unavailable";
         }
-        if (gapMs > 0 && gapMs < oneHourMs) {
-          isNearWithinHour = true;
-        }
+        // const latestStart = Math.max(windowStart.getTime(), entryStart.getTime());
+        // const earliestEnd = Math.min(windowEnd.getTime(), entryEnd.getTime());
+        // const overlap = latestStart < earliestEnd;
+        // if (overlap) {
+        //   hasOverlap = true;
+        //   break;
+        // }
+
+        // let gapMs = 0;
+        // if (windowEnd.getTime() <= entryStart.getTime()) {
+        //   gapMs = entryStart.getTime() - windowEnd.getTime();
+        // } else if (entryEnd.getTime() <= windowStart.getTime()) {
+        //   gapMs = windowStart.getTime() - entryEnd.getTime();
+        // }
+        // if (gapMs > 0 && gapMs < oneHourMs) {
+        //   isNearWithinHour = true;
+        // }
       }
 
-      if (hasOverlap) return "unavailable";
-      if (isNearWithinHour) return "partially_unavailable";
+      // if (hasOverlap) return "unavailable";
+      // if (isNearWithinHour) return "partially_unavailable";
       return "available";
     },
     []
@@ -988,14 +995,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         </div>
       );
     }
-  
+
     return (
       <div className="space-y-2">
         {entries.map((time, index) => (
-          <div
-            key={index}
-            className="flex items-center text-xs text-red-600 dark:text-red-400 rounded-md px-2 py-1"
-          >
+          <div key={index} className="flex items-center text-xs text-red-600 dark:text-red-400 rounded-md px-2 py-1">
             <Clock className="w-3.5 h-3.5 mr-2 shrink-0" />
             <div className="flex flex-col">
               <span className="font-medium">
@@ -1010,7 +1014,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       </div>
     );
   };
-  
+
   return (
     <div className="w-full mx">
       <div className="flex flex-row w-full mb-4 items-center">
@@ -2445,17 +2449,18 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                   >
                                     <div className="bg-white dark:bg-gray-900/30 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-lg p-2 pl-6">
                                       {(() => {
-                                        const getRank = (status: string) => (status === "available" ? 0 : status === "partially_unavailable" ? 1 : 2);
+                                        const getRank = (status: string) =>
+                                          status === "available" ? 0 : status === "partially_unavailable" ? 1 : 2;
                                         const sortedTms = [...tms].sort((a, b) => {
                                           const aStatus = classifyTMAvailability(
                                             a as unknown as AvailableTM,
                                             scheduleStartDate,
-                                            scheduleEndDate,
+                                            scheduleEndDate
                                           );
                                           const bStatus = classifyTMAvailability(
                                             b as unknown as AvailableTM,
                                             scheduleStartDate,
-                                            scheduleEndDate,
+                                            scheduleEndDate
                                           );
                                           return getRank(aStatus) - getRank(bStatus);
                                         });
@@ -2643,8 +2648,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                       if (status === "partially_unavailable") {
                                         return (
                                           <>
-                                            <span className="text-xs text-yellow-700 dark:text-yellow-400">Partially Available</span>
-                                            <Tooltip content={createTooltip((tm).unavailable_times)}>
+                                            <span className="text-xs text-yellow-700 dark:text-yellow-400">
+                                              Partially Available
+                                            </span>
+                                            <Tooltip content={createTooltip(tm.unavailable_times)}>
                                               <CircleQuestionMark size={15} />
                                             </Tooltip>
                                           </>
