@@ -315,7 +315,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     if (schedule_id && clientsData) {
       fetchSchedule();
     }
-  }, [schedule_id, clientsData, fetchSchedule]);
+  }, [schedule_id, clientsData]);
 
   useEffect(() => {
     setIsDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
