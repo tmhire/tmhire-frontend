@@ -49,7 +49,7 @@ export default function ReportsContainer() {
   const { data: schedules, isLoading } = useQuery<Schedule[]>({
     queryKey: ["reports-schedules"],
     queryFn: async () => {
-      const response = await fetchWithAuth("/schedules");
+      const response = await fetchWithAuth("/schedules?type=all");
       const data = await response.json();
       if (!data.success) throw new Error(data.message || "Failed to fetch schedules");
       return data.data as Schedule[];

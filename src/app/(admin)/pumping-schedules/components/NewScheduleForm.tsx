@@ -290,7 +290,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     enabled: !!scheduleDateForCount,
     queryFn: async () => {
       try {
-        const response = await fetchWithAuth("/schedules");
+        const response = await fetchWithAuth("/schedules?type=all");
         const data = await response.json();
         if (data.success && Array.isArray(data.data)) {
           return (data.data as ScheduleForCount[]).filter(

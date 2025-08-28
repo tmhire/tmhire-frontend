@@ -43,6 +43,7 @@ interface Schedule {
     onward_time: number;
     return_time: number;
     buffer_time: number;
+    load_time: number;
     pump_start: string;
     schedule_date: string;
     pump_start_time_from_plant: string;
@@ -56,6 +57,7 @@ interface Schedule {
     tm_no: string;
     tm_id: string;
     plant_load: string;
+    plant_buffer: string;
     plant_start: string;
     pump_start: string;
     unloading_time: string;
@@ -188,12 +190,15 @@ export default function ScheduleViewPage() {
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.client_name}</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Project Name</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.project_name}</p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Site Location</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.site_address}</p>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Project Name & Site Location
+              </h4>
+              <p
+                className="text-base text-gray-800 dark:text-white/90 truncate"
+                title={`${schedule.project_name}, ${schedule.site_address}`}
+              >
+                {schedule.project_name}, {schedule.site_address}
+              </p>
             </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Placement Zone</h4>
@@ -232,24 +237,28 @@ export default function ScheduleViewPage() {
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.quantity} m³</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Load/Buffer Time (mins) (A)</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Buffer Time (mins) (A)</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.buffer_time} min</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Onward Time (mins) (B)</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Load Time (mins) (B)</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.load_time} min</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Onward Time (mins) (C)</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.onward_time} min</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Unloading Time (mins) C</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Unloading Time (mins) (D)</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.unloading_time} min</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Return Time (mins) (D)</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Return Time (mins) (E)</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.return_time} min</p>
             </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Total TM Cycle Time (hours)/Min (A+B+C+D)
+                Total TM Cycle Time (hours)/Min (A+B+C+D+E)
               </h4>
               <p className="text-base text-gray-800 dark:text-white/90">{formatHoursAndMinutes(schedule.cycle_time)}</p>
             </div>
@@ -453,7 +462,7 @@ export default function ScheduleViewPage() {
                           if (!schedule.input_params.pump_start) return "N/A";
                           const pumpStart = new Date(schedule.input_params.pump_start);
                           const pumpingHours = schedule.input_params.quantity / schedule.input_params.pumping_speed;
-                          const pumpEnd = new Date(pumpStart.getTime() + (pumpingHours * 60 * 60 * 1000));
+                          const pumpEnd = new Date(pumpStart.getTime() + pumpingHours * 60 * 60 * 1000);
                           return formatTimeByPreference(pumpEnd, profile?.preferred_format);
                         })()}
                       </span>
@@ -469,8 +478,10 @@ export default function ScheduleViewPage() {
                           if (!schedule.input_params.pump_start) return "N/A";
                           const pumpStart = new Date(schedule.input_params.pump_start);
                           const pumpingHours = schedule.input_params.quantity / schedule.input_params.pumping_speed;
-                          const pumpEnd = new Date(pumpStart.getTime() + (pumpingHours * 60 * 60 * 1000));
-                          const pumpSiteLeave = new Date(pumpEnd.getTime() + (schedule.input_params.pump_removal_time * 60 * 1000));
+                          const pumpEnd = new Date(pumpStart.getTime() + pumpingHours * 60 * 60 * 1000);
+                          const pumpSiteLeave = new Date(
+                            pumpEnd.getTime() + schedule.input_params.pump_removal_time * 60 * 1000
+                          );
                           return formatTimeByPreference(pumpSiteLeave, profile?.preferred_format);
                         })()}
                       </span>
@@ -482,13 +493,18 @@ export default function ScheduleViewPage() {
                           const pumpStart = new Date(schedule.input_params.pump_start);
                           const pumpFixingTime = schedule.input_params.pump_fixing_time || 0;
                           const pumpOnwardTime = schedule.input_params.pump_onward_time || 0;
-                          const pumpStartFromPlant = new Date(pumpStart.getTime() - (pumpFixingTime + pumpOnwardTime) * 60 * 1000);
-                          
+                          const pumpStartFromPlant = new Date(
+                            pumpStart.getTime() - (pumpFixingTime + pumpOnwardTime) * 60 * 1000
+                          );
+
                           const pumpingHours = schedule.input_params.quantity / schedule.input_params.pumping_speed;
-                          const pumpEnd = new Date(pumpStart.getTime() + (pumpingHours * 60 * 60 * 1000));
-                          const pumpSiteLeave = new Date(pumpEnd.getTime() + (schedule.input_params.pump_removal_time * 60 * 1000));
-                          
-                          const totalHours = (pumpSiteLeave.getTime() - pumpStartFromPlant.getTime()) / (1000 * 60 * 60);
+                          const pumpEnd = new Date(pumpStart.getTime() + pumpingHours * 60 * 60 * 1000);
+                          const pumpSiteLeave = new Date(
+                            pumpEnd.getTime() + schedule.input_params.pump_removal_time * 60 * 1000
+                          );
+
+                          const totalHours =
+                            (pumpSiteLeave.getTime() - pumpStartFromPlant.getTime()) / (1000 * 60 * 60);
                           return formatHoursAndMinutes(totalHours);
                         })()}
                       </span>
@@ -517,7 +533,7 @@ export default function ScheduleViewPage() {
                       TM No
                     </th>
                     <th
-                      colSpan={3}
+                      colSpan={4}
                       className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
                     >
                       Plant
@@ -526,7 +542,7 @@ export default function ScheduleViewPage() {
                       colSpan={2}
                       className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
                     >
-                      Pump
+                      Pump - Unloading
                     </th>
                     <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                       Return Time
@@ -555,8 +571,11 @@ export default function ScheduleViewPage() {
                     <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-l border-gray-200 dark:border-gray-700">
                       Prepare Time
                     </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-l border-gray-200 dark:border-gray-700">
                       Load Time
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
+                      Start Time
                     </th>
                     <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
                       Start Time
@@ -617,6 +636,13 @@ export default function ScheduleViewPage() {
                       <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">
                           {trip.plant_name ? trip.plant_name : "N / A"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-3 py-4 text-start">
+                        <span className="text-gray-800 dark:text-white/90">
+                          {trip.plant_buffer
+                            ? formatTimeByPreference(trip.plant_buffer, profile?.preferred_format)
+                            : "-"}
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-4 text-start">
@@ -790,7 +816,9 @@ export default function ScheduleViewPage() {
                       <td key={i} className="px-2 py-2"></td>
                     ))}
                     <td className="px-2 py-2 text-center"></td>
-                    <td className="px-2 py-2 text-right">{avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-"}</td>
+                    <td className="px-2 py-2 text-right">
+                      {avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-"}
+                    </td>
                   </tr>
                 </tbody>
               </table>

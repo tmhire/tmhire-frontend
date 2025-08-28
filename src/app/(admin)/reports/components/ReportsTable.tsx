@@ -5,6 +5,7 @@ import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
 import { Eye, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { capitalize } from "lodash";
 
 type Schedule = {
   _id: string;
@@ -109,7 +110,7 @@ export default function ReportsTable({
             {data.map((s) => (
               <TableRow key={s._id}>
                 <TableCell className="px-3 py-4 text-start">
-                  <Badge size="sm" color={s.type === "supply" ? "info" : "primary"}>{s.type || "pumping"}</Badge>
+                  <Badge size="sm" color={s.type === "supply" ? "warning" : "primary"}>{capitalize(s.type) || "Pumping"}</Badge>
                 </TableCell>
                 <TableCell className="px-3 py-4 text-start">
                   <span className="text-gray-800 dark:text-white/90 font-medium">{s.client_name}</span>
@@ -140,7 +141,6 @@ export default function ReportsTable({
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => handleEdit(s)} className="flex items-center gap-1">
                       <Pencil size={14} />
-                      Edit
                     </Button>
                   </div>
                 </TableCell>

@@ -1,7 +1,7 @@
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import React from "react";
 import Button from "@/components/ui/button/Button";
-import { Eye, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Badge from "@/components/ui/badge/Badge";
 import Tooltip from "@/components/ui/tooltip";
@@ -212,7 +212,7 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
                           onClick={() => handleEdit(schedule)}
                           className="flex items-center gap-1"
                         >
-                          Edit
+                          <Pencil size={14} />
                         </Button>
                         <Button
                           size="sm"
@@ -221,7 +221,6 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
                           className="flex items-center gap-1 text-red-600 hover:text-red-700"
                         >
                           <Trash2 size={14} />
-                          Delete
                         </Button>
                       </div>
                     </TableCell>
