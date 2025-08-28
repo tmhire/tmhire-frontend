@@ -687,7 +687,7 @@ export default function ScheduleViewPage() {
                                     {/* <img className="h-3" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" /> */}
                                     {/* IND */}
                                   </label>
-                                  <label className="p-1 px-1 font-mono text-sm font-medium items-center text-white dark:text-black">
+                                  <label className="p-1 px-1 font-mono text-sm font-medium items-center text-black">
                                     {trip.tm_no}
                                   </label>
                                 </div>
