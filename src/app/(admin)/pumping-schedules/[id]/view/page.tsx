@@ -364,7 +364,7 @@ export default function ScheduleViewPage() {
             const totalTrips = schedule.output_table.length;
             return (
               <div className="overflow-x-auto">
-                <table className="min-w-full text-xs border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
+                <table className="min-w-full text-xs border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800/30">
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-800">
                       <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">Sl. No</th>
@@ -826,7 +826,7 @@ export default function ScheduleViewPage() {
           });
           return (
             <div className="overflow-x-auto w-full">
-              <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
+              <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800/30">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800">
                     <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">S.No.</th>
@@ -836,8 +836,8 @@ export default function ScheduleViewPage() {
                         Trip {i + 1}
                       </th>
                     ))}
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">Start-End Time</th>
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-right">Total Hours</th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">Start-End Time</th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">Total Hours</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -864,8 +864,8 @@ export default function ScheduleViewPage() {
                             </td>
                           );
                         })}
-                        <td className="px-4 text-gray-800 dark:text-white/90 py-2 text-left">{overallRange}</td>
-                        <td className="px-4 text-gray-800 dark:text-white/90 py-2 text-right">
+                        <td className="px-4 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">{overallRange}</td>
+                        <td className="px-4 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
                           {totalHours ? formatHoursAndMinutes(totalHours) : "-"}
                         </td>
                       </tr>
@@ -878,8 +878,8 @@ export default function ScheduleViewPage() {
                     {Array.from({ length: maxTrips }).map((_, i) => (
                       <td key={i} className="px-2 py-2"></td>
                     ))}
-                    <td className="px-2 py-2 text-center"></td>
-                    <td className="px-2 py-2 text-right">
+                    <td className="px-2 py-2 text-center bg-gray-100 dark:bg-gray-800"></td>
+                    <td className="px-4 py-2 text-left bg-gray-100 dark:bg-gray-800">
                       {avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-"}
                     </td>
                   </tr>
