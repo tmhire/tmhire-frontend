@@ -762,9 +762,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       const entries: UnavailableTimeEntry[] = tm?.unavailable_times ? Object.values(tm.unavailable_times) : [];
       if (entries.length === 0) return "available";
 
-      let hasOverlap = false;
-      let isNearWithinHour = false;
-      const oneHourMs = 60 * 60 * 1000;
+      // let hasOverlap = false;
+      // let isNearWithinHour = false;
+      // const oneHourMs = 60 * 60 * 1000;
 
       for (const entry of entries) {
         const entryStart = new Date(entry.start);
