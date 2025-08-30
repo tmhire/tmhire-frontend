@@ -630,9 +630,32 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
     setIsGenerating(true);
     try {
+      const partially_available: UnavailableTimes = {};
+      if (!!scheduleStartDate && !!scheduleEndDate)
+        calculatedTMs?.available_tms?.forEach((tm) => {
+          if (!tm?.unavailable_times) return;
+          Object.keys(tm?.unavailable_times).forEach((schedule) => {
+            const entryStart = new Date(tm?.unavailable_times[schedule].start);
+            const entryEnd = new Date(tm?.unavailable_times[schedule].end);
+            if (scheduleStartDate.getTime() < entryEnd.getTime() && entryEnd.getTime() <= scheduleEndDate.getTime()) {
+              if ((entryEnd.getTime() - scheduleStartDate.getTime()) / 3600000 <= 1) {
+                partially_available[tm.id] = {
+                  start: tm?.unavailable_times[schedule].start,
+                  end: tm?.unavailable_times[schedule].end,
+                  schedule_no: tm?.unavailable_times[schedule].schedule_no,
+                };
+              }
+            }
+          });
+        });
       const response = await fetchWithAuth(`/schedules/${calculatedTMs.schedule_id}/generate-schedule`, {
         method: "POST",
-        body: JSON.stringify({ selected_tms: tmSequence, pump: selectedPump, type: "pumping" }),
+        body: JSON.stringify({
+          selected_tms: tmSequence,
+          pump: selectedPump,
+          type: "pumping",
+          partially_available: partially_available,
+        }),
       });
 
       const data = await response.json();
@@ -761,22 +784,22 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       if (tm.availability) return "available";
       if (!windowStart || !windowEnd) return tm.availability ? "available" : "unavailable";
 
-      const entries: UnavailableTimeEntry[] = tm?.unavailable_times ? Object.values(tm.unavailable_times) : [];
-      if (entries.length === 0) return "available";
+      const unavailable_times: UnavailableTimes = tm?.unavailable_times ? tm.unavailable_times : {};
+      if (Object.keys(unavailable_times).length === 0) return "available";
 
       // let hasOverlap = false;
-      // let isNearWithinHour = false;
+      let isNearWithinHour = false;
       // const oneHourMs = 60 * 60 * 1000;
 
-      for (const entry of entries) {
+      for (const [schedule, entry] of Object.entries(unavailable_times)) {
+        if (schedule_id === schedule) continue;
         const entryStart = new Date(entry.start);
         const entryEnd = new Date(entry.end);
-        if (entryStart.getTime() < windowEnd.getTime() && windowEnd.getTime() <= entryEnd.getTime())
-          return "unavailable";
-
         if (windowStart.getTime() < entryEnd.getTime() && entryEnd.getTime() <= windowEnd.getTime()) {
           if ((entryEnd.getTime() - windowStart.getTime()) / 3600000 > 1) return "unavailable";
-          return "partially_unavailable";
+          isNearWithinHour = true;
+        } else if (windowStart.getTime() < entryStart.getTime() && entryStart.getTime() <= windowEnd.getTime()) {
+          return "unavailable";
         }
         // const latestStart = Math.max(windowStart.getTime(), entryStart.getTime());
         // const earliestEnd = Math.min(windowEnd.getTime(), entryEnd.getTime());
@@ -798,7 +821,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       }
 
       // if (hasOverlap) return "unavailable";
-      // if (isNearWithinHour) return "partially_unavailable";
+      if (isNearWithinHour) return "partially_unavailable";
       return "available";
     },
     []
@@ -2560,12 +2583,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                                 type="checkbox"
                                                 checked={tmSequence.includes(tm.id)}
                                                 disabled={(() => {
-                                                  const status = classifyTMAvailability(
-                                                    tm as unknown as AvailableTM,
-                                                    scheduleStartDate,
-                                                    scheduleEndDate
+                                                  return (
+                                                    classifyTMAvailability(
+                                                      tm as unknown as AvailableTM,
+                                                      scheduleStartDate,
+                                                      scheduleEndDate
+                                                    ) === "unavailable"
                                                   );
-                                                  return status === "unavailable";
                                                 })()}
                                                 onChange={(e) => {
                                                   setTMSequence((prev) => {
