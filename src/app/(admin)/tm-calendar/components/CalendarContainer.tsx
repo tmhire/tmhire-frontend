@@ -216,6 +216,7 @@ const typeRowColors: Record<string, string> = {
 
 export default function CalendarContainer() {
   const { data: session, status } = useSession();
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -531,35 +532,6 @@ export default function CalendarContainer() {
 
             {/* Right side - Date Selection */}
             <div className="flex items-center gap-3">
-              {/* Start Hour Selector moved next to date picker */}
-              <div className="flex flex-row items-center justify-end gap-2 w-full">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Hour</label>{" "}
-                <button
-                  onClick={() => setIsStartHourFilterOpen(!isStartHourFilterOpen)}
-                  className="px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  title="Start Hour"
-                >
-                  {`${String(customStartHour).padStart(2, "0")}:00`}
-                </button>
-                {isStartHourFilterOpen && (
-                  <div className="absolute z-20 mt-1 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-60 overflow-y-auto">
-                    <div className="p-2 text-gray-800 dark:text-white/90">
-                      {Array.from({ length: 24 }, (_, i) => (
-                        <button
-                          key={i}
-                          className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                          onClick={() => {
-                            setCustomStartHour(i);
-                            setIsStartHourFilterOpen(false);
-                          }}
-                        >
-                          {`${String(i).padStart(2, "0")}:00`}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
               <DatePickerInput value={selectedDate} onChange={handleDateChange} className="w-48" />
               <button
                 onClick={() => handleDateChange(new Date().toISOString().split("T")[0])}
@@ -853,11 +825,11 @@ export default function CalendarContainer() {
           </div>
 
           {/* Gantt Chart */}
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] w-full">
+          <div className="relative rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] w-full ">
             <div className="w-full overflow-x-auto">
               <div className="min-w-full w-full">
                 {/* Time Header */}
-                <div className="flex border-b border-gray-300 dark:border-white/[0.05]">
+                <div className="flex border-b border-gray-300 dark:border-white/[0.05] sticky top-0 z-20 bg-white dark:bg-white/[0.03] pr-3">
                   {/* Serial Number Column */}
                   <div className="w-16 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] text-center flex-shrink-0">
                     SNo
@@ -875,18 +847,52 @@ export default function CalendarContainer() {
                   ))}
                   {/* Free Time Column */}
                   <div className="w-24 px-1 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center flex-shrink-0">
-                    Unused Hrs
+                    <div className="flex items-center justify-center gap-1">
+                      <span>Unused Hrs</span>
+                      <button
+                        onClick={() => setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc')}
+                        className=" hover:bg-gray-100 dark:hover:bg-white/[0.05] rounded transition-colors"
+                        title={`Sort ${sortDirection === 'desc' ? 'ascending' : 'descending'}`}
+                      >
+                        {sortDirection === 'desc' ? '↓' : '↑'}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 {/* Gantt Rows */}
-                <div className="divide-y divide-gray-400 dark:divide-white/[0.05]">
+                <div className="divide-y divide-gray-400 dark:divide-white/[0.05] custom-scrollbar pr-[6.5px] overflow-y-auto max-h-96">
                   {filteredData.length === 0 ? (
                     <div className="flex items-center justify-center py-8 text-gray-500 dark:text-gray-400">
                       No mixers found for the selected criteria
                     </div>
                   ) : (
-                    filteredData.map((item, idx) => {
+                    // Sort data by free time in descending order, keeping TMs and pumps separate
+                    [...filteredData]
+                      .sort((a, b) => {
+                        // Calculate free time for both items
+                        let freeTimeA = 24;
+                        let freeTimeB = 24;
+                        
+                        a.tasks.forEach((task) => {
+                          freeTimeA -= calculateDuration(task.actualStart, task.actualEnd) / 60;
+                        });
+                        b.tasks.forEach((task) => {
+                          freeTimeB -= calculateDuration(task.actualStart, task.actualEnd) / 60;
+                        });
+                        
+                        freeTimeA = Math.round(freeTimeA);
+                        freeTimeB = Math.round(freeTimeB);
+                        
+                        // If both are same type, sort by free time based on sortDirection
+                        if (a.item === b.item) {
+                          return sortDirection === 'desc' ? freeTimeB - freeTimeA : freeTimeA - freeTimeB;
+                        }
+                        
+                        // Keep TMs and pumps separate by maintaining original order for different types
+                        return 0;
+                      })
+                      .map((item, idx) => {
                       // --- NEW LOGIC FOR DYNAMIC TIMESLOTS ---
 
                       const slots = getTimeSlots();
@@ -1014,16 +1020,14 @@ export default function CalendarContainer() {
                         freeTime -= calculateDuration(task.actualStart, task.actualEnd) / 60;
                       });
                       freeTime = Math.round(freeTime);
-                      console.log("item",item)
+                      console.log("item", item);
                       return (
                         <div
                           key={item.id}
-                          className={`flex dark:hover:bg-white/[0.02] transition-colors  ${
+                          className={`flex group transition-colors  ${
                             (item.item === "pump" && item.type && typeRowColors[item.type]) || ""
                           } 
-                          ${
-                            (item.item === "mixer" && typeRowColors["tm"]) || ""
-                          } `}
+                          ${(item.item === "mixer" && typeRowColors["tm"]) || ""} `}
                         >
                           {/* Serial Number */}
                           <div className="w-16 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
@@ -1126,7 +1130,6 @@ export default function CalendarContainer() {
               </div>
             </div>
           </div>
-
           {/* Legends: Client and Task Types side by side */}
           <div className="mt-6 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4">
             <div className="flex flex-wrap md:flex-nowrap gap-4 w-full">

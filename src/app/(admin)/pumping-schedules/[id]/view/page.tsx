@@ -420,12 +420,12 @@ export default function ScheduleViewPage() {
                     >
                       No.
                     </TableCell>
-                    <TableCell
+                    {/* <TableCell
                       isHeader
                       className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
                       Type
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell
                       isHeader
                       className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
@@ -486,12 +486,33 @@ export default function ScheduleViewPage() {
                   <TableRow>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
-                        {schedule.available_pumps.find((pump) => pump.id === schedule.pump)?.identifier || "N/A"}
+                        {(() => {
+                          const pump = schedule.available_pumps.find((pump) => pump.id === schedule.pump);
+                          if (!pump) return "N/A";
+                          
+                          // Color coding based on pump type
+                          const isLinePump = schedule.pump_type === 'line';
+                          const bgColor = isLinePump ? "bg-blue-500" : "bg-green-500";
+                          const textColor = 'text-white';
+                          
+                          return (
+                            <div className={`flex w-fit rounded-md border-2 border-black shadow items-center gap-2 pr-2  ${bgColor}`}>
+                              <label className={`flex flex-col justify-between bg-blue-700 rounded-l-sm p-2 text-[8px] ${textColor}`}>
+                                <span className="text-xs text-white-400">
+                                  {isLinePump ? 'LINE' : 'BOOM'}
+                                </span>
+                              </label>
+                              <label className={`p-1 px-1 font-mono text-sm font-medium items-center text-white`}>
+                                {pump.identifier}
+                              </label>
+                            </div>
+                          );
+                        })()}
                       </span>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start">
+                    {/* <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">{schedule.pump_type || "N/A"}</span>
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {calculatePumpStartTimeFromPlant(schedule, profile?.preferred_format)}

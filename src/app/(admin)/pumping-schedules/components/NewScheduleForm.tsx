@@ -201,7 +201,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     floorHeight: "",
     pumpSiteReachTime: "",
     scheduleName: "",
-    slumpAtSite: "160",
+    slumpAtSite: "",
     oneWayKm: "",
     siteSupervisorId: "",
   });
@@ -280,7 +280,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       throw new Error("Failed to fetch average TM capacity");
     },
   });
-  const avgTMCap = avgTMCapData?.average_capacity ?? null;
+  const avgTMCap = Math.ceil(avgTMCapData?.average_capacity || 0) ?? null;
 
   // Count schedules for the selected date to generate schedule number
   type ScheduleForCount = { input_params?: { schedule_date?: string } };
@@ -713,6 +713,17 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     );
   };
 
+  // Helper to check if all transit mixer fields are filled for fleet sizing
+  const areTransitMixerFieldsFilled = () => {
+    return (
+      !!formData.bufferTime &&
+      !!formData.loadTime &&
+      !!formData.onwardTime &&
+      !!formData.unloadingTime &&
+      !!formData.returnTime
+    );
+  };
+
   const setPumpingSpeedAndUnloadingTime = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleInputChange(e);
     const { name, value } = e.target;
@@ -822,11 +833,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   // Custom SVG Donut Chart
   const cycleTimeData = [
-    { label: "Buffer", shortLabel: "Load", value: buffer, color: "#3b82f6" },
-    { label: "Loading", shortLabel: "Load", value: load, color: "#ef4444" },
+    { label: "Buffer", shortLabel: "Buffer", value: buffer, color: "#3b82f6" },
+    { label: "Loading", shortLabel: "Load", value: load, color: "#8b5cf6" },
     { label: "Onward Journey", shortLabel: "Onward", value: onward, color: "#f59e0b" },
     { label: "TM Unloading", shortLabel: "Unload", value: unload, color: "#10b981" },
-    { label: "Return Journey", shortLabel: "Return", value: ret, color: "#8b5cf6" },
+    { label: "Return Journey", shortLabel: "Return", value: ret, color: "#ef4444" },
   ];
 
   const DonutChart = ({
@@ -1338,6 +1349,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         setHasChanged(true);
                       }}
                       placeholder="160"
+                      min="0"
+                      max="300"
                     />
                   </div>
                 </div>
@@ -1620,6 +1633,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         value={parseFloat(formData.speed)}
                         onChange={setPumpingSpeedAndUnloadingTime}
                         placeholder="Enter speed"
+                        min="0"
                       />
                     </div>
 
@@ -1637,6 +1651,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           name="unloadingTime"
                           value={parseFloat(formData.unloadingTime)}
                           onChange={setPumpingSpeedAndUnloadingTime}
+                          min="0"
                           placeholder={
                             avgTMCap !== null
                               ? "Auto-calculated from pumping speed"
@@ -1682,6 +1697,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         </div>
                         <div className="w-20 flex-shrink-0">
                           <Input
+                            min="0"
                             type="number"
                             name="bufferTime"
                             value={parseFloat(formData.bufferTime)}
@@ -1697,7 +1713,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         <div className="flex items-center min-w-0 flex-1">
                           <span
                             className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
-                            style={{ backgroundColor: "#3b82f6" }}
+                            style={{ backgroundColor: "#8b5cf6" }}
                           ></span>
                           <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
                             LoadingTime (min)
@@ -1706,6 +1722,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         <div className="w-20 flex-shrink-0">
                           <Input
                             type="number"
+                            min="0"
                             name="loadTime"
                             value={parseFloat(formData.loadTime)}
                             onChange={handleInputChange}
@@ -1729,6 +1746,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         <div className="w-20 flex-shrink-0">
                           <Input
                             type="number"
+                            min="0"
                             name="onwardTime"
                             value={parseFloat(formData.onwardTime)}
                             onChange={handleInputChange}
@@ -1757,6 +1775,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         <div className="w-20 flex-shrink-0">
                           <Input
                             type="number"
+                            min="0"
                             name="unloadingTime"
                             value={parseFloat(formData.unloadingTime)}
                             onChange={handleInputChange}
@@ -1783,6 +1802,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             type="number"
                             name="returnTime"
                             value={parseFloat(formData.returnTime)}
+                            min="0"
                             onChange={handleInputChange}
                             placeholder="0"
                             className="w-full text-right text-xs h-7"
@@ -1842,73 +1862,84 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
                     <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Fleet Sizing</h3>
 
-                    <div className="space-y-2.5">
-                      <div className="flex items-center justify-between py-2 border-b border-blue-200/60 dark:border-blue-800/60">
-                        <span className="text-xs font-medium text-gray-900 dark:text-white">
-                          Optimum Fleet: Zero Wait, Non-Stop Pour
-                        </span>
-                        <span className="text-sm font-bold text-gray-900 dark:text-white min-w-[2rem] text-right">
-                          {tmReq > 0 ? tmReq : "-"}
-                        </span>
+                    {!areTransitMixerFieldsFilled() ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Tooltip content="Fill all transit mixer fields (Buffer, Loading, Onward, Unloading, Return times) to see fleet sizing calculations">
+                          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                            <Info className="w-4 h-4" />
+                            <span className="text-sm">Fill all transit mixer fields to calculate</span>
+                          </div>
+                        </Tooltip>
                       </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between py-2 border-b border-blue-200/60 dark:border-blue-800/60">
+                          <span className="text-xs font-medium text-gray-900 dark:text-white">
+                            Optimum Fleet: Zero Wait, Non-Stop Pour
+                          </span>
+                          <span className="text-sm font-bold text-gray-900 dark:text-white min-w-[2rem] text-right">
+                            {tmReq > 0 ? tmReq : "-"}
+                          </span>
+                        </div>
 
-                      <div className="flex items-center justify-between py-2 border-b border-blue-200/60 dark:border-blue-800/60">
-                        <span className="text-xs font-medium text-gray-900 dark:text-white">TMs Additional</span>
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
-                            onClick={() => {
-                              if (tmReq <= 0) return;
-                              const nextAdditional = Math.max(0, additionalTMValue - 1);
-                              const nextTotal = Math.max(1, tmReq + nextAdditional);
-                              setOverruleTMCount(nextAdditional > 0);
-                              setCustomTMCount(nextTotal);
-                              setHasChanged(true);
-                            }}
-                          >
-                            -
-                          </button>
-                          <input
-                            type="number"
-                            min={0}
-                            className="no-spinner h-6 w-8 text-center px-1 rounded border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
-                            value={tmReq > 0 ? additionalTMValue : 0}
-                            onChange={(e) => {
-                              const raw = parseInt(e.target.value || "0", 10);
-                              const add = isNaN(raw) ? 0 : Math.max(0, raw);
-                              if (tmReq <= 0) return;
-                              const nextTotal = Math.max(1, tmReq + add);
-                              setOverruleTMCount(add > 0);
-                              setCustomTMCount(nextTotal);
-                              setHasChanged(true);
-                            }}
-                          />
+                        <div className="flex items-center justify-between py-2 border-b border-blue-200/60 dark:border-blue-800/60">
+                          <span className="text-xs font-medium text-gray-900 dark:text-white">TMs Additional</span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                              onClick={() => {
+                                if (tmReq <= 0) return;
+                                const nextAdditional = Math.max(0, additionalTMValue - 1);
+                                const nextTotal = Math.max(1, tmReq + nextAdditional);
+                                setOverruleTMCount(nextAdditional > 0);
+                                setCustomTMCount(nextTotal);
+                                setHasChanged(true);
+                              }}
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              min={0}
+                              className="no-spinner h-6 w-8 text-center px-1 rounded border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
+                              value={tmReq > 0 ? additionalTMValue : 0}
+                              onChange={(e) => {
+                                const raw = parseInt(e.target.value || "0", 10);
+                                const add = isNaN(raw) ? 0 : Math.max(0, raw);
+                                if (tmReq <= 0) return;
+                                const nextTotal = Math.max(1, tmReq + add);
+                                setOverruleTMCount(add > 0);
+                                setCustomTMCount(nextTotal);
+                                setHasChanged(true);
+                              }}
+                            />
 
-                          <button
-                            type="button"
-                            className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
-                            onClick={() => {
-                              if (tmReq <= 0) return;
-                              const nextAdditional = additionalTMValue + 1;
-                              const nextTotal = Math.max(1, tmReq + nextAdditional);
-                              setOverruleTMCount(true);
-                              setCustomTMCount(nextTotal);
-                              setHasChanged(true);
-                            }}
-                          >
-                            +
-                          </button>
+                            <button
+                              type="button"
+                              className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                              onClick={() => {
+                                if (tmReq <= 0) return;
+                                const nextAdditional = additionalTMValue + 1;
+                                const nextTotal = Math.max(1, tmReq + nextAdditional);
+                                setOverruleTMCount(true);
+                                setCustomTMCount(nextTotal);
+                                setHasChanged(true);
+                              }}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between py-2">
+                          <span className="text-xs font-semibold text-gray-900 dark:text-white">Total TM Required</span>
+                          <span className="text-base font-bold text-blue-600 dark:text-blue-400 min-w-[2rem] text-right">
+                            {totalTMRequired > 0 ? totalTMRequired : "-"}
+                          </span>
                         </div>
                       </div>
-
-                      <div className="flex items-center justify-between py-2">
-                        <span className="text-xs font-semibold text-gray-900 dark:text-white">Total TM Required</span>
-                        <span className="text-base font-bold text-blue-600 dark:text-blue-400 min-w-[2rem] text-right">
-                          {totalTMRequired > 0 ? totalTMRequired : "-"}
-                        </span>
-                      </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* TM Trip Distribution */}
@@ -1916,7 +1947,16 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-3">
                       TM Trip Distribution
                     </h3>
-                    {(() => {
+                    {!areTransitMixerFieldsFilled() ? (
+                      <div className="flex items-center justify-center h-32">
+                        <Tooltip content="Fill all transit mixer fields (Buffer, Loading, Onward, Unloading, Return times) to see trip distribution">
+                          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
+                            <Info className="w-4 h-4" />
+                            <span>Fill all transit mixer fields to calculate</span>
+                          </div>
+                        </Tooltip>
+                      </div>
+                    ) : (() => {
                       if (totalTMRequired <= 0 || tripsPerTMExact <= 0) {
                         return (
                           <div className="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400 text-sm">
@@ -1942,8 +1982,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             trips: floorTripsPerTM,
                             totalTrips: numFloorTms * floorTripsPerTM,
                           });
-                        rows.sort((a, b) => b.trips - a.trips);
                       }
+                      // Sort by trips (column B) in descending order
+                      rows.sort((a, b) => b.trips - a.trips);
+
                       const totalTMs = rows.reduce((s, r) => s + r.tmCount, 0);
                       const totalTrips = rows.reduce((s, r) => s + r.totalTrips, 0);
 
@@ -2047,7 +2089,17 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               <div className="grid grid-cols-2 gap-6">
                 {/* Left Column - Pump Selection */}
                 <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select Pump</h3>
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select Pump</h3>
+                    {/* Pump Type Filter Indicator */}
+                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+                      pumpType === 'line' 
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' 
+                        : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                    }`}>
+                      {pumpType === 'line' ? 'Line Pump' : 'Boom Pump'}
+                    </span>
+                  </div>
                   <RadioGroup
                     value={selectedPump}
                     onValueChange={(val) => {
@@ -2149,9 +2201,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                               className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
                                             />
                                             <div className="flex flex-row w-full justify-between">
-                                              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                {pump.identifier}
-                                              </p>
+                                              <div className="flex items-center gap-2">
+                                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                  {pump.identifier}
+                                                </p>
+                                                {/* Pump Type Chip */}
+                                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                                  pumpType === 'line' 
+                                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' 
+                                                    : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                                                }`}>
+                                                  {pumpType === 'line' ? 'Line' : 'Boom'}
+                                                </span>
+                                              </div>
                                               <div className="flex flex-row items-end gap-2">
                                                 {!pump.availability && (
                                                   <>
@@ -2202,6 +2264,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             <div className="flex flex-col gap-2">
                               <div className="flex items-center gap-2">
                                 <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
+                                {/* Pump Type Chip */}
+                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                  pumpType === 'line' 
+                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' 
+                                    : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                                }`}>
+                                  {pumpType === 'line' ? 'Line' : 'Boom'}
+                                </span>
                                 <span className="text-xs px-2 py-1 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full">
                                   {plantName}
                                 </span>
