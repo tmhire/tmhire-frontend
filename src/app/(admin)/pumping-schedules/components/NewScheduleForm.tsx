@@ -630,7 +630,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
     setIsGenerating(true);
     try {
-      const partially_available: UnavailableTimes = {};
+      const partially_available_tm: UnavailableTimes = {};
       if (!!scheduleStartDate && !!scheduleEndDate)
         calculatedTMs?.available_tms?.forEach((tm) => {
           if (!tm?.unavailable_times) return;
@@ -639,7 +639,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             const entryEnd = new Date(tm?.unavailable_times[schedule].end);
             if (scheduleStartDate.getTime() < entryEnd.getTime() && entryEnd.getTime() <= scheduleEndDate.getTime()) {
               if ((entryEnd.getTime() - scheduleStartDate.getTime()) / 3600000 <= 1) {
-                partially_available[tm.id] = {
+                partially_available_tm[tm.id] = {
                   start: tm?.unavailable_times[schedule].start,
                   end: tm?.unavailable_times[schedule].end,
                   schedule_no: tm?.unavailable_times[schedule].schedule_no,
@@ -654,7 +654,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           selected_tms: tmSequence,
           pump: selectedPump,
           type: "pumping",
-          partially_available: partially_available,
+          partially_available_tm: partially_available_tm,
         }),
       });
 
