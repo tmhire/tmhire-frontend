@@ -623,6 +623,33 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     }
   };
 
+  const generatePartiallyAvailableTime = (
+    tms: CalculateTMResponse,
+    windowStart: Date | null,
+    scheduleEndDate: Date | null
+  ): UnavailableTimes => {
+    const partially_available: UnavailableTimes = {};
+    if (!!windowStart && !!scheduleEndDate) {
+      tms?.available_tms?.forEach((tm) => {
+        if (!tm?.unavailable_times) return;
+        Object.keys(tm?.unavailable_times).forEach((schedule) => {
+          if (schedule_id === schedule) return;
+          const entryEnd = new Date(tm?.unavailable_times[schedule].end);
+          if (windowStart.getTime() < entryEnd.getTime() && entryEnd.getTime() <= scheduleEndDate.getTime()) {
+            if ((entryEnd.getTime() - windowStart.getTime()) / 3600000 <= 1) {
+              partially_available[tm.id] = {
+                start: tm?.unavailable_times[schedule].start,
+                end: tm?.unavailable_times[schedule].end,
+                schedule_no: tm?.unavailable_times[schedule].schedule_no,
+              };
+            }
+          }
+        });
+      });
+    }
+    return partially_available;
+  };
+
   const generateSchedule = async () => {
     if (!calculatedTMs?.schedule_id || tmSequence.length === 0) {
       return false;
@@ -630,24 +657,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
     setIsGenerating(true);
     try {
-      const partially_available_tm: UnavailableTimes = {};
-      if (!!scheduleStartDate && !!scheduleEndDate)
-        calculatedTMs?.available_tms?.forEach((tm) => {
-          if (!tm?.unavailable_times) return;
-          Object.keys(tm?.unavailable_times).forEach((schedule) => {
-            if (schedule_id === schedule) return;
-            const entryEnd = new Date(tm?.unavailable_times[schedule].end);
-            if (scheduleStartDate.getTime() < entryEnd.getTime() && entryEnd.getTime() <= scheduleEndDate.getTime()) {
-              if ((entryEnd.getTime() - scheduleStartDate.getTime()) / 3600000 <= 1) {
-                partially_available_tm[tm.id] = {
-                  start: tm?.unavailable_times[schedule].start,
-                  end: tm?.unavailable_times[schedule].end,
-                  schedule_no: tm?.unavailable_times[schedule].schedule_no,
-                };
-              }
-            }
-          });
-        });
+      const partially_available_tm: UnavailableTimes = generatePartiallyAvailableTime(
+        calculatedTMs,
+        scheduleStartDate,
+        scheduleEndDate
+      );
       const response = await fetchWithAuth(`/schedules/${calculatedTMs.schedule_id}/generate-schedule`, {
         method: "POST",
         body: JSON.stringify({
