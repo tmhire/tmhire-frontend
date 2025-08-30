@@ -635,7 +635,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         calculatedTMs?.available_tms?.forEach((tm) => {
           if (!tm?.unavailable_times) return;
           Object.keys(tm?.unavailable_times).forEach((schedule) => {
-            const entryStart = new Date(tm?.unavailable_times[schedule].start);
+            if (schedule_id === schedule) return;
             const entryEnd = new Date(tm?.unavailable_times[schedule].end);
             if (scheduleStartDate.getTime() < entryEnd.getTime() && entryEnd.getTime() <= scheduleEndDate.getTime()) {
               if ((entryEnd.getTime() - scheduleStartDate.getTime()) / 3600000 <= 1) {
