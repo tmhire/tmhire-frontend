@@ -530,16 +530,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-
-    // Special handling for quantity field to enforce 1-9999 range and no decimals
-    if (name === "quantity") {
-      const numValue = parseFloat(value);
-      if (isNaN(numValue) || numValue < 1 || numValue > 9999 || !Number.isInteger(numValue)) {
-        // If invalid, don't update the field
-        return;
-      }
-    }
-
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -727,6 +717,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const setPumpingSpeedAndUnloadingTime = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleInputChange(e);
     const { name, value } = e.target;
+    if (value === "") return setFormData((prev) => ({ ...prev, unloadingTime: "", speed: "" }));
     if (!avgTMCap || !value) return;
     if (name === "speed") {
       const speed = parseFloat(value);
@@ -1324,8 +1315,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="quantity"
-                    value={parseFloat(formData.quantity)}
-                    onChange={handleInputChange}
+                    value={formData.quantity || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numValue = parseFloat(value);
+                      if (value === "" || (numValue >= 1 && numValue <= 9999 && Number.isInteger(numValue))) {
+                        handleInputChange(e);
+                      }
+                    }}
                     placeholder="Enter quantity (1-9999)"
                     min="1"
                     max="9999"
@@ -1956,95 +1953,97 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           </div>
                         </Tooltip>
                       </div>
-                    ) : (() => {
-                      if (totalTMRequired <= 0 || tripsPerTMExact <= 0) {
+                    ) : (
+                      (() => {
+                        if (totalTMRequired <= 0 || tripsPerTMExact <= 0) {
+                          return (
+                            <div className="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400 text-sm">
+                              Enter inputs to see estimated distribution.
+                            </div>
+                          );
+                        }
+                        const rows = [];
+                        if (floorTripsPerTM === ceilTripsPerTM) {
+                          const tmCount = totalTMRequired;
+                          const trips = floorTripsPerTM;
+                          rows.push({ tmCount, trips, totalTrips: tmCount * trips });
+                        } else {
+                          if (numCeilTms > 0)
+                            rows.push({
+                              tmCount: numCeilTms,
+                              trips: ceilTripsPerTM,
+                              totalTrips: numCeilTms * ceilTripsPerTM,
+                            });
+                          if (numFloorTms > 0)
+                            rows.push({
+                              tmCount: numFloorTms,
+                              trips: floorTripsPerTM,
+                              totalTrips: numFloorTms * floorTripsPerTM,
+                            });
+                        }
+                        // Sort by trips (column B) in descending order
+                        rows.sort((a, b) => b.trips - a.trips);
+
+                        const totalTMs = rows.reduce((s, r) => s + r.tmCount, 0);
+                        const totalTrips = rows.reduce((s, r) => s + r.totalTrips, 0);
+
                         return (
-                          <div className="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400 text-sm">
-                            Enter inputs to see estimated distribution.
-                          </div>
-                        );
-                      }
-                      const rows = [];
-                      if (floorTripsPerTM === ceilTripsPerTM) {
-                        const tmCount = totalTMRequired;
-                        const trips = floorTripsPerTM;
-                        rows.push({ tmCount, trips, totalTrips: tmCount * trips });
-                      } else {
-                        if (numCeilTms > 0)
-                          rows.push({
-                            tmCount: numCeilTms,
-                            trips: ceilTripsPerTM,
-                            totalTrips: numCeilTms * ceilTripsPerTM,
-                          });
-                        if (numFloorTms > 0)
-                          rows.push({
-                            tmCount: numFloorTms,
-                            trips: floorTripsPerTM,
-                            totalTrips: numFloorTms * floorTripsPerTM,
-                          });
-                      }
-                      // Sort by trips (column B) in descending order
-                      rows.sort((a, b) => b.trips - a.trips);
-
-                      const totalTMs = rows.reduce((s, r) => s + r.tmCount, 0);
-                      const totalTrips = rows.reduce((s, r) => s + r.totalTrips, 0);
-
-                      return (
-                        <div>
-                          <table className="w-full table-fixed border-collapse border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
-                            <thead>
-                              <tr className="bg-gray-50 dark:bg-gray-800/60">
-                                <th className="w-1/6 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
-                                  Sl.
-                                </th>
-                                <th className="w-1/4 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
-                                  TMs (A)
-                                </th>
-                                <th className="w-1/4 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
-                                  Trips/TM (B)
-                                </th>
-                                <th className="w-1/3 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
-                                  Total (A × B)
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {rows.map((row, idx) => (
-                                <tr
-                                  key={idx}
-                                  className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors"
-                                >
-                                  <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50">
-                                    {idx + 1}
+                          <div>
+                            <table className="w-full table-fixed border-collapse border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
+                              <thead>
+                                <tr className="bg-gray-50 dark:bg-gray-800/60">
+                                  <th className="w-1/6 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                    Sl.
+                                  </th>
+                                  <th className="w-1/4 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                    TMs (A)
+                                  </th>
+                                  <th className="w-1/4 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                    Trips/TM (B)
+                                  </th>
+                                  <th className="w-1/3 px-2 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-200 text-left border-b border-gray-200 dark:border-gray-700">
+                                    Total (A × B)
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {rows.map((row, idx) => (
+                                  <tr
+                                    key={idx}
+                                    className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors"
+                                  >
+                                    <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50">
+                                      {idx + 1}
+                                    </td>
+                                    <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-medium">
+                                      {row.tmCount}
+                                    </td>
+                                    <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-medium">
+                                      {row.trips}
+                                    </td>
+                                    <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-semibold">
+                                      {row.totalTrips}
+                                    </td>
+                                  </tr>
+                                ))}
+                                <tr className="bg-gray-50 dark:bg-gray-800/40 border-t border-gray-300 dark:border-gray-600">
+                                  <td className="px-2 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">
+                                    Total
                                   </td>
-                                  <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-medium">
-                                    {row.tmCount}
+                                  <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+                                    {totalTMs}
                                   </td>
-                                  <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-medium">
-                                    {row.trips}
-                                  </td>
-                                  <td className="px-2 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700/50 font-semibold">
-                                    {row.totalTrips}
+                                  <td className="px-2 py-2 text-xs text-gray-400 dark:text-gray-500">—</td>
+                                  <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+                                    {totalTrips}
                                   </td>
                                 </tr>
-                              ))}
-                              <tr className="bg-gray-50 dark:bg-gray-800/40 border-t border-gray-300 dark:border-gray-600">
-                                <td className="px-2 py-2 text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">
-                                  Total
-                                </td>
-                                <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">
-                                  {totalTMs}
-                                </td>
-                                <td className="px-2 py-2 text-xs text-gray-400 dark:text-gray-500">—</td>
-                                <td className="px-2 py-2 text-xs font-bold text-gray-800 dark:text-gray-200">
-                                  {totalTrips}
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      );
-                    })()}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })()
+                    )}
                   </div>
                 </div>
               </div>
@@ -2092,12 +2091,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <div className="flex items-center gap-3">
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select Pump</h3>
                     {/* Pump Type Filter Indicator */}
-                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-                      pumpType === 'line' 
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' 
-                        : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
-                    }`}>
-                      {pumpType === 'line' ? 'Line Pump' : 'Boom Pump'}
+                    <span
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${
+                        pumpType === "line"
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                          : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                      }`}
+                    >
+                      {pumpType === "line" ? "Line Pump" : "Boom Pump"}
                     </span>
                   </div>
                   <RadioGroup
@@ -2206,12 +2207,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                                   {pump.identifier}
                                                 </p>
                                                 {/* Pump Type Chip */}
-                                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                                  pumpType === 'line' 
-                                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' 
-                                                    : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
-                                                }`}>
-                                                  {pumpType === 'line' ? 'Line' : 'Boom'}
+                                                <span
+                                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                                    pumpType === "line"
+                                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                                  }`}
+                                                >
+                                                  {pumpType === "line" ? "Line" : "Boom"}
                                                 </span>
                                               </div>
                                               <div className="flex flex-row items-end gap-2">
@@ -2265,12 +2268,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               <div className="flex items-center gap-2">
                                 <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
                                 {/* Pump Type Chip */}
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                  pumpType === 'line' 
-                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' 
-                                    : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
-                                }`}>
-                                  {pumpType === 'line' ? 'Line' : 'Boom'}
+                                <span
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    pumpType === "line"
+                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                  }`}
+                                >
+                                  {pumpType === "line" ? "Line" : "Boom"}
                                 </span>
                                 <span className="text-xs px-2 py-1 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full">
                                   {plantName}
