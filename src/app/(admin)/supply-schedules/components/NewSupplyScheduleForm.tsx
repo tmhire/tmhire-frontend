@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import Button from "@/components/ui/button/Button";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import Input from "@/components/form/input/InputField";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
-import { ArrowLeft, ArrowRight, Clock, CheckCircle2, ChevronDown, ChevronRight, Calendar, FileText } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, ArrowRight, Clock, CheckCircle2, ChevronDown, ChevronRight, Calendar, FileText, Ban, GripVertical, CircleQuestionMark, AlertTriangle, Info, CheckCircle, ArrowDown } from "lucide-react";
+import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useQuery } from "@tanstack/react-query";
 // removed unused table and badge imports
 import { useRouter } from "next/navigation";
 import TimeInput from "@/components/form/input/TimeInput";
 import { useProfile } from "@/hooks/useProfile";
+import Tooltip from "@/components/ui/tooltip";
 
 interface Client {
   contact_phone: number;
@@ -35,6 +36,16 @@ interface Project {
   coordinates: string;
 }
 
+interface UnavailableTimeEntry {
+  start: string; // ISO date string
+  end: string; // ISO date string
+  schedule_no: string;
+}
+
+interface UnavailableTimes {
+  [scheduleId: string]: UnavailableTimeEntry;
+}
+
 interface AvailableTM {
   id: string;
   identifier: string;
@@ -42,6 +53,7 @@ interface AvailableTM {
   availability: boolean;
   plant_id: string;
   plant_name: string;
+  unavailable_times: UnavailableTimes;
 }
 
 interface CalculateTMResponse {
@@ -55,6 +67,34 @@ interface CalculateTMResponse {
 }
 
 // removed unused GeneratedSchedule interface
+
+// Helper function to format date and time for tooltips
+const formatDateTimeForTooltip = (dateTimeString: string): string => {
+  const date = new Date(dateTimeString);
+  const dateStr = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const timeStr = date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${dateStr} ${timeStr}`;
+};
+
+const createTooltip = (unavailable_times: UnavailableTimes) => {
+  let tooltip = "";
+  Object.keys(unavailable_times).map((schedule) => {
+    tooltip =
+      tooltip +
+      `Schedule No. : ${unavailable_times[schedule]["schedule_no"]}\nStarts from: ${formatDateTimeForTooltip(
+        unavailable_times[schedule]["start"]
+      )} to: ${formatDateTimeForTooltip(unavailable_times[schedule]["end"])}\n\n`;
+  });
+  return tooltip;
+};
 
 const steps = [
   { id: 1, name: "Schedule Details" },
@@ -454,6 +494,88 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   // removed unused handleSubmit
 
   const progressPercentage = ((step - 1) / (steps.length - 1)) * 100;
+
+  // Build Date objects for schedule window and TM classification helpers
+  const scheduleStartDate = useMemo(() => {
+    if (!formData.scheduleDate || !formData.startTime) return null;
+    return new Date(`${formData.scheduleDate}T${formData.startTime}`);
+  }, [formData.scheduleDate, formData.startTime]);
+
+  const scheduleEndDate = useMemo(() => {
+    if (!scheduleStartDate) return null;
+    // For supply schedules, we'll use a reasonable end time based on cycle time
+    const cycleTimeMin = [
+      formData.bufferTime,
+      formData.loadTime,
+      formData.onwardTime,
+      formData.unloadingTime,
+      formData.returnTime,
+    ]
+      .map((v) => parseFloat(v) || 0)
+      .reduce((a, b) => a + b, 0);
+    
+    if (cycleTimeMin <= 0) return null;
+    return new Date(scheduleStartDate.getTime() + cycleTimeMin * 60 * 1000);
+  }, [scheduleStartDate, formData.bufferTime, formData.loadTime, formData.onwardTime, formData.unloadingTime, formData.returnTime]);
+
+  type TMAvailabilityClass = "available" | "partially_unavailable" | "unavailable";
+  const classifyTMAvailability = useCallback(
+    (tm: AvailableTM, windowStart: Date | null, windowEnd: Date | null): TMAvailabilityClass => {
+      if (tm.availability) return "available";
+      if (!windowStart || !windowEnd) return tm.availability ? "available" : "unavailable";
+
+      const unavailable_times: UnavailableTimes = tm?.unavailable_times ? tm.unavailable_times : {};
+      if (Object.keys(unavailable_times).length === 0) return "available";
+
+      let isNearWithinHour = false;
+
+      for (const [schedule, entry] of Object.entries(unavailable_times)) {
+        if (schedule_id === schedule) continue;
+        const entryStart = new Date(entry.start);
+        const entryEnd = new Date(entry.end);
+        if (windowStart.getTime() < entryEnd.getTime() && entryEnd.getTime() <= windowEnd.getTime()) {
+          if ((entryEnd.getTime() - windowStart.getTime()) / 3600000 > 1) return "unavailable";
+          isNearWithinHour = true;
+        } else if (windowStart.getTime() < entryStart.getTime() && entryStart.getTime() <= windowEnd.getTime()) {
+          return "unavailable";
+        }
+      }
+
+      if (isNearWithinHour) return "partially_unavailable";
+      return "available";
+    },
+    [schedule_id]
+  );
+
+  const createUnavailableInfo = (unavailableTimes: UnavailableTimes): ReactNode => {
+    const entries: UnavailableTimeEntry[] = unavailableTimes ? Object.values(unavailableTimes) : [];
+    if (!entries || entries.length === 0) {
+      return (
+        <div className="flex items-center text-xs text-red-600 dark:text-red-400">
+          <Ban className="w-3.5 h-3.5 mr-1" />
+          <span className="font-medium">Full day unavailable</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        {entries.map((time, index) => (
+          <div key={index} className="flex items-center text-xs text-red-600 dark:text-red-400 rounded-md px-2 py-1">
+            <Clock className="w-3.5 h-3.5 mr-2 shrink-0" />
+            <div className="flex flex-col">
+              <span className="font-medium">
+                {formatDateTimeForTooltip(time.start)} – {formatDateTimeForTooltip(time.end)}
+              </span>
+              {time.schedule_no && (
+                <span className="text-[11px] text-red-500 dark:text-red-300">Schedule #{time.schedule_no}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const isStep1FormValid = () => {
     return (
@@ -934,7 +1056,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                         <div className="flex items-center min-w-0 flex-1">
                           <span
                             className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
-                            style={{ backgroundColor: "#3b82f6" }}
+                            style={{ backgroundColor: "#8b5cf6" }}
                           ></span>
                           <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
                             Loading Time (min)
@@ -1003,7 +1125,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                         <div className="flex items-center min-w-0 flex-1">
                           <span
                             className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
-                            style={{ backgroundColor: "#8b5cf6" }}
+                            style={{ backgroundColor: "#ef4444" }}
                           ></span>
                           <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
                             Return Time (min)
@@ -1078,7 +1200,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                 label: "Loading Time",
                                 shortLabel: "Loading",
                                 value: parseFloat(formData.loadTime) || 0,
-                                color: "#ef4444",
+                                color: "#8b5cf6",
                               },
                               {
                                 label: "Onward Journey",
@@ -1096,7 +1218,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                 label: "Return Journey",
                                 shortLabel: "Return",
                                 value: parseFloat(formData.returnTime) || 0,
-                                color: "#8b5cf6",
+                                color: "#ef4444",
                               },
                             ];
                             const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
@@ -1469,14 +1591,108 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Step 2 - TM Selection */}
-            <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select TM</h3>
+            {calculatedTMs && (
+              <div className="mb-6 p-6 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                  TM Selection & Sequencing
+                </h4>
+
+                <div className="grid grid-cols-2 gap-8">
+                  {/* Left Half - Selection Instructions */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                        1
+                      </span>
+                      <h5 className="text-lg font-medium text-gray-900 dark:text-white">
+                        Select TMs from the list below
+                      </h5>
+                    </div>
+
+                    {/* Calculation Display */}
+                    <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center justify-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Required:</span>
+                          <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded-lg font-semibold">
+                            {fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount} TMs
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">=</span>
+                          <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 rounded-lg font-bold">
+                            {fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount} Total TMs
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Selection Guidelines */}
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3">
+                        <ArrowDown className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          Select from the dropdown list below
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Clock className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          Check for partially available TMs - choose them wisely
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          Prioritize fully available TMs first
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Half - Sequencing Instructions */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                        2
+                      </span>
+                      <h5 className="text-lg font-medium text-gray-900 dark:text-white">Arrange Sequence of TMs</h5>
+                    </div>
+
+                    {/* Sequencing Guidelines */}
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3">
+                        <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          Drag and arrange TMs in the right panel
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          Check engaged timelines for unavailable/partially available TMs
+                        </span>
+                      </div>
+                      <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
+                        <div className="flex items-start gap-2">
+                          <span className="text-xs font-semibold text-yellow-700 dark:text-yellow-400">TIP:</span>
+                          <span className="text-xs text-yellow-700 dark:text-yellow-400">
+                            Use already in-use TMs later in the order
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {calculatedTMs && calculatedTMs.available_tms && (
               <>
-                {calculatedTMs.available_tms.length === 0 ? (
+                {calculatedTMs.available_tms.length < (fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount) ? (
                   <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center justify-between">
-                    <span>No available TMs found. Please add TMs to proceed.</span>
+                    <span>Not enough available TMs to fulfill the requirement. Please add more TMs.</span>
                     <a
                       href="/transit-mixers"
                       className="ml-4 px-3 py-1 bg-brand-500 text-white rounded hover:bg-brand-600 transition-colors text-sm font-medium"
@@ -1493,6 +1709,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
             <div className="grid grid-cols-2 gap-6">
               {/* Left Column - TM Selection */}
               <div className="space-y-6">
+                <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
+                  Select {fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount} TMs
+                </h3>
                 <div className="space-y-4">
                   {calculatedTMs && calculatedTMs.available_tms && calculatedTMs.available_tms.length > 0 ? (
                     (() => {
@@ -1508,18 +1727,26 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                         if (!grouped[group]) grouped[group] = [];
                         grouped[group].push(tm);
                       });
-                      // Sort group names: all except 'Unassigned' alphabetically, then 'Unassigned' last
+                      // Sort groups: mother plant first, then others alphabetically, then unassigned last
+                      const motherPlantName = (() => {
+                        const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
+                        return motherId ? plantIdToName[motherId] || "" : "";
+                      })();
+
                       const groupOrder = Object.keys(grouped)
                         .filter((g) => g !== "Unassigned")
-                        .sort((a, b) => a.localeCompare(b))
+                        .sort((a, b) => {
+                          // Mother plant first
+                          if (a === motherPlantName) return -1;
+                          if (b === motherPlantName) return 1;
+                          // Then alphabetically
+                          return a.localeCompare(b);
+                        })
                         .concat(Object.keys(grouped).includes("Unassigned") ? ["Unassigned"] : []);
+
                       return groupOrder.map((plant) => {
                         const tms = grouped[plant];
                         const isOpen = openPlantGroups[plant] ?? true;
-                        const motherPlantName = (() => {
-                          const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
-                          return motherId ? plantIdToName[motherId] || "" : "";
-                        })();
                         return (
                           <div key={plant} className="mb-4">
                             <button
@@ -1555,49 +1782,134 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                   className="overflow-hidden"
                                 >
                                   <div className="bg-white dark:bg-gray-900/30 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-lg p-2 pl-6">
-                                    {tms.map((tm, idx) => (
-                                      <label
-                                        key={tm.id}
-                                        className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
-                                          !tm.availability
-                                            ? "opacity-50 cursor-not-allowed"
-                                            : "cursor-pointer hover:bg-gray-100"
-                                        } `}
-                                      >
-                                        <div className="flex flex-row items-center space-x-4 w-full">
-                                          <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
-                                          <input
-                                            type="checkbox"
-                                            checked={tmSequence.includes(tm.id)}
-                                            disabled={!tm.availability}
-                                            onChange={(e) => {
-                                              if (e.target.checked) {
-                                                setTMSequence((prev) => [...prev, tm.id]);
-                                              } else {
-                                                setTMSequence((prev) => prev.filter((id) => id !== tm.id));
-                                              }
-                                              setHasChanged(true);
-                                            }}
-                                            className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
-                                          />
-                                          <div className="flex flex-row w-full justify-between">
-                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                              {tm.identifier}
-                                            </p>
-                                            <div className="flex flex-row items-end gap-2">
-                                              {!tm.availability && (
-                                                <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
-                                                  Unavailable -
-                                                </p>
-                                              )}
-                                              <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
-                                                {tm.capacity}m³
+                                    {(() => {
+                                      const getRank = (status: string) =>
+                                        status === "available" ? 0 : status === "partially_unavailable" ? 1 : 2;
+                                      const sortedTms = [...tms].sort((a, b) => {
+                                        const aStatus = classifyTMAvailability(
+                                          a as unknown as AvailableTM,
+                                          scheduleStartDate,
+                                          scheduleEndDate
+                                        );
+                                        const bStatus = classifyTMAvailability(
+                                          b as unknown as AvailableTM,
+                                          scheduleStartDate,
+                                          scheduleEndDate
+                                        );
+                                        return getRank(aStatus) - getRank(bStatus);
+                                      });
+                                      return sortedTms.map((tm, idx) => (
+                                        <label
+                                          key={tm.id}
+                                          className={`flex gap-3 flex-col items-end justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${(() => {
+                                            const status = classifyTMAvailability(
+                                              tm as unknown as AvailableTM,
+                                              scheduleStartDate,
+                                              scheduleEndDate
+                                            );
+                                            if (status === "unavailable") return "opacity-50 cursor-not-allowed";
+                                            if (status === "partially_unavailable")
+                                              return "cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20";
+                                            return "cursor-pointer hover:bg-gray-100";
+                                          })()} `}
+                                        >
+                                          <div className="flex flex-row items-center space-x-4 w-full">
+                                            <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
+                                            <input
+                                              type="checkbox"
+                                              checked={tmSequence.includes(tm.id)}
+                                              disabled={(() => {
+                                                return (
+                                                  classifyTMAvailability(
+                                                    tm as unknown as AvailableTM,
+                                                    scheduleStartDate,
+                                                    scheduleEndDate
+                                                  ) === "unavailable"
+                                                );
+                                              })()}
+                                              onChange={(e) => {
+                                                setTMSequence((prev) => {
+                                                  const updated = e.target.checked
+                                                    ? [...prev, tm.id]
+                                                    : prev.filter((id) => id !== tm.id);
+                                                  return updated;
+                                                });
+                                                setHasChanged(true);
+                                              }}
+                                              className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
+                                            />
+                                            <div className="flex flex-row w-full justify-between">
+                                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                {tm.identifier}
                                               </p>
+                                              <div className="flex flex-row items-end gap-2">
+                                                {(() => {
+                                                  const status = classifyTMAvailability(
+                                                    tm as unknown as AvailableTM,
+                                                    scheduleStartDate,
+                                                    scheduleEndDate
+                                                  );
+                                                  if (status === "unavailable") {
+                                                    return (
+                                                      <>
+                                                        <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                                          Unavailable -
+                                                        </p>
+                                                        <Tooltip content={createTooltip(tm.unavailable_times)}>
+                                                          <CircleQuestionMark size={15} />
+                                                        </Tooltip>
+                                                      </>
+                                                    );
+                                                  }
+                                                  if (status === "partially_unavailable") {
+                                                    return (
+                                                      <>
+                                                        <p className="text-sm text-yellow-600 dark:text-yellow-400 text-right">
+                                                          Partially Available -
+                                                        </p>
+                                                        <Tooltip content={createTooltip(tm.unavailable_times)}>
+                                                          <CircleQuestionMark size={15} />
+                                                        </Tooltip>
+                                                      </>
+                                                    );
+                                                  }
+                                                  return null;
+                                                })()}
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                                  {tm.capacity}m³
+                                                </p>
+                                              </div>
                                             </div>
                                           </div>
-                                        </div>
-                                      </label>
-                                    ))}
+                                          {(() => {
+                                            const status = classifyTMAvailability(
+                                              tm as unknown as AvailableTM,
+                                              scheduleStartDate,
+                                              scheduleEndDate
+                                            );
+                                            if (status === "unavailable") {
+                                              return (
+                                                <div className="item-right p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+                                                  <div className="space-y-1">
+                                                    {createUnavailableInfo(tm.unavailable_times)}
+                                                  </div>
+                                                </div>
+                                              );
+                                            }
+                                            if (status === "partially_unavailable") {
+                                              return (
+                                                <div className="item-right p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
+                                                  <div className="space-y-1">
+                                                    {createUnavailableInfo(tm.unavailable_times)}
+                                                  </div>
+                                                </div>
+                                              );
+                                            }
+                                            return null;
+                                          })()}
+                                        </label>
+                                      ));
+                                    })()}
                                   </div>
                                 </motion.div>
                               )}
@@ -1614,9 +1926,11 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 </div>
               </div>
 
-              {/* Right Column - Selected TM */}
+              {/* Right Column - TM Sequence */}
               <div className="space-y-6">
-                <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Selected TMs</h3>
+                <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
+                  {tmSequence.length}/{fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount} selected - Arrange
+                </h3>
                 <div className="space-y-2">
                   {tmSequence.length > 0 && calculatedTMs ? (
                     (() => {
@@ -1625,44 +1939,78 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                         acc[plant._id] = plant.name;
                         return acc;
                       }, {} as Record<string, string>);
-
+                      // Build a map of plant to ordered selected TMs
+                      const tmIdToPlant = Object.fromEntries(
+                        calculatedTMs.available_tms.map((tm) => [
+                          tm.id,
+                          tm.plant_id ? plantIdToName[tm.plant_id] || "Unassigned" : "Unassigned",
+                        ])
+                      );
+                      const plantToTms: Record<string, string[]> = {};
+                      tmSequence.forEach((tmId) => {
+                        const plant = tmIdToPlant[tmId] || "Unassigned";
+                        if (!plantToTms[plant]) plantToTms[plant] = [];
+                        plantToTms[plant].push(tmId);
+                      });
+                      // For each TM in sequence, show its number and plant badge
                       return (
-                        <div className="space-y-2">
-                          {tmSequence.map((tmId, index) => {
+                        <Reorder.Group axis="y" values={tmSequence} onReorder={setTMSequence} className="space-y-2">
+                          {tmSequence.map((tmId, idx) => {
                             const tm = calculatedTMs.available_tms.find((t) => t.id === tmId);
-                            const plant = tm?.plant_id ? plantIdToName[tm.plant_id] || "Unassigned" : "Unassigned";
-
+                            const plant = tmIdToPlant[tmId] || "Unassigned";
                             return (
-                              <div
+                              <Reorder.Item
                                 key={tmId}
-                                className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                                value={tmId}
+                                className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 cursor-grab active:cursor-grabbing"
                               >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center space-x-4">
-                                    <span className="text-xs text-brand-600 dark:text-brand-400 font-semibold bg-brand-100 dark:bg-brand-900/30 px-2 py-1 rounded-full">
-                                      {index + 1}
+                                <div className="flex items-center space-x-4">
+                                  <span className="text-xs text-brand-600 dark:text-brand-400 font-semibold">
+                                    {idx + 1}
+                                  </span>
+                                  <span className="text-gray-700 dark:text-gray-300">{tm?.identifier}</span>
+                                </div>
+                                <div className="flex items-center flex-1 justify-end space-x-2">
+                                  {(() => {
+                                    if (!tm) return null;
+                                    const status = classifyTMAvailability(
+                                      tm as unknown as AvailableTM,
+                                      scheduleStartDate,
+                                      scheduleEndDate
+                                    );
+                                    if (status === "partially_unavailable") {
+                                      return (
+                                        <>
+                                          <span className="text-xs text-yellow-700 dark:text-yellow-400">
+                                            Partially Available
+                                          </span>
+                                          <Tooltip content={createTooltip(tm.unavailable_times)}>
+                                            <CircleQuestionMark size={15} />
+                                          </Tooltip>
+                                        </>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                  {plant && (
+                                    <span className="px-2 py-1 text-xs font-medium text-brand-600 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-400 rounded-full ml-2">
+                                      {plant}
                                     </span>
-                                    <span className="text-gray-700 dark:text-gray-300 font-medium">
-                                      {tm?.identifier}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    {plant && (
-                                      <span className="px-2 py-1 text-xs font-medium text-brand-600 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-400 rounded-full">
-                                        {plant}
-                                      </span>
-                                    )}
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">{tm?.capacity} m³</span>
+                                  )}
+                                  <div className="flex items-center">
+                                    <GripVertical className="text-black/50" size={"18px"} />
                                   </div>
                                 </div>
-                              </div>
+                              </Reorder.Item>
                             );
                           })}
-                        </div>
+                        </Reorder.Group>
                       );
                     })()
                   ) : (
-                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">No TMs selected</div>
+                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                      No TMs selected for sequencing
+                    </div>
                   )}
                 </div>
               </div>
@@ -1677,12 +2025,11 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 {/* Warning message */}
                 {tmSequence.length !== (fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount) && (
                   <div className="p-2 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg text-xs">
-                    Please select{" "}
-                    <span className="font-semibold">
-                      {fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount} TM
-                      {(fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount) > 1 ? "s" : ""}
-                    </span>{" "}
-                    to proceed.
+                    Select{" "}
+                    <span className="font-semibold">{fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount}</span>{" "}
+                    TMs
+                    {!fleetOptions.useRoundTrip && " to get optimum schedule."}
+                    {fleetOptions.useRoundTrip && "."}
                   </div>
                 )}
                 <Button

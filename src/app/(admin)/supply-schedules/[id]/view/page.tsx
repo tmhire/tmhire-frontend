@@ -91,9 +91,9 @@ export default function SupplyScheduleViewPage() {
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Scheduled Date</h4>
               <p className="text-base text-gray-800 dark:text-white/90">
                 {schedule.input_params.schedule_date
-                  ? new Date(schedule.input_params.schedule_date).toLocaleDateString([], {
-                      month: "2-digit",
+                  ? new Date(schedule.input_params.schedule_date).toLocaleDateString(["en-GB"], {
                       day: "2-digit",
+                      month: "2-digit",
                       year: "2-digit",
                     })
                   : "N/A"}
@@ -149,7 +149,7 @@ export default function SupplyScheduleViewPage() {
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Created</h4>
               <p className="text-base text-gray-800 dark:text-white/90">
-                {new Date(schedule.created_at).toLocaleDateString([], {
+                {new Date(schedule.created_at).toLocaleDateString(["en-GB"], {
                   month: "2-digit",
                   day: "2-digit",
                   year: "2-digit",
