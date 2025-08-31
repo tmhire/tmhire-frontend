@@ -440,7 +440,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       console.error("Error fetching schedule:", error);
       return false;
     }
-  }, [schedule_id, fetchWithAuth, avgTMCap, formData.scheduleDate, motherPlantName, schedulesForDayCount]);
+  }, [schedule_id, avgTMCap, formData.scheduleDate, motherPlantName, schedulesForDayCount]);
 
   const updateSchedule = async () => {
     if (!schedule_id) return false;
