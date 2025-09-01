@@ -300,7 +300,7 @@ export default function ScheduleViewPage() {
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.quantity} m³</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Buffer Time (mins) (A)</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Pre-Start Time (mins) (A)</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.buffer_time} min</p>
             </div>
             <div>

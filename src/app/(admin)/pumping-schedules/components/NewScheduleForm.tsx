@@ -1719,7 +1719,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </h3>
 
                     <div className="space-y-2.5">
-                      {/* Buffer Time */}
+                      {/* Pre-Start Time */}
                       <div className="flex items-center gap-2">
                         <div className="flex items-center min-w-0 flex-1">
                           <span
@@ -1727,7 +1727,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             style={{ backgroundColor: "#3b82f6" }}
                           ></span>
                           <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
-                            Buffer Time (min)
+                            Pre-Start Time (min)
                           </label>
                         </div>
                         <div className="w-20 flex-shrink-0">
