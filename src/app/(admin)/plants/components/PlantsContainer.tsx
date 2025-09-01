@@ -26,6 +26,7 @@ interface Plant {
   contact_name2: string | null;
   contact_number2: string | null;
   remarks: string | null;
+  status: "active" | "inactive";
   created_at: string;
 }
 
@@ -40,6 +41,7 @@ interface CreatePlantData {
   contact_name2?: string;
   contact_number2?: string;
   remarks?: string;
+  status: "active" | "inactive";
 }
 
 export default function PlantsContainer() {
@@ -53,6 +55,8 @@ export default function PlantsContainer() {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [selectedContact, setSelectedContact] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -63,6 +67,7 @@ export default function PlantsContainer() {
     address: "",
     contact_name1: "",
     contact_number1: "",
+    status: "active",
   });
   const [newPlant, setNewPlant] = useState<CreatePlantData>({
     name: "",
@@ -70,6 +75,7 @@ export default function PlantsContainer() {
     address: "",
     contact_name1: "",
     contact_number1: "",
+    status: "active",
   });
 
   // Validation state variables
@@ -180,6 +186,7 @@ export default function PlantsContainer() {
         address: "",
         contact_name1: "",
         contact_number1: "",
+        status: "active",
       });
     },
   });
@@ -246,6 +253,7 @@ export default function PlantsContainer() {
       contact_name2: plant.contact_name2 || "",
       contact_number2: plant.contact_number2 || "",
       remarks: plant.remarks || "",
+      status: plant.status,
     });
     setIsEditModalOpen(true);
   };
@@ -276,7 +284,7 @@ export default function PlantsContainer() {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
     // Handle capacity field with validation
@@ -332,7 +340,7 @@ export default function PlantsContainer() {
     }));
   };
 
-  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
     // Handle capacity field with validation
@@ -459,9 +467,12 @@ export default function PlantsContainer() {
         }
       }
 
-      return matchesSearch && matchesLocation && matchesContact && matchesDate;
+      // Status filter
+      const matchesStatus = !selectedStatus || plant.status === selectedStatus;
+
+      return matchesSearch && matchesLocation && matchesContact && matchesDate && matchesStatus;
     });
-  }, [plantsData, searchQuery, selectedLocation, selectedContact, selectedDate, dateRanges]);
+      }, [plantsData, searchQuery, selectedLocation, selectedContact, selectedDate, selectedStatus, dateRanges]);
 
   return (
     <div>
@@ -590,6 +601,49 @@ export default function PlantsContainer() {
                         {range.label}
                       </button>
                     ))}
+                  </div>
+                </Dropdown>
+              </div>
+
+              {/* Status Filter */}
+              <div className="relative text-sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsStatusFilterOpen(!isStatusFilterOpen)}
+                  className="dropdown-toggle"
+                >
+                  Status: {selectedStatus || "All"}
+                </Button>
+                <Dropdown isOpen={isStatusFilterOpen} onClose={() => setIsStatusFilterOpen(false)} className="w-48 text-xs">
+                  <div className="p-2 text-gray-800 dark:text-white/90">
+                    <button
+                      className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                      onClick={() => {
+                        setSelectedStatus("");
+                        setIsStatusFilterOpen(false);
+                      }}
+                    >
+                      All
+                    </button>
+                    <button
+                      className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                      onClick={() => {
+                        setSelectedStatus("active");
+                        setIsStatusFilterOpen(false);
+                      }}
+                    >
+                      Active
+                    </button>
+                    <button
+                      className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                      onClick={() => {
+                        setSelectedStatus("inactive");
+                        setIsStatusFilterOpen(false);
+                      }}
+                    >
+                      Inactive
+                    </button>
                   </div>
                 </Dropdown>
               </div>
@@ -763,6 +817,21 @@ export default function PlantsContainer() {
               maxLength={50}
             />
           </div>
+          <div className="flex flex-row w-full gap-2">
+            <div className="w-full">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status</label>
+                             <select
+                 name="status"
+                 value={newPlant.status || ""}
+                 onChange={handleInputChange}
+                 className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-4 pr-12 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+               >
+                 <option value="">Select Status</option>
+                 <option value="active">Active</option>
+                 <option value="inactive">Inactive</option>
+               </select>
+            </div>
+          </div>
         </div>
         <div className="flex items-center justify-end w-full gap-3 mt-8">
           <Button size="sm" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
@@ -930,6 +999,21 @@ export default function PlantsContainer() {
                 placeholder="Enter remarks (optional, max 50 characters)"
                 maxLength={50}
               />
+            </div>
+            <div className="flex flex-row w-full gap-2">
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status</label>
+                                 <select
+                   name="status"
+                   value={editedPlant.status || ""}
+                   onChange={handleEditInputChange}
+                   className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-4 pr-12 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+                 >
+                   <option value="">Select Status</option>
+                   <option value="active">Active</option>
+                   <option value="inactive">Inactive</option>
+                 </select>
+              </div>
             </div>
           </div>
         )}
