@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import { BoxCubeIcon, ChevronDownIcon, PieChartIcon, PlugInIcon, TruckIcon } from "../icons/index";
-import { Box, Calendar, Grid, SquareChartGantt, TruckElectric, Users, IdCardLanyard } from "lucide-react";
+import { Box, Calendar, Grid, SquareChartGantt, TruckElectric, Users, IdCardLanyard, FileText } from "lucide-react";
 
 type NavItem = {
   shortName?: string;
@@ -74,6 +74,12 @@ const navItems: NavItem[] = [
     name: "Calendar",
     shortName: "Calendar",
     path: "/tm-calendar",
+  },
+  {
+    icon: <FileText />,
+    name: "Reports",
+    shortName: "Reports",
+    path: "/reports",
   },
 ];
 

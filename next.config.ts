@@ -13,7 +13,8 @@ const nextConfig: NextConfig = {
     images:{
         domains:[
             'lh3.googleusercontent.com',
-            'i.ibb.co'
+            'i.ibb.co',
+            'iili.io'
         ]
     },
 };

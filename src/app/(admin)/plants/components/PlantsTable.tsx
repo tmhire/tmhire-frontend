@@ -16,6 +16,7 @@ interface Plant {
   contact_name2: string | null;
   contact_number2: string | null;
   remarks: string | null;
+  status: "active" | "inactive";
   created_at: string;
 }
 
@@ -86,6 +87,12 @@ export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps
                   isHeader
                   className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
+                  Status
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
                   Actions
                 </TableCell>
               </TableRow>
@@ -132,6 +139,13 @@ export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps
                   </TableCell>
                   <TableCell className="px-3 py-4 text-gray-500 text-theme-sm dark:text-gray-400">
                     {plant.remarks || "-"}
+                  </TableCell>
+                  <TableCell className="px-3 py-4 text-gray-500 text-theme-sm dark:text-gray-400">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      plant.status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                    }`}>
+                      {plant.status}
+                    </span>
                   </TableCell>
                   <TableCell className="px-3 py-4">
                     <div className="flex items-center gap-2">

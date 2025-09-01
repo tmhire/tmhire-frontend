@@ -38,6 +38,17 @@ export default function UserPreferenceCard() {
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}${period}`;
   };
 
+  const getEndTime = (startHour: number) => {
+    const endHour = (startHour + 24) % 24; // 24 hours later
+    return floatToTimeString(endHour);
+  };
+
+  const getWorkingHoursDisplay = (startHour: number) => {
+    const startTime = floatToTimeString(startHour);
+    const endTime = getEndTime(startHour);
+    return `${startTime} - ${endTime} (next day)`;
+  };
+
   React.useEffect(() => {
     if (session) {
       setFormData({
@@ -80,8 +91,6 @@ export default function UserPreferenceCard() {
       if (data.success) {
         closeModal();
         setPrevFormData(formData);
-        // setHasChanged(false);
-        // window.location.reload();
         await update({
           ...(session as unknown as Record<string, unknown>),
           new_user: false,
@@ -117,9 +126,12 @@ export default function UserPreferenceCard() {
             </div>
 
             <div>
-              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">Custom Start Time</p>
+              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">24-Hour Working Period</p>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {`${floatToTimeString(formData.customStartHour)}` || "N/A"}
+                {getWorkingHoursDisplay(formData.customStartHour) || "N/A"}
+              </p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Daily work cycle spans 24 hours
               </p>
             </div>
           </div>
@@ -151,26 +163,41 @@ export default function UserPreferenceCard() {
       <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] m-4">
         <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
           <div className="px-2 pr-14">
-            <h4 className="mb-2 text-2xl font-semibold text-gray-700 dark:text-gray-300">Edit Company Details</h4>
+            <h4 className="mb-2 text-2xl font-semibold text-gray-700 dark:text-gray-300">Edit Preferences</h4>
             <p className="mb-6 text-sm text-gray-700 dark:text-gray-300 lg:mb-7">
-              Update your preferences to keep your profile up-to-date.
+              Configure your time preferences. The system operates on 24-hour working cycles.
             </p>
           </div>
           <form
             className="flex flex-col"
             onSubmit={(e) => {
               e.preventDefault();
-              // handleSave();
             }}
           >
             <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
               <div className="mt-7">
-                <h5 className="mb-5 text-lg font-medium text-gray-700 dark:text-gray-300 lg:mb-6">Preferences</h5>
+                <h5 className="mb-5 text-lg font-medium text-gray-700 dark:text-gray-300 lg:mb-6">Time Configuration</h5>
+
+                {/* System Notice */}
+                <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    <div>
+                      <h6 className="text-sm font-medium text-blue-800 dark:text-blue-200">24-Hour Working System</h6>
+                      <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                        This system follows continuous 24-hour working periods. Your selected start time will run for exactly 24 hours until the same time the next day.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Preferred Time Format</Label>
                     <button
+                      type="button"
                       onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
                       className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     >
@@ -181,8 +208,8 @@ export default function UserPreferenceCard() {
                         {timeFormatOptions.map((option) => (
                           <div className="p-2 text-gray-800 dark:text-white/90" key={option.value}>
                             <button
+                              type="button"
                               className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                              name="globalFormat"
                               onClick={() => {
                                 setFormData((prev) => ({
                                   ...prev,
@@ -200,7 +227,7 @@ export default function UserPreferenceCard() {
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>Custom Start Time</Label>
+                    <Label>Working Day Start Time</Label>
                     <select
                       className="w-full px-2 py-1 border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white"
                       value={formData.customStartHour}
@@ -217,6 +244,35 @@ export default function UserPreferenceCard() {
                         </option>
                       ))}
                     </select>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Select when your 24-hour working period begins
+                    </p>
+                  </div>
+
+                  {/* Working Hours Preview */}
+                  <div className="col-span-2">
+                    <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <h6 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Your Working Hours Preview</h6>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Start Time (Today)</p>
+                          <p className="font-medium text-gray-900 dark:text-white">{floatToTimeString(formData.customStartHour)}</p>
+                        </div>
+                        <div className="text-center">
+                          <svg className="w-6 h-6 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                          </svg>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">24 hours</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">End Time (Tomorrow)</p>
+                          <p className="font-medium text-gray-900 dark:text-white">{getEndTime(formData.customStartHour)}</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 text-center">
+                        Complete working cycle: {getWorkingHoursDisplay(formData.customStartHour)}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

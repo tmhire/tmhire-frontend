@@ -1,13 +1,17 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useParams, useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useApiClient } from "@/hooks/useApiClient";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
-import { formatTimeByPreference } from "@/lib/utils";
+import Button from "@/components/ui/button/Button";
+import { Modal } from "@/components/ui/modal";
+import { Pencil, Trash2 } from "lucide-react";
+import { formatTimeByPreference, formatHoursAndMinutes } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
+import { useState } from "react";
 
 interface Schedule {
   pumping_job: string;
@@ -43,6 +47,7 @@ interface Schedule {
     onward_time: number;
     return_time: number;
     buffer_time: number;
+    load_time: number;
     pump_start: string;
     schedule_date: string;
     pump_start_time_from_plant: string;
@@ -56,6 +61,7 @@ interface Schedule {
     tm_no: string;
     tm_id: string;
     plant_load: string;
+    plant_buffer: string;
     plant_start: string;
     pump_start: string;
     unloading_time: string;
@@ -108,8 +114,45 @@ const calculatePumpSiteReachTime = (schedule: Schedule, preferredFormat?: string
 
 export default function ScheduleViewPage() {
   const params = useParams();
+  const router = useRouter();
   const { fetchWithAuth } = useApiClient();
   const { profile } = useProfile();
+  const queryClient = useQueryClient();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  // Delete schedule mutation
+  const deleteScheduleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetchWithAuth(`/schedules/${id}`, {
+        method: "DELETE",
+      });
+      if (!response) throw new Error("No response from server");
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message || "Failed to delete schedule");
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      setIsDeleteModalOpen(false);
+      router.push("/pumping-schedules");
+    },
+  });
+
+  const handleEdit = () => {
+    router.push(`/pumping-schedules/${params.id}`);
+  };
+
+  const handleDelete = () => {
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteScheduleMutation.mutateAsync(params.id as string);
+    } catch (error) {
+      console.error("Error deleting schedule:", error);
+    }
+  };
 
   const { data: schedule, isLoading } = useQuery<Schedule>({
     queryKey: ["schedule", params.id],
@@ -136,17 +179,39 @@ export default function ScheduleViewPage() {
   return (
     <div className="w-full mx-">
       <div className="mb-3">
-        <h2 className="text-xl font-semibold text-black dark:text-white flex gap-3">
-          <span>Concrete Pumping - Schedule Summary</span>
-          <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
-            {schedule.status}
-          </Badge>
-          {schedule.schedule_name && (
-            <Badge size="sm" color={"info"}>
-              {schedule.schedule_name}
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-black dark:text-white flex gap-3">
+            <span>Concrete Pumping - Schedule Summary</span>
+            <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
+              {schedule.status}
             </Badge>
-          )}
-        </h2>
+            {schedule.schedule_name && (
+              <Badge size="sm" color={"info"}>
+                {schedule.schedule_name}
+              </Badge>
+            )}
+          </h2>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleEdit}
+              className="flex items-center gap-1"
+            >
+              <Pencil size={14} />
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDelete}
+              className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-500 border-red-600 dark:border-red-400"
+            >
+              <Trash2 size={14} />
+              Delete
+            </Button>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
@@ -155,7 +220,14 @@ export default function ScheduleViewPage() {
           <div className="grid grid-cols-4 gap-x-8 gap-y-4">
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Scheduled Date</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.schedule_date}</p>
+              <p className="text-base text-gray-800 dark:text-white/90">
+                {schedule.input_params.schedule_date &&
+                  new Date(schedule.input_params.schedule_date).toLocaleDateString(["en-GB"], {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "2-digit",
+                  })}
+              </p>
             </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Pump Start Time at Site</h4>
@@ -181,12 +253,15 @@ export default function ScheduleViewPage() {
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.client_name}</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Project Name</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.project_name}</p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Site Location</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.site_address}</p>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Project Name & Site Location
+              </h4>
+              <p
+                className="text-base text-gray-800 dark:text-white/90 truncate"
+                title={`${schedule.project_name}, ${schedule.site_address}`}
+              >
+                {schedule.project_name}, {schedule.site_address}
+              </p>
             </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Placement Zone</h4>
@@ -225,26 +300,30 @@ export default function ScheduleViewPage() {
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.quantity} m³</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Load/Buffer Time (mins) (A)</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Buffer Time (mins) (A)</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.buffer_time} min</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Onward Time (mins) (B)</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Load Time (mins) (B)</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.load_time} min</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Onward Time (mins) (C)</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.onward_time} min</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Unloading Time (mins) C</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Unloading Time (mins) (D)</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.unloading_time} min</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Return Time (mins) (D)</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Return Time (mins) (E)</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.return_time} min</p>
             </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Total TM Cycle Time (hours)/Min (A+B+C+D)
+                Total TM Cycle Time (A+B+C+D+E)
               </h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.cycle_time?.toFixed(2)} hrs</p>
+              <p className="text-base text-gray-800 dark:text-white/90">{formatHoursAndMinutes(schedule.cycle_time)}</p>
             </div>
             {/* <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</h4>
@@ -255,7 +334,7 @@ export default function ScheduleViewPage() {
           </div>
         </div>
         {/* TM Trip Distribution Card */}
-        <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl p-6 flex flex-col justify-start h-full">
+        <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-md p-6 flex flex-col justify-start h-full">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-4">TM Trip Distribution</h3>
           {(() => {
             if (!schedule.output_table || schedule.output_table.length === 0) {
@@ -285,7 +364,7 @@ export default function ScheduleViewPage() {
             const totalTrips = schedule.output_table.length;
             return (
               <div className="overflow-x-auto">
-                <table className="min-w-full text-xs border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
+                <table className="min-w-full text-xs border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800/30">
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-800">
                       <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">Sl. No</th>
@@ -339,37 +418,67 @@ export default function ScheduleViewPage() {
                       isHeader
                       className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
-                      Pump No.
+                      No.
+                    </TableCell>
+                    {/* <TableCell
+                      isHeader
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                    >
+                      Type
+                    </TableCell> */}
+                    <TableCell
+                      isHeader
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                    >
+                      Start Time from Plant
                     </TableCell>
                     <TableCell
                       isHeader
                       className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
-                      Pump Type
+                      Site Reach Time
                     </TableCell>
                     <TableCell
                       isHeader
                       className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
-                      Pump Start Time from Plant
+                      Fixing Time (min)
                     </TableCell>
                     <TableCell
                       isHeader
                       className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
-                      Pump Site Reach Time
+                      Pump Start Time
                     </TableCell>
                     <TableCell
                       isHeader
                       className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
-                      Pump Fixing Time (min)
+                      Pumping Hours
                     </TableCell>
                     <TableCell
                       isHeader
                       className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
-                      Pump Removal Time (min)
+                      Pump End Time
+                    </TableCell>
+                    <TableCell
+                      isHeader
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                    >
+                      Removal Time (min)
+                    </TableCell>
+                    <TableCell
+                      isHeader
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                    >
+                      Site Leave Time
+                    </TableCell>
+                    <TableCell
+                      isHeader
+                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                    >
+                      Total Hours Engaged
                     </TableCell>
                   </TableRow>
                 </TableHeader>
@@ -377,12 +486,33 @@ export default function ScheduleViewPage() {
                   <TableRow>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
-                        {schedule.available_pumps.find((pump) => pump.id === schedule.pump)?.identifier || "N/A"}
+                        {(() => {
+                          const pump = schedule.available_pumps.find((pump) => pump.id === schedule.pump);
+                          if (!pump) return "N/A";
+                          
+                          // Color coding based on pump type
+                          const isLinePump = schedule.pump_type === 'line';
+                          const bgColor = isLinePump ? "bg-blue-500" : "bg-green-500";
+                          const textColor = 'text-white';
+                          
+                          return (
+                            <div className={`flex w-fit rounded-md border-2 border-black shadow items-center gap-2 pr-2  ${bgColor}`}>
+                              <label className={`flex flex-col justify-between bg-blue-700 rounded-l-sm p-2 text-[8px] ${textColor}`}>
+                                <span className="text-xs text-white-400">
+                                  {isLinePump ? 'LINE' : 'BOOM'}
+                                </span>
+                              </label>
+                              <label className={`p-1 px-1 font-mono text-sm font-medium items-center text-white`}>
+                                {pump.identifier}
+                              </label>
+                            </div>
+                          );
+                        })()}
                       </span>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start">
+                    {/* <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">{schedule.pump_type || "N/A"}</span>
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {calculatePumpStartTimeFromPlant(schedule, profile?.preferred_format)}
@@ -399,8 +529,68 @@ export default function ScheduleViewPage() {
                       </span>
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {schedule.input_params.pump_start
+                          ? formatTimeByPreference(schedule.input_params.pump_start, profile?.preferred_format)
+                          : "N/A"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start">
+                      <span className="text-gray-800 dark:text-white/90">
+                        {formatHoursAndMinutes(schedule.input_params.quantity / schedule.input_params.pumping_speed)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start">
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {(() => {
+                          if (!schedule.input_params.pump_start) return "N/A";
+                          const pumpStart = new Date(schedule.input_params.pump_start);
+                          const pumpingHours = schedule.input_params.quantity / schedule.input_params.pumping_speed;
+                          const pumpEnd = new Date(pumpStart.getTime() + pumpingHours * 60 * 60 * 1000);
+                          return formatTimeByPreference(pumpEnd, profile?.preferred_format);
+                        })()}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
                         {schedule.input_params.pump_removal_time || "N/A"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start">
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {(() => {
+                          if (!schedule.input_params.pump_start) return "N/A";
+                          const pumpStart = new Date(schedule.input_params.pump_start);
+                          const pumpingHours = schedule.input_params.quantity / schedule.input_params.pumping_speed;
+                          const pumpEnd = new Date(pumpStart.getTime() + pumpingHours * 60 * 60 * 1000);
+                          const pumpSiteLeave = new Date(
+                            pumpEnd.getTime() + schedule.input_params.pump_removal_time * 60 * 1000
+                          );
+                          return formatTimeByPreference(pumpSiteLeave, profile?.preferred_format);
+                        })()}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start">
+                      <span className="text-gray-800 dark:text-white/90">
+                        {(() => {
+                          if (!schedule.input_params.pump_start) return "N/A";
+                          const pumpStart = new Date(schedule.input_params.pump_start);
+                          const pumpFixingTime = schedule.input_params.pump_fixing_time || 0;
+                          const pumpOnwardTime = schedule.input_params.pump_onward_time || 0;
+                          const pumpStartFromPlant = new Date(
+                            pumpStart.getTime() - (pumpFixingTime + pumpOnwardTime) * 60 * 1000
+                          );
+
+                          const pumpingHours = schedule.input_params.quantity / schedule.input_params.pumping_speed;
+                          const pumpEnd = new Date(pumpStart.getTime() + pumpingHours * 60 * 60 * 1000);
+                          const pumpSiteLeave = new Date(
+                            pumpEnd.getTime() + schedule.input_params.pump_removal_time * 60 * 1000
+                          );
+
+                          const totalHours =
+                            (pumpSiteLeave.getTime() - pumpStartFromPlant.getTime()) / (1000 * 60 * 60);
+                          return formatHoursAndMinutes(totalHours);
+                        })()}
                       </span>
                     </TableCell>
                   </TableRow>
@@ -427,7 +617,7 @@ export default function ScheduleViewPage() {
                       TM No
                     </th>
                     <th
-                      colSpan={2}
+                      colSpan={4}
                       className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
                     >
                       Plant
@@ -436,7 +626,7 @@ export default function ScheduleViewPage() {
                       colSpan={2}
                       className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
                     >
-                      Pump
+                      Pump - Unloading
                     </th>
                     <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                       Return Time
@@ -462,8 +652,14 @@ export default function ScheduleViewPage() {
                     <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
                       Name
                     </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-l border-gray-200 dark:border-gray-700">
+                      Prepare Time
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-l border-gray-200 dark:border-gray-700">
                       Load Time
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
+                      Start Time
                     </th>
                     <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
                       Start Time
@@ -504,15 +700,15 @@ export default function ScheduleViewPage() {
 
                             return (
                               <>
-                                <div className="flex w-fit rounded-lg border-2 border-black bg-yellow-500 shadow items-center gap-2 pr-2">
-                                  <label className="flex flex-col justify-between bg-blue-700 rounded-l-md p-2 text-[8px]  text-white">
-                                <span className="text-xs text-white-400">
-                                  ({currentTripIndex}/{tmTotalTrips})
-                                </span>
+                                <div className="flex w-fit rounded-md border-2 border-black bg-yellow-500 shadow items-center gap-2 pr-2">
+                                  <label className="flex flex-col justify-between bg-blue-700 rounded-l-sm p-2 text-[8px] text-white">
+                                    <span className="text-xs text-white-400">
+                                      ({currentTripIndex}/{tmTotalTrips})
+                                    </span>
                                     {/* <img className="h-3" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" /> */}
                                     {/* IND */}
                                   </label>
-                                  <label className="p-1 px-1 font-mono text-sm font-medium items-center ">
+                                  <label className="p-1 px-1 font-mono text-sm font-medium items-center text-black">
                                     {trip.tm_no}
                                   </label>
                                 </div>
@@ -524,6 +720,13 @@ export default function ScheduleViewPage() {
                       <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">
                           {trip.plant_name ? trip.plant_name : "N / A"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-3 py-4 text-start">
+                        <span className="text-gray-800 dark:text-white/90">
+                          {trip.plant_buffer
+                            ? formatTimeByPreference(trip.plant_buffer, profile?.preferred_format)
+                            : "-"}
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-4 text-start">
@@ -644,7 +847,7 @@ export default function ScheduleViewPage() {
           });
           return (
             <div className="overflow-x-auto w-full">
-              <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900/30">
+              <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800/30">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800">
                     <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">S.No.</th>
@@ -654,8 +857,8 @@ export default function ScheduleViewPage() {
                         Trip {i + 1}
                       </th>
                     ))}
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">Start-End Time</th>
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-right">Total Hours</th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">Start-End Time</th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">Total Hours</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -682,9 +885,9 @@ export default function ScheduleViewPage() {
                             </td>
                           );
                         })}
-                        <td className="px-4 text-gray-800 dark:text-white/90 py-2 text-left">{overallRange}</td>
-                        <td className="px-4 text-gray-800 dark:text-white/90 py-2 text-right">
-                          {totalHours ? totalHours.toFixed(1) : "-"}
+                        <td className="px-4 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">{overallRange}</td>
+                        <td className="px-4 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
+                          {totalHours ? formatHoursAndMinutes(totalHours) : "-"}
                         </td>
                       </tr>
                     );
@@ -696,8 +899,10 @@ export default function ScheduleViewPage() {
                     {Array.from({ length: maxTrips }).map((_, i) => (
                       <td key={i} className="px-2 py-2"></td>
                     ))}
-                    <td className="px-2 py-2 text-center"></td>
-                    <td className="px-2 py-2 text-right">{avgTotalHours ? avgTotalHours.toFixed(1) : "-"}</td>
+                    <td className="px-2 py-2 text-center bg-gray-100 dark:bg-gray-800"></td>
+                    <td className="px-4 py-2 text-left bg-gray-100 dark:bg-gray-800">
+                      {avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-"}
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -705,6 +910,29 @@ export default function ScheduleViewPage() {
           );
         })()}
       </div>
+
+      {/* Delete Modal */}
+      <Modal className="max-w-[500px] p-5" isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
+        <div className="p-6">
+          <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Delete Schedule</h4>
+          <p className="mb-6 dark:text-white/90">Are you sure you want to delete this schedule? This action cannot be undone.</p>
+          <div className="flex justify-end gap-4">
+            <Button onClick={() => setIsDeleteModalOpen(false)} variant="outline">
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmDelete} variant="warning" disabled={deleteScheduleMutation.isPending}>
+              {deleteScheduleMutation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <Spinner size="sm" />
+                  <span>Deleting...</span>
+                </div>
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

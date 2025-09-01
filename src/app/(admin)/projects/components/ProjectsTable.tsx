@@ -184,12 +184,12 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients, plants,
                     <span className="truncate block">{getPlantName(project.mother_plant_id)}</span>
                   </TableCell>
                   <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-20">
-                    <span className="truncate block">{project.address}</span>
+                    <span className="truncate block">{truncateText(project.address,15)}</span>
                   </TableCell>
                   <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-20">
                     <div className="flex flex-col">
-                      <span className="font-medium truncate"> {project.contact_name}</span>
-                      <span className="text-xs text-gray-400 truncate">{project.contact_number}</span>
+                      <span className="font-medium truncate"> {truncateText(project.contact_name,10)}</span>
+                      <span className="text-xs text-gray-400 truncate">{truncateText(project.contact_number,10)}</span>
                     </div>
                   </TableCell>
                   <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-24">

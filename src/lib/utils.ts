@@ -20,10 +20,45 @@ export function formatTimeByPreference(date: string | number | Date, preferredFo
   });
 }
 
+export function formatHoursAndMinutes(decimalHours: number): string {
+  if (isNaN(decimalHours) || decimalHours < 0) return "0 hrs 0 mins";
+  
+  const hours = Math.floor(decimalHours);
+  const minutes = Math.round((decimalHours - hours) * 60);
+  
+  if (hours === 0) {
+    return `${minutes} mins`;
+  } else if (minutes === 0) {
+    return `${hours} hrs`;
+  } else {
+    return `${hours} hrs ${minutes} mins`;
+  }
+}
+
 export const validateMobile = (value: string) => {
     return /^\d{10}$/.test(value);
 };
 
 export const validateName = (value: string) => {
     return /^[A-Za-z0-9 ]{1,25}$/.test(value.trim());
+};
+
+export const validateProfileName = (value: string) => {
+    return /^[A-Za-z0-9 ]{1,30}$/.test(value.trim());
+};
+
+export const validateCity = (value: string) => {
+    return /^[A-Za-z0-9 ]{1,20}$/.test(value.trim());
+};
+
+export const validateCompanyName = (value: string) => {
+    return /^[A-Za-z0-9 ]{1,50}$/.test(value.trim());
+};
+
+export const validateAddress = (value: string) => {
+    return value.trim().length <= 60;
+};
+
+export const validateCoordinates = (value: string) => {
+    return value.trim().length <= 60;
 };
