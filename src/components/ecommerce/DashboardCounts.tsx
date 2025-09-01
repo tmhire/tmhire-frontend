@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { Factory, Truck, Wrench, WrenchIcon } from "lucide-react";
+import { Factory, Truck, TruckElectric } from "lucide-react";
 
 export interface DashboardCountsData {
   active_plants_count: number;
@@ -17,15 +17,15 @@ export default function DashboardCounts({ counts }: { counts: DashboardCountsDat
   const tiles = [
     {
       title: "Plants",
-      icon: <Factory className="size-5 text-blue-600 dark:text-blue-400" />,
+      icon: <Factory className="size-4 text-amber-600 dark:text-amber-400" />,
       active: counts.active_plants_count,
       inactive: counts.inactive_plants_count,
-      bgColor: "bg-blue-50 dark:bg-blue-500/10",
-      borderColor: "border-blue-100 dark:border-blue-500/20",
+      bgColor: "bg-amber-50 dark:bg-amber-500/10",
+      borderColor: "border-amber-100 dark:border-amber-500/20",
     },
     {
       title: "Transit Mixers",
-      icon: <Truck className="size-5 text-emerald-600 dark:text-emerald-400" />,
+      icon: <Truck className="size-4 text-emerald-600 dark:text-emerald-400" />,
       active: counts.active_tms_count,
       inactive: counts.inactive_tms_count,
       bgColor: "bg-emerald-50 dark:bg-emerald-500/10",
@@ -33,15 +33,15 @@ export default function DashboardCounts({ counts }: { counts: DashboardCountsDat
     },
     {
       title: "Line Pumps",
-      icon: <Wrench className="size-5 text-amber-600 dark:text-amber-400" />,
+      icon: <TruckElectric className="size-4 text-blue-600 dark:text-blue-400" />,
       active: counts.active_line_pumps_count,
       inactive: counts.inactive_line_pumps_count,
-      bgColor: "bg-amber-50 dark:bg-amber-500/10",
-      borderColor: "border-amber-100 dark:border-amber-500/20",
+      bgColor: "bg-blue-50 dark:bg-blue-500/10",
+      borderColor: "border-blue-100 dark:border-blue-500/20",
     },
     {
       title: "Boom Pumps",
-      icon: <WrenchIcon className="size-5 text-purple-600 dark:text-purple-400" />,
+      icon: <TruckElectric className="size-4 text-purple-600 dark:text-purple-400" />,
       active: counts.active_boom_pumps_count,
       inactive: counts.inactive_boom_pumps_count,
       bgColor: "bg-purple-50 dark:bg-purple-500/10",
@@ -58,13 +58,12 @@ export default function DashboardCounts({ counts }: { counts: DashboardCountsDat
         >
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
+            <h4 className="font-semibold text-md text-gray-800 dark:text-white/90 mb-4 tracking-wide">{tile.title}</h4>
             <div
-              className={`flex items-center justify-center w-11 h-11 rounded-xl border ${tile.borderColor} ${tile.bgColor} transition-transform duration-200 group-hover:scale-105`}
+              className={`flex items-center justify-center w-9 h-9 rounded-md border ${tile.borderColor} ${tile.bgColor} transition-transform duration-200 group-hover:scale-105`}
             >
               {tile.icon}
             </div>
-            {/* Title */}
-            <h4 className="font-semibold text-sm text-gray-800 dark:text-white/90 mb-4 tracking-wide">{tile.title}</h4>
           </div>
 
           {/* Stats */}

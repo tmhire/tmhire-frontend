@@ -1,11 +1,6 @@
 "use client";
 import React from "react";
-import {
-  useReactTable,
-  getCoreRowModel,
-  createColumnHelper,
-  flexRender,
-} from "@tanstack/react-table";
+import { useReactTable, getCoreRowModel, createColumnHelper, flexRender } from "@tanstack/react-table";
 
 export interface PlantRow {
   plant_name: string;
@@ -67,96 +62,68 @@ export default function PlantsSummaryTable({ plantsTable }: { plantsTable: Plant
 
   const columns = [
     columnHelper.group({
-      id: 'plant_name_group',
-      header: 'Plant Name',
+      id: "plant_name_group",
+      header: "Plant Name",
       columns: [
-        columnHelper.accessor('plant_name', {
-          id: 'plant_name',
-          header: '',
+        columnHelper.accessor("plant_name", {
+          id: "plant_name",
+          header: "",
+          cell: (info) => <div className="font-medium text-gray-800 dark:text-white/90">{info.getValue()}</div>,
+          footer: () => <div className="font-semibold text-gray-800 dark:text-white/90">Total</div>,
+        }),
+      ],
+    }),
+    columnHelper.group({
+      id: "pumping",
+      header: "Pumping",
+      columns: [
+        columnHelper.accessor("pump_volume", {
+          header: "Vol (m³)",
+          cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()}</div>,
+          footer: () => (
+            <div className="text-center font-semibold text-gray-800 dark:text-white/90">{totals.pump_volume}</div>
+          ),
+        }),
+        columnHelper.accessor("pump_jobs", {
+          header: "Jobs",
           cell: (info) => (
-            <div className="font-medium text-gray-800 dark:text-white/90">
-              {info.getValue()}
-            </div>
+            <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()?.length || 0}</div>
           ),
           footer: () => (
-            <div className="font-semibold text-gray-800 dark:text-white/90">
-              Total
-            </div>
+            <div className="text-center font-semibold text-gray-800 dark:text-white/90">{totals.pump_jobs}</div>
           ),
         }),
       ],
     }),
     columnHelper.group({
-      id: 'pumping',
-      header: 'Pumping',
+      id: "supply",
+      header: "Supply",
       columns: [
-        columnHelper.accessor('pump_volume', {
-          header: 'Vol (m³)',
-          cell: (info) => (
-            <div className="text-center text-gray-500 dark:text-gray-400">
-              {info.getValue()}
-            </div>
-          ),
+        columnHelper.accessor("supply_volume", {
+          header: "Vol (m³)",
+          cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()}</div>,
           footer: () => (
-            <div className="text-center font-semibold text-gray-800 dark:text-white/90">
-              {totals.pump_volume}
-            </div>
+            <div className="text-center font-semibold text-gray-800 dark:text-white/90">{totals.supply_volume}</div>
           ),
         }),
-        columnHelper.accessor('pump_jobs', {
-          header: 'Jobs',
+        columnHelper.accessor("supply_jobs", {
+          header: "Jobs",
           cell: (info) => (
-            <div className="text-center text-gray-500 dark:text-gray-400">
-              {info.getValue()?.length || 0}
-            </div>
+            <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()?.length || 0}</div>
           ),
           footer: () => (
-            <div className="text-center font-semibold text-gray-800 dark:text-white/90">
-              {totals.pump_jobs}
-            </div>
+            <div className="text-center font-semibold text-gray-800 dark:text-white/90">{totals.supply_jobs}</div>
           ),
         }),
       ],
     }),
     columnHelper.group({
-      id: 'supply',
-      header: 'Supply',
-      columns: [
-        columnHelper.accessor('supply_volume', {
-          header: 'Vol (m³)',
-          cell: (info) => (
-            <div className="text-center text-gray-500 dark:text-gray-400">
-              {info.getValue()}
-            </div>
-          ),
-          footer: () => (
-            <div className="text-center font-semibold text-gray-800 dark:text-white/90">
-              {totals.supply_volume}
-            </div>
-          ),
-        }),
-        columnHelper.accessor('supply_jobs', {
-          header: 'Jobs',
-          cell: (info) => (
-            <div className="text-center text-gray-500 dark:text-gray-400">
-              {info.getValue()?.length || 0}
-            </div>
-          ),
-          footer: () => (
-            <div className="text-center font-semibold text-gray-800 dark:text-white/90">
-              {totals.supply_jobs}
-            </div>
-          ),
-        }),
-      ],
-    }),
-    columnHelper.group({
-      id: 'equipment_engagement',
-      header: 'Equipment Engagement',
+      id: "equipment_engagement",
+      header: "Equipment Engagement",
       columns: [
         columnHelper.accessor((row) => ({ tm_used: row.tm_used, tm_hours: row.tm_used_total_hours }), {
-          id: 'tm_engagement',
-          header: 'TM (%)',
+          id: "tm_engagement",
+          header: "TM (%)",
           cell: (info) => {
             const { tm_used, tm_hours } = info.getValue();
             return (
@@ -171,84 +138,66 @@ export default function PlantsSummaryTable({ plantsTable }: { plantsTable: Plant
             </div>
           ),
         }),
-        columnHelper.accessor((row) => ({ line_used: row.line_pump_used, line_hours: row.line_pump_used_total_hours }), {
-          id: 'line_engagement',
-          header: 'Line (%)',
-          cell: (info) => {
-            const { line_used, line_hours } = info.getValue();
-            return (
-              <div className="text-center text-gray-500 dark:text-gray-400">
-                {line_used} ({formatPercent(line_hours, 24)})
+        columnHelper.accessor(
+          (row) => ({ line_used: row.line_pump_used, line_hours: row.line_pump_used_total_hours }),
+          {
+            id: "line_engagement",
+            header: "Line (%)",
+            cell: (info) => {
+              const { line_used, line_hours } = info.getValue();
+              return (
+                <div className="text-center text-gray-500 dark:text-gray-400">
+                  {line_used} ({formatPercent(line_hours, 24)})
+                </div>
+              );
+            },
+            footer: () => (
+              <div className="text-center font-semibold text-gray-800 dark:text-white/90">
+                {totals.line_used} ({formatPercent(totals.line_hours, 24)})
               </div>
-            );
-          },
-          footer: () => (
-            <div className="text-center font-semibold text-gray-800 dark:text-white/90">
-              {totals.line_used} ({formatPercent(totals.line_hours, 24)})
-            </div>
-          ),
-        }),
-        columnHelper.accessor((row) => ({ boom_used: row.boom_pump_used, boom_hours: row.boom_pump_used_total_hours }), {
-          id: 'boom_engagement',
-          header: 'Boom (%)',
-          cell: (info) => {
-            const { boom_used, boom_hours } = info.getValue();
-            return (
-              <div className="text-center text-gray-500 dark:text-gray-400">
-                {boom_used} ({formatPercent(boom_hours, 24)})
+            ),
+          }
+        ),
+        columnHelper.accessor(
+          (row) => ({ boom_used: row.boom_pump_used, boom_hours: row.boom_pump_used_total_hours }),
+          {
+            id: "boom_engagement",
+            header: "Boom (%)",
+            cell: (info) => {
+              const { boom_used, boom_hours } = info.getValue();
+              return (
+                <div className="text-center text-gray-500 dark:text-gray-400">
+                  {boom_used} ({formatPercent(boom_hours, 24)})
+                </div>
+              );
+            },
+            footer: () => (
+              <div className="text-center font-semibold text-gray-800 dark:text-white/90">
+                {totals.boom_used} ({formatPercent(totals.boom_hours, 24)})
               </div>
-            );
-          },
-          footer: () => (
-            <div className="text-center font-semibold text-gray-800 dark:text-white/90">
-              {totals.boom_used} ({formatPercent(totals.boom_hours, 24)})
-            </div>
-          ),
-        }),
+            ),
+          }
+        ),
       ],
     }),
     columnHelper.group({
-      id: 'active_not_scheduled',
-      header: 'Active Not Scheduled',
+      id: "active_not_scheduled",
+      header: "Active Not Scheduled",
       columns: [
-        columnHelper.accessor('tm_active_but_not_used', {
-          header: 'TM',
-          cell: (info) => (
-            <div className="text-center text-gray-500 dark:text-gray-400">
-              {info.getValue()}
-            </div>
-          ),
-          footer: () => (
-            <div className="text-center font-semibold text-gray-800 dark:text-white/90">
-              -
-            </div>
-          ),
+        columnHelper.accessor("tm_active_but_not_used", {
+          header: "TM",
+          cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()}</div>,
+          footer: () => <div className="text-center font-semibold text-gray-800 dark:text-white/90">-</div>,
         }),
-        columnHelper.accessor('line_pump_active_but_not_used', {
-          header: 'Line',
-          cell: (info) => (
-            <div className="text-center text-gray-500 dark:text-gray-400">
-              {info.getValue()}
-            </div>
-          ),
-          footer: () => (
-            <div className="text-center font-semibold text-gray-800 dark:text-white/90">
-              -
-            </div>
-          ),
+        columnHelper.accessor("line_pump_active_but_not_used", {
+          header: "Line",
+          cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()}</div>,
+          footer: () => <div className="text-center font-semibold text-gray-800 dark:text-white/90">-</div>,
         }),
-        columnHelper.accessor('boom_pump_active_but_not_used', {
-          header: 'Boom',
-          cell: (info) => (
-            <div className="text-center text-gray-500 dark:text-gray-400">
-              {info.getValue()}
-            </div>
-          ),
-          footer: () => (
-            <div className="text-center font-semibold text-gray-800 dark:text-white/90">
-              -
-            </div>
-          ),
+        columnHelper.accessor("boom_pump_active_but_not_used", {
+          header: "Boom",
+          cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()}</div>,
+          footer: () => <div className="text-center font-semibold text-gray-800 dark:text-white/90">-</div>,
         }),
       ],
     }),
@@ -265,38 +214,33 @@ export default function PlantsSummaryTable({ plantsTable }: { plantsTable: Plant
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Plant wise summary</h3>
       </div>
-      <div className="max-w-full overflow-x-auto">
+      <div className="max-w-full overflow-x-auto mb-4">
         <table className="w-full">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b border-gray-200 dark:border-gray-800">
                 {headerGroup.headers.map((header) => {
                   const isGroupHeader = header.subHeaders && header.subHeaders.length > 0;
-                  const isPlantName = header.id === 'plant_name';
-                  
+                  const isPlantName = header.id === "plant_name";
+                  const isActiveGroup = header?.id === "active_not_scheduled";
+
                   return (
                     <th
                       key={header.id}
                       colSpan={header.colSpan}
                       className={`
                         py-3 px-4 font-medium text-theme-xs
-                        ${isGroupHeader 
-                          ? 'text-gray-600 dark:text-gray-300 border-x border-gray-200 dark:border-gray-700' 
-                          : 'text-gray-500 dark:text-gray-400'
+                        ${
+                          isGroupHeader
+                            ? "text-gray-600 dark:text-gray-300 border-x border-gray-200 dark:border-gray-700"
+                            : "text-gray-500 dark:text-gray-400"
                         }
-                        ${isPlantName 
-                          ? 'text-left border-r border-gray-200 dark:border-gray-700' 
-                          : 'text-center'
-                        }
-                        ${!isGroupHeader && !isPlantName 
-                          ? 'border-r border-gray-200 dark:border-gray-700' 
-                          : ''
-                        }
+                        ${!isGroupHeader && !isPlantName && !isActiveGroup ? "border-r border-gray-200 dark:border-gray-700" : ""}
+                        ${isPlantName ? "text-left border-r border-gray-200 dark:border-gray-700" : "text-center"}
+                        ${!isGroupHeader && !isPlantName ? "border-r border-gray-200 dark:border-gray-700" : ""}
                       `}
                     >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
                   );
                 })}
@@ -311,11 +255,12 @@ export default function PlantsSummaryTable({ plantsTable }: { plantsTable: Plant
                     key={cell.id}
                     className={`
                       py-3 px-4 text-theme-sm
-                      ${index === 0 
-                        ? 'border-r border-gray-200 dark:border-gray-700' 
-                        : index < row.getVisibleCells().length - 1
-                          ? 'border-r border-gray-200 dark:border-gray-700'
-                          : ''
+                      ${
+                        index === 0
+                          ? "border-r border-gray-200 dark:border-gray-700"
+                          : index < row.getVisibleCells().length - 1
+                          ? "border-r border-gray-200 dark:border-gray-700"
+                          : ""
                       }
                     `}
                   >
@@ -326,28 +271,37 @@ export default function PlantsSummaryTable({ plantsTable }: { plantsTable: Plant
             ))}
           </tbody>
           <tfoot>
-            {table.getFooterGroups().map((footerGroup) => (
-              <tr key={footerGroup.id} className="bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-800">
-                {footerGroup.headers.map((header, index) => (
-                  <td
-                    key={header.id}
-                    className={`
-                      py-3 px-4 text-theme-sm
-                      ${index === 0 
-                        ? 'border-r border-gray-200 dark:border-gray-700' 
-                        : index < footerGroup.headers.length - 1
-                          ? 'border-r border-gray-200 dark:border-gray-700'
-                          : ''
-                      }
-                    `}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.footer, header.getContext())}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {table.getFooterGroups().map((footerGroup) => {
+              const allEmpty = footerGroup.headers.every(
+                (header) => header.isPlaceholder || !header.column.columnDef.footer
+              );
+              if (allEmpty) return null;
+
+              return (
+                <tr
+                  key={footerGroup.id}
+                  className="bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-800"
+                >
+                  {footerGroup.headers.map((header, index) => (
+                    <td
+                      key={header.id}
+                      className={`
+              py-3 px-4 text-theme-sm
+              ${
+                index === 0
+                  ? "border-r border-gray-200 dark:border-gray-700"
+                  : index < footerGroup.headers.length - 1
+                  ? "border-r border-gray-200 dark:border-gray-700"
+                  : ""
+              }
+            `}
+                    >
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.footer, header.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
           </tfoot>
         </table>
       </div>
