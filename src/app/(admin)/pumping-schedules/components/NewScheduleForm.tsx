@@ -427,13 +427,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   const updateSchedule = async () => {
     if (!schedule_id) return false;
+
     try {
       const response = await fetchWithAuth(`/schedules/${schedule_id}`, {
         method: "PUT",
         body: JSON.stringify({
           client_id: selectedClient,
           project_id: selectedProject,
-          pump: selectedPump,
+          // pump: selectedPump,
           concreteGrade: formData.concreteGrade,
           pumping_speed: formData.speed,
           schedule_name: formData.scheduleName,
