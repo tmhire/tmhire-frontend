@@ -1566,7 +1566,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                 {/* Total Pumping Hours (Auto Fill) */}
                 <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Total Pumping Hours
                   </label>
                   <Input
@@ -1580,14 +1580,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                 {/* Pump End Time (Auto Calculated) */}
                 <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pump End Time (24h)
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 truncate -mr-2">
+                    Pump End Time <span className="text-gray-500 text-[10px] pl-1">(24h)</span>
                   </label>
                   <div className="relative">
                     <TimeInput
                       type="time"
                       name="endTime"
-                      format="24h"
+                      format="hh:mm"
                       value={pumpEndTime}
                       disabled
                       className="cursor-not-allowed bg-gray-100 dark:bg-gray-800"
