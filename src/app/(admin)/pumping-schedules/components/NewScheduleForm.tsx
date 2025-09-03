@@ -1646,7 +1646,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Pumping Details</h3>
               </div>
 
-              <div className="grid grid-cols-5 gap-6">
+              <div className="grid grid-cols-4 gap-6">
                 {/* One Way distance to site from Plant in KM */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1730,31 +1730,28 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     max="600"
                   />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-4 gap-6 mt-6">
                 {/* SLUMP AT SITE */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Slump at Site (mm)
                   </label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      name="slumpAtSite"
-                      value={parseFloat(formData.slumpAtSite)}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setFormData((prev) => ({ ...prev, slumpAtSite: v }));
-                        setHasChanged(true);
-                      }}
-                      placeholder="Enter value between 0-300"
-                      min="0"
-                      max="300"
-                    />
-                  </div>
+                  <Input
+                    type="number"
+                    name="slumpAtSite"
+                    value={parseFloat(formData.slumpAtSite)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFormData((prev) => ({ ...prev, slumpAtSite: v }));
+                      setHasChanged(true);
+                    }}
+                    placeholder="Enter value between 0-300"
+                    min="0"
+                    max="300"
+                  />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-5 gap-6 mt-6">
                 {/* SITE SUPERVISOR */}
                 <div className="col-span-1">
                   <SearchableDropdown
@@ -1774,37 +1771,33 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Mix Code
                   </label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="string"
-                      name="mixCode"
-                      value={(formData.mixCode)}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setFormData((prev) => ({ ...prev, mixCode: v }));
-                        setHasChanged(true);
-                      }}
-                      placeholder="Enter value between 0-200"
-                    />
-                  </div>
+                  <Input
+                    type="string"
+                    name="mixCode"
+                    value={(formData.mixCode)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFormData((prev) => ({ ...prev, mixCode: v }));
+                      setHasChanged(true);
+                    }}
+                    placeholder="Enter value between 0-200"
+                  />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Remarks
                   </label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="string"
-                      name="remarks"
-                      value={(formData.remarks)}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setFormData((prev) => ({ ...prev, remarks: v }));
-                        setHasChanged(true);
-                      }}
-                      placeholder="Enter remarks"
-                    />
-                  </div>
+                  <Input
+                    type="string"
+                    name="remarks"
+                    value={(formData.remarks)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFormData((prev) => ({ ...prev, remarks: v }));
+                      setHasChanged(true);
+                    }}
+                    placeholder="Enter remarks"
+                  />
                 </div>
               </div>
 
