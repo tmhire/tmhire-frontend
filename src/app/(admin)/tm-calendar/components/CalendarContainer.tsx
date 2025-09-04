@@ -6,7 +6,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Tooltip from "@/components/ui/tooltip";
+// import Tooltip from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 import SearchableDropdown from "@/components/form/SearchableDropdown";
 
@@ -92,22 +92,22 @@ const calculateDuration = (start: string, end: string): number => {
 };
 
 // Helper function to format date and time for tooltips
-const formatDateTimeForTooltip = (dateTimeString: string): string => {
-  const date = new Date(dateTimeString);
-  const dateStr = date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-  const timeStr = date.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "UTC",
-  });
-  return `${dateStr} ${timeStr}`;
-};
+// const formatDateTimeForTooltip = (dateTimeString: string): string => {
+//   const date = new Date(dateTimeString);
+//   const dateStr = date.toLocaleDateString("en-US", {
+//     month: "short",
+//     day: "numeric",
+//     year: "numeric",
+//     timeZone: "UTC",
+//   });
+//   const timeStr = date.toLocaleTimeString("en-US", {
+//     hour: "2-digit",
+//     minute: "2-digit",
+//     hour12: true,
+//     timeZone: "UTC",
+//   });
+//   return `${dateStr} ${timeStr}`;
+// };
 
 // Task type color map
 const TASK_TYPE_COLORS: Record<string, string> = {
