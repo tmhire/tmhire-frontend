@@ -14,7 +14,8 @@ import DatePickerInput from "@/components/form/input/DatePickerInput";
 import Button from "@/components/ui/button/Button";
 
 interface DashboardData {
-  counts: DashboardCountsData & { plants_table: PlantsTable };
+  counts: DashboardCountsData;
+  plants_table: PlantsTable;
   series: { name: string; data: number[] }[];
   recent_orders: { client: string; quantity: string; order_date: string; status: string }[];
 }
@@ -76,7 +77,7 @@ export default function DashboardContainer() {
           </div>
 
           <div className="col-span-12">
-            <PlantsSummaryTable plantsTable={dashboardData.counts.plants_table} />
+            <PlantsSummaryTable plantsTable={dashboardData.plants_table} />
           </div>
 
           <div className="col-span-12 xl:col-span-6">

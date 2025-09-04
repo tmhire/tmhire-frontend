@@ -5,9 +5,9 @@ import { useReactTable, getCoreRowModel, createColumnHelper, flexRender } from "
 export interface PlantRow {
   plant_name: string;
   pump_volume: number;
-  pump_jobs: number[];
+  pump_jobs: number;
   supply_volume: number;
-  supply_jobs: number[];
+  supply_jobs: number;
   tm_used: number;
   tm_used_total_hours: number;
   line_pump_used: number;
@@ -35,9 +35,9 @@ export default function PlantsSummaryTable({ plantsTable }: { plantsTable: Plant
   const totals = rows.reduce(
     (acc, r) => {
       acc.pump_volume += r.pump_volume || 0;
-      acc.pump_jobs += r.pump_jobs?.length || 0;
+      acc.pump_jobs += r.pump_jobs || 0;
       acc.supply_volume += r.supply_volume || 0;
-      acc.supply_jobs += r.supply_jobs?.length || 0;
+      acc.supply_jobs += r.supply_jobs || 0;
       acc.tm_used += r.tm_used || 0;
       acc.tm_hours += r.tm_used_total_hours || 0;
       acc.line_used += r.line_pump_used || 0;
@@ -86,9 +86,7 @@ export default function PlantsSummaryTable({ plantsTable }: { plantsTable: Plant
         }),
         columnHelper.accessor("pump_jobs", {
           header: "Jobs",
-          cell: (info) => (
-            <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()?.length || 0}</div>
-          ),
+          cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue() || 0}</div>,
           footer: () => (
             <div className="text-center font-semibold text-gray-800 dark:text-white/90">{totals.pump_jobs}</div>
           ),
@@ -108,9 +106,7 @@ export default function PlantsSummaryTable({ plantsTable }: { plantsTable: Plant
         }),
         columnHelper.accessor("supply_jobs", {
           header: "Jobs",
-          cell: (info) => (
-            <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()?.length || 0}</div>
-          ),
+          cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue() || 0}</div>,
           footer: () => (
             <div className="text-center font-semibold text-gray-800 dark:text-white/90">{totals.supply_jobs}</div>
           ),
@@ -128,13 +124,13 @@ export default function PlantsSummaryTable({ plantsTable }: { plantsTable: Plant
             const { tm_used, tm_hours } = info.getValue();
             return (
               <div className="text-center text-gray-500 dark:text-gray-400">
-                {tm_used} ({formatPercent(tm_hours, 24)})
+                {tm_used} ({formatPercent(tm_hours, 24 * tm_used)})
               </div>
             );
           },
           footer: () => (
             <div className="text-center font-semibold text-gray-800 dark:text-white/90">
-              {totals.tm_used} ({formatPercent(totals.tm_hours, 24)})
+              {totals.tm_used} ({formatPercent(totals.tm_hours, 24 * totals.tm_used)})
             </div>
           ),
         }),
@@ -235,7 +231,11 @@ export default function PlantsSummaryTable({ plantsTable }: { plantsTable: Plant
                             ? "text-gray-600 dark:text-gray-300 border-x border-gray-200 dark:border-gray-700"
                             : "text-gray-500 dark:text-gray-400"
                         }
-                        ${!isGroupHeader && !isPlantName && !isActiveGroup ? "border-r border-gray-200 dark:border-gray-700" : ""}
+                        ${
+                          !isGroupHeader && !isPlantName && !isActiveGroup
+                            ? "border-r border-gray-200 dark:border-gray-700"
+                            : ""
+                        }
                         ${isPlantName ? "text-left border-r border-gray-200 dark:border-gray-700" : "text-center"}
                         ${!isGroupHeader && !isPlantName ? "border-r border-gray-200 dark:border-gray-700" : ""}
                       `}
