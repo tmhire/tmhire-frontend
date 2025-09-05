@@ -1071,7 +1071,6 @@ export default function CalendarContainer() {
                                 // Get client color from clientColors map
                                 const clientColor = clientColors.get(tasks[0].client) || "bg-gray-300";
                                 const timeSlotsLength = getTimeSlots().length;
-                                console.log(tasks);
                                 return (
                                   <Tooltip
                                     key={tasks[0].client + i}

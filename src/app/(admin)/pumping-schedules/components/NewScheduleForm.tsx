@@ -885,6 +885,25 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     []
   );
 
+  const getUnusedHours = (unavailable_times: UnavailableTimes | null, dayStart: Date | null) => {
+    if (!dayStart || !unavailable_times) return 24;
+    const dayEnd = new Date(dayStart.getTime() + 86400000);
+    let start = dayStart,
+      end = dayEnd;
+    let duration = 0;
+    for (const [schedule, entry] of Object.entries(unavailable_times)) {
+      if (schedule == schedule_id) continue;
+      const scheduleStart = new Date(entry.start);
+      const scheduleEnd = new Date(entry.end);
+      start = scheduleStart.getTime() > dayStart.getTime() ? scheduleStart : dayStart;
+      end = scheduleEnd.getTime() < dayEnd.getTime() ? scheduleEnd : dayEnd;
+      if (start.getTime() > end.getTime()) continue;
+      duration += (end.getTime() - start.getTime()) / 3600000;
+    }
+    const unusedHours = 24 - Math.ceil(duration);
+    return unusedHours;
+  };
+
   if (formDataRetrieved === false) {
     return (
       <div className="max-w-6xl mx-auto p-6">
@@ -2791,7 +2810,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                                     return null;
                                                   })()}
                                                   <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
-                                                    {tm.capacity}m³
+                                                    {tm.capacity}m³ - Unused{" "}
+                                                    {getUnusedHours(tm.unavailable_times, scheduleStartDate)} hours
                                                   </p>
                                                 </div>
                                               </div>
