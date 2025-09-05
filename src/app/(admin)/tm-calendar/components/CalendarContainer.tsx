@@ -225,9 +225,9 @@ const transformApiData = (apiData: ApiResponse, plantMap: Map<string, string>): 
 
 // Type color mapping
 const typeRowColors: Record<string, string> = {
-  tm: "bg-yellow-100 hover:bg-yellow-300/50 dark:bg-yellow-300/30", // light blue
-  line: "bg-blue-100 hover:bg-blue-300/50 dark:bg-blue-300/30", // light blue
-  boom: "bg-green-100 hover:bg-green-300/50 dark:bg-green-300/30", // light green
+  tm: "bg-yellow-500/70 hover:bg-yellow-500/90", // light blue
+  line: "bg-blue-500/70 hover:bg-blue-500/90", // light blue
+  boom: "bg-green-500/70 hover:bg-green-500/90", // light green
 };
 
 export default function CalendarContainer() {
@@ -1037,19 +1037,20 @@ export default function CalendarContainer() {
                         });
                         freeTime = Math.round(freeTime);
                         return (
-                          <div
-                            key={item.id}
-                            className={`flex group transition-colors  ${
-                              (item.item === "pump" && item.type && typeRowColors[item.type]) || ""
-                            } 
-                          ${(item.item === "mixer" && typeRowColors["tm"]) || ""} `}
-                          >
+                          <div key={item.id} className="flex group transition-colors white">
                             {/* Serial Number */}
                             <div className="w-16 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
                               {idx + 1}
                             </div>
                             {/* Mixer Name */}
-                            <div className="w-32 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0">
+                            <div
+                              className={`w-32 px-5 py-1  ${
+                                (item.item === "pump" && item.type && typeRowColors[item.type]) || ""
+                              } 
+                          ${
+                            (item.item === "mixer" && typeRowColors["tm"]) || ""
+                          }  text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0`}
+                            >
                               {item.name.length > 13 ? ".." + item.name.slice(-13) : item.name}
                               {/* {item.name} */}
                             </div>
