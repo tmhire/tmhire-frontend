@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { useReactTable, getCoreRowModel, createColumnHelper, flexRender } from "@tanstack/react-table";
 
 export interface PlantRow {
@@ -30,7 +30,7 @@ function formatPercent(engagedHours: number, totalHours: number) {
 const columnHelper = createColumnHelper<PlantRow>();
 
 export default function PlantsSummaryTable({ plantsTable }: { plantsTable: PlantsTable }) {
-  const rows = Object.values(plantsTable || {});
+  const [rows] = useState(Object.values(plantsTable || {}));
 
   const totals = rows.reduce(
     (acc, r) => {
@@ -60,144 +60,147 @@ export default function PlantsSummaryTable({ plantsTable }: { plantsTable: Plant
     }
   );
 
-  const columns = [
-    columnHelper.group({
-      id: "plant_name_group",
-      header: "Plant Name",
-      columns: [
-        columnHelper.accessor("plant_name", {
-          id: "plant_name",
-          header: "",
-          cell: (info) => <div className="font-medium text-gray-800 dark:text-white/90">{info.getValue()}</div>,
-          footer: () => <div className="font-semibold text-gray-800 dark:text-white/90">Total</div>,
-        }),
-      ],
-    }),
-    columnHelper.group({
-      id: "pumping",
-      header: "Pumping",
-      columns: [
-        columnHelper.accessor("pump_volume", {
-          header: "Vol (m³)",
-          cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()}</div>,
-          footer: () => (
-            <div className="text-center font-semibold text-gray-800 dark:text-white/90">{totals.pump_volume}</div>
-          ),
-        }),
-        columnHelper.accessor("pump_jobs", {
-          header: "Jobs",
-          cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue() || 0}</div>,
-          footer: () => (
-            <div className="text-center font-semibold text-gray-800 dark:text-white/90">{totals.pump_jobs}</div>
-          ),
-        }),
-      ],
-    }),
-    columnHelper.group({
-      id: "supply",
-      header: "Supply",
-      columns: [
-        columnHelper.accessor("supply_volume", {
-          header: "Vol (m³)",
-          cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()}</div>,
-          footer: () => (
-            <div className="text-center font-semibold text-gray-800 dark:text-white/90">{totals.supply_volume}</div>
-          ),
-        }),
-        columnHelper.accessor("supply_jobs", {
-          header: "Jobs",
-          cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue() || 0}</div>,
-          footer: () => (
-            <div className="text-center font-semibold text-gray-800 dark:text-white/90">{totals.supply_jobs}</div>
-          ),
-        }),
-      ],
-    }),
-    columnHelper.group({
-      id: "equipment_engagement",
-      header: "Equipment Engagement",
-      columns: [
-        columnHelper.accessor((row) => ({ tm_used: row.tm_used, tm_hours: row.tm_used_total_hours }), {
-          id: "tm_engagement",
-          header: "TM (%)",
-          cell: (info) => {
-            const { tm_used, tm_hours } = info.getValue();
-            return (
-              <div className="text-center text-gray-500 dark:text-gray-400">
-                {tm_used} ({formatPercent(tm_hours, 24 * tm_used)})
-              </div>
-            );
-          },
-          footer: () => (
-            <div className="text-center font-semibold text-gray-800 dark:text-white/90">
-              {totals.tm_used} ({formatPercent(totals.tm_hours, 24 * totals.tm_used)})
-            </div>
-          ),
-        }),
-        columnHelper.accessor(
-          (row) => ({ line_used: row.line_pump_used, line_hours: row.line_pump_used_total_hours }),
-          {
-            id: "line_engagement",
-            header: "Line (%)",
+  const columns = useMemo(
+    () => [
+      columnHelper.group({
+        id: "plant_name_group",
+        header: "Plant Name",
+        columns: [
+          columnHelper.accessor("plant_name", {
+            id: "plant_name",
+            header: "",
+            cell: (info) => <div className="font-medium text-gray-800 dark:text-white/90">{info.getValue()}</div>,
+            footer: () => <div className="font-semibold text-gray-800 dark:text-white/90">Total</div>,
+          }),
+        ],
+      }),
+      columnHelper.group({
+        id: "pumping",
+        header: "Pumping",
+        columns: [
+          columnHelper.accessor("pump_volume", {
+            header: "Vol (m³)",
+            cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()}</div>,
+            footer: () => (
+              <div className="text-center font-semibold text-gray-800 dark:text-white/90">{totals.pump_volume}</div>
+            ),
+          }),
+          columnHelper.accessor("pump_jobs", {
+            header: "Jobs",
+            cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue() || 0}</div>,
+            footer: () => (
+              <div className="text-center font-semibold text-gray-800 dark:text-white/90">{totals.pump_jobs}</div>
+            ),
+          }),
+        ],
+      }),
+      columnHelper.group({
+        id: "supply",
+        header: "Supply",
+        columns: [
+          columnHelper.accessor("supply_volume", {
+            header: "Vol (m³)",
+            cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()}</div>,
+            footer: () => (
+              <div className="text-center font-semibold text-gray-800 dark:text-white/90">{totals.supply_volume}</div>
+            ),
+          }),
+          columnHelper.accessor("supply_jobs", {
+            header: "Jobs",
+            cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue() || 0}</div>,
+            footer: () => (
+              <div className="text-center font-semibold text-gray-800 dark:text-white/90">{totals.supply_jobs}</div>
+            ),
+          }),
+        ],
+      }),
+      columnHelper.group({
+        id: "equipment_engagement",
+        header: "Equipment Engagement",
+        columns: [
+          columnHelper.accessor((row) => ({ tm_used: row.tm_used, tm_hours: row.tm_used_total_hours }), {
+            id: "tm_engagement",
+            header: "TM (%)",
             cell: (info) => {
-              const { line_used, line_hours } = info.getValue();
+              const { tm_used, tm_hours } = info.getValue();
               return (
                 <div className="text-center text-gray-500 dark:text-gray-400">
-                  {line_used} ({formatPercent(line_hours, 24)})
+                  {tm_used} ({formatPercent(tm_hours, 24 * tm_used)})
                 </div>
               );
             },
             footer: () => (
               <div className="text-center font-semibold text-gray-800 dark:text-white/90">
-                {totals.line_used} ({formatPercent(totals.line_hours, 24)})
+                {totals.tm_used} ({formatPercent(totals.tm_hours, 24 * totals.tm_used)})
               </div>
             ),
-          }
-        ),
-        columnHelper.accessor(
-          (row) => ({ boom_used: row.boom_pump_used, boom_hours: row.boom_pump_used_total_hours }),
-          {
-            id: "boom_engagement",
-            header: "Boom (%)",
-            cell: (info) => {
-              const { boom_used, boom_hours } = info.getValue();
-              return (
-                <div className="text-center text-gray-500 dark:text-gray-400">
-                  {boom_used} ({formatPercent(boom_hours, 24)})
+          }),
+          columnHelper.accessor(
+            (row) => ({ line_used: row.line_pump_used, line_hours: row.line_pump_used_total_hours }),
+            {
+              id: "line_engagement",
+              header: "Line (%)",
+              cell: (info) => {
+                const { line_used, line_hours } = info.getValue();
+                return (
+                  <div className="text-center text-gray-500 dark:text-gray-400">
+                    {line_used} ({formatPercent(line_hours, 24)})
+                  </div>
+                );
+              },
+              footer: () => (
+                <div className="text-center font-semibold text-gray-800 dark:text-white/90">
+                  {totals.line_used} ({formatPercent(totals.line_hours, 24)})
                 </div>
-              );
-            },
-            footer: () => (
-              <div className="text-center font-semibold text-gray-800 dark:text-white/90">
-                {totals.boom_used} ({formatPercent(totals.boom_hours, 24)})
-              </div>
-            ),
-          }
-        ),
-      ],
-    }),
-    columnHelper.group({
-      id: "active_not_scheduled",
-      header: "Active Not Scheduled",
-      columns: [
-        columnHelper.accessor("tm_active_but_not_used", {
-          header: "TM",
-          cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()}</div>,
-          footer: () => <div className="text-center font-semibold text-gray-800 dark:text-white/90">-</div>,
-        }),
-        columnHelper.accessor("line_pump_active_but_not_used", {
-          header: "Line",
-          cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()}</div>,
-          footer: () => <div className="text-center font-semibold text-gray-800 dark:text-white/90">-</div>,
-        }),
-        columnHelper.accessor("boom_pump_active_but_not_used", {
-          header: "Boom",
-          cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()}</div>,
-          footer: () => <div className="text-center font-semibold text-gray-800 dark:text-white/90">-</div>,
-        }),
-      ],
-    }),
-  ];
+              ),
+            }
+          ),
+          columnHelper.accessor(
+            (row) => ({ boom_used: row.boom_pump_used, boom_hours: row.boom_pump_used_total_hours }),
+            {
+              id: "boom_engagement",
+              header: "Boom (%)",
+              cell: (info) => {
+                const { boom_used, boom_hours } = info.getValue();
+                return (
+                  <div className="text-center text-gray-500 dark:text-gray-400">
+                    {boom_used} ({formatPercent(boom_hours, 24)})
+                  </div>
+                );
+              },
+              footer: () => (
+                <div className="text-center font-semibold text-gray-800 dark:text-white/90">
+                  {totals.boom_used} ({formatPercent(totals.boom_hours, 24)})
+                </div>
+              ),
+            }
+          ),
+        ],
+      }),
+      columnHelper.group({
+        id: "active_not_scheduled",
+        header: "Active Not Scheduled",
+        columns: [
+          columnHelper.accessor("tm_active_but_not_used", {
+            header: "TM",
+            cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()}</div>,
+            footer: () => <div className="text-center font-semibold text-gray-800 dark:text-white/90">-</div>,
+          }),
+          columnHelper.accessor("line_pump_active_but_not_used", {
+            header: "Line",
+            cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()}</div>,
+            footer: () => <div className="text-center font-semibold text-gray-800 dark:text-white/90">-</div>,
+          }),
+          columnHelper.accessor("boom_pump_active_but_not_used", {
+            header: "Boom",
+            cell: (info) => <div className="text-center text-gray-500 dark:text-gray-400">{info.getValue()}</div>,
+            footer: () => <div className="text-center font-semibold text-gray-800 dark:text-white/90">-</div>,
+          }),
+        ],
+      }),
+    ],
+    []
+  );
 
   const table = useReactTable({
     data: rows,
