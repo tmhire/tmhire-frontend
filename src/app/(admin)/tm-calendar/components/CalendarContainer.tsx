@@ -6,7 +6,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-// import Tooltip from "@/components/ui/tooltip";
+import Tooltip from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 import SearchableDropdown from "@/components/form/SearchableDropdown";
 
@@ -92,22 +92,38 @@ const calculateDuration = (start: string, end: string): number => {
 };
 
 // Helper function to format date and time for tooltips
-// const formatDateTimeForTooltip = (dateTimeString: string): string => {
-//   const date = new Date(dateTimeString);
-//   const dateStr = date.toLocaleDateString("en-US", {
-//     month: "short",
-//     day: "numeric",
-//     year: "numeric",
-//     timeZone: "UTC",
-//   });
-//   const timeStr = date.toLocaleTimeString("en-US", {
-//     hour: "2-digit",
-//     minute: "2-digit",
-//     hour12: true,
-//     timeZone: "UTC",
-//   });
-//   return `${dateStr} ${timeStr}`;
-// };
+const formatDateTimeForTooltip = (dateTimeString: string): string => {
+  const date = new Date(dateTimeString);
+  const dateStr = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  const timeStr = date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "UTC",
+  });
+  return `${dateStr} ${timeStr}`;
+};
+
+// Helper funciton to format hour duration into hours and minutes
+export function formatHoursAndMinutes(decimalHours: number): string {
+  if (isNaN(decimalHours) || decimalHours < 0) return "0 hrs 0 mins";
+
+  const hours = Math.floor(decimalHours);
+  const minutes = Math.round((decimalHours - hours) * 60);
+
+  if (hours === 0) {
+    return `${minutes} mins`;
+  } else if (minutes === 0) {
+    return `${hours} hrs`;
+  } else {
+    return `${hours} hrs ${minutes} mins`;
+  }
+}
 
 // Task type color map
 const TASK_TYPE_COLORS: Record<string, string> = {
@@ -1020,7 +1036,6 @@ export default function CalendarContainer() {
                           freeTime -= calculateDuration(task.actualStart, task.actualEnd) / 60;
                         });
                         freeTime = Math.round(freeTime);
-                        console.log("item", item);
                         return (
                           <div
                             key={item.id}
@@ -1056,16 +1071,30 @@ export default function CalendarContainer() {
                                 // Get client color from clientColors map
                                 const clientColor = clientColors.get(tasks[0].client) || "bg-gray-300";
                                 const timeSlotsLength = getTimeSlots().length;
+                                console.log(tasks);
                                 return (
-                                  <div
+                                  <Tooltip
                                     key={tasks[0].client + i}
-                                    className={`absolute - h-6 rounded ${clientColor} opacity-90 z-0`}
-                                    style={{
-                                      left: `${(offset / timeSlotsLength) * 100 - 0.25}%`,
-                                      width: `${(width / timeSlotsLength) * 100 + 0.5}%`,
-                                      zIndex: 1,
-                                    }}
-                                  />
+                                    content={`Client: ${tasks[0].client}\n${formatDateTimeForTooltip(
+                                      tasks[0].actualStart
+                                    )} to ${formatDateTimeForTooltip(
+                                      tasks[tasks.length - 1].actualEnd
+                                    )}\nDuration: ${formatHoursAndMinutes(width)}m`}
+                                  >
+                                    <div
+                                      key={tasks[0].client + i}
+                                      className={`absolute - h-6 rounded ${clientColor} opacity-90 z-0`}
+                                      style={{
+                                        left: `${(offset / timeSlotsLength) * 100 - 0.25}%`,
+                                        width: `${(width / timeSlotsLength) * 100 + 0.5}%`,
+                                        zIndex: 1,
+                                      }}
+                                    >
+                                      <span className="text-white text-[12px] items-center justify-center flex h-full">
+                                        {tasks[0].client ? tasks[0].client : "Unknown Client"}
+                                      </span>
+                                    </div>
+                                  </Tooltip>
                                 );
                               })}
                               {/* Render bars for each task by type that overlaps the window */}
