@@ -385,8 +385,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             data.data.input_params.unloading_time && data.data.input_params.unloading_time !== 0
               ? data.data.input_params.unloading_time.toString()
               : pumping_speed && avgTMCap
-                ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
-                : "",
+              ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
+              : "",
           pumpOnwardTime: data.data.input_params.pump_onward_time.toString(),
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
@@ -413,7 +413,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         });
         setComputedScheduleName(
           data?.data?.schedule_no ||
-          `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
+            `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
         );
         const tm_ids = new Set();
         const tmSequence: string[] = [];
@@ -773,18 +773,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       return !!formData.pumpOnwardTime && !!formData.pumpFixingTime && !!formData.pumpRemovalTime;
     } else if (step === 1.3) {
       // Transit Mixer Trip Log validation
-      const requiredFields = [
-        'bufferTime',
-        'loadTime',
-        'onwardTime',
-        'unloadingTime',
-        'returnTime'
-      ];
+      const requiredFields = ["bufferTime", "loadTime", "onwardTime", "unloadingTime", "returnTime"];
 
       // Check if all required fields have values
-      return requiredFields.every(field => {
+      return requiredFields.every((field) => {
         const value = formData[field as keyof typeof formData];
-        return value !== undefined && value !== null && value !== '';
+        return value !== undefined && value !== null && value !== "";
       });
     }
     return false;
@@ -1136,10 +1130,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 >
                   {/* Step Circle */}
                   <motion.div
-                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${step >= s.id
-                      ? "border-brand-500 bg-brand-500 text-white shadow-lg"
-                      : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                      }`}
+                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${
+                      step >= s.id
+                        ? "border-brand-500 bg-brand-500 text-white shadow-lg"
+                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                    }`}
                     animate={{
                       scale: s.type === "subStep" ? (step === s.id ? 0.9 : 0.8) : step === s.id ? 1.3 : 1,
                       boxShadow: step === s.id ? "0 0 20px rgba(var(--brand-500-rgb, 59, 130, 246), 0.5)" : "none",
@@ -1168,8 +1163,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                   {/* Step Name */}
                   <motion.span
-                    className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
-                      }`}
+                    className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${
+                      step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
+                    }`}
                     animate={{
                       fontWeight: step >= s.id ? 500 : 400,
                     }}
@@ -1210,12 +1206,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900/40 py-1 px-3 rounded-full">
                   Company Timings -
                   {profile?.preferred_format === "12h"
-                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
-                    } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) + 12 < 24 ? "PM" : "AM"
-                    } NEXT DAY`
+                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${
+                        (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
+                      } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${
+                        (profile?.custom_start_hour ?? 0) + 12 < 24 ? "PM" : "AM"
+                      } NEXT DAY`
                     : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 TODAY TO ${String(
-                      ((profile?.custom_start_hour ?? 0) + 12) % 24
-                    ).padStart(2, "0")}:00 TOMORROW`}
+                        ((profile?.custom_start_hour ?? 0) + 12) % 24
+                      ).padStart(2, "0")}:00 TOMORROW`}
                 </span>
               </div>
 
@@ -1357,10 +1355,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     {selectedProject ? (
                       <div className="space-y-1">
                         <p className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                          <span className="font-medium">Contact:</span> {projects.find(p => p._id === selectedProject)?.contact_number || 'N/A'}
+                          <span className="font-medium">Contact:</span>{" "}
+                          {projects.find((p) => p._id === selectedProject)?.contact_number || "N/A"}
                         </p>
                         <p className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                          <span className="font-medium">Coordinates:</span> {projects.find(p => p._id === selectedProject)?.coordinates || 'N/A'}
+                          <span className="font-medium">Coordinates:</span>{" "}
+                          {projects.find((p) => p._id === selectedProject)?.coordinates || "N/A"}
                         </p>
                       </div>
                     ) : (
@@ -1397,16 +1397,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               </div>
 
               <div className="grid grid-cols-5 gap-6 mt-6">
-
                 {/* Grade of Concrete */}
                 <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    RMC Grade
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">RMC Grade</label>
                   <div className="flex items-center w-full">
-                    <span className="w-6 text-gray-700 dark:text-gray-300 font-medium">
-                      M
-                    </span>
+                    <span className="w-6 text-gray-700 dark:text-gray-300 font-medium">M</span>
                     <Input
                       type="number"
                       name="concreteGrade"
@@ -1420,10 +1415,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   </div>
                 </div>
 
-
                 {/* Pump Type Selection */}
                 <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Pump Type <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pump Type <span className="text-red-500">*</span>
+                  </label>
                   <div className="flex flex-wrap items-center gap-4">
                     <Radio
                       id="line-pump"
@@ -1452,7 +1448,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   </div>
                 </div>
 
-
                 {/* Supply from Which Plant (Mother Plant) */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1464,8 +1459,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     value={
                       selectedProject && projects.find((p) => p._id === selectedProject)?.mother_plant_id
                         ? (plantsData || []).find(
-                          (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                        )?.name || "Unknown Plant"
+                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
+                          )?.name || "Unknown Plant"
                         : ""
                     }
                     disabled
@@ -1510,12 +1505,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </span>
                   </div>
                 </div>
-
               </div>
 
-
               <div className="grid grid-cols-10 gap-6 mt-6">
-
                 {/* Pumping Speed */}
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1548,17 +1540,15 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       onChange={setPumpingSpeedAndUnloadingTime}
                       min="0"
                       placeholder={
-                        avgTMCap !== null
-                          ? "Auto-calculated from pumping speed"
-                          : "Enter pumping speed to calculate"
+                        avgTMCap !== null ? "Auto-calculated from pumping speed" : "Enter pumping speed to calculate"
                       }
                       className="w-full"
                     />
                     {avgTMCap !== null && (
                       <p className="text-xs text-gray-500">
-                        Based on avg. TM capacity:{" "}
-                        <span className="font-medium">{avgTMCap?.toFixed(0)} m³</span>
-                        <br />(Update this in the Transit Mixers page)
+                        Based on avg. TM capacity: <span className="font-medium">{avgTMCap?.toFixed(0)} m³</span>
+                        <br />
+                        (Update this in the Transit Mixers page)
                       </p>
                     )}
                   </div>
@@ -1768,13 +1758,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   />
                 </div>
                 <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Mix Code
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mix Code</label>
                   <Input
                     type="string"
                     name="mixCode"
-                    value={(formData.mixCode)}
+                    value={formData.mixCode}
                     onChange={(e) => {
                       const v = e.target.value;
                       setFormData((prev) => ({ ...prev, mixCode: v }));
@@ -1784,13 +1772,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   />
                 </div>
                 <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Remarks
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Remarks</label>
                   <Input
                     type="string"
                     name="remarks"
-                    value={(formData.remarks)}
+                    value={formData.remarks}
                     onChange={(e) => {
                       const v = e.target.value;
                       setFormData((prev) => ({ ...prev, remarks: v }));
@@ -1800,8 +1786,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   />
                 </div>
               </div>
-
-
             </div>
           </div>
         ) : step === 1.3 ? (
@@ -1819,9 +1803,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       <h3 className="text-base font-semibold text-gray-800 dark:text-white/90 mb-4">
                         Cycle Time Parameters <span className="text-red-500">*</span>
                       </h3>
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
-                        min
-                      </span>
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">min</span>
                     </div>
 
                     <div className="space-y-2.5">
@@ -2024,7 +2006,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         </div>
 
                         <div className="flex items-center justify-between py-2 border-b border-blue-200/60 dark:border-blue-800/60">
-                          <span className="text-xs font-medium text-gray-900 dark:text-white">TMs Additional (Max TMs to wait at site)
+                          <span className="text-xs font-medium text-gray-900 dark:text-white">
+                            TMs Additional (Max TMs to wait at site)
                           </span>
                           <div className="flex items-center gap-1">
                             <button
@@ -2201,11 +2184,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             </div>
           ) : (
             <div className="space-y-6">
-              {calculatedTMs &&
+              {calculatedTMs && (
                 <div className="mb-6 p-6 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-                    Pumping Selection
-                  </h4>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Pumping Selection</h4>
 
                   <div className="grid grid-cols-2 gap-8">
                     {/* Left Half - Selection Instructions */}
@@ -2268,7 +2249,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       </div>
                     </div>
                   </div>
-                </div>}
+                </div>
+              )}
 
               {calculatedTMs && calculatedTMs.available_pumps && (
                 <>
@@ -2295,10 +2277,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select 1 Pump</h3>
                     {/* Pump Type Filter Indicator */}
                     <span
-                      className={`px-3 py-1 text-sm font-medium rounded-full ${pumpType === "line"
-                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                        : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                        }`}
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${
+                        pumpType === "line"
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                          : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                      }`}
                     >
                       {pumpType === "line" ? "Line Pump" : "Boom Pump"}
                     </span>
@@ -2381,10 +2364,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                       {pumps.map((pump, idx) => (
                                         <label
                                           key={pump.id}
-                                          className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${!pump.availability
-                                            ? "opacity-50 cursor-not-allowed"
-                                            : "cursor-pointer hover:bg-gray-100"
-                                            } `}
+                                          className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
+                                            !pump.availability
+                                              ? "opacity-50 cursor-not-allowed"
+                                              : "cursor-pointer hover:bg-gray-100"
+                                          } `}
                                         >
                                           <div className="flex flex-row items-center space-x-4 w-full">
                                             <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
@@ -2409,10 +2393,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                                 </p>
                                                 {/* Pump Type Chip */}
                                                 <span
-                                                  className={`px-2 py-1 text-xs font-medium rounded-full ${pumpType === "line"
-                                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                                    : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                                    }`}
+                                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                                    pumpType === "line"
+                                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                                  }`}
                                                 >
                                                   {pumpType === "line" ? "Line" : "Boom"}
                                                 </span>
@@ -2454,7 +2439,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                 {/* Right Column - Chosen Pump */}
                 <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">{selectedPump ? "Pump Chosen" : "Select Pump"}</h3>
+                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
+                    {selectedPump ? "Pump Chosen" : "Select Pump"}
+                  </h3>
                   <div className="space-y-2">
                     {selectedPump && calculatedTMs && calculatedTMs.available_pumps ? (
                       (() => {
@@ -2469,10 +2456,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
                                 {/* Pump Type Chip */}
                                 <span
-                                  className={`px-2 py-1 text-xs font-medium rounded-full ${pumpType === "line"
-                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                    : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                    }`}
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    pumpType === "line"
+                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                  }`}
                                 >
                                   {pumpType === "line" ? "Line" : "Boom"}
                                 </span>
@@ -2948,7 +2936,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           )
         ) : null}
       </div>
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-2 ml-24">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-2 ml-24 dark:bg-gray-900 dark:border-gray-700">
         {step === 1.1 && (
           <div className="flex justify-between mt-2">
             <span></span>
