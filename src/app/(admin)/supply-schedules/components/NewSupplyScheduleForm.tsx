@@ -971,7 +971,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 {/* Site Reach Time */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Supply Start Time ({profile?.preferred_format})
+                    Supply Start Time at Site ({profile?.preferred_format})
                   </label>
                   <div className="relative">
                     <TimeInput

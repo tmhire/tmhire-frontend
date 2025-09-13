@@ -23,7 +23,8 @@ interface DashboardData {
 export default function DashboardContainer() {
   const { fetchWithAuth } = useApiClient();
   const { status } = useSession();
-
+  const { data: session } = useSession();
+  const [city, setCity] = useState<string>(session?.city || "");
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState(today.toISOString().slice(0, 10));
 
@@ -39,6 +40,26 @@ export default function DashboardContainer() {
     enabled: status === "authenticated",
   });
 
+  React.useEffect(() => {
+    if (session && session?.user) {
+      setCity(session.city || "");
+    }
+  }, [session, setCity]);
+
+  const startHour = session?.custom_start_hour ?? 0; // default 7
+  const format = session?.preferred_format ?? "12h";
+
+  function formatHour(hour: number) {
+    if (format === "24h") {
+      return `${hour.toString().padStart(2, "0")}:00`;
+    }
+    const suffix = hour >= 12 ? "PM" : "AM";
+    const adjusted = hour % 12 === 0 ? 12 : hour % 12;
+    return `${adjusted.toString().padStart(2, "0")}:00 ${suffix}`;
+  }
+
+  const endHour = (startHour + 24) % 24;
+
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
   };
@@ -46,22 +67,35 @@ export default function DashboardContainer() {
   return (
     <div className="grid grid-cols-12 gap-4 md:gap-6">
       {/* Date Picker Row */}
-      <div className="col-span-12 flex items-center justify-between py-4 pl-6 px-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-3">
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-white">Dashboard Overview</h3>
+      <div className="col-span-12 flex items-center justify-between py-4 pl-6 px-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700
+  sticky top-24 z-10">        <div className="flex items-center space-x-3">
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-white">Dashboard Overview - {city}</h3>
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="outline"
+              className="h-8"
+              onClick={() => setSelectedDate(new Date().toISOString().slice(0, 10))}
+            >
+              Today
+            </Button>
+            <div className="w-28">
+              <DatePickerInput
+                value={selectedDate}
+                onChange={handleDateChange}
+                placeholder="Select date"
+                className="h-8"
+              />
+            </div>
+          </div>
         </div>
         <div className="flex items-center space-x-3">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Select date to view data</span>
-          <Button
-            variant="outline"
-            className="h-10"
-            onClick={() => setSelectedDate(new Date().toISOString().slice(0, 10))}
-          >
-            Today
-          </Button>
-          <div className="w-28">
-            <DatePickerInput value={selectedDate} onChange={handleDateChange} placeholder="Select date" />
-          </div>
+          
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              Scheduled Timings
+            </span>
+          <span className="px-3 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-sm font-medium text-gray-800 dark:text-gray-200">
+            {formatHour(startHour)} TO {formatHour(endHour)} NEXT DAY
+          </span>
         </div>
       </div>
 
@@ -73,19 +107,19 @@ export default function DashboardContainer() {
       ) : (
         <>
           <div className="col-span-12 space-y-6 xl:col-span-12">
-            <DashboardCounts counts={dashboardData.counts} />
+            <DashboardCounts counts={dashboardData?.counts} />
           </div>
 
           <div className="col-span-12">
-            <PlantsSummaryTable plantsTable={dashboardData.plants_table} />
+            <PlantsSummaryTable plantsTable={dashboardData?.plants_table} />
           </div>
 
           <div className="col-span-12 xl:col-span-6">
-            <StatisticsChart series={dashboardData.series} />
+            <StatisticsChart series={dashboardData?.series} />
           </div>
 
           <div className="col-span-12 xl:col-span-6">
-            <RecentSchedules orders={dashboardData.recent_orders} />
+            <RecentSchedules orders={dashboardData?.recent_orders} />
           </div>
         </>
       )}

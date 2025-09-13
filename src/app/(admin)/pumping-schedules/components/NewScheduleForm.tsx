@@ -1228,10 +1228,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${
                         (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
                       } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${
-                        (profile?.custom_start_hour ?? 0) + 12 < 24 ? "PM" : "AM"
+                        (profile?.custom_start_hour ?? 0) + 24 < 24 ? "PM" : "AM"
                       } NEXT DAY`
                     : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 TODAY TO ${String(
-                        ((profile?.custom_start_hour ?? 0) + 12) % 24
+                        ((profile?.custom_start_hour ?? 0) + 24) % 24
                       ).padStart(2, "0")}:00 TOMORROW`}
                 </span>
               </div>
@@ -1639,8 +1639,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         handleInputChange(e);
                       }
                     }}
-                    placeholder="Enter floor between 1 to 99"
-                    min="1"
+                    placeholder="Enter floor between 0 to 99"
+                    min="0"
                     max="99"
                   />
                 </div>
@@ -1787,7 +1787,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       setFormData((prev) => ({ ...prev, mixCode: v }));
                       setHasChanged(true);
                     }}
-                    placeholder="Enter value between 0-200"
+                    placeholder="Enter mix code"
                   />
                 </div>
                 <div className="col-span-1">

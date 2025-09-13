@@ -100,7 +100,7 @@ export default function SupplyScheduleViewPage() {
               </p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Supply Start Time</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Supply Start Time at Site</h4>
               <p className="text-base text-gray-800 dark:text-white/90">
                 {schedule.input_params.pump_start
                   ? new Date(schedule.input_params.pump_start).toLocaleTimeString([], {
