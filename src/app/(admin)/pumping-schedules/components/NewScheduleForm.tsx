@@ -426,13 +426,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     if (!mother_plant_id) return;
     const capacity = plantsData.find((plant) => plant._id === mother_plant_id)?.capacity;
     if (!capacity) return;
-    const unloadingTime = capacity / avgTMCap;
+    const loadTime = Math.ceil(capacity / avgTMCap / 5) * 5;
 
     if (!formData.unloadingTime) {
       setFormData((prev) => ({
         ...prev,
-        unloadingTime: unloadingTime.toFixed(0),
-        speed: (avgTMCap / (unloadingTime / 60)).toFixed(0),
+        loadTime: loadTime.toFixed(0),
       }));
     }
   }, [selectedProject, avgTMCap, projects, plantsData]);
