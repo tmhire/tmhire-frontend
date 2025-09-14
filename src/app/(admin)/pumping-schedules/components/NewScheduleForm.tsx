@@ -315,7 +315,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     },
   });
 
-  const { data: plantsData } = useQuery<{ _id: string; name: string }[]>({
+  const { data: plantsData } = useQuery<{ _id: string; name: string; capacity: number }[]>({
     queryKey: ["plants"],
     queryFn: async () => {
       const response = await fetchWithAuth("/plants");
@@ -410,6 +410,34 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   // Build computed and displayed schedule names
   const [computedScheduleName, setComputedScheduleName] = useState("");
 
+  // Prefill unloading time when project changes
+  useEffect(() => {
+    if (
+      !selectedProject ||
+      !avgTMCap ||
+      formData.unloadingTime ||
+      !projects ||
+      projects.length === 0 ||
+      !plantsData ||
+      plantsData.length === 0
+    )
+      return;
+    const mother_plant_id = projects.find((project) => project._id === selectedProject)?.mother_plant_id;
+    if (!mother_plant_id) return;
+    const capacity = plantsData.find((plant) => plant._id === mother_plant_id)?.capacity;
+    if (!capacity) return;
+    const unloadingTime = capacity / avgTMCap;
+
+    if (!formData.unloadingTime) {
+      setFormData((prev) => ({
+        ...prev,
+        unloadingTime: unloadingTime.toFixed(0),
+        speed: (avgTMCap / (unloadingTime / 60)).toFixed(0),
+      }));
+    }
+  }, [selectedProject, avgTMCap, projects, plantsData]);
+
+  // Template handling - prefill form when template is selected
   useEffect(() => {
     if (!template || template === "none" || schedule_id || pastSchedulesLoading) return;
     setSelectedPastSchedule(template);
