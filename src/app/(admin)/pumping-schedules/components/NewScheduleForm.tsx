@@ -24,18 +24,21 @@ import {
   ArrowDown,
   Ban,
   Search,
-  Building, Truck, MapPin
+  Building,
+  Truck,
+  MapPin,
 } from "lucide-react";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { RadioGroup } from "@/components/ui/radio";
 import { useProfile } from "@/hooks/useProfile";
 import TimeInput from "@/components/form/input/TimeInput";
 // Removed Chart.js pie in favor of custom SVG DonutChart
 import { Spinner } from "@/components/ui/spinner";
 import Tooltip from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface Client {
   contact_phone: number;
@@ -113,13 +116,17 @@ interface Project {
 
 interface PastSchedule {
   _id: string;
-  schedule_name: string;
+  schedule_no: string;
   client_id: string;
+  client_name: string;
   project_id: string;
+  project_name: string;
   pump_type: "line" | "boom";
   concreteGrade: string;
   pumping_job: string;
   input_params: {
+    quantity: number;
+    schedule_date: string;
     pump_onward_time: number;
     return_time: number;
     buffer_time: number;
@@ -145,6 +152,20 @@ const steps = [
   { id: 2, name: "Pump Selection" },
   { id: 3, name: "TM Selection" },
 ];
+
+const pumpColors = {
+  line: "bg-blue-100 text-blue-700",
+  boom: "bg-green-100 text-green-700",
+};
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
 
 // Helper function to format date and time for tooltips
 const formatDateTimeForTooltip = (dateTimeString: string): string => {
@@ -178,6 +199,8 @@ const createTooltip = (unavailable_times: UnavailableTimes) => {
 
 export default function NewScheduleForm({ schedule_id }: { schedule_id?: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const template = searchParams.get("template");
   const { fetchWithAuth } = useApiClient();
   const [step, setStep] = useState(schedule_id ? 2 : 1);
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -190,7 +213,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const { data: pastSchedules, isLoading: pastSchedulesLoading } = useQuery<PastSchedule[]>({
     queryKey: ["past-schedules"],
     queryFn: async () => {
-      const response = await fetchWithAuth("/schedules?type=all");
+      const response = await fetchWithAuth("/schedules");
       const data = await response.json();
       if (data.success) {
         return data.data;
@@ -222,7 +245,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     pumpingJob: string;
     floorHeight: string;
     pumpSiteReachTime: string;
-    scheduleName: string;
     slumpAtSite: string;
     mixCode: string;
     remarks: string;
@@ -248,7 +270,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     pumpingJob: "",
     floorHeight: "",
     pumpSiteReachTime: "",
-    scheduleName: "",
     slumpAtSite: "",
     mixCode: "",
     remarks: "",
@@ -390,23 +411,49 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [computedScheduleName, setComputedScheduleName] = useState("");
 
   useEffect(() => {
+    if (!template || template === "none" || schedule_id || pastSchedulesLoading) return;
+    setSelectedPastSchedule(template);
+    if (selectedPastSchedule) {
+      // Prefill form with past schedule data
+      const pastSchedule = pastSchedules?.find((s) => s._id === selectedPastSchedule);
+      if (pastSchedule) {
+        setSelectedClient(pastSchedule.client_id);
+        setSelectedProject(pastSchedule.project_id);
+        setPumpType(pastSchedule.pump_type);
+        setFormData((prev) => ({
+          ...prev,
+          concreteGrade: pastSchedule.concreteGrade,
+          pumpingJob: pastSchedule.pumping_job,
+          pumpOnwardTime: pastSchedule.input_params.pump_onward_time.toString(),
+          returnTime: pastSchedule.input_params.return_time.toString(),
+          bufferTime: pastSchedule.input_params.buffer_time.toString(),
+          loadTime: pastSchedule.input_params.load_time.toString(),
+          pumpFixingTime: pastSchedule.input_params.pump_fixing_time.toString(),
+          pumpRemovalTime: pastSchedule.input_params.pump_removal_time.toString(),
+          floorHeight: pastSchedule.floor_height.toString(),
+          pumpSiteReachTime: pastSchedule.pump_site_reach_time,
+          slumpAtSite: pastSchedule.slump_at_site?.toString() || "",
+          mixCode: pastSchedule.mix_code || "",
+          remarks: pastSchedule.remarks || "",
+          oneWayKm: pastSchedule.mother_plant_km?.toString() || "",
+          siteSupervisorId: pastSchedule.site_supervisor_id || "",
+        }));
+        if (pastSchedule.tm_overrule) {
+          setOverruleTMCount(true);
+          setCustomTMCount(pastSchedule.tm_overrule);
+        }
+      }
+    }
+    // Move to first sub-step
+    setStep(1.1);
+  }, [template, pastSchedules]);
+
+  useEffect(() => {
     if (selectedClient && selectedProject && formData.scheduleDate && motherPlantName)
       setComputedScheduleName(
         `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
       );
   }, [motherPlantName, formData.scheduleDate, schedulesForDayCount]);
-
-  const displayedScheduleName = schedule_id
-    ? formData.scheduleName || computedScheduleName
-    : computedScheduleName || formData.scheduleName;
-
-  // Keep schedule name in form data for API payloads (only auto-set for new schedules)
-  useEffect(() => {
-    if (!schedule_id && computedScheduleName && formData.scheduleName !== computedScheduleName) {
-      setFormData((prev) => ({ ...prev, scheduleName: computedScheduleName }));
-      setHasChanged(true);
-    }
-  }, [computedScheduleName, schedule_id, formData.scheduleName]);
 
   const fetchSchedule = useCallback(async () => {
     try {
@@ -420,7 +467,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         const pumping_speed = data.data.input_params.pumping_speed;
         setFormData({
           scheduleDate: data.data.input_params.schedule_date,
-          scheduleName: data.data.schedule_name,
           startTime: data.data.input_params.pump_start.split("T")[1],
           quantity: data.data.input_params.quantity.toString(),
           speed: pumping_speed.toString(),
@@ -428,8 +474,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             data.data.input_params.unloading_time && data.data.input_params.unloading_time !== 0
               ? data.data.input_params.unloading_time.toString()
               : pumping_speed && avgTMCap
-                ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
-                : "",
+              ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
+              : "",
           pumpOnwardTime: data.data.input_params.pump_onward_time.toString(),
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
@@ -456,7 +502,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         });
         setComputedScheduleName(
           data?.data?.schedule_no ||
-          `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
+            `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
         );
         const tm_ids = new Set();
         const tmSequence: string[] = [];
@@ -507,7 +553,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           // pump: selectedPump,
           concreteGrade: formData.concreteGrade,
           pumping_speed: formData.speed,
-          schedule_name: formData.scheduleName,
           pump_type: pumpType,
           input_params: {
             quantity: parseFloat(formData.quantity),
@@ -606,13 +651,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       !selectedClient ||
       !formData.scheduleDate ||
       !formData.startTime ||
-      !formData.quantity ||
-      !formData.speed ||
-      !formData.onwardTime ||
-      !formData.pumpOnwardTime ||
-      !formData.returnTime ||
-      !formData.bufferTime ||
-      !formData.loadTime
+      !parseFloat(formData.quantity) ||
+      !parseFloat(formData.speed) ||
+      !parseFloat(formData.onwardTime) ||
+      !parseFloat(formData.pumpOnwardTime) ||
+      !parseFloat(formData.returnTime) ||
+      !parseFloat(formData.bufferTime) ||
+      !parseFloat(formData.loadTime)
     ) {
       return false;
     }
@@ -629,7 +674,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             concreteGrade: formData.concreteGrade,
             pumping_speed: formData.speed,
             pump_type: pumpType,
-            schedule_name: formData.scheduleName,
             input_params: {
               quantity: parseFloat(formData.quantity),
               pumping_speed: parseFloat(formData.speed),
@@ -828,14 +872,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const filteredSchedules = useMemo(() => {
     if (!searchTerm) return pastSchedules;
 
-    return pastSchedules?.filter(schedule =>
-      schedule.schedule_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      schedule.schedule_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      schedule.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      schedule.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      schedule.concreteGrade.toLowerCase().includes(searchTerm.toLowerCase())
+    return pastSchedules?.filter(
+      (schedule) =>
+        schedule.schedule_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        schedule.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        schedule.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        schedule.concreteGrade.toString().toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [searchTerm]);
+  }, [searchTerm, pastSchedules]);
 
   useEffect(() => {
     // reset project when client changes
@@ -864,7 +908,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       // Check if all required fields have values
       return requiredFields.every((field) => {
         const value = formData[field as keyof typeof formData];
-        return value !== undefined && value !== null && value !== "";
+        return value !== undefined && value !== null && value !== "" && value !== "0";
       });
     }
     return false;
@@ -998,6 +1042,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             Error retrieving schedule data. Please ensure the schedule ID is correct or try refreshing the page.
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if (pastSchedulesLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Spinner size="lg" text="Loading schedules..." />
       </div>
     );
   }
@@ -1235,10 +1287,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 >
                   {/* Step Circle */}
                   <motion.div
-                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${step >= s.id
-                      ? "border-brand-500 bg-brand-500 text-white shadow-lg"
-                      : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                      }`}
+                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${
+                      step >= s.id
+                        ? "border-brand-500 bg-brand-500 text-white shadow-lg"
+                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                    }`}
                     animate={{
                       scale: s.type === "subStep" ? (step === s.id ? 0.9 : 0.8) : step === s.id ? 1.3 : 1,
                       boxShadow: step === s.id ? "0 0 20px rgba(var(--brand-500-rgb, 59, 130, 246), 0.5)" : "none",
@@ -1267,8 +1320,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                   {/* Step Name */}
                   <motion.span
-                    className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
-                      }`}
+                    className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${
+                      step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
+                    }`}
                     animate={{
                       fontWeight: step >= s.id ? 500 : 400,
                     }}
@@ -1303,9 +1357,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         {step === 1 ? (
           <div className="max-w-6xl mx-auto p-6 space-y-6">
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Choose Schedule Starting Point
-              </h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Choose Schedule Starting Point</h2>
               <p className="text-gray-600 dark:text-gray-400">
                 Start from scratch or use a previous schedule as a template
               </p>
@@ -1315,32 +1367,36 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               {/* Start from Scratch Option */}
               <div className="lg:col-span-1">
                 <div
-                  className={`h-full p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 ${!selectedPastSchedule
-                    ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg'
-                    : 'border-gray-200 hover:border-brand-300 hover:shadow-md dark:border-gray-700 dark:hover:border-brand-600'
-                    }`}
+                  className={`h-full p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                    !selectedPastSchedule
+                      ? "border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg"
+                      : "border-gray-200 hover:border-brand-300 hover:shadow-md dark:border-gray-700 dark:hover:border-brand-600"
+                  }`}
                   onClick={() => setSelectedPastSchedule("")}
                 >
                   <div className="text-center">
-                    <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${!selectedPastSchedule
-                      ? 'bg-brand-500 text-white'
-                      : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
-                      }`}>
+                    <div
+                      className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
+                        !selectedPastSchedule
+                          ? "bg-brand-500 text-white"
+                          : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                      }`}
+                    >
                       <FileText className="w-8 h-8" />
                     </div>
-                    <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">
-                      Start from Scratch
-                    </h3>
+                    <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">Start from Scratch</h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed">
-                      Create a completely new schedule with default values. You'll input all details manually for maximum customization.
+                      Create a completely new schedule with default values. You'll input all details manually for
+                      maximum customization.
                     </p>
                     <button
-                      className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${!selectedPastSchedule
-                        ? 'bg-brand-500 text-white hover:bg-brand-600'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                        }`}
+                      className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
+                        !selectedPastSchedule
+                          ? "bg-brand-500 text-white hover:bg-brand-600"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                      }`}
                     >
-                      {!selectedPastSchedule ? 'Selected' : 'Choose this option'}
+                      {!selectedPastSchedule ? "Selected" : "Choose this option"}
                     </button>
                   </div>
                 </div>
@@ -1349,22 +1405,24 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               {/* Use Past Schedule Option */}
               <div className="lg:col-span-2">
                 <div
-                  className={`p-6 rounded-xl border-2 transition-all duration-200 ${selectedPastSchedule
-                    ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg'
-                    : 'border-gray-200 dark:border-gray-700'
-                    }`}
+                  className={`p-6 rounded-xl border-2 transition-all duration-200 ${
+                    selectedPastSchedule
+                      ? "border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg"
+                      : "border-gray-200 dark:border-gray-700"
+                  }`}
                 >
                   <div className="flex items-center mb-4">
-                    <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mr-4 ${selectedPastSchedule
-                      ? 'bg-brand-500 text-white'
-                      : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
-                      }`}>
+                    <div
+                      className={`inline-flex items-center justify-center w-12 h-12 rounded-full mr-4 ${
+                        selectedPastSchedule
+                          ? "bg-brand-500 text-white"
+                          : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                      }`}
+                    >
                       <Clock className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                        Use Past Schedule
-                      </h3>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Use Past Schedule</h3>
                       <p className="text-gray-600 dark:text-gray-400 text-sm">
                         Start with values from a previous schedule as a template
                       </p>
@@ -1400,20 +1458,25 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       filteredSchedules?.map((schedule) => (
                         <div
                           key={schedule._id}
-                          className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${selectedPastSchedule === schedule._id
-                            ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
-                            : 'border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50'
-                            }`}
+                          className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
+                            selectedPastSchedule === schedule._id
+                              ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
+                              : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
+                          }`}
                           onClick={() => setSelectedPastSchedule(schedule._id)}
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-2">
                                 <h4 className="font-semibold text-gray-900 dark:text-white truncate">
-                                  {schedule.schedule_name}
+                                  {schedule.schedule_no}
                                 </h4>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPumpTypeColor(schedule.pump_type)}`}>
-                                  {schedule.pump_type.toUpperCase()}
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    pumpColors[schedule.pump_type]
+                                  }`}
+                                >
+                                  {schedule?.pump_type?.toUpperCase()}
                                 </span>
                               </div>
 
@@ -1436,11 +1499,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-1">
                                     <Calendar className="w-4 h-4" />
-                                    <span>{formatDate(schedule.date)}</span>
+                                    <span>{formatDate(schedule.input_params.schedule_date)}</span>
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <Truck className="w-4 h-4" />
-                                    <span>{schedule.quantity} m³</span>
+                                    <span>{schedule.input_params.quantity} m³</span>
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <span className="w-4 h-4 text-center text-xs font-bold">G</span>
@@ -1454,10 +1517,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               </div>
                             </div>
 
-                            <div className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPastSchedule === schedule._id
-                              ? 'border-brand-500 bg-brand-500'
-                              : 'border-gray-300 dark:border-gray-600'
-                              }`}>
+                            <div
+                              className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                selectedPastSchedule === schedule._id
+                                  ? "border-brand-500 bg-brand-500"
+                                  : "border-gray-300 dark:border-gray-600"
+                              }`}
+                            >
                               {selectedPastSchedule === schedule._id && (
                                 <div className="w-2 h-2 rounded-full bg-white"></div>
                               )}
@@ -1471,7 +1537,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   {selectedPastSchedule && (
                     <div className="mt-4 p-3 bg-brand-50 dark:bg-brand-900/20 rounded-lg border border-brand-200 dark:border-brand-700">
                       <p className="text-sm text-brand-700 dark:text-brand-300">
-                        <strong>Note:</strong> Date, time, quantity, and some other fields will still need to be updated for the new schedule.
+                        <strong>Note:</strong> Date, time, quantity, and some other fields will still need to be updated
+                        for the new schedule.
                       </p>
                     </div>
                   )}
@@ -1483,12 +1550,24 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             <div className="flex justify-center gap-4 pt-6">
               <button
                 className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                onClick={() => {
+                  setSelectedPastSchedule("");
+                  setStep(1.1);
+                }}
               >
                 Cancel
               </button>
               <button
-                className="px-8 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors font-medium"
-                disabled={!selectedPastSchedule && selectedPastSchedule !== ""}
+                className={cn(
+                  "px-8 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors font-medium",
+                  !selectedPastSchedule || selectedPastSchedule === "" ? "opacity-50 cursor-not-allowed" : ""
+                )}
+                disabled={!selectedPastSchedule || selectedPastSchedule === ""}
+                onClick={() => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.set("template", selectedPastSchedule || "none");
+                  router.replace(`?${params.toString()}`);
+                }}
               >
                 Continue
               </button>
@@ -1503,12 +1582,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900/40 py-1 px-3 rounded-full">
                   Company Timings -
                   {profile?.preferred_format === "12h"
-                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
-                    } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) + 24 < 24 ? "PM" : "AM"
-                    } NEXT DAY`
+                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${
+                        (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
+                      } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${
+                        (profile?.custom_start_hour ?? 0) + 24 < 24 ? "PM" : "AM"
+                      } NEXT DAY`
                     : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 TODAY TO ${String(
-                      ((profile?.custom_start_hour ?? 0) + 24) % 24
-                    ).padStart(2, "0")}:00 TOMORROW`}
+                        ((profile?.custom_start_hour ?? 0) + 24) % 24
+                      ).padStart(2, "0")}:00 TOMORROW`}
                 </span>
               </div>
 
@@ -1524,7 +1605,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       Schedule No.
                     </p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                      {displayedScheduleName || "Select Project and Schedule Date first"}
+                      {computedScheduleName || "Select Project and Schedule Date first"}
                     </p>
                   </div>
                 </div>
@@ -1754,8 +1835,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     value={
                       selectedProject && projects.find((p) => p._id === selectedProject)?.mother_plant_id
                         ? (plantsData || []).find(
-                          (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                        )?.name || "Unknown Plant"
+                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
+                          )?.name || "Unknown Plant"
                         : ""
                     }
                     disabled
@@ -2572,10 +2653,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select 1 Pump</h3>
                     {/* Pump Type Filter Indicator */}
                     <span
-                      className={`px-3 py-1 text-sm font-medium rounded-full ${pumpType === "line"
-                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                        : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                        }`}
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${
+                        pumpType === "line"
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                          : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                      }`}
                     >
                       {pumpType === "line" ? "Line Pump" : "Boom Pump"}
                     </span>
@@ -2658,10 +2740,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                       {pumps.map((pump, idx) => (
                                         <label
                                           key={pump.id}
-                                          className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${!pump.availability
-                                            ? "opacity-50 cursor-not-allowed"
-                                            : "cursor-pointer hover:bg-gray-100"
-                                            } `}
+                                          className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
+                                            !pump.availability
+                                              ? "opacity-50 cursor-not-allowed"
+                                              : "cursor-pointer hover:bg-gray-100"
+                                          } `}
                                         >
                                           <div className="flex flex-row items-center space-x-4 w-full">
                                             <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
@@ -2686,10 +2769,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                                 </p>
                                                 {/* Pump Type Chip */}
                                                 <span
-                                                  className={`px-2 py-1 text-xs font-medium rounded-full ${pumpType === "line"
-                                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                                    : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                                    }`}
+                                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                                    pumpType === "line"
+                                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                                  }`}
                                                 >
                                                   {pumpType === "line" ? "Line" : "Boom"}
                                                 </span>
@@ -2748,10 +2832,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
                                 {/* Pump Type Chip */}
                                 <span
-                                  className={`px-2 py-1 text-xs font-medium rounded-full ${pumpType === "line"
-                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                    : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                    }`}
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    pumpType === "line"
+                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                  }`}
                                 >
                                   {pumpType === "line" ? "Line" : "Boom"}
                                 </span>
@@ -3231,7 +3316,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-2 ml-24 dark:bg-gray-900 dark:border-gray-700">
         {step === 1.1 && (
           <div className="flex justify-between mt-2">
-            <span></span>
+            <Button onClick={handleBack} variant="outline" className="flex items-center gap-2">
+              <ArrowLeft size={16} />
+              Back to Select Template
+            </Button>
             <span>
               <span className="text-red-500">*</span> Compulsory, all other fields are optional
             </span>
