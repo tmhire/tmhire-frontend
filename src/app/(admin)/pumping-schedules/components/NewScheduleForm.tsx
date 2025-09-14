@@ -1386,7 +1386,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </div>
                     <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">Start from Scratch</h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed">
-                      Create a completely new schedule with default values. You'll input all details manually for
+                      Create a completely new schedule with default values. You&apos;ll input all details manually for
                       maximum customization.
                     </p>
                     <button
