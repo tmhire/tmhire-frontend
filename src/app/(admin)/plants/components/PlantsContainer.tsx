@@ -284,6 +284,19 @@ export default function PlantsContainer() {
     }
   };
 
+  const { data: avgTMCapData } = useQuery<{ average_capacity: number }>({
+    queryKey: ["average-tm-capacity"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/tms/average-capacity");
+      const data = await response.json();
+      if (data.success && data.data && typeof data.data.average_capacity === "number") {
+        return { average_capacity: data.data.average_capacity };
+      }
+      throw new Error("Failed to fetch average TM capacity");
+    },
+  });
+  const avgTMCap = Math.ceil(avgTMCapData?.average_capacity || 0) ?? null;
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
@@ -293,7 +306,7 @@ export default function PlantsContainer() {
       if (value !== "" && Number(value) > 99) {
         return; // Don't update the state if value exceeds 99
       }
-      
+
       if (value === "") {
         setCapacityError(""); // Allow empty capacity
       } else {
@@ -349,7 +362,7 @@ export default function PlantsContainer() {
       if (value !== "" && Number(value) > 99) {
         return; // Don't update the state if value exceeds 99
       }
-      
+
       if (value === "") {
         setEditCapacityError(""); // Allow empty capacity
       } else {
@@ -472,7 +485,7 @@ export default function PlantsContainer() {
 
       return matchesSearch && matchesLocation && matchesContact && matchesDate && matchesStatus;
     });
-      }, [plantsData, searchQuery, selectedLocation, selectedContact, selectedDate, selectedStatus, dateRanges]);
+  }, [plantsData, searchQuery, selectedLocation, selectedContact, selectedDate, selectedStatus, dateRanges]);
 
   return (
     <div>
@@ -708,6 +721,29 @@ export default function PlantsContainer() {
               />
               {capacityError && <span className="text-xs text-red-600 mt-1 block">{capacityError}</span>}
             </div>
+            <div className="w-full">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex flex-row justify-between">
+                Loading Time (min)   {newPlant?.capacity && (
+                  <span className="text-xs text-gray-500 mt-1 block">
+                    Using Avg TM Cap: {avgTMCap}
+                  </span>
+                )}
+              </label>
+              <Input
+                type="number"
+                name="capacity"
+                placeholder="Enter plant capacity to calculate"
+                value={
+                  newPlant?.capacity
+                    ? Math.ceil((newPlant.capacity / avgTMCap) / 5) * 5
+                    : ""
+                }
+                disabled
+              />
+              {capacityError && (
+                <span className="text-xs text-red-600 mt-1 block">{capacityError}</span>
+              )}
+            </div>
           </div>
           <div className="flex flex-row w-full gap-2">
             <div className="w-full">
@@ -732,6 +768,19 @@ export default function PlantsContainer() {
                 onChange={handleInputChange}
                 maxLength={60}
               />
+            </div>
+            <div className="w-full">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status</label>
+              <select
+                name="status"
+                value={newPlant.status || ""}
+                onChange={handleInputChange}
+                className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-4 pr-12 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+              >
+                <option value="">Select Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
             </div>
           </div>
           <div>
@@ -816,21 +865,6 @@ export default function PlantsContainer() {
               onChange={handleInputChange}
               maxLength={50}
             />
-          </div>
-          <div className="flex flex-row w-full gap-2">
-            <div className="w-full">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status</label>
-                             <select
-                 name="status"
-                 value={newPlant.status || ""}
-                 onChange={handleInputChange}
-                 className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-4 pr-12 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
-               >
-                 <option value="">Select Status</option>
-                 <option value="active">Active</option>
-                 <option value="inactive">Inactive</option>
-               </select>
-            </div>
           </div>
         </div>
         <div className="flex items-center justify-end w-full gap-3 mt-8">
@@ -1003,16 +1037,16 @@ export default function PlantsContainer() {
             <div className="flex flex-row w-full gap-2">
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status</label>
-                                 <select
-                   name="status"
-                   value={editedPlant.status || ""}
-                   onChange={handleEditInputChange}
-                   className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-4 pr-12 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
-                 >
-                   <option value="">Select Status</option>
-                   <option value="active">Active</option>
-                   <option value="inactive">Inactive</option>
-                 </select>
+                <select
+                  name="status"
+                  value={editedPlant.status || ""}
+                  onChange={handleEditInputChange}
+                  className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-4 pr-12 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+                >
+                  <option value="">Select Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
               </div>
             </div>
           </div>

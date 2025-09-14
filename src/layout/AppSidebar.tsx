@@ -129,7 +129,7 @@ const AppSidebar: React.FC = () => {
 
   const renderMenuItems = (navItems: NavItem[], menuType: "main" | "others") => (
     <ul
-      className={`flex flex-col  ${isHovered || isExpanded || isMobileOpen ? "" : "items-center justify-center"} gap-4`}
+      className={`flex flex-col  ${isMobileOpen ? "" : "items-center justify-center"} gap-2`}
     >
       {navItems.map((nav, index) => (
         <li key={nav.name}>
@@ -140,7 +140,7 @@ const AppSidebar: React.FC = () => {
                 openSubmenu?.type === menuType && openSubmenu?.index === index
                   ? "menu-item-active"
                   : "menu-item-inactive"
-              } cursor-pointer ${!isExpanded && !isHovered ? "lg:justify-center" : "lg:justify-start"}`}
+              } cursor-pointer ${!isExpanded ? "lg:justify-center" : "lg:justify-start"}`}
             >
               <span
                 className={` ${
@@ -172,17 +172,17 @@ const AppSidebar: React.FC = () => {
                   } flex flex-col justify-center items-center gap-1`}
                 >
                   {nav.icon}
-                  {!isExpanded && !isHovered && !isMobileOpen && nav.shortName && (
+                  {!isExpanded && !isMobileOpen && nav.shortName && (
                     <span className="text-[10px] text-center leading-tight break-words max-w-[60px]">
                       {nav.shortName}
                     </span>
                   )}
                 </span>
-                {(isExpanded || isHovered || isMobileOpen) && <span className={`menu-item-text`}>{nav.name}</span>}
+                {(isExpanded || isMobileOpen) && <span className={`menu-item-text`}>{nav.name}</span>}
               </Link>
             )
           )}
-          {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
+          {nav.subItems && (isExpanded || isMobileOpen) && (
             <div
               ref={(el) => {
                 subMenuRefs.current[`${menuType}-${index}`] = el;
@@ -305,7 +305,7 @@ const AppSidebar: React.FC = () => {
   return (
     <aside
       className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
-        ${isExpanded || isMobileOpen ? "w-[290px]" : isHovered ? "w-[290px]" : "w-[90px]"}
+        ${isExpanded || isMobileOpen ? "w-[290px]" : "w-[90px]"}
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0`}
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
