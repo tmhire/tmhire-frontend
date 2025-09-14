@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, Filter, Calendar } from "lucide-react";
 import { useApiClient } from "@/hooks/useApiClient";
+import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -181,8 +182,8 @@ const transformApiData = (apiData: ApiResponse, plantMap: Map<string, string>): 
         itemType === "mixer" && rawType === "work"
           ? "unload"
           : itemType === "pump" && rawType === "work"
-          ? "pump"
-          : rawType;
+            ? "pump"
+            : rawType;
       return {
         id: task.id,
         color: TASK_TYPE_COLORS[mappedType] || "bg-gray-500",
@@ -243,11 +244,11 @@ export default function CalendarContainer() {
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedItem, setSelectedItem] = useState<"all" | "mixer" | "pump">("all");
-  const [selectedPlant, setSelectedPlant] = useState("");
-  const [selectedClient, setSelectedClient] = useState("");
-  const [selectedPump, setSelectedPump] = useState("");
-  const [selectedTM, setSelectedTM] = useState("");
-  const [selectedProject, setSelectedProject] = useState("");
+  const [selectedPlant, setSelectedPlant] = useState<string[]>([]);
+  const [selectedClient, setSelectedClient] = useState<string[]>([]);
+  const [selectedPump, setSelectedPump] = useState<string[]>([]);
+  const [selectedTM, setSelectedTM] = useState<string[]>([]);
+  const [selectedProject, setSelectedProject] = useState<string[]>([]);
   const [timeFormat, setTimeFormat] = useState<"12h" | "24h" | undefined>(session?.preferred_format);
   const [customStartHour, setCustomStartHour] = useState<number | undefined>(session?.custom_start_hour);
   const [ganttData, setGanttData] = useState<Item[]>([]);
@@ -396,16 +397,19 @@ export default function CalendarContainer() {
   // Filter data based on search term and selected filters
   const filteredData = ganttData.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesClient = !selectedClient || item.client === selectedClient;
+    const matchesClient = selectedClient.length === 0 || (item.client && selectedClient.includes(item.client));
     const matchesItem = selectedItem === "all" || item.item === selectedItem;
 
-    // Single-select filters using SearchableDropdown
-    const matchesPlant = !selectedPlant || item.plant === selectedPlant;
-    const matchesPumps = !selectedPump || (item.item === "pump" && item.name === selectedPump);
-    const matchesTMs = !selectedTM || (item.item === "mixer" && item.name === selectedTM);
+    // Multi-select filters using SearchableDropdown
+    const matchesPlant = selectedPlant.length === 0 || selectedPlant.includes(item.plant);
+    const matchesPumps = selectedPump.length === 0 || (item.item === "pump" && selectedPump.includes(item.name));
+    const matchesTMs = selectedTM.length === 0 || (item.item === "mixer" && selectedTM.includes(item.name));
     const matchesProject =
-      !selectedProject ||
-      item.tasks.some((t) => (t.project || t.client) && (t.project || t.client) === selectedProject);
+      selectedProject.length === 0 ||
+      item.tasks.some((t) => {
+        const projectOrClient = t.project || t.client;
+        return projectOrClient && selectedProject.includes(projectOrClient);
+      });
 
     return (
       matchesSearch && matchesPlant && matchesClient && matchesItem && matchesPumps && matchesTMs && matchesProject
@@ -535,11 +539,10 @@ export default function CalendarContainer() {
               {/* Filter Toggle */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                  showFilters
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
                     ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
                     : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
-                } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
+                  } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
               >
                 <Filter className="h-4 w-4" />
                 Filters
@@ -617,11 +620,10 @@ export default function CalendarContainer() {
                 {/* Filter Toggle */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                    showFilters
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
                       ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
                       : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
-                  } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
+                    } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
                 >
                   <Filter className="h-4 w-4" />
                   Filters
@@ -680,43 +682,41 @@ export default function CalendarContainer() {
                     </label>
                     <button
                       onClick={() => setIsItemFilterOpen(!isItemFilterOpen)}
-                      className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                      className="dropdown-toggle w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     >
                       {selectedItem === "all" ? "All Vehicles" : selectedItem === "mixer" ? "TMs" : "Pumps"}
                     </button>
-                    {isItemFilterOpen && (
-                      <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
-                        <div className="p-2 text-gray-800 dark:text-white/90">
-                          <button
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setSelectedItem("all");
-                              setIsItemFilterOpen(false);
-                            }}
-                          >
-                            All Vehicles
-                          </button>
-                          <button
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setSelectedItem("mixer");
-                              setIsItemFilterOpen(false);
-                            }}
-                          >
-                            TMs
-                          </button>
-                          <button
-                            className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setSelectedItem("pump");
-                              setIsItemFilterOpen(false);
-                            }}
-                          >
-                            Pumps
-                          </button>
-                        </div>
+                    <Dropdown isOpen={isItemFilterOpen} onClose={() => setIsItemFilterOpen(false)} className="w-full">
+                      <div className="p-2 text-gray-800 dark:text-white/90">
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setSelectedItem("all");
+                            setIsItemFilterOpen(false);
+                          }}
+                        >
+                          All Vehicles
+                        </button>
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setSelectedItem("mixer");
+                            setIsItemFilterOpen(false);
+                          }}
+                        >
+                          TMs
+                        </button>
+                        <button
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setSelectedItem("pump");
+                            setIsItemFilterOpen(false);
+                          }}
+                        >
+                          Pumps
+                        </button>
                       </div>
-                    )}
+                    </Dropdown>
                   </div>
 
                   {/* Plant Filter */}
@@ -724,11 +724,12 @@ export default function CalendarContainer() {
                     <SearchableDropdown
                       options={plants}
                       value={selectedPlant}
-                      onChange={setSelectedPlant}
+                      onChange={(value) => setSelectedPlant(Array.isArray(value) ? value : [])}
                       getOptionLabel={(o: string) => o}
                       getOptionValue={(o: string) => o}
                       label="Plant"
                       placeholder="All Plants"
+                      multiple
                     />
                   </div>
 
@@ -737,11 +738,12 @@ export default function CalendarContainer() {
                     <SearchableDropdown
                       options={clients}
                       value={selectedClient}
-                      onChange={setSelectedClient}
+                      onChange={(value) => setSelectedClient(Array.isArray(value) ? value : [])}
                       getOptionLabel={(o: string) => o}
                       getOptionValue={(o: string) => o}
                       label="Client"
                       placeholder="All Clients"
+                      multiple
                     />
                   </div>
 
@@ -750,11 +752,12 @@ export default function CalendarContainer() {
                     <SearchableDropdown
                       options={availablePumps}
                       value={selectedPump}
-                      onChange={setSelectedPump}
+                      onChange={(value) => setSelectedPump(Array.isArray(value) ? value : [])}
                       getOptionLabel={(o: string) => o}
                       getOptionValue={(o: string) => o}
                       label="Pumps"
                       placeholder="All Pumps"
+                      multiple
                     />
                   </div>
 
@@ -763,11 +766,12 @@ export default function CalendarContainer() {
                     <SearchableDropdown
                       options={availableTMs}
                       value={selectedTM}
-                      onChange={setSelectedTM}
+                      onChange={(value) => setSelectedTM(Array.isArray(value) ? value : [])}
                       getOptionLabel={(o: string) => o}
                       getOptionValue={(o: string) => o}
                       label="Transit Mixers"
                       placeholder="All TMs"
+                      multiple
                     />
                   </div>
 
@@ -776,11 +780,12 @@ export default function CalendarContainer() {
                     <SearchableDropdown
                       options={availableProjects}
                       value={selectedProject}
-                      onChange={setSelectedProject}
+                      onChange={(value) => setSelectedProject(Array.isArray(value) ? value : [])}
                       getOptionLabel={(o: string) => o}
                       getOptionValue={(o: string) => o}
                       label="Projects"
                       placeholder="All Projects"
+                      multiple
                     />
                   </div>
 
@@ -836,7 +841,13 @@ export default function CalendarContainer() {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
+              })} - {new Date(new Date(selectedDate).setDate(new Date(selectedDate).getDate() + 1)).toLocaleDateString("en-US", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
               })}
+
             </h2>
           </div>
 
@@ -845,7 +856,7 @@ export default function CalendarContainer() {
             <div className="w-full overflow-x-auto">
               <div className="min-w-full w-full">
                 {/* Time Header */}
-                <div className="flex border-b border-gray-300 dark:border-white/[0.05] sticky top-0 z-20 bg-white dark:bg-white/[0.03] pr-3">
+                <div className="flex border-b border-gray-300 dark:border-white/[0.05] sticky top-0 z-15 bg-white dark:bg-white/[0.03] pr-3">
                   {/* Serial Number Column */}
                   <div className="w-16 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] text-center flex-shrink-0">
                     SNo
@@ -856,7 +867,7 @@ export default function CalendarContainer() {
                   {getTimeSlots().map((time) => (
                     <div
                       key={time}
-                      className="flex-1 px-1 py-3 text-center font-medium text-gray-500 text-[9px] dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] min-w-[40px]"
+                      className={`flex-1 px-1 py-3 text-center tracking-tight leading-tight font-medium text-gray-500 text-[8.5px] dark:text-gray-400 border-r ${time === 23 ? 'border-r-2 border-r-gray-400 dark:border-r-white/[0.2]' : 'border-gray-300 dark:border-white/[0.05]'} min-w-[40px]`}
                     >
                       {formatTime(time)}
                     </div>
@@ -1044,12 +1055,10 @@ export default function CalendarContainer() {
                             </div>
                             {/* Mixer Name */}
                             <div
-                              className={`w-32 px-5 py-1  ${
-                                (item.item === "pump" && item.type && typeRowColors[item.type]) || ""
-                              } 
-                          ${
-                            (item.item === "mixer" && typeRowColors["tm"]) || ""
-                          }  text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0`}
+                              className={`w-32 px-5 py-1  ${(item.item === "pump" && item.type && typeRowColors[item.type]) || ""
+                                } 
+                          ${(item.item === "mixer" && typeRowColors["tm"]) || ""
+                                }  text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0`}
                             >
                               {item.name.length > 13 ? ".." + item.name.slice(-13) : item.name}
                               {/* {item.name} */}
@@ -1143,7 +1152,7 @@ export default function CalendarContainer() {
                               {slots.map((time) => (
                                 <div
                                   key={time}
-                                  className="flex-1 h-6 border-r border-gray-300 dark:border-white/[0.05] relative min-w-[40px]"
+                                  className={`flex-1 h-6 border-r ${time === 23 ? 'border-r-2 border-r-gray-400 dark:border-r-white/[0.2]' : 'border-gray-300 dark:border-white/[0.05]'} relative min-w-[40px]`}
                                 />
                               ))}
                             </div>

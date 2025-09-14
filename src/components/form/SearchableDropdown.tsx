@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface SearchableDropdownProps<T> {
   options: T[];
-  value: string;
-  onChange: (value: string) => void;
+  value: string | string[];
+  onChange: (value: string | string[]) => void;
   getOptionLabel: (option: T) => string;
   getOptionValue: (option: T) => string;
   placeholder?: string;
@@ -16,6 +16,7 @@ interface SearchableDropdownProps<T> {
   disabled?: boolean;
   error?: string;
   required?: boolean;
+  multiple?: boolean;
 }
 
 export default function SearchableDropdown<T>({
@@ -30,6 +31,7 @@ export default function SearchableDropdown<T>({
   disabled = false,
   error,
   required = false,
+  multiple = false,
 }: SearchableDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -37,10 +39,16 @@ export default function SearchableDropdown<T>({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedOption = options.find((option) => getOptionValue(option) === value);
+  const selectedOptions = multiple 
+    ? options.filter((option) => Array.isArray(value) && value.includes(getOptionValue(option)))
+    : options.filter((option) => getOptionValue(option) === value);
 
-  // Ensure we have a valid selected option
-  const displayText = selectedOption ? getOptionLabel(selectedOption) : value ? `Selected: ${value}` : placeholder;
+  // Ensure we have valid selected options
+  const displayText = selectedOptions.length > 0 
+    ? multiple 
+      ? `${selectedOptions.length} selected`
+      : getOptionLabel(selectedOptions[0])
+    : placeholder;
 
   const filteredOptions = options.filter((option) =>
     getOptionLabel(option).toLowerCase().includes(searchTerm.toLowerCase())
@@ -81,13 +89,23 @@ export default function SearchableDropdown<T>({
   };
 
   const handleSelect = (optionValue: string) => {
-    onChange(optionValue);
-    setIsOpen(false);
-    setSearchTerm("");
+    if (multiple) {
+      const currentValue = Array.isArray(value) ? value : [];
+      const newValue = currentValue.includes(optionValue)
+        ? currentValue.filter(v => v !== optionValue)
+        : [...currentValue, optionValue];
+      onChange(newValue);
+      setSearchTerm("");
+      // Keep dropdown open for multiple selection
+    } else {
+      onChange(optionValue);
+      setIsOpen(false);
+      setSearchTerm("");
+    }
   };
 
   const handleClear = () => {
-    onChange("");
+    onChange(multiple ? [] : "");
     setSearchTerm("");
   };
 
@@ -122,7 +140,7 @@ export default function SearchableDropdown<T>({
               : error
               ? "border-red-300 focus:border-red-500 focus:ring-red-500/10 dark:border-red-600"
               : "border-gray-300 focus:border-brand-300 focus:ring-brand-500/10 dark:border-gray-700"
-          } ${selectedOption ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"}`}
+          } ${selectedOptions.length > 0 ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-400"}`}
           onClick={handleToggle}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
@@ -190,7 +208,9 @@ export default function SearchableDropdown<T>({
                 filteredOptions.map((option) => {
                   const optionValue = getOptionValue(option);
                   const optionLabel = getOptionLabel(option);
-                  const isSelected = optionValue === value;
+                  const isSelected = multiple 
+                    ? Array.isArray(value) && value.includes(optionValue)
+                    : optionValue === value;
 
                   return (
                     <button
@@ -201,8 +221,19 @@ export default function SearchableDropdown<T>({
                         isSelected
                           ? "bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300"
                           : "text-gray-800 dark:text-white/90"
-                      }`}
+                      } flex items-center`}
                     >
+                      {multiple && (
+                        <div className={`w-4 h-4 mr-2 border rounded flex items-center justify-center ${
+                          isSelected ? "border-brand-500 bg-brand-500" : "border-gray-300 dark:border-gray-600"
+                        }`}>
+                          {isSelected && (
+                            <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </div>
+                      )}
                       {optionLabel}
                     </button>
                   );

@@ -1698,8 +1698,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <SearchableDropdown
                       options={clientsData || []}
                       value={selectedClient}
-                      onChange={(value) => {
-                        setSelectedClient(value);
+                      onChange={(value: string | string[]) => {
+                        setSelectedClient(value as string);
                         setHasChanged(true);
                       }}
                       getOptionLabel={(client: Client) => client.name}
@@ -1707,6 +1707,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       placeholder="Select a client"
                       label="Choose Client"
                       required
+                      multiple={false}
                     />
                   )}
                 </div>
@@ -1735,8 +1736,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <SearchableDropdown
                       options={projects || []}
                       value={selectedProject}
-                      onChange={(value) => {
-                        setSelectedProject(value);
+                      onChange={(value: string | string[]) => {
+                        setSelectedProject(value as string);
                         setHasChanged(true);
                       }}
                       getOptionLabel={(project: Project) => project.name}
@@ -1745,6 +1746,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       label="Choose Project"
                       disabled={projects.length === 0}
                       required
+                      multiple={false}
                     />
                   )}
                 </div>
@@ -1996,14 +1998,15 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <SearchableDropdown
                     options={["SLAB", "Raft", "PCC / Footing", "Road", "Piling", "Screed", "Colomn / Beam", "Wall"]}
                     value={formData.pumpingJob}
-                    onChange={(value) => {
-                      setFormData((prev) => ({ ...prev, pumpingJob: value }));
+                    onChange={(value: string | string[]) => {
+                      setFormData((prev) => ({ ...prev, pumpingJob: value as string }));
                       setHasChanged(true);
                     }}
                     getOptionLabel={(option: string) => option}
                     getOptionValue={(option: string) => option}
                     placeholder="Select Zone"
                     label="Placement Zone"
+                    multiple={false}
                   />
                 </div>
 
@@ -2150,14 +2153,15 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <SearchableDropdown
                     options={scheduleTeamMembers || []}
                     value={formData.siteSupervisorId}
-                    onChange={(value) => {
-                      setFormData((prev) => ({ ...prev, siteSupervisorId: value }));
+                    onChange={(value: string | string[]) => {
+                      setFormData((prev) => ({ ...prev, siteSupervisorId: value as string }));
                       setHasChanged(true);
                     }}
                     getOptionLabel={(member: TeamMember) => member.name}
                     getOptionValue={(member: TeamMember) => member._id}
                     placeholder="Select supervisor"
                     label="Site Supervisor"
+                    multiple={false}
                   />
                 </div>
                 <div className="col-span-1">
