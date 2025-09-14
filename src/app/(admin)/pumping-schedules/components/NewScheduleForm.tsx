@@ -23,6 +23,8 @@ import {
   CheckCircle,
   ArrowDown,
   Ban,
+  Search,
+  Building, Truck, MapPin
 } from "lucide-react";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
@@ -109,6 +111,32 @@ interface Project {
   coordinates: string;
 }
 
+interface PastSchedule {
+  _id: string;
+  schedule_name: string;
+  client_id: string;
+  project_id: string;
+  pump_type: "line" | "boom";
+  concreteGrade: string;
+  pumping_job: string;
+  input_params: {
+    pump_onward_time: number;
+    return_time: number;
+    buffer_time: number;
+    load_time: number;
+    pump_fixing_time: number;
+    pump_removal_time: number;
+  };
+  floor_height: number;
+  pump_site_reach_time: string;
+  tm_overrule?: number;
+  slump_at_site?: number;
+  mix_code?: string;
+  remarks?: string;
+  mother_plant_km?: number;
+  site_supervisor_id?: string;
+}
+
 const steps = [
   { id: 1, name: "Schedule Details" },
   { id: 1.1, name: "Pour Details", type: "subStep" },
@@ -151,10 +179,25 @@ const createTooltip = (unavailable_times: UnavailableTimes) => {
 export default function NewScheduleForm({ schedule_id }: { schedule_id?: string }) {
   const router = useRouter();
   const { fetchWithAuth } = useApiClient();
-  const [step, setStep] = useState(schedule_id ? 2 : 1.1);
+  const [step, setStep] = useState(schedule_id ? 2 : 1);
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [pumpType, setPumpType] = useState<"line" | "boom">("line");
   const [selectedPump, setSelectedPump] = useState<string>("");
+  const [selectedPastSchedule, setSelectedPastSchedule] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Query for past schedules
+  const { data: pastSchedules, isLoading: pastSchedulesLoading } = useQuery<PastSchedule[]>({
+    queryKey: ["past-schedules"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/schedules?type=all");
+      const data = await response.json();
+      if (data.success) {
+        return data.data;
+      }
+      return [];
+    },
+  });
   const [tmSequence, setTMSequence] = useState<string[]>([]);
   const [calculatedTMs, setCalculatedTMs] = useState<CalculateTMResponse | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
@@ -385,8 +428,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             data.data.input_params.unloading_time && data.data.input_params.unloading_time !== 0
               ? data.data.input_params.unloading_time.toString()
               : pumping_speed && avgTMCap
-              ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
-              : "",
+                ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
+                : "",
           pumpOnwardTime: data.data.input_params.pump_onward_time.toString(),
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
@@ -413,7 +456,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         });
         setComputedScheduleName(
           data?.data?.schedule_no ||
-            `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
+          `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
         );
         const tm_ids = new Set();
         const tmSequence: string[] = [];
@@ -701,6 +744,37 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   const handleNext = async () => {
     if (step === 1) {
+      if (selectedPastSchedule) {
+        // Prefill form with past schedule data
+        const pastSchedule = pastSchedules?.find((s) => s._id === selectedPastSchedule);
+        if (pastSchedule) {
+          setSelectedClient(pastSchedule.client_id);
+          setSelectedProject(pastSchedule.project_id);
+          setPumpType(pastSchedule.pump_type);
+          setFormData((prev) => ({
+            ...prev,
+            concreteGrade: pastSchedule.concreteGrade,
+            pumpingJob: pastSchedule.pumping_job,
+            pumpOnwardTime: pastSchedule.input_params.pump_onward_time.toString(),
+            returnTime: pastSchedule.input_params.return_time.toString(),
+            bufferTime: pastSchedule.input_params.buffer_time.toString(),
+            loadTime: pastSchedule.input_params.load_time.toString(),
+            pumpFixingTime: pastSchedule.input_params.pump_fixing_time.toString(),
+            pumpRemovalTime: pastSchedule.input_params.pump_removal_time.toString(),
+            floorHeight: pastSchedule.floor_height.toString(),
+            pumpSiteReachTime: pastSchedule.pump_site_reach_time,
+            slumpAtSite: pastSchedule.slump_at_site?.toString() || "",
+            mixCode: pastSchedule.mix_code || "",
+            remarks: pastSchedule.remarks || "",
+            oneWayKm: pastSchedule.mother_plant_km?.toString() || "",
+            siteSupervisorId: pastSchedule.site_supervisor_id || "",
+          }));
+          if (pastSchedule.tm_overrule) {
+            setOverruleTMCount(true);
+            setCustomTMCount(pastSchedule.tm_overrule);
+          }
+        }
+      }
       // Move to first sub-step
       setStep(1.1);
     } else if (step === 1.1) {
@@ -750,6 +824,18 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     if (step === 3) return 100;
     return 0;
   })();
+
+  const filteredSchedules = useMemo(() => {
+    if (!searchTerm) return pastSchedules;
+
+    return pastSchedules?.filter(schedule =>
+      schedule.schedule_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      schedule.schedule_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      schedule.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      schedule.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      schedule.concreteGrade.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [searchTerm]);
 
   useEffect(() => {
     // reset project when client changes
@@ -1149,11 +1235,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 >
                   {/* Step Circle */}
                   <motion.div
-                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${
-                      step >= s.id
-                        ? "border-brand-500 bg-brand-500 text-white shadow-lg"
-                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                    }`}
+                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${step >= s.id
+                      ? "border-brand-500 bg-brand-500 text-white shadow-lg"
+                      : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                      }`}
                     animate={{
                       scale: s.type === "subStep" ? (step === s.id ? 0.9 : 0.8) : step === s.id ? 1.3 : 1,
                       boxShadow: step === s.id ? "0 0 20px rgba(var(--brand-500-rgb, 59, 130, 246), 0.5)" : "none",
@@ -1182,9 +1267,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                   {/* Step Name */}
                   <motion.span
-                    className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${
-                      step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
-                    }`}
+                    className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
+                      }`}
                     animate={{
                       fontWeight: step >= s.id ? 500 : 400,
                     }}
@@ -1216,7 +1300,201 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       </div>
 
       <div>
-        {step === 1.1 ? (
+        {step === 1 ? (
+          <div className="max-w-6xl mx-auto p-6 space-y-6">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                Choose Schedule Starting Point
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                Start from scratch or use a previous schedule as a template
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Start from Scratch Option */}
+              <div className="lg:col-span-1">
+                <div
+                  className={`h-full p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 ${!selectedPastSchedule
+                    ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg'
+                    : 'border-gray-200 hover:border-brand-300 hover:shadow-md dark:border-gray-700 dark:hover:border-brand-600'
+                    }`}
+                  onClick={() => setSelectedPastSchedule("")}
+                >
+                  <div className="text-center">
+                    <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${!selectedPastSchedule
+                      ? 'bg-brand-500 text-white'
+                      : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                      }`}>
+                      <FileText className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">
+                      Start from Scratch
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed">
+                      Create a completely new schedule with default values. You'll input all details manually for maximum customization.
+                    </p>
+                    <button
+                      className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${!selectedPastSchedule
+                        ? 'bg-brand-500 text-white hover:bg-brand-600'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                        }`}
+                    >
+                      {!selectedPastSchedule ? 'Selected' : 'Choose this option'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Use Past Schedule Option */}
+              <div className="lg:col-span-2">
+                <div
+                  className={`p-6 rounded-xl border-2 transition-all duration-200 ${selectedPastSchedule
+                    ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg'
+                    : 'border-gray-200 dark:border-gray-700'
+                    }`}
+                >
+                  <div className="flex items-center mb-4">
+                    <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mr-4 ${selectedPastSchedule
+                      ? 'bg-brand-500 text-white'
+                      : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                      }`}>
+                      <Clock className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                        Use Past Schedule
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm">
+                        Start with values from a previous schedule as a template
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Search Bar */}
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      placeholder="Search by schedule name, number, client, or project..."
+                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      disabled={pastSchedulesLoading}
+                    />
+                  </div>
+
+                  {/* Schedule List */}
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {pastSchedulesLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500 mx-auto"></div>
+                        <p className="mt-2 text-gray-500">Loading schedules...</p>
+                      </div>
+                    ) : filteredSchedules?.length === 0 ? (
+                      <div className="text-center py-8">
+                        <FileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-500">No schedules found</p>
+                      </div>
+                    ) : (
+                      filteredSchedules?.map((schedule) => (
+                        <div
+                          key={schedule._id}
+                          className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${selectedPastSchedule === schedule._id
+                            ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
+                            : 'border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50'
+                            }`}
+                          onClick={() => setSelectedPastSchedule(schedule._id)}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h4 className="font-semibold text-gray-900 dark:text-white truncate">
+                                  {schedule.schedule_name}
+                                </h4>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPumpTypeColor(schedule.pump_type)}`}>
+                                  {schedule.pump_type.toUpperCase()}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-400">
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-1">
+                                    <FileText className="w-4 h-4" />
+                                    <span className="font-medium">{schedule.schedule_no}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Building className="w-4 h-4" />
+                                    <span className="truncate">{schedule.client_name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="w-4 h-4" />
+                                    <span className="truncate">{schedule.project_name}</span>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="w-4 h-4" />
+                                    <span>{formatDate(schedule.date)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Truck className="w-4 h-4" />
+                                    <span>{schedule.quantity} m³</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <span className="w-4 h-4 text-center text-xs font-bold">G</span>
+                                    <span>{schedule.concreteGrade}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                {schedule.pumping_job} • {schedule.pump_site_reach_time}
+                              </div>
+                            </div>
+
+                            <div className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPastSchedule === schedule._id
+                              ? 'border-brand-500 bg-brand-500'
+                              : 'border-gray-300 dark:border-gray-600'
+                              }`}>
+                              {selectedPastSchedule === schedule._id && (
+                                <div className="w-2 h-2 rounded-full bg-white"></div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {selectedPastSchedule && (
+                    <div className="mt-4 p-3 bg-brand-50 dark:bg-brand-900/20 rounded-lg border border-brand-200 dark:border-brand-700">
+                      <p className="text-sm text-brand-700 dark:text-brand-300">
+                        <strong>Note:</strong> Date, time, quantity, and some other fields will still need to be updated for the new schedule.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-center gap-4 pt-6">
+              <button
+                className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                className="px-8 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors font-medium"
+                disabled={!selectedPastSchedule && selectedPastSchedule !== ""}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        ) : step === 1.1 ? (
           <div className="space-y-4">
             {/* Pour Details Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30 mb-24">
@@ -1225,14 +1503,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900/40 py-1 px-3 rounded-full">
                   Company Timings -
                   {profile?.preferred_format === "12h"
-                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${
-                        (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
-                      } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${
-                        (profile?.custom_start_hour ?? 0) + 24 < 24 ? "PM" : "AM"
-                      } NEXT DAY`
+                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
+                    } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) + 24 < 24 ? "PM" : "AM"
+                    } NEXT DAY`
                     : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 TODAY TO ${String(
-                        ((profile?.custom_start_hour ?? 0) + 24) % 24
-                      ).padStart(2, "0")}:00 TOMORROW`}
+                      ((profile?.custom_start_hour ?? 0) + 24) % 24
+                    ).padStart(2, "0")}:00 TOMORROW`}
                 </span>
               </div>
 
@@ -1478,8 +1754,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     value={
                       selectedProject && projects.find((p) => p._id === selectedProject)?.mother_plant_id
                         ? (plantsData || []).find(
-                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                          )?.name || "Unknown Plant"
+                          (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
+                        )?.name || "Unknown Plant"
                         : ""
                     }
                     disabled
@@ -2296,11 +2572,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select 1 Pump</h3>
                     {/* Pump Type Filter Indicator */}
                     <span
-                      className={`px-3 py-1 text-sm font-medium rounded-full ${
-                        pumpType === "line"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                          : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                      }`}
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${pumpType === "line"
+                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                        : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                        }`}
                     >
                       {pumpType === "line" ? "Line Pump" : "Boom Pump"}
                     </span>
@@ -2383,11 +2658,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                       {pumps.map((pump, idx) => (
                                         <label
                                           key={pump.id}
-                                          className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
-                                            !pump.availability
-                                              ? "opacity-50 cursor-not-allowed"
-                                              : "cursor-pointer hover:bg-gray-100"
-                                          } `}
+                                          className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${!pump.availability
+                                            ? "opacity-50 cursor-not-allowed"
+                                            : "cursor-pointer hover:bg-gray-100"
+                                            } `}
                                         >
                                           <div className="flex flex-row items-center space-x-4 w-full">
                                             <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
@@ -2412,11 +2686,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                                 </p>
                                                 {/* Pump Type Chip */}
                                                 <span
-                                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                                    pumpType === "line"
-                                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                                  }`}
+                                                  className={`px-2 py-1 text-xs font-medium rounded-full ${pumpType === "line"
+                                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                                    : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                                    }`}
                                                 >
                                                   {pumpType === "line" ? "Line" : "Boom"}
                                                 </span>
@@ -2475,11 +2748,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
                                 {/* Pump Type Chip */}
                                 <span
-                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                    pumpType === "line"
-                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                  }`}
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${pumpType === "line"
+                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                    : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                    }`}
                                 >
                                   {pumpType === "line" ? "Line" : "Boom"}
                                 </span>
