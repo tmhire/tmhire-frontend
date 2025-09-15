@@ -19,6 +19,9 @@ interface Schedule {
   client_name: string;
   client_id: string;
   site_address: string;
+  project_name: string;
+  mother_plant_name: string
+  pump_type: string;
   status: string;
   input_params: {
     quantity: number;

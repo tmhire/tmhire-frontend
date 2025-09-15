@@ -1,16 +1,22 @@
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import React from "react";
+import { cn } from "@/lib/utils";
 import Button from "@/components/ui/button/Button";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Badge from "@/components/ui/badge/Badge";
 import Tooltip from "@/components/ui/tooltip";
+import { formatTimeByPreference } from "@/lib/utils";
+import { useProfile } from "@/hooks/useProfile";
 
 interface Schedule {
   _id: string;
   client_name: string;
   client_id: string;
   site_address: string;
+  project_name: string;
+  mother_plant_name: string;
+  pump_type: string;
   status: string;
   input_params: {
     quantity: number;
@@ -44,6 +50,7 @@ interface SchedulesTableProps {
 
 export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) {
   const router = useRouter();
+  const { profile } = useProfile();
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -85,29 +92,35 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
             {/* Table Header */}
             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
               <TableRow>
-                {/* <TableCell
-                  isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
-                  ID
-                </TableCell> */}
                 <TableCell
                   isHeader
                   className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Client
+                  Sl. No
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Site Address
+                  Client Name
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Quantity
+                  Project
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Qty
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Supply Plant
                 </TableCell>
                 <TableCell
                   isHeader
@@ -125,13 +138,25 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
                   isHeader
                   className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Status
+                  Pump Type
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Created
+                  TM Job Time
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Pump Operation Time
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Status
                 </TableCell>
                 <TableCell
                   isHeader
@@ -144,68 +169,59 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
 
             {/* Table Body */}
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-              {data.map((schedule) => (
+              {data.map((schedule, index) => (
                 <React.Fragment key={schedule._id}>
-                  <TableRow>
-                    {/* <TableCell className="px-3 py-4 text-start">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <span
-                            className="block text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                            title={schedule._id}
-                          >
-                            {schedule._id.slice(0, 4)}...{schedule._id.slice(-4)}
-                          </span>
-                        </div>
-                      </div>
-                    </TableCell> */}
-                    <TableCell className="px-3 py-4 text-start">
+                    <TableRow 
+                      className={schedule.status === "generated" ? "hover:bg-gray-50 dark:hover:bg-gray-800/50" : ""}
+                      onClick={() => schedule.status === "generated" && handleView(schedule)}
+                    >
+                    <TableCell className="px-2 py-3 text-sm text-start">
+                      <span className="text-gray-800 dark:text-white/90">{index + 1}</span>
+                    </TableCell>
+                    <TableCell className="px-2 py-3 text-sm text-start">
                       <span className="text-gray-800 dark:text-white/90 font-medium">{schedule.client_name}</span>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start">
-                      <span className="text-gray-800 dark:text-white/90">{schedule.site_address}</span>
+                    <TableCell className="px-2 py-3 text-sm text-start">
+                      <span className="text-gray-800 dark:text-white/90">{schedule.project_name}</span>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start">
+                    <TableCell className="px-2 py-3 text-sm text-start">
                       <span className="text-gray-800 dark:text-white/90">{schedule.input_params.quantity}</span>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start">
-                      <span className="text-gray-500 dark:text-gray-400">
+                    <TableCell className="px-2 py-3 text-sm text-start">
+                      <span className="text-gray-800 dark:text-white/90">{schedule.mother_plant_name}</span>
+                    </TableCell>
+                    <TableCell className="px-2 py-3 text-sm text-start">
+                      <span className="text-gray-800 dark:text-white/90">
                         {formatDate(schedule.input_params.schedule_date)}
                       </span>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    <TableCell className="px-2 py-3 text-sm text-gray-500 text-start dark:text-gray-400">
                       {schedule.tm_count}
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start">
+                    <TableCell className="px-2 py-3 text-sm text-start">
+                      <span className="text-gray-800 dark:text-white/90">{schedule.pump_type}</span>
+                    </TableCell>
+                    <TableCell className="px-2 py-3 text-sm text-start">
+                      <span className="text-gray-800 dark:text-white/90">
+                        {schedule.output_table[0]?.plant_start ? 
+                          `${formatTimeByPreference(schedule.output_table[0].plant_start,profile?.preferred_format)} - ${formatTimeByPreference(schedule.output_table[schedule.output_table.length - 1].return,profile?.preferred_format)}` : 
+                          '-'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-2 py-3 text-sm text-start">
+                      <span className="text-gray-800 dark:text-white/90">
+                        {schedule.input_params.pump_start ? 
+                          `${formatTimeByPreference(schedule.input_params.pump_start,profile?.preferred_format)} - ${formatTimeByPreference(schedule.output_table[schedule.output_table.length - 1]?.unloading_time,profile?.preferred_format)}` : 
+                          '-'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-2 py-3 text-sm text-start">
                       <Badge size="sm" color={getStatusColor(schedule.status)}>
                         {schedule.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start">
-                      <span className="text-gray-500 dark:text-gray-400">{formatDate(schedule.created_at)}</span>
-                    </TableCell>
-                    <TableCell className="px-3 py-4">
-                      <div className="flex items-center gap-2">
-                        <Tooltip
-                          key={schedule._id}
-                          content={
-                            schedule.status === "generated"
-                              ? "View Schedule"
-                              : "Generate the schedule before trying to view"
-                          }
-                          opacity={0.5}
-                        >
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleView(schedule)}
-                            className="flex items-center gap-1"
-                            disabled={schedule.status !== "generated"}
-                          >
-                            <Eye size={14} />
-                            View
-                          </Button>
-                        </Tooltip>
+                    <TableCell className="px-2 py-3 text-sm">
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <Button
                           size="sm"
                           variant="outline"
