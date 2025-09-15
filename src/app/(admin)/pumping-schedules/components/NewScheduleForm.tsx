@@ -39,6 +39,7 @@ import TimeInput from "@/components/form/input/TimeInput";
 import { Spinner } from "@/components/ui/spinner";
 import Tooltip from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useSession } from "next-auth/react";
 
 interface Client {
   contact_phone: number;
@@ -66,7 +67,7 @@ interface UnavailableTimes {
   [scheduleId: string]: UnavailableTimeEntry;
 }
 
-interface AvailableTM {
+interface AvailableVehicle {
   id: string;
   // _id: string;
   identifier: string;
@@ -77,16 +78,6 @@ interface AvailableTM {
   unavailable_times: UnavailableTimes;
 }
 
-interface AvailablePump {
-  id: string;
-  // _id: string;
-  identifier: string;
-  capacity: number;
-  availability: boolean;
-  plant_id: string;
-  plant_name: string;
-  unavailable_times: UnavailableTimes;
-}
 type TeamMember = {
   _id: string;
   name: string;
@@ -99,8 +90,8 @@ interface CalculateTMResponse {
   total_trips: number;
   trips_per_tm: number;
   cycle_time: number;
-  available_tms: AvailableTM[];
-  available_pumps: AvailablePump[];
+  available_tms: AvailableVehicle[];
+  available_pumps: AvailableVehicle[];
 }
 
 interface Project {
@@ -189,6 +180,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const router = useRouter();
   const searchParams = useSearchParams();
   const template = searchParams.get("template");
+  const { data: session, status } = useSession();
   const { fetchWithAuth } = useApiClient();
   const [step, setStep] = useState(schedule_id ? 2 : 1);
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -631,11 +623,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   };
 
   useEffect(() => {
-    if (schedule_id && clientsData && pumpsData) {
+    if (
+      schedule_id &&
+      clientsData &&
+      pumpsData &&
+      clientsData.length > 0 &&
+      pumpsData.length > 0 &&
+      status === "authenticated" &&
+      session
+    ) {
       fetchSchedule();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schedule_id, clientsData, pumpsData]);
+  }, [schedule_id, clientsData, pumpsData, status, session]);
 
   useEffect(() => {
     setIsDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -739,7 +739,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       if (hasChanged) {
         return updateSchedule();
       }
-      return fetchSchedule();
+      // return fetchSchedule();
     }
   };
 
@@ -760,8 +760,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     tms: CalculateTMResponse,
     windowStart: Date | null,
     scheduleEndDate: Date | null
-  ): UnavailableTimes => {
-    const partially_available: UnavailableTimes = {};
+  ): { partially_available_tm: UnavailableTimes; partially_available_pump: UnavailableTimeEntry } => {
+    const partially_available_tm: UnavailableTimes = {};
     if (!!windowStart && !!scheduleEndDate) {
       tms?.available_tms?.forEach((tm) => {
         if (!tm?.unavailable_times) return;
@@ -770,7 +770,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           const entryEnd = new Date(tm?.unavailable_times[schedule].end);
           if (windowStart.getTime() < entryEnd.getTime() && entryEnd.getTime() <= scheduleEndDate.getTime()) {
             if ((entryEnd.getTime() - windowStart.getTime()) / 3600000 <= 1) {
-              partially_available[tm.id] = {
+              partially_available_tm[tm.id] = {
                 start: tm?.unavailable_times[schedule].start,
                 end: tm?.unavailable_times[schedule].end,
                 schedule_no: tm?.unavailable_times[schedule].schedule_no,
@@ -780,7 +780,26 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         });
       });
     }
-    return partially_available;
+    let partially_available_pump: UnavailableTimeEntry = { start: "", end: "", schedule_no: "" };
+    if (!!windowStart && !!scheduleEndDate) {
+      tms?.available_pumps?.forEach((pump) => {
+        if (!pump?.unavailable_times) return;
+        Object.keys(pump?.unavailable_times).forEach((schedule) => {
+          if (schedule_id === schedule) return;
+          const entryEnd = new Date(pump?.unavailable_times[schedule].end);
+          if (windowStart.getTime() < entryEnd.getTime() && entryEnd.getTime() <= scheduleEndDate.getTime()) {
+            if ((entryEnd.getTime() - windowStart.getTime()) / 3600000 <= 1) {
+              partially_available_pump = {
+                start: pump?.unavailable_times[schedule].start,
+                end: pump?.unavailable_times[schedule].end,
+                schedule_no: pump?.unavailable_times[schedule].schedule_no,
+              };
+            }
+          }
+        });
+      });
+    }
+    return { partially_available_tm: partially_available_tm, partially_available_pump: partially_available_pump };
   };
 
   const generateSchedule = async () => {
@@ -790,7 +809,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
     setIsGenerating(true);
     try {
-      const partially_available_tm: UnavailableTimes = generatePartiallyAvailableTime(
+      const { partially_available_tm, partially_available_pump } = generatePartiallyAvailableTime(
         calculatedTMs,
         scheduleStartDate,
         scheduleEndDate
@@ -802,6 +821,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           pump: selectedPump,
           type: "pumping",
           partially_available_tm: partially_available_tm,
+          partially_available_pump: partially_available_pump,
         }),
       });
 
@@ -998,13 +1018,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     return new Date(scheduleStartDate.getTime() + pumpMinutesLocal * 60 * 1000);
   }, [scheduleStartDate, formData.quantity, formData.speed]);
 
-  type TMAvailabilityClass = "available" | "partially_unavailable" | "unavailable";
-  const classifyTMAvailability = useCallback(
-    (tm: AvailableTM, windowStart: Date | null, windowEnd: Date | null): TMAvailabilityClass => {
-      if (tm.availability) return "available";
-      if (!windowStart || !windowEnd) return tm.availability ? "available" : "unavailable";
+  type VehicleAvailabilityClass = "available" | "partially_unavailable" | "unavailable";
+  const classifyVehicleAvailability = useCallback(
+    (vehicle: AvailableVehicle, windowStart: Date | null, windowEnd: Date | null): VehicleAvailabilityClass => {
+      if (vehicle.availability) return "available";
+      if (!windowStart || !windowEnd) return vehicle.availability ? "available" : "unavailable";
 
-      const unavailable_times: UnavailableTimes = tm?.unavailable_times ? tm.unavailable_times : {};
+      const unavailable_times: UnavailableTimes = vehicle?.unavailable_times ? vehicle.unavailable_times : {};
       if (Object.keys(unavailable_times).length === 0) return "available";
 
       // let hasOverlap = false;
@@ -1018,7 +1038,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         if (windowStart.getTime() < entryEnd.getTime() && entryEnd.getTime() <= windowEnd.getTime()) {
           if ((entryEnd.getTime() - windowStart.getTime()) / 3600000 > 1) return "unavailable";
           isNearWithinHour = true;
-        } else if (windowStart.getTime() < entryStart.getTime() && entryStart.getTime() <= windowEnd.getTime()) {
+        } else if (
+          (windowStart.getTime() < entryStart.getTime() && entryStart.getTime() <= windowEnd.getTime()) ||
+          (entryStart.getTime() <= windowStart.getTime() && windowEnd.getTime() <= entryEnd.getTime())
+        ) {
           return "unavailable";
         }
         // const latestStart = Math.max(windowStart.getTime(), entryStart.getTime());
@@ -2780,66 +2803,146 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                     className="overflow-hidden"
                                   >
                                     <div className="bg-white dark:bg-gray-900/30 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-lg p-2 pl-6">
-                                      {pumps.map((pump, idx) => (
-                                        <label
-                                          key={pump.id}
-                                          className={`flex items-center justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${
-                                            !pump.availability
-                                              ? "opacity-50 cursor-not-allowed"
-                                              : "cursor-pointer hover:bg-gray-100"
-                                          } `}
-                                        >
-                                          <div className="flex flex-row items-center space-x-4 w-full">
-                                            <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
-                                            <input
-                                              type="checkbox"
-                                              checked={selectedPump === pump.id}
-                                              disabled={!pump.availability}
-                                              onChange={(e) => {
-                                                if (e.target.checked) {
-                                                  setSelectedPump(pump.id);
-                                                } else {
-                                                  setSelectedPump("");
-                                                }
-                                                setHasChanged(true);
-                                              }}
-                                              className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
-                                            />
-                                            <div className="flex flex-row w-full justify-between">
-                                              <div className="flex items-center gap-2">
-                                                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                  {pump.identifier}
-                                                </p>
-                                                {/* Pump Type Chip */}
-                                                <span
-                                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                                    pumpType === "line"
-                                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                                  }`}
-                                                >
-                                                  {pumpType === "line" ? "Line" : "Boom"}
-                                                </span>
-                                              </div>
-                                              <div className="flex flex-row items-end gap-2">
-                                                {!pump.availability && (
-                                                  <>
-                                                    <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
-                                                      Unavailable -
-                                                    </p>
-                                                    <Tooltip content={createTooltip(pump.unavailable_times)}>
-                                                      <CircleQuestionMark size={15} />
-                                                    </Tooltip>
-                                                  </>
-                                                )}
-                                                {/* <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
-                                                {pump.capacity}m³
-                                              </p> */}
+                                      {(() => {
+                                        const getRank = (status: string) =>
+                                          status === "available" ? 0 : status === "partially_unavailable" ? 1 : 2;
+                                        const sortedPumps = [...pumps].sort((a, b) => {
+                                          const aStatus = classifyVehicleAvailability(
+                                            a as unknown as AvailableVehicle,
+                                            scheduleStartDate,
+                                            scheduleEndDate
+                                          );
+                                          const bStatus = classifyVehicleAvailability(
+                                            b as unknown as AvailableVehicle,
+                                            scheduleStartDate,
+                                            scheduleEndDate
+                                          );
+                                          return getRank(aStatus) - getRank(bStatus);
+                                        });
+                                        return sortedPumps.map((pump, idx) => (
+                                          <label
+                                            key={pump.id}
+                                            className={`flex gap-3 flex-col items-end justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${(() => {
+                                              const status = classifyVehicleAvailability(
+                                                pump as unknown as AvailableVehicle,
+                                                scheduleStartDate,
+                                                scheduleEndDate
+                                              );
+                                              if (status === "unavailable") return "opacity-50 cursor-not-allowed";
+                                              if (status === "partially_unavailable")
+                                                return "cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20";
+                                              return "cursor-pointer hover:bg-gray-100";
+                                            })()} `}
+                                          >
+                                            <div className="flex flex-row items-center space-x-4 w-full">
+                                              <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
+                                              <input
+                                                type="checkbox"
+                                                checked={selectedPump === pump.id}
+                                                disabled={(() => {
+                                                  return (
+                                                    classifyVehicleAvailability(
+                                                      pump as unknown as AvailableVehicle,
+                                                      scheduleStartDate,
+                                                      scheduleEndDate
+                                                    ) === "unavailable"
+                                                  );
+                                                })()}
+                                                onChange={(e) => {
+                                                  if (e.target.checked) {
+                                                    setSelectedPump(pump.id);
+                                                  } else {
+                                                    setSelectedPump("");
+                                                  }
+                                                  setHasChanged(true);
+                                                }}
+                                                className="h-4 w-4 text-brand-500 rounded border-gray-300 focus:ring-brand-500"
+                                              />
+                                              <div className="flex flex-row w-full justify-between">
+                                                <div className="flex items-center gap-2">
+                                                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    {pump.identifier}
+                                                  </p>
+                                                  {/* Pump Type Chip */}
+                                                  <span
+                                                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                                      pumpType === "line"
+                                                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                                        : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                                    }`}
+                                                  >
+                                                    {pumpType === "line" ? "Line" : "Boom"}
+                                                  </span>
+                                                </div>
+                                                <div className="flex flex-row items-end gap-2">
+                                                  {(() => {
+                                                    const status = classifyVehicleAvailability(
+                                                      pump as unknown as AvailableVehicle,
+                                                      scheduleStartDate,
+                                                      scheduleEndDate
+                                                    );
+                                                    if (status === "unavailable") {
+                                                      return (
+                                                        <>
+                                                          <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                                            Unavailable -
+                                                          </p>
+                                                          <Tooltip content={createTooltip(pump.unavailable_times)}>
+                                                            <CircleQuestionMark size={15} />
+                                                          </Tooltip>
+                                                        </>
+                                                      );
+                                                    }
+                                                    if (status === "partially_unavailable") {
+                                                      return (
+                                                        <>
+                                                          <p className="text-sm text-yellow-600 dark:text-yellow-400 text-right">
+                                                            Partially Available -
+                                                          </p>
+                                                          <Tooltip content={createTooltip(pump.unavailable_times)}>
+                                                            <CircleQuestionMark size={15} />
+                                                          </Tooltip>
+                                                        </>
+                                                      );
+                                                    }
+                                                    return null;
+                                                  })()}
+                                                  <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                                                    {pump.capacity}m³ - Unused{" "}
+                                                    {getUnusedHours(pump.unavailable_times, scheduleStartDate)} hours
+                                                  </p>
+                                                </div>
                                               </div>
                                             </div>
-                                          </div>
-                                        </label>
-                                      ))}
+                                            {(() => {
+                                              const status = classifyVehicleAvailability(
+                                                pump as unknown as AvailableVehicle,
+                                                scheduleStartDate,
+                                                scheduleEndDate
+                                              );
+                                              if (status === "unavailable") {
+                                                return (
+                                                  <div className="item-right p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+                                                    <div className="space-y-1">
+                                                      {createUnavailableInfo(pump.unavailable_times)}
+                                                    </div>
+                                                  </div>
+                                                );
+                                              }
+                                              if (status === "partially_unavailable") {
+                                                return (
+                                                  <div className="item-right p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
+                                                    <div className="space-y-1">
+                                                      {createUnavailableInfo(pump.unavailable_times)}
+                                                    </div>
+                                                  </div>
+                                                );
+                                              }
+                                              return null;
+                                            })()}
+                                          </label>
+                                        ));
+                                      })()}
                                     </div>
                                   </motion.div>
                                 )}
@@ -3120,13 +3223,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                         const getRank = (status: string) =>
                                           status === "available" ? 0 : status === "partially_unavailable" ? 1 : 2;
                                         const sortedTms = [...tms].sort((a, b) => {
-                                          const aStatus = classifyTMAvailability(
-                                            a as unknown as AvailableTM,
+                                          const aStatus = classifyVehicleAvailability(
+                                            a as unknown as AvailableVehicle,
                                             scheduleStartDate,
                                             scheduleEndDate
                                           );
-                                          const bStatus = classifyTMAvailability(
-                                            b as unknown as AvailableTM,
+                                          const bStatus = classifyVehicleAvailability(
+                                            b as unknown as AvailableVehicle,
                                             scheduleStartDate,
                                             scheduleEndDate
                                           );
@@ -3136,8 +3239,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                           <label
                                             key={tm.id}
                                             className={`flex gap-3 flex-col items-end justify-between px-3 py-2 mb-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:hover:bg-gray-800/50  ${(() => {
-                                              const status = classifyTMAvailability(
-                                                tm as unknown as AvailableTM,
+                                              const status = classifyVehicleAvailability(
+                                                tm as unknown as AvailableVehicle,
                                                 scheduleStartDate,
                                                 scheduleEndDate
                                               );
@@ -3154,8 +3257,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                                 checked={tmSequence.includes(tm.id)}
                                                 disabled={(() => {
                                                   return (
-                                                    classifyTMAvailability(
-                                                      tm as unknown as AvailableTM,
+                                                    classifyVehicleAvailability(
+                                                      tm as unknown as AvailableVehicle,
                                                       scheduleStartDate,
                                                       scheduleEndDate
                                                     ) === "unavailable"
@@ -3178,8 +3281,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                                 </p>
                                                 <div className="flex flex-row items-end gap-2">
                                                   {(() => {
-                                                    const status = classifyTMAvailability(
-                                                      tm as unknown as AvailableTM,
+                                                    const status = classifyVehicleAvailability(
+                                                      tm as unknown as AvailableVehicle,
                                                       scheduleStartDate,
                                                       scheduleEndDate
                                                     );
@@ -3217,8 +3320,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                               </div>
                                             </div>
                                             {(() => {
-                                              const status = classifyTMAvailability(
-                                                tm as unknown as AvailableTM,
+                                              const status = classifyVehicleAvailability(
+                                                tm as unknown as AvailableVehicle,
                                                 scheduleStartDate,
                                                 scheduleEndDate
                                               );
@@ -3310,8 +3413,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                   <div className="flex items-center flex-1 justify-end space-x-2">
                                     {(() => {
                                       if (!tm) return null;
-                                      const status = classifyTMAvailability(
-                                        tm as unknown as AvailableTM,
+                                      const status = classifyVehicleAvailability(
+                                        tm as unknown as AvailableVehicle,
                                         scheduleStartDate,
                                         scheduleEndDate
                                       );

@@ -17,6 +17,8 @@ type ApiTask = {
   start: string;
   end: string;
   client: string;
+  project: string;
+  schedule_no: string;
 };
 
 type Task = {
@@ -26,7 +28,8 @@ type Task = {
   type: string;
   actualStart: string;
   actualEnd: string;
-  project?: string;
+  project: string;
+  schedule_no: string;
 };
 
 type Item = {
@@ -36,6 +39,8 @@ type Item = {
   item: "mixer" | "pump";
   type: "line" | "boom" | null;
   client: string | null;
+  project: string | null;
+  schedule_no: string | null;
   tasks: Task[];
 };
 
@@ -182,12 +187,14 @@ const transformApiData = (apiData: ApiResponse, plantMap: Map<string, string>): 
         itemType === "mixer" && rawType === "work"
           ? "unload"
           : itemType === "pump" && rawType === "work"
-            ? "pump"
-            : rawType;
+          ? "pump"
+          : rawType;
       return {
         id: task.id,
         color: TASK_TYPE_COLORS[mappedType] || "bg-gray-500",
         client: task.client,
+        project: task.project,
+        schedule_no: task.schedule_no,
         type: mappedType,
         actualStart: task.start,
         actualEnd: task.end,
@@ -196,6 +203,8 @@ const transformApiData = (apiData: ApiResponse, plantMap: Map<string, string>): 
 
     // Determine mixer's current client (first task's client or null)
     const currentClient = transformedTasks.length > 0 ? transformedTasks[0].client : null;
+    const currentProject = transformedTasks.length > 0 ? transformedTasks[0].project : null;
+    const currentScheduleNo = transformedTasks.length > 0 ? transformedTasks[0].schedule_no : null;
 
     // Convert plant ID to plant name
     const plantName = plantMap.get(item.plant) || item.plant;
@@ -205,6 +214,8 @@ const transformApiData = (apiData: ApiResponse, plantMap: Map<string, string>): 
       name: item.name,
       plant: plantName,
       client: currentClient,
+      project: currentProject,
+      schedule_no: currentScheduleNo,
       item: itemType,
       type: item.type || null,
       tasks: transformedTasks,
@@ -271,6 +282,7 @@ export default function CalendarContainer() {
         setCustomStartHour(session.custom_start_hour);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status]);
 
   // Fetch plants, pumps, and TMs data
@@ -392,6 +404,7 @@ export default function CalendarContainer() {
     if (status === "authenticated" && session) {
       fetchGanttData(selectedDate);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, customStartHour, status]);
 
   // Filter data based on search term and selected filters
@@ -539,10 +552,11 @@ export default function CalendarContainer() {
               {/* Filter Toggle */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  showFilters
                     ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
                     : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
-                  } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
+                } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
               >
                 <Filter className="h-4 w-4" />
                 Filters
@@ -620,10 +634,11 @@ export default function CalendarContainer() {
                 {/* Filter Toggle */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                    showFilters
                       ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
                       : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
-                    } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
+                  } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
                 >
                   <Filter className="h-4 w-4" />
                   Filters
@@ -841,13 +856,17 @@ export default function CalendarContainer() {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
-              })} - {new Date(new Date(selectedDate).setDate(new Date(selectedDate).getDate() + 1)).toLocaleDateString("en-US", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-
+              })}{" "}
+              -{" "}
+              {new Date(new Date(selectedDate).setDate(new Date(selectedDate).getDate() + 1)).toLocaleDateString(
+                "en-US",
+                {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                }
+              )}
             </h2>
           </div>
 
@@ -867,7 +886,11 @@ export default function CalendarContainer() {
                   {getTimeSlots().map((time) => (
                     <div
                       key={time}
-                      className={`flex-1 px-1 py-3 text-center tracking-tight leading-tight font-medium text-gray-500 text-[8.5px] dark:text-gray-400 border-r ${time === 23 ? 'border-r-2 border-r-gray-400 dark:border-r-white/[0.2]' : 'border-gray-300 dark:border-white/[0.05]'} min-w-[40px]`}
+                      className={`flex-1 px-1 py-3 text-center tracking-tight leading-tight font-medium text-gray-500 text-[8.5px] dark:text-gray-400 border-r ${
+                        time === 23
+                          ? "border-r-2 border-r-gray-400 dark:border-r-white/[0.2]"
+                          : "border-gray-300 dark:border-white/[0.05]"
+                      } min-w-[40px]`}
                     >
                       {formatTime(time)}
                     </div>
@@ -1055,10 +1078,12 @@ export default function CalendarContainer() {
                             </div>
                             {/* Mixer Name */}
                             <div
-                              className={`w-32 px-5 py-1  ${(item.item === "pump" && item.type && typeRowColors[item.type]) || ""
-                                } 
-                          ${(item.item === "mixer" && typeRowColors["tm"]) || ""
-                                }  text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0`}
+                              className={`w-32 px-5 py-1  ${
+                                (item.item === "pump" && item.type && typeRowColors[item.type]) || ""
+                              } 
+                          ${
+                            (item.item === "mixer" && typeRowColors["tm"]) || ""
+                          }  text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0`}
                             >
                               {item.name.length > 13 ? ".." + item.name.slice(-13) : item.name}
                               {/* {item.name} */}
@@ -1084,11 +1109,13 @@ export default function CalendarContainer() {
                                 return (
                                   <Tooltip
                                     key={tasks[0].client + i}
-                                    content={`Client: ${tasks[0].client}\n${formatDateTimeForTooltip(
+                                    content={`Schedule No.: ${tasks[0].schedule_no}\nClient: ${
+                                      tasks[0].client
+                                    }\nProject: ${tasks[0].project}\n${formatDateTimeForTooltip(
                                       tasks[0].actualStart
                                     )} to ${formatDateTimeForTooltip(
                                       tasks[tasks.length - 1].actualEnd
-                                    )}\nDuration: ${formatHoursAndMinutes(width)}m`}
+                                    )}\nDuration: ${formatHoursAndMinutes(width)}`}
                                   >
                                     <div
                                       key={tasks[0].client + i}
@@ -1100,7 +1127,10 @@ export default function CalendarContainer() {
                                       }}
                                     >
                                       <span className="text-white text-[10px] items-center justify-center flex h-full">
-                                        {`${(tasks[0].client || '').slice(0, 5)}-${(tasks[0].project || '').slice(0, 5)}`}
+                                        {`${(tasks[0].client || "").slice(0, 5)}-${(tasks[0].project || "").slice(
+                                          0,
+                                          5
+                                        )}`}
                                       </span>
                                     </div>
                                   </Tooltip>
@@ -1152,7 +1182,11 @@ export default function CalendarContainer() {
                               {slots.map((time) => (
                                 <div
                                   key={time}
-                                  className={`flex-1 h-6 border-r ${time === 23 ? 'border-r-2 border-r-gray-400 dark:border-r-white/[0.2]' : 'border-gray-300 dark:border-white/[0.05]'} relative min-w-[40px]`}
+                                  className={`flex-1 h-6 border-r ${
+                                    time === 23
+                                      ? "border-r-2 border-r-gray-400 dark:border-r-white/[0.2]"
+                                      : "border-gray-300 dark:border-white/[0.05]"
+                                  } relative min-w-[40px]`}
                                 />
                               ))}
                             </div>
