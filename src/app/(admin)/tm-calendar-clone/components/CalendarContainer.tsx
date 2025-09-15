@@ -216,7 +216,7 @@ const typeRowColors: Record<string, string> = {
 
 export default function CalendarContainer() {
   const { data: session, status } = useSession();
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -254,6 +254,7 @@ export default function CalendarContainer() {
         setCustomStartHour(session.custom_start_hour);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status]);
 
   // Fetch plants, pumps, and TMs data
@@ -375,6 +376,7 @@ export default function CalendarContainer() {
     if (status === "authenticated" && session) {
       fetchGanttData(selectedDate);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, customStartHour, status]);
 
   // Filter data based on search term and selected filters
@@ -708,7 +710,7 @@ export default function CalendarContainer() {
                     <SearchableDropdown
                       options={plants}
                       value={selectedPlant}
-                      onChange={setSelectedPlant}
+                      onChange={setSelectedPlant as (value: string | string[]) => void}
                       getOptionLabel={(o: string) => o}
                       getOptionValue={(o: string) => o}
                       label="Plant"
@@ -721,7 +723,7 @@ export default function CalendarContainer() {
                     <SearchableDropdown
                       options={clients}
                       value={selectedClient}
-                      onChange={setSelectedClient}
+                      onChange={setSelectedClient as (value: string | string[]) => void}
                       getOptionLabel={(o: string) => o}
                       getOptionValue={(o: string) => o}
                       label="Client"
@@ -734,7 +736,7 @@ export default function CalendarContainer() {
                     <SearchableDropdown
                       options={availablePumps}
                       value={selectedPump}
-                      onChange={setSelectedPump}
+                      onChange={setSelectedPump as (value: string | string[]) => void}
                       getOptionLabel={(o: string) => o}
                       getOptionValue={(o: string) => o}
                       label="Pumps"
@@ -747,7 +749,7 @@ export default function CalendarContainer() {
                     <SearchableDropdown
                       options={availableTMs}
                       value={selectedTM}
-                      onChange={setSelectedTM}
+                      onChange={setSelectedTM as (value: string | string[]) => void}
                       getOptionLabel={(o: string) => o}
                       getOptionValue={(o: string) => o}
                       label="Transit Mixers"
@@ -760,7 +762,7 @@ export default function CalendarContainer() {
                     <SearchableDropdown
                       options={availableProjects}
                       value={selectedProject}
-                      onChange={setSelectedProject}
+                      onChange={setSelectedProject as (value: string | string[]) => void}
                       getOptionLabel={(o: string) => o}
                       getOptionValue={(o: string) => o}
                       label="Projects"
@@ -850,11 +852,11 @@ export default function CalendarContainer() {
                     <div className="flex items-center justify-center gap-1">
                       <span>Unused Hrs</span>
                       <button
-                        onClick={() => setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc')}
+                        onClick={() => setSortDirection(sortDirection === "desc" ? "asc" : "desc")}
                         className=" hover:bg-gray-100 dark:hover:bg-white/[0.05] rounded transition-colors"
-                        title={`Sort ${sortDirection === 'desc' ? 'ascending' : 'descending'}`}
+                        title={`Sort ${sortDirection === "desc" ? "ascending" : "descending"}`}
                       >
-                        {sortDirection === 'desc' ? '↓' : '↑'}
+                        {sortDirection === "desc" ? "↓" : "↑"}
                       </button>
                     </div>
                   </div>
@@ -873,258 +875,258 @@ export default function CalendarContainer() {
                         // Calculate free time for both items
                         let freeTimeA = 24;
                         let freeTimeB = 24;
-                        
+
                         a.tasks.forEach((task) => {
                           freeTimeA -= calculateDuration(task.actualStart, task.actualEnd) / 60;
                         });
                         b.tasks.forEach((task) => {
                           freeTimeB -= calculateDuration(task.actualStart, task.actualEnd) / 60;
                         });
-                        
+
                         freeTimeA = Math.round(freeTimeA);
                         freeTimeB = Math.round(freeTimeB);
-                        
+
                         // If both are same type, sort by free time based on sortDirection
                         if (a.item === b.item) {
-                          return sortDirection === 'desc' ? freeTimeB - freeTimeA : freeTimeA - freeTimeB;
+                          return sortDirection === "desc" ? freeTimeB - freeTimeA : freeTimeA - freeTimeB;
                         }
-                        
+
                         // Keep TMs and pumps separate by maintaining original order for different types
                         return 0;
                       })
                       .map((item, idx) => {
-                      // --- NEW LOGIC FOR DYNAMIC TIMESLOTS ---
+                        // --- NEW LOGIC FOR DYNAMIC TIMESLOTS ---
 
-                      const slots = getTimeSlots();
-                      const windowStart = slots[0];
-                      const windowEnd = slots[0] !== 0 ? (slots[slots.length - 1] % 24) + 25 : 24;
-                      // Helper to check if a time is within the window, considering wrap-around
-                      const isInWindow = (start: number, end: number) => {
-                        if (windowStart < windowEnd) {
-                          return end > windowStart && start < windowEnd;
-                        } else {
-                          // Wraps around midnight
-                          return end > windowStart || start < windowEnd;
-                        }
-                      };
-                      // Helper to get offset and width in the current window
-                      const getBarProps = (start: number, end: number) => {
-                        let barStart = start;
-                        let barEnd = end;
-                        if (windowStart < windowEnd) {
-                          barStart = Math.max(start, windowStart);
-                          barEnd = Math.min(end, windowEnd + 1);
-                        } else {
-                          // Wraps around midnight
-                          if (start < windowStart && end <= windowStart) {
-                            // Task is in the early part of the window (after midnight)
-                            barStart = start;
-                            barEnd = Math.min(end, windowEnd + 1);
-                          } else if (start >= windowStart) {
-                            // Task is in the late part of the window (before midnight)
+                        const slots = getTimeSlots();
+                        const windowStart = slots[0];
+                        const windowEnd = slots[0] !== 0 ? (slots[slots.length - 1] % 24) + 25 : 24;
+                        // Helper to check if a time is within the window, considering wrap-around
+                        const isInWindow = (start: number, end: number) => {
+                          if (windowStart < windowEnd) {
+                            return end > windowStart && start < windowEnd;
+                          } else {
+                            // Wraps around midnight
+                            return end > windowStart || start < windowEnd;
+                          }
+                        };
+                        // Helper to get offset and width in the current window
+                        const getBarProps = (start: number, end: number) => {
+                          let barStart = start;
+                          let barEnd = end;
+                          if (windowStart < windowEnd) {
                             barStart = Math.max(start, windowStart);
-                            barEnd = end;
+                            barEnd = Math.min(end, windowEnd + 1);
                           } else {
-                            // Task spans the wrap
-                            barStart = start;
-                            barEnd = end;
+                            // Wraps around midnight
+                            if (start < windowStart && end <= windowStart) {
+                              // Task is in the early part of the window (after midnight)
+                              barStart = start;
+                              barEnd = Math.min(end, windowEnd + 1);
+                            } else if (start >= windowStart) {
+                              // Task is in the late part of the window (before midnight)
+                              barStart = Math.max(start, windowStart);
+                              barEnd = end;
+                            } else {
+                              // Task spans the wrap
+                              barStart = start;
+                              barEnd = end;
+                            }
                           }
-                        }
-                        // Calculate offset and width in slots
-                        const offset = (barStart - windowStart + 24) % 24;
-                        let width = barEnd - barStart;
-                        // Clamp width to not exceed window
-                        if (width < 0) width = 0;
-                        // Clamp width so bar does not extend past the last visible slot
-                        if (offset + width > slots.length) {
-                          width = slots.length - offset;
+                          // Calculate offset and width in slots
+                          const offset = (barStart - windowStart + 24) % 24;
+                          let width = barEnd - barStart;
+                          // Clamp width to not exceed window
                           if (width < 0) width = 0;
-                        }
-                        return { offset, width };
-                      };
-
-                      // // --- Group tasks by client for background pills ---
-                      // const clientTaskGroups: Record<string, Task[]> = {};
-                      // item.tasks.forEach((task) => {
-                      //   if (!clientTaskGroups[task.client]) clientTaskGroups[task.client] = [];
-                      //   clientTaskGroups[task.client].push(task);
-                      // });
-
-                      function groupConsecutiveTasks(tasks: Task[]): Task[][] {
-                        if (!tasks.length) return [];
-
-                        // Ensure tasks are sorted by actualStart
-                        const sortedTasks = [...tasks].sort(
-                          (a, b) => new Date(a.actualStart).getTime() - new Date(b.actualStart).getTime()
-                        );
-
-                        const groups: Task[][] = [];
-                        let currentGroup: Task[] = [sortedTasks[0]];
-
-                        for (let i = 1; i < sortedTasks.length; i++) {
-                          const prevEnd = new Date(sortedTasks[i - 1].actualEnd).getTime();
-                          const currStart = new Date(sortedTasks[i].actualStart).getTime();
-
-                          // Check if current task starts exactly 1 minute after previous task ends
-                          if (currStart === prevEnd) {
-                            currentGroup.push(sortedTasks[i]);
-                          } else {
-                            groups.push(currentGroup);
-                            currentGroup = [sortedTasks[i]];
+                          // Clamp width so bar does not extend past the last visible slot
+                          if (offset + width > slots.length) {
+                            width = slots.length - offset;
+                            if (width < 0) width = 0;
                           }
+                          return { offset, width };
+                        };
+
+                        // // --- Group tasks by client for background pills ---
+                        // const clientTaskGroups: Record<string, Task[]> = {};
+                        // item.tasks.forEach((task) => {
+                        //   if (!clientTaskGroups[task.client]) clientTaskGroups[task.client] = [];
+                        //   clientTaskGroups[task.client].push(task);
+                        // });
+
+                        function groupConsecutiveTasks(tasks: Task[]): Task[][] {
+                          if (!tasks.length) return [];
+
+                          // Ensure tasks are sorted by actualStart
+                          const sortedTasks = [...tasks].sort(
+                            (a, b) => new Date(a.actualStart).getTime() - new Date(b.actualStart).getTime()
+                          );
+
+                          const groups: Task[][] = [];
+                          let currentGroup: Task[] = [sortedTasks[0]];
+
+                          for (let i = 1; i < sortedTasks.length; i++) {
+                            const prevEnd = new Date(sortedTasks[i - 1].actualEnd).getTime();
+                            const currStart = new Date(sortedTasks[i].actualStart).getTime();
+
+                            // Check if current task starts exactly 1 minute after previous task ends
+                            if (currStart === prevEnd) {
+                              currentGroup.push(sortedTasks[i]);
+                            } else {
+                              groups.push(currentGroup);
+                              currentGroup = [sortedTasks[i]];
+                            }
+                          }
+
+                          // Push the last group
+                          groups.push(currentGroup);
+
+                          return groups;
                         }
-
-                        // Push the last group
-                        groups.push(currentGroup);
-
-                        return groups;
-                      }
-                      const uniqueTasks = groupConsecutiveTasks(item.tasks);
-                      // // --- Calculate Free Time ---
-                      // const busyIntervals: { start: number; end: number }[] = item.tasks
-                      //   .map((task) => {
-                      //     let s = new Date(task.actualStart).getTime() / 3600000;
-                      //     let e = new Date(task.actualEnd).getTime() / 3600000;
-                      //     if (windowStart < windowEnd) {
-                      //       s = Math.max(s, windowStart);
-                      //       e = Math.min(e, windowEnd + 1);
-                      //       if (e <= s) return null;
-                      //     } else {
-                      //       if (s < windowStart && e <= windowStart) {
-                      //         s = s;
-                      //         e = Math.min(e, windowEnd + 1);
-                      //         if (e <= s) return null;
-                      //       } else if (s >= windowStart) {
-                      //         s = Math.max(s, windowStart);
-                      //         e = e;
-                      //         if (e <= s) return null;
-                      //       } else {
-                      //         s = s;
-                      //         e = e;
-                      //       }
-                      //     }
-                      //     return { start: s, end: e };
-                      //   })
-                      //   .filter(Boolean) as { start: number; end: number }[];
-                      // busyIntervals.sort((a, b) => a.start - b.start);
-                      // const merged: { start: number; end: number }[] = [];
-                      // for (const interval of busyIntervals) {
-                      //   if (!merged.length || merged[merged.length - 1].end < interval.start) {
-                      //     merged.push({ ...interval });
-                      //   } else {
-                      //     merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, interval.end);
-                      //   }
-                      // }
-                      let freeTime = 24;
-                      item.tasks.forEach((task) => {
-                        freeTime -= calculateDuration(task.actualStart, task.actualEnd) / 60;
-                      });
-                      freeTime = Math.round(freeTime);
-                      console.log("item", item);
-                      return (
-                        <div
-                          key={item.id}
-                          className={`flex group transition-colors  ${
-                            (item.item === "pump" && item.type && typeRowColors[item.type]) || ""
-                          } 
+                        const uniqueTasks = groupConsecutiveTasks(item.tasks);
+                        // // --- Calculate Free Time ---
+                        // const busyIntervals: { start: number; end: number }[] = item.tasks
+                        //   .map((task) => {
+                        //     let s = new Date(task.actualStart).getTime() / 3600000;
+                        //     let e = new Date(task.actualEnd).getTime() / 3600000;
+                        //     if (windowStart < windowEnd) {
+                        //       s = Math.max(s, windowStart);
+                        //       e = Math.min(e, windowEnd + 1);
+                        //       if (e <= s) return null;
+                        //     } else {
+                        //       if (s < windowStart && e <= windowStart) {
+                        //         s = s;
+                        //         e = Math.min(e, windowEnd + 1);
+                        //         if (e <= s) return null;
+                        //       } else if (s >= windowStart) {
+                        //         s = Math.max(s, windowStart);
+                        //         e = e;
+                        //         if (e <= s) return null;
+                        //       } else {
+                        //         s = s;
+                        //         e = e;
+                        //       }
+                        //     }
+                        //     return { start: s, end: e };
+                        //   })
+                        //   .filter(Boolean) as { start: number; end: number }[];
+                        // busyIntervals.sort((a, b) => a.start - b.start);
+                        // const merged: { start: number; end: number }[] = [];
+                        // for (const interval of busyIntervals) {
+                        //   if (!merged.length || merged[merged.length - 1].end < interval.start) {
+                        //     merged.push({ ...interval });
+                        //   } else {
+                        //     merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, interval.end);
+                        //   }
+                        // }
+                        let freeTime = 24;
+                        item.tasks.forEach((task) => {
+                          freeTime -= calculateDuration(task.actualStart, task.actualEnd) / 60;
+                        });
+                        freeTime = Math.round(freeTime);
+                        console.log("item", item);
+                        return (
+                          <div
+                            key={item.id}
+                            className={`flex group transition-colors  ${
+                              (item.item === "pump" && item.type && typeRowColors[item.type]) || ""
+                            } 
                           ${(item.item === "mixer" && typeRowColors["tm"]) || ""} `}
-                        >
-                          {/* Serial Number */}
-                          <div className="w-16 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
-                            {idx + 1}
-                          </div>
-                          {/* Mixer Name */}
-                          <div className="w-32 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0">
-                            {item.name.length > 13 ? ".." + item.name.slice(-13) : item.name}
-                            {/* {item.name} */}
-                          </div>
-                          {/* Time Slots */}
-                          <div className="flex-1 flex relative">
-                            {/* Render background pills for each client */}
-                            {uniqueTasks.map((tasks, i) => {
-                              // Find earliest start and latest end for this client
-                              const starts = tasks.map((t) => new Date(t.actualStart).getTime());
-                              const ends = tasks.map((t) => new Date(t.actualEnd).getTime());
-                              const minStart =
-                                (Math.min(...starts) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
-                              const maxEnd =
-                                (Math.max(...ends) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
+                          >
+                            {/* Serial Number */}
+                            <div className="w-16 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
+                              {idx + 1}
+                            </div>
+                            {/* Mixer Name */}
+                            <div className="w-32 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0">
+                              {item.name.length > 13 ? ".." + item.name.slice(-13) : item.name}
+                              {/* {item.name} */}
+                            </div>
+                            {/* Time Slots */}
+                            <div className="flex-1 flex relative">
+                              {/* Render background pills for each client */}
+                              {uniqueTasks.map((tasks, i) => {
+                                // Find earliest start and latest end for this client
+                                const starts = tasks.map((t) => new Date(t.actualStart).getTime());
+                                const ends = tasks.map((t) => new Date(t.actualEnd).getTime());
+                                const minStart =
+                                  (Math.min(...starts) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
+                                const maxEnd =
+                                  (Math.max(...ends) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
 
-                              if (!isInWindow(minStart, maxEnd)) return null;
-                              const { offset, width } = getBarProps(minStart, maxEnd);
-                              if (width <= 0) return null;
-                              // Get client color from clientColors map
-                              const clientColor = clientColors.get(tasks[0].client) || "bg-gray-300";
-                              const timeSlotsLength = getTimeSlots().length;
-                              return (
-                                <div
-                                  key={tasks[0].client + i}
-                                  className={`absolute - h-6 rounded ${clientColor} opacity-90 z-0`}
-                                  style={{
-                                    left: `${(offset / timeSlotsLength) * 100 - 0.25}%`,
-                                    width: `${(width / timeSlotsLength) * 100 + 0.5}%`,
-                                    zIndex: 1,
-                                  }}
-                                />
-                              );
-                            })}
-                            {/* Render bars for each task by type that overlaps the window */}
-                            {item.tasks.map((task, i) => {
-                              const start =
-                                (new Date(task.actualStart).getTime() -
-                                  new Date(`${selectedDate}T00:00:00.000Z`).getTime()) /
-                                3600000;
-                              const end =
-                                (new Date(task.actualEnd).getTime() -
-                                  new Date(`${selectedDate}T00:00:00.000Z`).getTime()) /
-                                3600000;
-
-                              if (!isInWindow(start, end)) return null;
-                              const { offset, width } = getBarProps(start, end);
-                              if (width <= 0) return null;
-                              const duration = calculateDuration(task.actualStart, task.actualEnd);
-                              const timeSlotsLength = getTimeSlots().length;
-                              return (
-                                <Tooltip
-                                  key={task.id + i}
-                                  content={`Type: ${task.type}\nClient: ${task.client}\n${formatDateTimeForTooltip(
-                                    task.actualStart
-                                  )} to ${formatDateTimeForTooltip(task.actualEnd)}\nDuration: ${duration}m`}
-                                >
+                                if (!isInWindow(minStart, maxEnd)) return null;
+                                const { offset, width } = getBarProps(minStart, maxEnd);
+                                if (width <= 0) return null;
+                                // Get client color from clientColors map
+                                const clientColor = clientColors.get(tasks[0].client) || "bg-gray-300";
+                                const timeSlotsLength = getTimeSlots().length;
+                                return (
                                   <div
-                                    className={`absolute top-1 h-4 rounded-sm ${
-                                      TASK_TYPE_COLORS[task.type] || "bg-gray-500"
-                                    } opacity-100 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
+                                    key={tasks[0].client + i}
+                                    className={`absolute - h-6 rounded ${clientColor} opacity-90 z-0`}
                                     style={{
-                                      left: `${(offset / timeSlotsLength) * 100}%`,
-                                      width: `${(width / timeSlotsLength) * 100}%`,
-                                      zIndex: 5,
+                                      left: `${(offset / timeSlotsLength) * 100 - 0.25}%`,
+                                      width: `${(width / timeSlotsLength) * 100 + 0.5}%`,
+                                      zIndex: 1,
                                     }}
+                                  />
+                                );
+                              })}
+                              {/* Render bars for each task by type that overlaps the window */}
+                              {item.tasks.map((task, i) => {
+                                const start =
+                                  (new Date(task.actualStart).getTime() -
+                                    new Date(`${selectedDate}T00:00:00.000Z`).getTime()) /
+                                  3600000;
+                                const end =
+                                  (new Date(task.actualEnd).getTime() -
+                                    new Date(`${selectedDate}T00:00:00.000Z`).getTime()) /
+                                  3600000;
+
+                                if (!isInWindow(start, end)) return null;
+                                const { offset, width } = getBarProps(start, end);
+                                if (width <= 0) return null;
+                                const duration = calculateDuration(task.actualStart, task.actualEnd);
+                                const timeSlotsLength = getTimeSlots().length;
+                                return (
+                                  <Tooltip
+                                    key={task.id + i}
+                                    content={`Type: ${task.type}\nClient: ${task.client}\n${formatDateTimeForTooltip(
+                                      task.actualStart
+                                    )} to ${formatDateTimeForTooltip(task.actualEnd)}\nDuration: ${duration}m`}
                                   >
-                                    <span
-                                      className={`text-white ${task.type === "unload" ? "text-[6px]" : "text-[6px]"}`}
+                                    <div
+                                      className={`absolute top-1 h-4 rounded-sm ${
+                                        TASK_TYPE_COLORS[task.type] || "bg-gray-500"
+                                      } opacity-100 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center z-5`}
+                                      style={{
+                                        left: `${(offset / timeSlotsLength) * 100}%`,
+                                        width: `${(width / timeSlotsLength) * 100}%`,
+                                        zIndex: 5,
+                                      }}
                                     >
-                                      {task.type === "unload" && item.item === "mixer" ? null : duration}
-                                    </span>
-                                  </div>
-                                </Tooltip>
-                              );
-                            })}
-                            {/* Render slot borders */}
-                            {slots.map((time) => (
-                              <div
-                                key={time}
-                                className="flex-1 h-6 border-r border-gray-300 dark:border-white/[0.05] relative min-w-[40px]"
-                              />
-                            ))}
+                                      <span
+                                        className={`text-white ${task.type === "unload" ? "text-[6px]" : "text-[6px]"}`}
+                                      >
+                                        {task.type === "unload" && item.item === "mixer" ? null : duration}
+                                      </span>
+                                    </div>
+                                  </Tooltip>
+                                );
+                              })}
+                              {/* Render slot borders */}
+                              {slots.map((time) => (
+                                <div
+                                  key={time}
+                                  className="flex-1 h-6 border-r border-gray-300 dark:border-white/[0.05] relative min-w-[40px]"
+                                />
+                              ))}
+                            </div>
+                            {/* Free Time */}
+                            <div className="w-24 px-1 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
+                              {freeTime}
+                            </div>
                           </div>
-                          {/* Free Time */}
-                          <div className="w-24 px-1 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
-                            {freeTime}
-                          </div>
-                        </div>
-                      );
-                    })
+                        );
+                      })
                   )}
                 </div>
               </div>

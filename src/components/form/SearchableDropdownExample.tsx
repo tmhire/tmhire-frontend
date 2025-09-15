@@ -41,15 +41,13 @@ export default function SearchableDropdownExample() {
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-        SearchableDropdown Examples
-      </h1>
-      
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">SearchableDropdown Examples</h1>
+
       <div className="space-y-4">
         <SearchableDropdown
           options={users}
           value={selectedUser}
-          onChange={setSelectedUser}
+          onChange={setSelectedUser as (value: string | string[]) => void}
           getOptionLabel={(user: User) => `${user.name} (${user.email})`}
           getOptionValue={(user: User) => user.id}
           placeholder="Select a user"
@@ -60,7 +58,7 @@ export default function SearchableDropdownExample() {
         <SearchableDropdown
           options={products}
           value={selectedProduct}
-          onChange={setSelectedProduct}
+          onChange={setSelectedProduct as (value: string | string[]) => void}
           getOptionLabel={(product: Product) => `${product.title} - ${product.category}`}
           getOptionValue={(product: Product) => product.sku}
           placeholder="Select a product"
@@ -70,7 +68,7 @@ export default function SearchableDropdownExample() {
         <SearchableDropdown
           options={categories}
           value={selectedCategory}
-          onChange={setSelectedCategory}
+          onChange={setSelectedCategory as (value: string | string[]) => void}
           getOptionLabel={(category: string) => category}
           getOptionValue={(category: string) => category}
           placeholder="Select a category"
@@ -89,4 +87,3 @@ export default function SearchableDropdownExample() {
     </div>
   );
 }
-
