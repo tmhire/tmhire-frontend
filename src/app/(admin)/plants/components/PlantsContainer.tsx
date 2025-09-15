@@ -106,14 +106,9 @@ export default function PlantsContainer() {
       validateMobile(newPlant.contact_number1.trim()) &&
       validateAddress(newPlant.address.trim()) &&
       (newPlant.coordinates === "" || (newPlant.coordinates && validateCoordinates(newPlant.coordinates.trim()))) &&
-      (newPlant.contact_name2 === "" || (newPlant.contact_name2 && validateName(newPlant.contact_name2.trim()))) &&
-      (newPlant.contact_number2 === "" ||
-        (newPlant.contact_number2 && validateMobile(newPlant.contact_number2.trim()))) &&
       !nameError &&
       !contactName1Error &&
-      !contactName2Error &&
       !contactNumber1Error &&
-      !contactNumber2Error &&
       !capacityError
     );
   }, [newPlant, nameError, contactName1Error, contactName2Error, contactNumber1Error, contactNumber2Error, capacityError]);
@@ -918,6 +913,29 @@ export default function PlantsContainer() {
                 />
                 {editCapacityError && <span className="text-xs text-red-600 mt-1 block">{editCapacityError}</span>}
               </div>
+              <div className="w-full">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex flex-row justify-between">
+                  Loading Time (min)   {newPlant?.capacity && (
+                    <span className="text-xs text-gray-500 mt-1 block">
+                      Using Avg TM Cap: {avgTMCap}
+                    </span>
+                  )}
+                </label>
+                <Input
+                  type="number"
+                  name="capacity"
+                  placeholder="Enter plant capacity to calculate"
+                  value={
+                    editedPlant?.capacity
+                      ? Math.ceil((editedPlant.capacity / avgTMCap) / 5) * 5
+                      : ""
+                  }
+                  disabled
+                />
+                {editCapacityError && (
+                  <span className="text-xs text-red-600 mt-1 block">{editCapacityError}</span>
+                )}
+              </div>
             </div>
             <div className="flex flex-row w-full gap-2">
               <div className="w-full">
@@ -941,6 +959,19 @@ export default function PlantsContainer() {
                   onChange={handleEditInputChange}
                   maxLength={60}
                 />
+              </div>
+              <div className="w-full">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status</label>
+                <select
+                  name="status"
+                  value={editedPlant.status || ""}
+                  onChange={handleEditInputChange}
+                  className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-4 pr-12 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+                >
+                  <option value="">Select Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
               </div>
             </div>
             <div>
@@ -1033,21 +1064,6 @@ export default function PlantsContainer() {
                 placeholder="Enter remarks (optional, max 50 characters)"
                 maxLength={50}
               />
-            </div>
-            <div className="flex flex-row w-full gap-2">
-              <div className="w-full">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status</label>
-                <select
-                  name="status"
-                  value={editedPlant.status || ""}
-                  onChange={handleEditInputChange}
-                  className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-4 pr-12 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
-                >
-                  <option value="">Select Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
             </div>
           </div>
         )}
