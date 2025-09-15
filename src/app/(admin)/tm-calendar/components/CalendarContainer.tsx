@@ -1099,8 +1099,8 @@ export default function CalendarContainer() {
                                         zIndex: 1,
                                       }}
                                     >
-                                      <span className="text-white text-[12px] items-center justify-center flex h-full">
-                                        {tasks[0].client ? tasks[0].client : "Unknown Client"}
+                                      <span className="text-white text-[10px] items-center justify-center flex h-full">
+                                        {`${(tasks[0].client || '').slice(0, 5)}-${(tasks[0].project || '').slice(0, 5)}`}
                                       </span>
                                     </div>
                                   </Tooltip>
@@ -1207,18 +1207,25 @@ export default function CalendarContainer() {
                   })}
                 </div>
               </div>
-              {/* Task Type Legend - right half */}
+              {/* Vehicle Type Legend - right half */}
               <div className="flex-1 min-w-[200px] md:pl-6">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Task Types</h3>
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Vehicle Types</h3>
                 <div className="flex flex-wrap gap-4">
-                  {Object.entries(TASK_TYPE_COLORS).map(([type, color]) => (
-                    <div key={type} className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded ${color}`}></div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                      </span>
-                    </div>
-                  ))}
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-yellow-500/70"></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Transit Mixer</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-blue-500/70"></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Line Pump</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-green-500/70"></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Boom Pump</span>
+                  </div>
+                  <div className="mt-2 w-full text-xs text-gray-500 dark:text-gray-400">
+                    Note: The vertical dark border in the timeline indicates day separation at 00:00
+                  </div>
                 </div>
               </div>
             </div>
