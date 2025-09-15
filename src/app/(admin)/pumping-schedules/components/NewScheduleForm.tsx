@@ -185,18 +185,6 @@ const formatDateTimeForTooltip = (dateTimeString: string): string => {
   return `${dateStr} ${timeStr}`;
 };
 
-const createTooltip = (unavailable_times: UnavailableTimes) => {
-  let tooltip = "";
-  Object.keys(unavailable_times).map((schedule) => {
-    tooltip =
-      tooltip +
-      `Schedule No. : ${unavailable_times[schedule]["schedule_no"]}\nStarts from: ${formatDateTimeForTooltip(
-        unavailable_times[schedule]["start"]
-      )} to: ${formatDateTimeForTooltip(unavailable_times[schedule]["end"])}\n\n`;
-  });
-  return tooltip;
-};
-
 export default function NewScheduleForm({ schedule_id }: { schedule_id?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -751,6 +739,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     }
   };
 
+  const createTooltip = (unavailable_times: UnavailableTimes) => {
+    let tooltip = "";
+    Object.keys(unavailable_times).map((schedule) => {
+      if (schedule_id === schedule) return;
+      tooltip =
+        tooltip +
+        `Schedule No. : ${unavailable_times[schedule]["schedule_no"]}\nStarts from: ${formatDateTimeForTooltip(
+          unavailable_times[schedule]["start"]
+        )} to: ${formatDateTimeForTooltip(unavailable_times[schedule]["end"])}\n\n`;
+    });
+    return tooltip;
+  };
+
   const generatePartiallyAvailableTime = (
     tms: CalculateTMResponse,
     windowStart: Date | null,
@@ -1253,8 +1254,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const numFloorTms = totalTMRequired > 0 ? Math.max(0, totalTMRequired - numCeilTms) : 0;
 
   const createUnavailableInfo = (unavailableTimes: UnavailableTimes): ReactNode => {
-    const entries: UnavailableTimeEntry[] = unavailableTimes ? Object.values(unavailableTimes) : [];
-    if (!entries || entries.length === 0) {
+    const schedules: string[] = unavailableTimes ? Object.keys(unavailableTimes) : [];
+    if (!schedules || schedules.length === 0) {
       return (
         <div className="flex items-center text-xs text-red-600 dark:text-red-400">
           <Ban className="w-3.5 h-3.5 mr-1" />
@@ -1265,19 +1266,25 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
     return (
       <div className="space-y-2">
-        {entries.map((time, index) => (
-          <div key={index} className="flex items-center text-xs text-red-600 dark:text-red-400 rounded-md px-2 py-1">
-            <Clock className="w-3.5 h-3.5 mr-2 shrink-0" />
-            <div className="flex flex-col">
-              <span className="font-medium">
-                {formatDateTimeForTooltip(time.start)} – {formatDateTimeForTooltip(time.end)}
-              </span>
-              {time.schedule_no && (
-                <span className="text-[11px] text-red-500 dark:text-red-300">Schedule #{time.schedule_no}</span>
-              )}
+        {schedules.map((schedule, index) => {
+          if (schedule_id === schedule) return;
+          return (
+            <div key={index} className="flex items-center text-xs text-red-600 dark:text-red-400 rounded-md px-2 py-1">
+              <Clock className="w-3.5 h-3.5 mr-2 shrink-0" />
+              <div className="flex flex-col">
+                <span className="font-medium">
+                  {formatDateTimeForTooltip(unavailableTimes[schedule].start)} –{" "}
+                  {formatDateTimeForTooltip(unavailableTimes[schedule].end)}
+                </span>
+                {unavailableTimes[schedule].schedule_no && (
+                  <span className="text-[11px] text-red-500 dark:text-red-300">
+                    Schedule #{unavailableTimes[schedule].schedule_no}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
