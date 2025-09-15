@@ -1,11 +1,10 @@
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import React from "react";
-import { cn } from "@/lib/utils";
 import Button from "@/components/ui/button/Button";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Badge from "@/components/ui/badge/Badge";
-import Tooltip from "@/components/ui/tooltip";
+// import Tooltip from "@/components/ui/tooltip";
 import { formatTimeByPreference } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
 
