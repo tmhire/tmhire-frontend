@@ -115,8 +115,15 @@ export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps
                     {plant.capacity ? plant.capacity : "-"}
                   </TableCell>
                   <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    <div className="max-w-[120px] truncate" title={plant.location}>
-                      {plant.location}
+                    <div className="max-w-[120px] truncate group relative cursor-pointer" title={plant.location}>
+                      <a 
+                        href={plant.location}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+                      >
+                        {plant.location}
+                      </a>
                     </div>
                   </TableCell>
                   <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
