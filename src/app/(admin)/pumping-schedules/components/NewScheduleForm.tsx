@@ -422,6 +422,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         loadTime: loadTime.toFixed(0),
       }));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProject, avgTMCap, projects, plantsData]);
 
   // Template handling - prefill form when template is selected
@@ -461,6 +462,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     }
     // Move to first sub-step
     setStep(1.1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template, pastSchedules]);
 
   useEffect(() => {
@@ -468,7 +470,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       setComputedScheduleName(
         `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
       );
-  }, [motherPlantName, formData.scheduleDate, schedulesForDayCount]);
+  }, [motherPlantName, formData.scheduleDate, schedulesForDayCount, selectedClient, selectedProject]);
 
   const fetchSchedule = useCallback(async () => {
     try {
@@ -553,6 +555,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       console.error("Error fetching schedule:", error);
       return false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schedule_id, avgTMCap, formData.scheduleDate, motherPlantName, schedulesForDayCount]);
 
   const updateSchedule = async () => {
@@ -631,6 +634,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     if (schedule_id && clientsData && pumpsData) {
       fetchSchedule();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schedule_id, clientsData, pumpsData]);
 
   useEffect(() => {
@@ -1040,6 +1044,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       if (isNearWithinHour) return "partially_unavailable";
       return "available";
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
