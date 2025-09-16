@@ -783,8 +783,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     let partially_available_pump: UnavailableTimeEntry = { start: "", end: "", schedule_no: "" };
     if (!!windowStart && !!scheduleEndDate) {
       tms?.available_pumps?.forEach((pump) => {
+        if (pump.id !== selectedPump) return;
         if (!pump?.unavailable_times) return;
-        Object.keys(pump?.unavailable_times).forEach((schedule) => {
+        Object.keys(pump?.unavailable_times || {}).forEach((schedule) => {
           if (schedule_id === schedule) return;
           const entryEnd = new Date(pump?.unavailable_times[schedule].end);
           if (windowStart.getTime() < entryEnd.getTime() && entryEnd.getTime() <= scheduleEndDate.getTime()) {

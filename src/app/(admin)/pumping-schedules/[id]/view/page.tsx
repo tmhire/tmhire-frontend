@@ -89,9 +89,10 @@ interface Schedule {
 
 // Utility function to calculate pump start time from plant
 const calculatePumpStartTimeFromPlant = (schedule: Schedule, preferredFormat?: string): string => {
-  if (!schedule.input_params.pump_start) return "N/A";
+  const pump_start = schedule.output_table?.length > 0 ? schedule.output_table[0].pump_start : null;
+  if (!pump_start) return "N/A";
 
-  const pumpStart = new Date(schedule.input_params.pump_start);
+  const pumpStart = new Date(pump_start);
   const pumpFixingTime = schedule.input_params.pump_fixing_time || 0;
   const pumpOnwardTime = schedule.input_params.pump_onward_time || 0;
 
@@ -102,9 +103,10 @@ const calculatePumpStartTimeFromPlant = (schedule: Schedule, preferredFormat?: s
 };
 
 const calculatePumpSiteReachTime = (schedule: Schedule, preferredFormat?: string): string => {
-  if (!schedule.input_params.pump_start) return "N/A";
+  const pump_start = schedule.output_table?.length > 0 ? schedule.output_table[0].pump_start : null;
+  if (!pump_start) return "N/A";
 
-  const pumpStart = new Date(schedule.input_params.pump_start);
+  const pumpStart = new Date(pump_start);
   const pumpFixingTime = schedule.input_params.pump_fixing_time || 0;
 
   const calculatedTime = new Date(pumpStart.getTime() - pumpFixingTime * 60 * 1000);
@@ -192,12 +194,7 @@ export default function ScheduleViewPage() {
             )}
           </h2>
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleEdit}
-              className="flex items-center gap-1"
-            >
+            <Button size="sm" variant="outline" onClick={handleEdit} className="flex items-center gap-1">
               <Pencil size={14} />
               Edit
             </Button>
@@ -489,18 +486,20 @@ export default function ScheduleViewPage() {
                         {(() => {
                           const pump = schedule.available_pumps.find((pump) => pump.id === schedule.pump);
                           if (!pump) return "N/A";
-                          
+
                           // Color coding based on pump type
-                          const isLinePump = schedule.pump_type === 'line';
+                          const isLinePump = schedule.pump_type === "line";
                           const bgColor = isLinePump ? "bg-blue-500" : "bg-green-500";
-                          const textColor = 'text-white';
-                          
+                          const textColor = "text-white";
+
                           return (
-                            <div className={`flex w-fit rounded-md border-2 border-black shadow items-center gap-2 pr-2  ${bgColor}`}>
-                              <label className={`flex flex-col justify-between bg-blue-700 rounded-l-sm p-2 text-[8px] ${textColor}`}>
-                                <span className="text-xs text-white-400">
-                                  {isLinePump ? 'LINE' : 'BOOM'}
-                                </span>
+                            <div
+                              className={`flex w-fit rounded-md border-2 border-black shadow items-center gap-2 pr-2  ${bgColor}`}
+                            >
+                              <label
+                                className={`flex flex-col justify-between bg-blue-700 rounded-l-sm p-2 text-[8px] ${textColor}`}
+                              >
+                                <span className="text-xs text-white-400">{isLinePump ? "LINE" : "BOOM"}</span>
                               </label>
                               <label className={`p-1 px-1 font-mono text-sm font-medium items-center text-white`}>
                                 {pump.identifier}
@@ -525,13 +524,13 @@ export default function ScheduleViewPage() {
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
-                        {schedule.input_params.pump_fixing_time || "N/A"}
+                        {schedule?.output_table?.length > 0 ? schedule.output_table[0].pump_start : "N/A"}
                       </span>
                     </TableCell>
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
-                        {schedule.input_params.pump_start
-                          ? formatTimeByPreference(schedule.input_params.pump_start, profile?.preferred_format)
+                        {schedule?.output_table?.length > 0
+                          ? formatTimeByPreference(schedule.output_table[0].pump_start, profile?.preferred_format)
                           : "N/A"}
                       </span>
                     </TableCell>
@@ -543,8 +542,8 @@ export default function ScheduleViewPage() {
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {(() => {
-                          if (!schedule.input_params.pump_start) return "N/A";
-                          const pumpStart = new Date(schedule.input_params.pump_start);
+                          if (!(schedule?.output_table?.length > 0)) return "N/A";
+                          const pumpStart = new Date(schedule.output_table[0].pump_start);
                           const pumpingHours = schedule.input_params.quantity / schedule.input_params.pumping_speed;
                           const pumpEnd = new Date(pumpStart.getTime() + pumpingHours * 60 * 60 * 1000);
                           return formatTimeByPreference(pumpEnd, profile?.preferred_format);
@@ -559,8 +558,8 @@ export default function ScheduleViewPage() {
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {(() => {
-                          if (!schedule.input_params.pump_start) return "N/A";
-                          const pumpStart = new Date(schedule.input_params.pump_start);
+                          if (!(schedule?.output_table?.length > 0)) return "N/A";
+                          const pumpStart = new Date(schedule.output_table[0].pump_start);
                           const pumpingHours = schedule.input_params.quantity / schedule.input_params.pumping_speed;
                           const pumpEnd = new Date(pumpStart.getTime() + pumpingHours * 60 * 60 * 1000);
                           const pumpSiteLeave = new Date(
@@ -573,8 +572,8 @@ export default function ScheduleViewPage() {
                     <TableCell className="px-3 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
                         {(() => {
-                          if (!schedule.input_params.pump_start) return "N/A";
-                          const pumpStart = new Date(schedule.input_params.pump_start);
+                          if (!(schedule?.output_table?.length > 0)) return "N/A";
+                          const pumpStart = new Date(schedule.output_table[0].pump_start);
                           const pumpFixingTime = schedule.input_params.pump_fixing_time || 0;
                           const pumpOnwardTime = schedule.input_params.pump_onward_time || 0;
                           const pumpStartFromPlant = new Date(
@@ -857,8 +856,12 @@ export default function ScheduleViewPage() {
                         Trip {i + 1}
                       </th>
                     ))}
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">Start-End Time</th>
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">Total Hours</th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
+                      Start-End Time
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
+                      Total Hours
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -885,7 +888,9 @@ export default function ScheduleViewPage() {
                             </td>
                           );
                         })}
-                        <td className="px-4 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">{overallRange}</td>
+                        <td className="px-4 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
+                          {overallRange}
+                        </td>
                         <td className="px-4 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
                           {totalHours ? formatHoursAndMinutes(totalHours) : "-"}
                         </td>
@@ -915,7 +920,9 @@ export default function ScheduleViewPage() {
       <Modal className="max-w-[500px] p-5" isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
         <div className="p-6">
           <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Delete Schedule</h4>
-          <p className="mb-6 dark:text-white/90">Are you sure you want to delete this schedule? This action cannot be undone.</p>
+          <p className="mb-6 dark:text-white/90">
+            Are you sure you want to delete this schedule? This action cannot be undone.
+          </p>
           <div className="flex justify-end gap-4">
             <Button onClick={() => setIsDeleteModalOpen(false)} variant="outline">
               Cancel
