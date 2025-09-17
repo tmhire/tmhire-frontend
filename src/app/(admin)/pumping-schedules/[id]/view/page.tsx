@@ -916,6 +916,76 @@ export default function ScheduleViewPage() {
         })()}
       </div>
 
+      {/* PLANT WISE TRIP DETAILS TABLE */}
+      <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mt-3">
+        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Plant Wise Trip Details</h4>
+        {(() => {
+          if (!schedule.output_table || schedule.output_table.length === 0) {
+            return <div className="text-gray-500 dark:text-gray-400">No trip data available.</div>;
+          }
+
+          // Group trips by plant
+          const plantTrips: Record<string, typeof schedule.output_table> = {};
+          schedule.output_table.forEach((trip) => {
+            const plantName = trip.plant_name || 'Unknown Plant';
+            if (!plantTrips[plantName]) plantTrips[plantName] = [];
+            plantTrips[plantName].push(trip);
+          });
+
+          // Sort trips for each plant by load time
+          Object.values(plantTrips).forEach((trips) => 
+            trips.sort((a, b) => new Date(a.plant_load).getTime() - new Date(b.plant_load).getTime())
+          );
+
+          // Get all plant names
+          const plantNames = Object.keys(plantTrips);
+
+          return (
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800/30">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-800">
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">Plant Name</th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">Total Trips</th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">First Load</th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">Last Load</th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">Load Time Range</th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">TMs Used</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {plantNames.map((plantName) => {
+                    const trips = plantTrips[plantName];
+                    const firstLoad = trips[0]?.plant_load;
+                    const lastLoad = trips[trips.length - 1]?.plant_load;
+                    
+                    // Get unique TMs for this plant
+                    const uniqueTMs = new Set(trips.map(trip => trip.tm_no));
+
+                    return (
+                      <tr key={plantName} className="border-b border-gray-100 dark:border-gray-700">
+                        <td className="px-2 py-2 text-gray-800 dark:text-white/90 font-medium">{plantName}</td>
+                        <td className="px-2 py-2 text-gray-600 dark:text-gray-400">{trips.length}</td>
+                        <td className="px-2 py-2 text-gray-600 dark:text-gray-400">
+                          {firstLoad ? formatTimeByPreference(new Date(firstLoad), profile?.preferred_format) : '-'}
+                        </td>
+                        <td className="px-2 py-2 text-gray-600 dark:text-gray-400">
+                          {lastLoad ? formatTimeByPreference(new Date(lastLoad), profile?.preferred_format) : '-'}
+                        </td>
+                        <td className="px-2 py-2 text-gray-600 dark:text-gray-400">
+                          {formatHoursAndMinutes(((new Date(lastLoad).getTime() - new Date(firstLoad).getTime()) / (1000 * 60))/60)}
+                        </td>
+                        <td className="px-2 py-2 text-gray-600 dark:text-gray-400">{uniqueTMs.size}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
+      </div>
+
       {/* Delete Modal */}
       <Modal className="max-w-[500px] p-5" isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
         <div className="p-6">

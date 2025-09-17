@@ -124,6 +124,7 @@ interface PastSchedule {
     load_time: number;
     pump_fixing_time: number;
     pump_removal_time: number;
+    pump_start: number;
   };
   floor_height: number;
   pump_site_reach_time: string;
@@ -1445,8 +1446,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </div>
                     <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">Start from Scratch</h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed">
-                      Create a completely new schedule with default values. You&apos;ll input all details manually for
-                      maximum customization.
+                      Create a completely new schedule without default values. You&apos;ll input all details manually.
                     </p>
                     <button
                       className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${!selectedPastSchedule
@@ -1534,7 +1534,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 </span>
                               </div>
 
-                              <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-400">
+                              <div className="grid grid-cols-3 gap-4 text-sm text-gray-600 dark:text-gray-400">
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-1">
                                     <FileText className="w-4 h-4" />
@@ -1543,10 +1543,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                   <div className="flex items-center gap-1">
                                     <Building className="w-4 h-4" />
                                     <span className="truncate">{schedule.client_name}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <MapPin className="w-4 h-4" />
-                                    <span className="truncate">{schedule.project_name}</span>
                                   </div>
                                 </div>
 
@@ -1559,15 +1555,21 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                     <Truck className="w-4 h-4" />
                                     <span>{schedule.input_params.quantity} m³</span>
                                   </div>
-                                  <div className="flex items-center gap-1">
-                                    <span className="w-4 h-4 text-center text-xs font-bold">G</span>
-                                    <span>{schedule.concreteGrade}</span>
-                                  </div>
                                 </div>
-                              </div>
-
-                              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                {schedule.pumping_job} • {schedule.pump_site_reach_time}
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="w-4 h-4" />
+                                    <span className="truncate">{schedule.project_name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Truck className="w-4 h-4" />
+                                    <span>{new Date(schedule.input_params.pump_start).toLocaleTimeString("en-US", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                    </span>
+                                  </div>
+</div>
                               </div>
                             </div>
 
@@ -1602,28 +1604,22 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             {/* Action Buttons */}
             <div className="flex justify-center gap-4 pt-6">
               <button
-                className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                onClick={() => {
-                  setSelectedPastSchedule("");
-                  setStep(1.1);
-                }}
-              >
-                Cancel
-              </button>
-              <button
                 className={cn(
-                  "px-8 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors font-medium",
-                  !selectedPastSchedule || selectedPastSchedule === "" ? "opacity-50 cursor-not-allowed" : ""
+                  "px-8 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors font-medium"
                 )}
-                disabled={!selectedPastSchedule || selectedPastSchedule === ""}
+                // disabled={!selectedPastSchedule || selectedPastSchedule === ""}
                 onClick={() => {
-                  const params = new URLSearchParams(searchParams.toString());
-                  params.set("template", selectedPastSchedule || "none");
-                  router.replace(`?${params.toString()}`);
+                  if (!selectedPastSchedule) {
+                    setSelectedPastSchedule("");
+                    setStep(1.1);
+                  } else {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set("template", selectedPastSchedule || "none");
+                    router.replace(`?${params.toString()}`);
+                  }
                 }}
               >
-                Continue
-              </button>
+                Continue</button>
             </div>
           </div>
         ) : step === 1.1 ? (
@@ -2862,11 +2858,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                                   </p>
                                                   {/* Pump Type Chip */}
                                                   <span
-                                                    className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                                      pumpType === "line"
-                                                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                                        : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                                    }`}
+                                                    className={`px-2 py-1 text-xs font-medium rounded-full ${pumpType === "line"
+                                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                                      }`}
                                                   >
                                                     {pumpType === "line" ? "Line" : "Boom"}
                                                   </span>

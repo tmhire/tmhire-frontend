@@ -707,37 +707,42 @@ export default function PlantsContainer() {
               <Input
                 type="number"
                 name="capacity"
-                placeholder="Enter plant capacity (1-99)"
+                placeholder="Enter plant capacity (1-999)"
                 value={newPlant.capacity || ""}
                 onChange={handleInputChange}
                 step={0.1}
                 min="1"
-                max="99"
+                max="999"
               />
               {capacityError && <span className="text-xs text-red-600 mt-1 block">{capacityError}</span>}
             </div>
             <div className="w-full">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex flex-row justify-between">
                 Loading Time (min)   {newPlant?.capacity && (
-                  <span className="text-xs text-gray-500 mt-1 block">
+                  <span className="text-[10px] text-gray-500 block">
                     Using Avg TM Cap: {avgTMCap}
                   </span>
                 )}
               </label>
-              <Input
-                type="number"
-                name="capacity"
-                placeholder="Enter plant capacity to calculate"
-                value={
-                  newPlant?.capacity
-                    ? Math.ceil((newPlant.capacity / avgTMCap) / 5) * 5
-                    : ""
-                }
-                disabled
-              />
-              {capacityError && (
-                <span className="text-xs text-red-600 mt-1 block">{capacityError}</span>
-              )}
+              <div className="relative">
+                <Input
+                  type="number"
+                  name="capacity"
+                  placeholder="Enter plant capacity to calculate"
+                  value={
+                    newPlant?.capacity
+                      ? Math.ceil((newPlant.capacity / avgTMCap) / 5) * 5
+                      : ""
+                  }
+                  disabled
+                  className="pr-28" // add right padding so text doesn't overlap
+                />
+                {newPlant?.capacity && (
+                  <span className="absolute inset-y-0 right-2 flex items-center text-[10px] text-gray-500">
+                    (rounded off to nearest 5)
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex flex-row w-full gap-2">
@@ -906,32 +911,41 @@ export default function PlantsContainer() {
                   name="capacity"
                   value={editedPlant.capacity || ""}
                   onChange={handleEditInputChange}
-                  placeholder="Enter plant capacity (1-99)"
+                  placeholder="Enter plant capacity (1-999)"
                   step={0.1}
                   min="1"
-                  max="99"
+                  max="999"
                 />
                 {editCapacityError && <span className="text-xs text-red-600 mt-1 block">{editCapacityError}</span>}
               </div>
               <div className="w-full">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex flex-row justify-between">
-                  Loading Time (min)   {newPlant?.capacity && (
-                    <span className="text-xs text-gray-500 mt-1 block">
+                  Loading Time (min)   {editedPlant?.capacity && (
+                    <span className="text-[10px] text-gray-500 block">
                       Using Avg TM Cap: {avgTMCap}
                     </span>
                   )}
                 </label>
-                <Input
-                  type="number"
-                  name="capacity"
-                  placeholder="Enter plant capacity to calculate"
-                  value={
-                    editedPlant?.capacity
-                      ? Math.ceil((editedPlant.capacity / avgTMCap) / 5) * 5
-                      : ""
-                  }
-                  disabled
-                />
+                <div className="relative">
+                  <Input
+                    type="number"
+                    name="capacity"
+                    placeholder="Enter plant capacity to calculate"
+                    value={
+                      editedPlant?.capacity
+                        ? Math.ceil((editedPlant.capacity / avgTMCap) / 5) * 5
+                        : ""
+                    }
+                    disabled
+                    className="pr-28" // add right padding so text doesn't overlap
+                  />
+                  {editedPlant?.capacity && (
+                    <span className="absolute inset-y-0 right-2 flex items-center text-[10px] text-gray-500">
+                      (rounded off to nearest 5)
+                    </span>
+                  )}
+                </div>
+
                 {editCapacityError && (
                   <span className="text-xs text-red-600 mt-1 block">{editCapacityError}</span>
                 )}
