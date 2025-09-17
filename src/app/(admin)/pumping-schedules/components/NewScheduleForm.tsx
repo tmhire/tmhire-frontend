@@ -483,8 +483,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             data.data.input_params.unloading_time && data.data.input_params.unloading_time !== 0
               ? data.data.input_params.unloading_time.toString()
               : pumping_speed && avgTMCap
-              ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
-              : "",
+                ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
+                : "",
           pumpOnwardTime: data.data.input_params.pump_onward_time.toString(),
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
@@ -511,7 +511,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         });
         setComputedScheduleName(
           data?.data?.schedule_no ||
-            `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
+          `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
         );
         const tm_ids = new Set();
         const tmSequence: string[] = [];
@@ -1350,11 +1350,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 >
                   {/* Step Circle */}
                   <motion.div
-                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${
-                      step >= s.id
-                        ? "border-brand-500 bg-brand-500 text-white shadow-lg"
-                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                    }`}
+                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${step >= s.id
+                      ? "border-brand-500 bg-brand-500 text-white shadow-lg"
+                      : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                      }`}
                     animate={{
                       scale: s.type === "subStep" ? (step === s.id ? 0.9 : 0.8) : step === s.id ? 1.3 : 1,
                       boxShadow: step === s.id ? "0 0 20px rgba(var(--brand-500-rgb, 59, 130, 246), 0.5)" : "none",
@@ -1383,9 +1382,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                   {/* Step Name */}
                   <motion.span
-                    className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${
-                      step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
-                    }`}
+                    className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
+                      }`}
                     animate={{
                       fontWeight: step >= s.id ? 500 : 400,
                     }}
@@ -1430,20 +1428,18 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               {/* Start from Scratch Option */}
               <div className="lg:col-span-1">
                 <div
-                  className={`h-full p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                    !selectedPastSchedule
-                      ? "border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg"
-                      : "border-gray-200 hover:border-brand-300 hover:shadow-md dark:border-gray-700 dark:hover:border-brand-600"
-                  }`}
+                  className={`h-full p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 ${!selectedPastSchedule
+                    ? "border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg"
+                    : "border-gray-200 hover:border-brand-300 hover:shadow-md dark:border-gray-700 dark:hover:border-brand-600"
+                    }`}
                   onClick={() => setSelectedPastSchedule("")}
                 >
                   <div className="text-center">
                     <div
-                      className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
-                        !selectedPastSchedule
-                          ? "bg-brand-500 text-white"
-                          : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                      }`}
+                      className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${!selectedPastSchedule
+                        ? "bg-brand-500 text-white"
+                        : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                        }`}
                     >
                       <FileText className="w-8 h-8" />
                     </div>
@@ -1453,11 +1449,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       maximum customization.
                     </p>
                     <button
-                      className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
-                        !selectedPastSchedule
-                          ? "bg-brand-500 text-white hover:bg-brand-600"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                      }`}
+                      className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${!selectedPastSchedule
+                        ? "bg-brand-500 text-white hover:bg-brand-600"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        }`}
                     >
                       {!selectedPastSchedule ? "Selected" : "Choose this option"}
                     </button>
@@ -1468,19 +1463,17 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               {/* Use Past Schedule Option */}
               <div className="lg:col-span-2">
                 <div
-                  className={`p-6 rounded-xl border-2 transition-all duration-200 ${
-                    selectedPastSchedule
-                      ? "border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg"
-                      : "border-gray-200 dark:border-gray-700"
-                  }`}
+                  className={`p-6 rounded-xl border-2 transition-all duration-200 ${selectedPastSchedule
+                    ? "border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg"
+                    : "border-gray-200 dark:border-gray-700"
+                    }`}
                 >
                   <div className="flex items-center mb-4">
                     <div
-                      className={`inline-flex items-center justify-center w-12 h-12 rounded-full mr-4 ${
-                        selectedPastSchedule
-                          ? "bg-brand-500 text-white"
-                          : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                      }`}
+                      className={`inline-flex items-center justify-center w-12 h-12 rounded-full mr-4 ${selectedPastSchedule
+                        ? "bg-brand-500 text-white"
+                        : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                        }`}
                     >
                       <Clock className="w-6 h-6" />
                     </div>
@@ -1521,11 +1514,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       filteredSchedules?.map((schedule) => (
                         <div
                           key={schedule._id}
-                          className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
-                            selectedPastSchedule === schedule._id
-                              ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
-                              : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
-                          }`}
+                          className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${selectedPastSchedule === schedule._id
+                            ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
+                            : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
+                            }`}
                           onClick={() => setSelectedPastSchedule(schedule._id)}
                         >
                           <div className="flex items-start justify-between">
@@ -1535,9 +1527,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                   {schedule.schedule_no}
                                 </h4>
                                 <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    pumpColors[schedule.pump_type]
-                                  }`}
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${pumpColors[schedule.pump_type]
+                                    }`}
                                 >
                                   {schedule?.pump_type?.toUpperCase()}
                                 </span>
@@ -1581,11 +1572,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             </div>
 
                             <div
-                              className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                selectedPastSchedule === schedule._id
-                                  ? "border-brand-500 bg-brand-500"
-                                  : "border-gray-300 dark:border-gray-600"
-                              }`}
+                              className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPastSchedule === schedule._id
+                                ? "border-brand-500 bg-brand-500"
+                                : "border-gray-300 dark:border-gray-600"
+                                }`}
                             >
                               {selectedPastSchedule === schedule._id && (
                                 <div className="w-2 h-2 rounded-full bg-white"></div>
@@ -1645,14 +1635,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900/40 py-1 px-3 rounded-full">
                   Company Timings -
                   {profile?.preferred_format === "12h"
-                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${
-                        (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
-                      } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${
-                        (profile?.custom_start_hour ?? 0) + 24 < 24 ? "PM" : "AM"
-                      } NEXT DAY`
+                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
+                    } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) + 24 < 24 ? "PM" : "AM"
+                    } NEXT DAY`
                     : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 TODAY TO ${String(
-                        ((profile?.custom_start_hour ?? 0) + 24) % 24
-                      ).padStart(2, "0")}:00 TOMORROW`}
+                      ((profile?.custom_start_hour ?? 0) + 24) % 24
+                    ).padStart(2, "0")}:00 TOMORROW`}
                 </span>
               </div>
 
@@ -1900,8 +1888,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     value={
                       selectedProject && projects.find((p) => p._id === selectedProject)?.mother_plant_id
                         ? (plantsData || []).find(
-                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                          )?.name || "Unknown Plant"
+                          (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
+                        )?.name || "Unknown Plant"
                         : ""
                     }
                     disabled
@@ -2626,7 +2614,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               <Spinner text="Loading pumps..." />
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-6 pb-24">
               {calculatedTMs && (
                 <div className="mb-6 p-6 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Pumping Selection</h4>
@@ -2714,21 +2702,29 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               )}
 
               <div className="grid grid-cols-2 gap-6">
-                {/* Left Column - Pump Selection */}
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3">
+                <div className="col-span-2 grid grid-cols-2 gap-6 sticky top-20 z-10 bg-white dark:bg-gray-900/70 backdrop-blur-sm">
+                  {/* Left header */}
+                  <div className="flex items-center gap-3 py-2 pl-4">
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select 1 Pump</h3>
-                    {/* Pump Type Filter Indicator */}
                     <span
-                      className={`px-3 py-1 text-sm font-medium rounded-full ${
-                        pumpType === "line"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                          : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                      }`}
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${pumpType === "line"
+                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                        : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                        }`}
                     >
                       {pumpType === "line" ? "Line Pump" : "Boom Pump"}
                     </span>
                   </div>
+
+                  {/* Right header */}
+                  <div className="flex items-center gap-3 py-2">
+                    <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
+                      {selectedPump ? "Pump Chosen" : "Select Pump"}
+                    </h3>
+                  </div>
+                </div>
+                {/* Left Column - Pump Selection */}
+                <div className="space-y-6">
                   <RadioGroup
                     value={selectedPump}
                     onValueChange={(val) => {
@@ -2962,9 +2958,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                 {/* Right Column - Chosen Pump */}
                 <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
-                    {selectedPump ? "Pump Chosen" : "Select Pump"}
-                  </h3>
                   <div className="space-y-2">
                     {selectedPump && calculatedTMs && calculatedTMs.available_pumps ? (
                       (() => {
@@ -2979,11 +2972,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
                                 {/* Pump Type Chip */}
                                 <span
-                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                    pumpType === "line"
-                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                  }`}
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${pumpType === "line"
+                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                    : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                    }`}
                                 >
                                   {pumpType === "line" ? "Line" : "Boom"}
                                 </span>
@@ -3016,7 +3008,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               <Spinner text="Loading TMs..." />
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-6 pb-24">
               {calculatedTMs && (
                 <div className="mb-6 p-6 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
@@ -3145,11 +3137,25 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               )}
 
               <div className="grid grid-cols-2 gap-6">
+                <div className="col-span-2 grid grid-cols-2 gap-6 sticky top-20 z-10 bg-white dark:bg-gray-900/70 backdrop-blur-sm">
+                  {/* Left header */}
+                  <div className="flex items-center gap-3 py-2 pl-4">
+                    <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
+                      Select {overruleTMCount ? customTMCount : calculatedTMs.tm_count || "N/A"} TMs
+                    </h3>
+                  </div>
+
+                  {/* Right header */}
+                  <div className="flex items-center gap-3 py-2">
+                    <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
+                      {tmSequence.length}/{overruleTMCount ? customTMCount : calculatedTMs.tm_count || "N/A"} selected -
+                      Arrange
+                    </h3>
+                  </div>
+                </div>
                 {/* Left Column - TM Selection */}
                 <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
-                    Select {overruleTMCount ? customTMCount : calculatedTMs.tm_count || "N/A"} TMs
-                  </h3>
+
                   <div className="space-y-4">
                     {calculatedTMs && calculatedTMs.available_tms && calculatedTMs.available_tms.length > 0 ? (
                       (() => {
@@ -3367,10 +3373,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                 {/* Right Column - TM Sequence */}
                 <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
-                    {tmSequence.length}/{overruleTMCount ? customTMCount : calculatedTMs.tm_count || "N/A"} selected -
-                    Arrange
-                  </h3>
                   <div className="space-y-2">
                     {tmSequence.length > 0 && calculatedTMs ? (
                       (() => {
