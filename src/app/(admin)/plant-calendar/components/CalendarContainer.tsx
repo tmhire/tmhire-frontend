@@ -208,17 +208,7 @@ export default function CalendarContainer() {
     return new Map(plantsData.map((p) => [p._id, p.name]));
   }, [plantsData]);
 
-  const clientColors = useMemo(() => {
-    const uniqueClients = Array.from(
-      new Set(rows.flatMap((r) => r.tasks.map((t) => t.client)).filter(Boolean))
-    ) as string[];
-    const map = new Map<string, string>();
-    uniqueClients.forEach((client, index) => {
-      const color = CLIENT_TAILWIND_COLORS[index % CLIENT_TAILWIND_COLORS.length];
-      map.set(client, color);
-    });
-    return map;
-  }, [rows]);
+  // Client colors removed to anonymize busy blocks
 
   const handleDateChange = (newDate: string) => {
     setSelectedDate(newDate);
@@ -286,22 +276,63 @@ export default function CalendarContainer() {
 
   const getTimeSlots = () => Array.from({ length: 24 }, (_, i) => ((customStartHour || 0) + i) % 24);
 
-  const groupConsecutiveTasks = (tasks: Task[]): Task[][] => {
-    if (!tasks.length) return [];
-    const sorted = [...tasks].sort((a, b) => new Date(a.actualStart).getTime() - new Date(b.actualStart).getTime());
-    const groups: Task[][] = [];
-    let current: Task[] = [sorted[0]];
-    for (let i = 1; i < sorted.length; i++) {
-      const prevEnd = new Date(sorted[i - 1].actualEnd).getTime();
-      const currStart = new Date(sorted[i].actualStart).getTime();
-      if (currStart === prevEnd) current.push(sorted[i]);
-      else {
-        groups.push(current);
-        current = [sorted[i]];
+  // Build merged busy intervals for each plant to eliminate overlaps
+  const buildMergedIntervals = (tasks: Task[], selectedDate: string) => {
+    // Clamp each task to the selected day
+    const dayStart = new Date(`${selectedDate}T00:00:00`).getTime();
+    const dayEnd = new Date(`${selectedDate}T24:00:00`).getTime();
+
+    const rawIntervals = tasks
+      .map((task) => {
+        const s = new Date(task.actualStart).getTime();
+        const e = new Date(task.actualEnd).getTime();
+        const startMs = Math.max(s, dayStart);
+        const endMs = Math.min(e, dayEnd);
+        if (!(startMs < endMs)) return null;
+        return {
+          startHour: (startMs - dayStart) / (1000 * 60 * 60),
+          endHour: (endMs - dayStart) / (1000 * 60 * 60),
+          actualStartMs: startMs,
+          actualEndMs: endMs,
+        };
+      })
+      .filter((iv): iv is { startHour: number; endHour: number; actualStartMs: number; actualEndMs: number } => !!iv)
+      .sort((a, b) => a.startHour - b.startHour);
+
+    // Merge overlapping or touching intervals
+    const mergedIntervals: {
+      startHour: number;
+      endHour: number;
+      actualStartMs: number;
+      actualEndMs: number;
+      duration: number; // minutes
+    }[] = [];
+
+    for (const iv of rawIntervals) {
+      const last = mergedIntervals[mergedIntervals.length - 1];
+      if (!last || iv.startHour > last.endHour) {
+        mergedIntervals.push({
+          startHour: iv.startHour,
+          endHour: iv.endHour,
+          actualStartMs: iv.actualStartMs,
+          actualEndMs: iv.actualEndMs,
+          duration: Math.round((iv.actualEndMs - iv.actualStartMs) / (1000 * 60)),
+        });
+      } else {
+        // Overlaps or touches; extend
+        if (iv.endHour > last.endHour) {
+          last.endHour = iv.endHour;
+          last.actualEndMs = iv.actualEndMs;
+        }
+        if (iv.startHour < last.startHour) {
+          last.startHour = iv.startHour;
+          last.actualStartMs = iv.actualStartMs;
+        }
+        last.duration = Math.round((last.actualEndMs - last.actualStartMs) / (1000 * 60));
       }
     }
-    groups.push(current);
-    return groups;
+
+    return mergedIntervals;
   };
 
   const getBarWindowHelpers = () => {
@@ -342,14 +373,7 @@ export default function CalendarContainer() {
     return { isInWindow, getBarProps };
   };
 
-  const clientLegend = Object.values(
-    rows
-      .flatMap((r) => r.tasks)
-      .reduce((acc, task) => {
-        if (task.client && !acc[task.client]) acc[task.client] = { name: task.client, color: task.color };
-        return acc;
-      }, {} as Record<string, { name: string; color: string }>)
-  );
+  // Client legend removed to anonymize busy blocks
 
   const computeUsedHours = (tasks: Task[]): number => {
     // Merge intervals to compute total occupied time (in hours)
@@ -586,7 +610,7 @@ export default function CalendarContainer() {
                       const slots = getTimeSlots();
                       const windowStart = slots[0];
                       const timeSlotsLength = slots.length;
-                      const grouped = groupConsecutiveTasks(row.tasks);
+                      const mergedIntervals = buildMergedIntervals(row.tasks, selectedDate);
 
                       const usedHours = computeUsedHours(row.tasks);
 
@@ -601,40 +625,28 @@ export default function CalendarContainer() {
                             {row.name}
                           </div>
                           <div className="flex-1 flex relative">
-                            {grouped.map((tasks, i) => {
-                              const starts = tasks.map((t) => new Date(t.actualStart).getTime());
-                              const ends = tasks.map((t) => new Date(t.actualEnd).getTime());
-                              const minStart =
-                                (Math.min(...starts) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
-                              const maxEnd =
-                                (Math.max(...ends) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
-                              if (!isInWindow(minStart, maxEnd)) return null;
-                              const { offset, width, slots: s } = getBarProps(minStart, maxEnd);
+                            {/* Render busy blocks (no client labels) */}
+                            {mergedIntervals.map((iv, i) => {
+                              if (!isInWindow(iv.startHour, iv.endHour)) return null;
+                              const { offset, width, slots: s } = getBarProps(iv.startHour, iv.endHour);
                               if (width <= 0) return null;
-                              const clientColor = clientColors.get(tasks[0].client) || "bg-gray-300";
                               return (
                                 <Tooltip
-                                  key={tasks[0].client + i}
-                                  content={`Schedule No.: ${tasks[0].schedule_no}\nClient: ${
-                                    tasks[0].client
-                                  }\nProject: ${tasks[0].project}\n${formatDateTimeForTooltip(
-                                    tasks[0].actualStart
-                                  )} to ${formatDateTimeForTooltip(
-                                    tasks[tasks.length - 1].actualEnd
-                                  )}\nDuration: ${formatHoursAndMinutes(width)}`}
+                                  key={`${row.id}-${i}`}
+                                  content={`Plant: ${row.name}\n${formatDateTimeForTooltip(
+                                    new Date(iv.actualStartMs).toISOString()
+                                  )} to ${formatDateTimeForTooltip(new Date(iv.actualEndMs).toISOString())}\nBusy: ${
+                                    iv.duration
+                                  }m`}
                                 >
                                   <div
-                                    className={`absolute - h-6 rounded ${clientColor} opacity-90 z-0`}
+                                    className="absolute top-1 h-4 rounded bg-blue-500 opacity-60 hover:opacity-80 transition-opacity cursor-default"
                                     style={{
                                       left: `${(offset / s.length) * 100 - 0.25}%`,
                                       width: `${(width / s.length) * 100 + 0.5}%`,
                                       zIndex: 1,
                                     }}
-                                  >
-                                    <span className="text-white text-[10px] items-center justify-center flex h-full">
-                                      {`${(tasks[0].client || "").slice(0, 5)}-${(tasks[0].project || "").slice(0, 5)}`}
-                                    </span>
-                                  </div>
+                                  />
                                 </Tooltip>
                               );
                             })}
@@ -662,24 +674,7 @@ export default function CalendarContainer() {
             </div>
           </div>
 
-          <div className="mt-6 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4">
-            <div className="flex flex-wrap md:flex-nowrap gap-4 w-full">
-              <div className="flex-1 min-w-[200px]">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Clients</h3>
-                <div className="flex flex-wrap gap-4">
-                  {clientLegend.map(({ name }) => {
-                    const color = clientColors.get(name) || "bg-gray-300";
-                    return (
-                      <div key={name} className="flex items-center gap-2 min-w-[160px]">
-                        <div className={`w-4 h-4 ${color} rounded`}></div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">{name}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Legend removed to anonymize tasks */}
         </div>
       </div>
     </div>
