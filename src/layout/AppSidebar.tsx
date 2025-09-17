@@ -4,7 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import { BoxCubeIcon, ChevronDownIcon, PieChartIcon, PlugInIcon, TruckIcon } from "../icons/index";
-import { Box, Calendar, Grid, SquareChartGantt, TruckElectric, Users, IdCardLanyard, FileText } from "lucide-react";
+import {
+  Box,
+  Calendar,
+  ChartGantt,
+  Grid,
+  SquareChartGantt,
+  TruckElectric,
+  Users,
+  IdCardLanyard,
+  FileText,
+} from "lucide-react";
 
 type NavItem = {
   shortName?: string;
@@ -76,6 +86,12 @@ const navItems: NavItem[] = [
     path: "/tm-calendar",
   },
   {
+    icon: <ChartGantt />,
+    name: "Plant Calendar",
+    shortName: "Plant Calendar",
+    path: "/plant-calendar",
+  },
+  {
     icon: <FileText />,
     name: "Reports",
     shortName: "Reports",
@@ -128,9 +144,7 @@ const AppSidebar: React.FC = () => {
   // };
 
   const renderMenuItems = (navItems: NavItem[], menuType: "main" | "others") => (
-    <ul
-      className={`flex flex-col  ${isMobileOpen ? "" : "items-center justify-center"} gap-2`}
-    >
+    <ul className={`flex flex-col  ${isMobileOpen ? "" : "items-center justify-center"} gap-2`}>
       {navItems.map((nav, index) => (
         <li key={nav.name}>
           {nav.subItems ? (
