@@ -119,6 +119,7 @@ interface PastSchedule {
     quantity: number;
     schedule_date: string;
     pump_onward_time: number;
+    onward_time: number;
     return_time: number;
     buffer_time: number;
     load_time: number;
@@ -434,6 +435,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           concreteGrade: pastSchedule.concreteGrade,
           pumpingJob: pastSchedule.pumping_job,
           pumpOnwardTime: pastSchedule.input_params.pump_onward_time.toString(),
+          onwardTime: pastSchedule.input_params.onward_time.toString(),
           returnTime: pastSchedule.input_params.return_time.toString(),
           bufferTime: pastSchedule.input_params.buffer_time.toString(),
           loadTime: pastSchedule.input_params.load_time.toString(),
