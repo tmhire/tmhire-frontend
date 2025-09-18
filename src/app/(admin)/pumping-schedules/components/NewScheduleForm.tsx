@@ -1571,7 +1571,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                     })}
                                     </span>
                                   </div>
-</div>
+                                </div>
                               </div>
                             </div>
 
@@ -1672,10 +1672,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       Current Date
                     </p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {new Date().toLocaleDateString("en-US", {
+                      {new Date().toLocaleDateString("en-GB", {
                         day: "2-digit",
                         month: "2-digit",
-                        year: "2-digit",
+                        year: "numeric",
                       })}
                     </p>
                   </div>
@@ -2040,11 +2040,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="floorHeight"
-                    value={formData.floorHeight ? parseFloat(formData.floorHeight) : ""}
+                    value={formData.floorHeight !== undefined && formData.floorHeight !== null
+                      ? formData.floorHeight
+                      : ""}
                     onChange={(e) => {
                       const value = e.target.value;
                       const numValue = parseFloat(value);
-                      if (value === "" || (numValue >= 1 && numValue <= 99 && Number.isInteger(numValue))) {
+                      if (value === "" || (numValue >= 0 && numValue <= 99 && Number.isInteger(numValue))) {
                         handleInputChange(e);
                       }
                     }}
