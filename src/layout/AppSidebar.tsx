@@ -3,18 +3,17 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
-import { BoxCubeIcon, ChevronDownIcon, PieChartIcon, PlugInIcon, TruckIcon } from "../icons/index";
+import { BoxCubeIcon, ChevronDownIcon, PieChartIcon, PlantIcon, PlugInIcon, PumpIcon, TmIcon } from "../icons/index";
 import {
-  Box,
   Calendar,
   ChartGantt,
   Grid,
   SquareChartGantt,
-  TruckElectric,
   Users,
   IdCardLanyard,
   FileText,
 } from "lucide-react";
+// import { Icons } from "@/components/icons";
 
 type NavItem = {
   shortName?: string;
@@ -32,7 +31,7 @@ const navItems: NavItem[] = [
     path: "/",
   },
   {
-    icon: <Box />,
+    icon: <PlantIcon clasname="w-8 h-12" />,
     name: "RMC Plants",
     shortName: "Plants",
     path: "/plants",
@@ -56,13 +55,13 @@ const navItems: NavItem[] = [
     path: "/projects",
   },
   {
-    icon: <TruckIcon />,
+    icon: <TmIcon />,
     name: "Transit Mixers",
     shortName: "Mixers",
     path: "/transit-mixers",
   },
   {
-    icon: <TruckElectric />,
+    icon: <PumpIcon />,
     name: "Concrete Pumps",
     shortName: "Pumps",
     path: "/pumps",
@@ -144,33 +143,30 @@ const AppSidebar: React.FC = () => {
   // };
 
   const renderMenuItems = (navItems: NavItem[], menuType: "main" | "others") => (
-    <ul className={`flex flex-col  ${isMobileOpen ? "" : "items-center justify-center"} gap-2`}>
+    <ul className={`flex flex-col  ${isMobileOpen ? "" : "items-center justify-center"} gap-1`}>
       {navItems.map((nav, index) => (
         <li key={nav.name}>
           {nav.subItems ? (
             <button
               onClick={() => handleSubmenuToggle(index, menuType)}
-              className={`menu-item group  ${
-                openSubmenu?.type === menuType && openSubmenu?.index === index
+              className={`menu-item group  ${openSubmenu?.type === menuType && openSubmenu?.index === index
                   ? "menu-item-active"
                   : "menu-item-inactive"
-              } cursor-pointer ${!isExpanded ? "lg:justify-center" : "lg:justify-start"}`}
+                } cursor-pointer ${!isExpanded ? "lg:justify-center" : "lg:justify-start"}`}
             >
               <span
-                className={` ${
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
+                className={` ${openSubmenu?.type === menuType && openSubmenu?.index === index
                     ? "menu-item-icon-active"
                     : "menu-item-icon-inactive"
-                }`}
+                  }`}
               >
                 {nav.icon}
               </span>
               {(isExpanded || isHovered || isMobileOpen) && <span className={`menu-item-text`}>{nav.name}</span>}
               {(isExpanded || isHovered || isMobileOpen) && (
                 <ChevronDownIcon
-                  className={`ml-auto w-5 h-5 transition-transform duration-200  ${
-                    openSubmenu?.type === menuType && openSubmenu?.index === index ? "rotate-180 text-brand-500" : ""
-                  }`}
+                  className={`ml-auto w-5 h-5 transition-transform duration-200  ${openSubmenu?.type === menuType && openSubmenu?.index === index ? "rotate-180 text-brand-500" : ""
+                    }`}
                 />
               )}
             </button>
@@ -181,9 +177,8 @@ const AppSidebar: React.FC = () => {
                 className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"}`}
               >
                 <span
-                  className={`${
-                    isActive(nav.path) ? "menu-item-icon-active" : "menu-item-icon-inactive"
-                  } flex flex-col justify-center items-center gap-1`}
+                  className={`${isActive(nav.path) ? "menu-item-icon-active" : "menu-item-icon-inactive"
+                    } flex flex-col justify-center items-center gap-`}
                 >
                   {nav.icon}
                   {!isExpanded && !isMobileOpen && nav.shortName && (
@@ -214,26 +209,23 @@ const AppSidebar: React.FC = () => {
                   <li key={subItem.name}>
                     <Link
                       href={subItem.path}
-                      className={`menu-dropdown-item ${
-                        isActive(subItem.path) ? "menu-dropdown-item-active" : "menu-dropdown-item-inactive"
-                      }`}
+                      className={`menu-dropdown-item ${isActive(subItem.path) ? "menu-dropdown-item-active" : "menu-dropdown-item-inactive"
+                        }`}
                     >
                       {subItem.name}
                       <span className="flex items-center gap-1 ml-auto">
                         {subItem.new && (
                           <span
-                            className={`ml-auto ${
-                              isActive(subItem.path) ? "menu-dropdown-badge-active" : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge `}
+                            className={`ml-auto ${isActive(subItem.path) ? "menu-dropdown-badge-active" : "menu-dropdown-badge-inactive"
+                              } menu-dropdown-badge `}
                           >
                             new
                           </span>
                         )}
                         {subItem.pro && (
                           <span
-                            className={`ml-auto ${
-                              isActive(subItem.path) ? "menu-dropdown-badge-active" : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge `}
+                            className={`ml-auto ${isActive(subItem.path) ? "menu-dropdown-badge-active" : "menu-dropdown-badge-inactive"
+                              } menu-dropdown-badge `}
                           >
                             pro
                           </span>

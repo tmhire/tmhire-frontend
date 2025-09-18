@@ -52,13 +52,16 @@ import MailIcon from "./mail-line.svg";
 import HorizontaLDots from "./horizontal-dots.svg";
 import ChatIcon from "./chat.svg";
 import MoreDotIcon from "./more-dot.svg";
-import BellIcon from "./bell.svg";
+import PlantIcon from "./plant.svg";
+import TmIcon from "./tm.svg";
+import PumpIcon from "./pump.svg";
 
-export {
+export {PlantIcon,
+  TmIcon,
   TruckIcon,
   TruckLightIcon,
   DownloadIcon,
-  BellIcon,
+  PumpIcon,
   MoreDotIcon,
   FileIcon,
   GridIcon,
