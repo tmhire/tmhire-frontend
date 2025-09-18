@@ -9,6 +9,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
 import Tooltip from "@/components/ui/tooltip";
 import SearchableDropdown from "@/components/form/SearchableDropdown";
+import { formatHoursAndMinutes } from "@/lib/utils";
 
 type ApiTask = {
   id: string;
@@ -135,8 +136,8 @@ function transformApiDataToPlantRows(apiData: ApiResponse, plantMap: Map<string,
         itemType === "mixer" && rawType === "work"
           ? "unload"
           : itemType === "pump" && rawType === "work"
-          ? "pump"
-          : rawType;
+            ? "pump"
+            : rawType;
       return {
         id: task.id,
         color: TASK_TYPE_COLORS[mappedType] || "bg-gray-500",
@@ -463,11 +464,10 @@ export default function CalendarContainer() {
 
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                    showFilters
-                      ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
-                      : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
-                  } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
+                    ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
+                    : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
+                    } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
                 >
                   <Filter className="h-4 w-4" />
                   Filters
@@ -586,16 +586,15 @@ export default function CalendarContainer() {
                   {getTimeSlots().map((time) => (
                     <div
                       key={time}
-                      className={`flex-1 px-1 py-3 text-center tracking-tight leading-tight font-medium text-gray-500 text-[8.5px] dark:text-gray-400 border-r ${
-                        time === 23
-                          ? "border-r-2 border-r-gray-400 dark:border-r-white/[0.2]"
-                          : "border-gray-300 dark:border-white/[0.05]"
-                      } min-w-[40px]`}
+                      className={`flex-1 px-1 py-3 text-center tracking-tight leading-tight font-medium text-gray-500 text-[8.5px] dark:text-gray-400 border-r ${time === 23
+                        ? "border-r-2 border-r-gray-400 dark:border-r-white/[0.2]"
+                        : "border-gray-300 dark:border-white/[0.05]"
+                        } min-w-[40px]`}
                     >
                       {formatTime(time)}
                     </div>
                   ))}
-                  <div className="w-24 px-1 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center flex-shrink-0">
+                  <div className="w-24 mr-1 px-1 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center flex-shrink-0">
                     Used Hrs
                   </div>
                 </div>
@@ -635,9 +634,8 @@ export default function CalendarContainer() {
                                   key={`${row.id}-${i}`}
                                   content={`Plant: ${row.name}\n${formatDateTimeForTooltip(
                                     new Date(iv.actualStartMs).toISOString()
-                                  )} to ${formatDateTimeForTooltip(new Date(iv.actualEndMs).toISOString())}\nBusy: ${
-                                    iv.duration
-                                  }m`}
+                                  )} to ${formatDateTimeForTooltip(new Date(iv.actualEndMs).toISOString())}\nBusy: ${formatHoursAndMinutes((iv.duration) / 60)
+                                    }m`}
                                 >
                                   <div
                                     className="absolute top-1 h-4 rounded bg-blue-500 opacity-60 hover:opacity-80 transition-opacity cursor-default"
@@ -654,15 +652,14 @@ export default function CalendarContainer() {
                             {slots.map((time) => (
                               <div
                                 key={`${row.id}-${time}`}
-                                className={`flex-1 h-6 border-r ${
-                                  time === 23
-                                    ? "border-r-2 border-r-gray-400 dark:border-r-white/[0.2]"
-                                    : "border-gray-300 dark:border-white/[0.05]"
-                                } relative min-w-[40px]`}
+                                className={`flex-1 h-6 border-r ${time === 23
+                                  ? "border-r-2 border-r-gray-400 dark:border-r-white/[0.2]"
+                                  : "border-gray-300 dark:border-white/[0.05]"
+                                  } relative min-w-[40px]`}
                               />
                             ))}
                           </div>
-                          <div className="w-24 px-1 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
+                          <div className="w-24 mr-2 px-1 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
                             {usedHours}
                           </div>
                         </div>
