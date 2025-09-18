@@ -72,26 +72,26 @@ const TASK_TYPE_COLORS: Record<string, string> = {
   return: "bg-blue-500",
 };
 
-const CLIENT_TAILWIND_COLORS = [
-  "bg-red-500",
-  "bg-lime-400",
-  "bg-fuchsia-400",
-  "bg-orange-500",
-  "bg-pink-400",
-  "bg-indigo-400",
-  "bg-cyan-400",
-  "bg-emerald-400",
-  "bg-rose-400",
-  "bg-amber-400",
-];
+// const CLIENT_TAILWIND_COLORS = [
+//   "bg-red-500",
+//   "bg-lime-400",
+//   "bg-fuchsia-400",
+//   "bg-orange-500",
+//   "bg-pink-400",
+//   "bg-indigo-400",
+//   "bg-cyan-400",
+//   "bg-emerald-400",
+//   "bg-rose-400",
+//   "bg-amber-400",
+// ];
 
 const getTaskType = (id: string) => id.split("-")[0];
 
-const calculateDurationMinutes = (start: string, end: string): number => {
-  const s = new Date(start).getTime();
-  const e = new Date(end).getTime();
-  return Math.max(0, Math.round((e - s) / 60000));
-};
+// const calculateDurationMinutes = (start: string, end: string): number => {
+//   const s = new Date(start).getTime();
+//   const e = new Date(end).getTime();
+//   return Math.max(0, Math.round((e - s) / 60000));
+// };
 
 const formatDateTimeForTooltip = (dateTimeString: string): string => {
   const date = new Date(dateTimeString);
@@ -110,14 +110,14 @@ const formatDateTimeForTooltip = (dateTimeString: string): string => {
   return `${dateStr} ${timeStr}`;
 };
 
-function formatHoursAndMinutes(decimalHours: number): string {
-  if (isNaN(decimalHours) || decimalHours < 0) return "0 hrs 0 mins";
-  const hours = Math.floor(decimalHours);
-  const minutes = Math.round((decimalHours - hours) * 60);
-  if (hours === 0) return `${minutes} mins`;
-  if (minutes === 0) return `${hours} hrs`;
-  return `${hours} hrs ${minutes} mins`;
-}
+// function formatHoursAndMinutes(decimalHours: number): string {
+//   if (isNaN(decimalHours) || decimalHours < 0) return "0 hrs 0 mins";
+//   const hours = Math.floor(decimalHours);
+//   const minutes = Math.round((decimalHours - hours) * 60);
+//   if (hours === 0) return `${minutes} mins`;
+//   if (minutes === 0) return `${hours} hrs`;
+//   return `${hours} hrs ${minutes} mins`;
+// }
 
 function transformApiDataToPlantRows(apiData: ApiResponse, plantMap: Map<string, string>): PlantRow[] {
   const plantIdToRow: Map<string, PlantRow> = new Map();
@@ -608,8 +608,8 @@ export default function CalendarContainer() {
                   ) : (
                     filteredRows.map((row, idx) => {
                       const slots = getTimeSlots();
-                      const windowStart = slots[0];
-                      const timeSlotsLength = slots.length;
+                      // const windowStart = slots[0];
+                      // const timeSlotsLength = slots.length;
                       const mergedIntervals = buildMergedIntervals(row.tasks, selectedDate);
 
                       const usedHours = computeUsedHours(row.tasks);
