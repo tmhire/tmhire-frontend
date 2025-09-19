@@ -9,8 +9,6 @@ import { useApiClient } from "@/hooks/useApiClient";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
 import Tooltip from "@/components/ui/tooltip";
 import SearchableDropdown from "@/components/form/SearchableDropdown";
-import { formatHoursAndMinutes } from "@/lib/utils";
-
 type ApiTask = {
   id: string;
   start: string;
@@ -55,10 +53,17 @@ type Task = {
   actualEnd: string;
 };
 
+type HourlyUtilization = {
+  hour: number;
+  fraction: string;
+  utilization: number;
+};
+
 type PlantRow = {
   id: string; // plant id
   name: string; // plant name
   tasks: Task[];
+  hourlyUtilization: HourlyUtilization[];
 };
 
 const TASK_TYPE_COLORS: Record<string, string> = {
@@ -73,20 +78,41 @@ const TASK_TYPE_COLORS: Record<string, string> = {
   return: "bg-blue-500",
 };
 
-// const CLIENT_TAILWIND_COLORS = [
-//   "bg-red-500",
-//   "bg-lime-400",
-//   "bg-fuchsia-400",
-//   "bg-orange-500",
-//   "bg-pink-400",
-//   "bg-indigo-400",
-//   "bg-cyan-400",
-//   "bg-emerald-400",
-//   "bg-rose-400",
-//   "bg-amber-400",
-// ];
-
 const getTaskType = (id: string) => id.split("-")[0];
+
+const buildHourlyUtilization = (tasks: Task[], selectedDate: string): HourlyUtilization[] => {
+  const dayStart = new Date(`${selectedDate}T00:00:00`).getTime();
+  const dayEnd = new Date(`${selectedDate}T24:00:00`).getTime();
+  const TM_PER_HOUR = 6; // Given 60/10 = 6 trucks per hour capacity
+
+  // Initialize hourly counters
+  const hourlyTMs: { [hour: number]: number } = {};
+  for (let i = 0; i < 24; i++) {
+    hourlyTMs[i] = 0;
+  }
+
+  // Count TMs per hour
+  tasks.forEach((task) => {
+    const startMs = new Date(task.actualStart).getTime();
+    const endMs = new Date(task.actualEnd).getTime();
+    const taskStartHour = Math.floor((Math.max(startMs, dayStart) - dayStart) / (1000 * 60 * 60));
+    const taskEndHour = Math.ceil((Math.min(endMs, dayEnd) - dayStart) / (1000 * 60 * 60));
+
+    // Increment counter for each hour this task spans
+    for (let hour = taskStartHour; hour < taskEndHour; hour++) {
+      if (hour >= 0 && hour < 24) {
+        hourlyTMs[hour]++;
+      }
+    }
+  });
+
+  // Convert to fraction display format
+  return Object.entries(hourlyTMs).map(([hour, count]) => ({
+    hour: parseInt(hour),
+    fraction: `${count}/${TM_PER_HOUR}`,
+    utilization: count / TM_PER_HOUR
+  }));
+};
 
 // const calculateDurationMinutes = (start: string, end: string): number => {
 //   const s = new Date(start).getTime();
@@ -94,62 +120,64 @@ const getTaskType = (id: string) => id.split("-")[0];
 //   return Math.max(0, Math.round((e - s) / 60000));
 // };
 
-const formatDateTimeForTooltip = (dateTimeString: string): string => {
-  const date = new Date(dateTimeString);
-  const dateStr = date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-  const timeStr = date.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "UTC",
-  });
-  return `${dateStr} ${timeStr}`;
-};
+// Removed unused formatting functions
 
-// function formatHoursAndMinutes(decimalHours: number): string {
-//   if (isNaN(decimalHours) || decimalHours < 0) return "0 hrs 0 mins";
-//   const hours = Math.floor(decimalHours);
-//   const minutes = Math.round((decimalHours - hours) * 60);
-//   if (hours === 0) return `${minutes} mins`;
-//   if (minutes === 0) return `${hours} hrs`;
-//   return `${hours} hrs ${minutes} mins`;
-// }
-
-function transformApiDataToPlantRows(apiData: ApiResponse, plantMap: Map<string, string>): PlantRow[] {
+function transformApiDataToPlantRows(apiData: ApiResponse, plantMap: Map<string, Plant>, date: string): PlantRow[] {
   const plantIdToRow: Map<string, PlantRow> = new Map();
+
+  // First, initialize rows for all plants
+  plantMap.forEach((plantInfo, plantId) => {
+    plantIdToRow.set(plantId, {
+      id: plantId,
+      name: `${plantInfo.name} (${plantInfo.location})`,
+      tasks: [],
+      hourlyUtilization: Array.from({ length: 24 }, (_, hour) => ({
+        hour,
+        fraction: '0/6',
+        utilization: 0
+      }))
+    });
+  });
 
   const assignItemTasks = (item: ApiItem, itemType: "mixer" | "pump") => {
     const plantId = item.plant;
-    const plantName = plantMap.get(plantId) || plantId;
+    const plantInfo = plantMap.get(plantId);
     if (!plantIdToRow.has(plantId)) {
-      plantIdToRow.set(plantId, { id: plantId, name: plantName, tasks: [] });
+      plantIdToRow.set(plantId, { 
+        id: plantId, 
+        name: plantInfo ? `${plantInfo.name} (${plantInfo.location})` : plantId,
+        tasks: [],
+        hourlyUtilization: Array.from({ length: 24 }, (_, hour) => ({
+          hour,
+          fraction: '0/6',
+          utilization: 0
+        }))
+      });
     }
-    const row = plantIdToRow.get(plantId)!;
-    const tasks: Task[] = (item.tasks || []).map((task) => {
-      const rawType = getTaskType(task.id);
-      const mappedType =
-        itemType === "mixer" && rawType === "work"
-          ? "unload"
-          : itemType === "pump" && rawType === "work"
-            ? "pump"
-            : rawType;
-      return {
-        id: task.id,
-        color: TASK_TYPE_COLORS[mappedType] || "bg-gray-500",
-        client: task.client,
-        project: task.project,
-        schedule_no: task.schedule_no,
-        type: mappedType,
-        actualStart: task.start,
-        actualEnd: task.end,
-      };
-    });
-    row.tasks.push(...tasks);
+      const row = plantIdToRow.get(plantId)!;
+      const tasks: Task[] = (item.tasks || []).map((task) => {
+        const rawType = getTaskType(task.id);
+        const mappedType =
+          itemType === "mixer" && rawType === "work"
+            ? "unload"
+            : itemType === "pump" && rawType === "work"
+              ? "pump"
+              : rawType;
+        return {
+          id: task.id,
+          color: TASK_TYPE_COLORS[mappedType] || "bg-gray-500",
+          client: task.client,
+          project: task.project,
+          schedule_no: task.schedule_no,
+          type: mappedType,
+          actualStart: task.start,
+          actualEnd: task.end,
+        };
+      });
+      row.tasks.push(...tasks);
+      
+      // Calculate hourly utilization for the plant
+      row.hourlyUtilization = buildHourlyUtilization(row.tasks, date);
   };
 
   (apiData.data.mixers || []).forEach((m) => assignItemTasks(m, "mixer"));
@@ -171,6 +199,8 @@ export default function CalendarContainer() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { fetchWithAuth } = useApiClient();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const initialDate = searchParams.get("date") || new Date().toISOString().split("T")[0];
 
@@ -183,8 +213,7 @@ export default function CalendarContainer() {
   const [timeFormat, setTimeFormat] = useState<"12h" | "24h" | undefined>(session?.preferred_format);
   const [customStartHour, setCustomStartHour] = useState<number | undefined>(session?.custom_start_hour);
   const [rows, setRows] = useState<PlantRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // const [tasks, setTasks] = useState<Task[]>([]); // Removed unused state
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -203,13 +232,12 @@ export default function CalendarContainer() {
     },
     enabled: status === "authenticated",
   });
-
+  
+  // Create a map of plants with additional details
   const plantMap = useMemo(() => {
-    if (!plantsData) return new Map<string, string>();
-    return new Map(plantsData.map((p) => [p._id, p.name]));
+    if (!plantsData) return new Map<string, Plant>();
+    return new Map(plantsData.map((p) => [p._id, p]));
   }, [plantsData]);
-
-  // Client colors removed to anonymize busy blocks
 
   const handleDateChange = (newDate: string) => {
     setSelectedDate(newDate);
@@ -229,7 +257,7 @@ export default function CalendarContainer() {
       });
       const data: ApiResponse = await response.json();
       if (data.success) {
-        const transformed = transformApiDataToPlantRows(data, plantMap);
+        const transformed = transformApiDataToPlantRows(data, plantMap, selectedDate);
         setRows(transformed);
       } else {
         setError(data.message || "Failed to fetch gantt data");
@@ -277,118 +305,46 @@ export default function CalendarContainer() {
 
   const getTimeSlots = () => Array.from({ length: 24 }, (_, i) => ((customStartHour || 0) + i) % 24);
 
-  // Build merged busy intervals for each plant to eliminate overlaps
-  const buildMergedIntervals = (tasks: Task[], selectedDate: string) => {
-    // Clamp each task to the selected day
+  const buildHourlyUtilization = (tasks: Task[], selectedDate: string) => {
     const dayStart = new Date(`${selectedDate}T00:00:00`).getTime();
     const dayEnd = new Date(`${selectedDate}T24:00:00`).getTime();
+    const TM_PER_HOUR = 6; // Given 60/10 = 6 trucks per hour capacity
 
-    const rawIntervals = tasks
-      .map((task) => {
-        const s = new Date(task.actualStart).getTime();
-        const e = new Date(task.actualEnd).getTime();
-        const startMs = Math.max(s, dayStart);
-        const endMs = Math.min(e, dayEnd);
-        if (!(startMs < endMs)) return null;
-        return {
-          startHour: (startMs - dayStart) / (1000 * 60 * 60),
-          endHour: (endMs - dayStart) / (1000 * 60 * 60),
-          actualStartMs: startMs,
-          actualEndMs: endMs,
-        };
-      })
-      .filter((iv): iv is { startHour: number; endHour: number; actualStartMs: number; actualEndMs: number } => !!iv)
-      .sort((a, b) => a.startHour - b.startHour);
-
-    // Merge overlapping or touching intervals
-    const mergedIntervals: {
-      startHour: number;
-      endHour: number;
-      actualStartMs: number;
-      actualEndMs: number;
-      duration: number; // minutes
-    }[] = [];
-
-    for (const iv of rawIntervals) {
-      const last = mergedIntervals[mergedIntervals.length - 1];
-      if (!last || iv.startHour > last.endHour) {
-        mergedIntervals.push({
-          startHour: iv.startHour,
-          endHour: iv.endHour,
-          actualStartMs: iv.actualStartMs,
-          actualEndMs: iv.actualEndMs,
-          duration: Math.round((iv.actualEndMs - iv.actualStartMs) / (1000 * 60)),
-        });
-      } else {
-        // Overlaps or touches; extend
-        if (iv.endHour > last.endHour) {
-          last.endHour = iv.endHour;
-          last.actualEndMs = iv.actualEndMs;
-        }
-        if (iv.startHour < last.startHour) {
-          last.startHour = iv.startHour;
-          last.actualStartMs = iv.actualStartMs;
-        }
-        last.duration = Math.round((last.actualEndMs - last.actualStartMs) / (1000 * 60));
-      }
+    // Initialize hourly counters
+    const hourlyTMs: { [hour: number]: number } = {};
+    for (let i = 0; i < 24; i++) {
+      hourlyTMs[i] = 0;
     }
 
-    return mergedIntervals;
-  };
+    // Count TMs per hour
+    tasks.forEach((task) => {
+      const startMs = new Date(task.actualStart).getTime();
+      const endMs = new Date(task.actualEnd).getTime();
+      const taskStartHour = Math.floor((Math.max(startMs, dayStart) - dayStart) / (1000 * 60 * 60));
+      const taskEndHour = Math.ceil((Math.min(endMs, dayEnd) - dayStart) / (1000 * 60 * 60));
 
-  const getBarWindowHelpers = () => {
-    const slots = getTimeSlots();
-    const windowStart = slots[0];
-    const windowEnd = slots[0] !== 0 ? (slots[slots.length - 1] % 24) + 25 : 24;
-    const isInWindow = (start: number, end: number) => {
-      if (windowStart < windowEnd) return end > windowStart && start < windowEnd;
-      return end > windowStart || start < windowEnd;
-    };
-    const getBarProps = (start: number, end: number) => {
-      let barStart = start;
-      let barEnd = end;
-      if (windowStart < windowEnd) {
-        barStart = Math.max(start, windowStart);
-        barEnd = Math.min(end, windowEnd + 1);
-      } else {
-        if (start < windowStart && end <= windowStart) {
-          barStart = start;
-          barEnd = Math.min(end, windowEnd + 1);
-        } else if (start >= windowStart) {
-          barStart = Math.max(start, windowStart);
-          barEnd = end;
-        } else {
-          barStart = start;
-          barEnd = end;
+      // Increment counter for each hour this task spans
+      for (let hour = taskStartHour; hour < taskEndHour; hour++) {
+        if (hour >= 0 && hour < 24) {
+          hourlyTMs[hour]++;
         }
       }
-      const offset = (barStart - windowStart + 24) % 24;
-      let width = barEnd - barStart;
-      if (width < 0) width = 0;
-      if (offset + width > slots.length) {
-        width = slots.length - offset;
-        if (width < 0) width = 0;
-      }
-      return { offset, width, slots };
-    };
-    return { isInWindow, getBarProps };
+    });
+
+    // Convert to fraction display format
+    return Object.entries(hourlyTMs).map(([hour, count]) => ({
+      hour: parseInt(hour),
+      fraction: `${count}/${TM_PER_HOUR}`,
+      utilization: count / TM_PER_HOUR
+    }));
   };
 
   // Client legend removed to anonymize busy blocks
 
   const computeUsedHours = (tasks: Task[]): number => {
-    // Merge intervals to compute total occupied time (in hours)
-    const intervals = tasks
-      .map((t) => ({ start: new Date(t.actualStart).getTime(), end: new Date(t.actualEnd).getTime() }))
-      .filter((i) => i.end > i.start)
-      .sort((a, b) => a.start - b.start);
-    const merged: { start: number; end: number }[] = [];
-    for (const it of intervals) {
-      if (!merged.length || merged[merged.length - 1].end < it.start) merged.push({ ...it });
-      else merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, it.end);
-    }
-    const totalMs = merged.reduce((sum, m) => sum + (m.end - m.start), 0);
-    return Math.round((totalMs / 3600000) * 100) / 100;
+    const hourlyUtilization = buildHourlyUtilization(tasks, selectedDate);
+    const totalTMs = hourlyUtilization.reduce((sum, hour) => sum + parseInt(hour.fraction.split('/')[0]), 0);
+    return Math.round((totalTMs / 6) * 100) / 100; // Normalized by trucks per hour (6)
   };
 
   if (loading) {
@@ -437,8 +393,6 @@ export default function CalendarContainer() {
     );
   }
 
-  const { isInWindow, getBarProps } = getBarWindowHelpers();
-
   return (
     <div className="w-full">
       <div className="flex flex-wrap items-center justify-between gap-3 w-full">
@@ -448,6 +402,7 @@ export default function CalendarContainer() {
             <p className="text-gray-600 dark:text-gray-400">Manage and monitor schedules grouped by plant</p>
           </div>
 
+          {/* Main Controls */}
           <div className="w-full bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4 mb-6">
             <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
               <div className="flex flex-col sm:flex-row gap-3 flex-1">
@@ -607,10 +562,6 @@ export default function CalendarContainer() {
                   ) : (
                     filteredRows.map((row, idx) => {
                       const slots = getTimeSlots();
-                      // const windowStart = slots[0];
-                      // const timeSlotsLength = slots.length;
-                      const mergedIntervals = buildMergedIntervals(row.tasks, selectedDate);
-
                       const usedHours = computeUsedHours(row.tasks);
 
                       return (
@@ -619,45 +570,40 @@ export default function CalendarContainer() {
                             {idx + 1}
                           </div>
                           <div
-                            className={`w-48 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0`}
+                            className={`w-48 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0 truncate`} 
                           >
                             {row.name}
                           </div>
                           <div className="flex-1 flex relative">
-                            {/* Render busy blocks (no client labels) */}
-                            {mergedIntervals.map((iv, i) => {
-                              if (!isInWindow(iv.startHour, iv.endHour)) return null;
-                              const { offset, width, slots: s } = getBarProps(iv.startHour, iv.endHour);
-                              if (width <= 0) return null;
+                            {slots.map((time) => {
+                              const utilization = row.hourlyUtilization.find(h => h.hour === time);
                               return (
-                                <Tooltip
-                                  key={`${row.id}-${i}`}
-                                  content={`Plant: ${row.name}\n${formatDateTimeForTooltip(
-                                    new Date(iv.actualStartMs).toISOString()
-                                  )} to ${formatDateTimeForTooltip(new Date(iv.actualEndMs).toISOString())}\nBusy: ${formatHoursAndMinutes((iv.duration) / 60)
-                                    }m`}
+                                <div
+                                  key={`${row.id}-${time}`}
+                                  className={`flex-1 h-6 border-r ${
+                                    time === 23
+                                      ? "border-r-2 border-r-gray-400 dark:border-r-white/[0.2]"
+                                      : "border-gray-300 dark:border-white/[0.05]"
+                                  } relative min-w-[40px] flex items-center justify-center`}
                                 >
-                                  <div
-                                    className="absolute top-1 h-4 rounded bg-blue-500 opacity-60 hover:opacity-80 transition-opacity cursor-default"
-                                    style={{
-                                      left: `${(offset / s.length) * 100 - 0.25}%`,
-                                      width: `${(width / s.length) * 100 + 0.5}%`,
-                                      zIndex: 1,
-                                    }}
-                                  />
-                                </Tooltip>
+                                  <Tooltip
+                                    content={`${utilization?.fraction || '0/6'} trucks utilized`}
+                                  >
+                                    <span 
+                                      className={`text-xs ${
+                                        (utilization?.utilization || 0) >= 0.8 
+                                          ? 'text-red-600 dark:text-red-400' 
+                                          : (utilization?.utilization || 0) >= 0.5 
+                                            ? 'text-yellow-600 dark:text-yellow-400'
+                                            : 'text-gray-600 dark:text-gray-400'
+                                      }`}
+                                    >
+                                      {utilization?.fraction || '0/6'}
+                                    </span>
+                                  </Tooltip>
+                                </div>
                               );
                             })}
-
-                            {slots.map((time) => (
-                              <div
-                                key={`${row.id}-${time}`}
-                                className={`flex-1 h-6 border-r ${time === 23
-                                  ? "border-r-2 border-r-gray-400 dark:border-r-white/[0.2]"
-                                  : "border-gray-300 dark:border-white/[0.05]"
-                                  } relative min-w-[40px]`}
-                              />
-                            ))}
                           </div>
                           <div className="w-24 mr-2 px-1 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
                             {usedHours}

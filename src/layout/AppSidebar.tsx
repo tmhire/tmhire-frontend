@@ -31,7 +31,7 @@ const navItems: NavItem[] = [
     path: "/",
   },
   {
-    icon: <PlantIcon clasname="w-8 h-12" />,
+    icon: <PlantIcon />,
     name: "RMC Plants",
     shortName: "Plants",
     path: "/plants",
@@ -177,7 +177,7 @@ const AppSidebar: React.FC = () => {
                 className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"}`}
               >
                 <span
-                  className={`${isActive(nav.path) ? "menu-item-icon-active" : "menu-item-icon-inactive"
+                  className={`${isActive(nav.path) ? "menu-item-icon-active " : "menu-item-icon-inactive"
                     } flex flex-col justify-center items-center gap-`}
                 >
                   {nav.icon}

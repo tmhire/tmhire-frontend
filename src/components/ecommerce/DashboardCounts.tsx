@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { Factory, Truck, TruckElectric } from "lucide-react";
+import { PlantIcon, PumpIcon, TmIcon } from "@/icons";
 
 export interface DashboardCountsData {
   active_plants_count: number;
@@ -17,7 +17,7 @@ export default function DashboardCounts({ counts }: { counts: DashboardCountsDat
   const tiles = [
     {
       title: "Plants",
-      icon: <Factory className="size-4 text-amber-600 dark:text-amber-400" />,
+      icon: <PlantIcon className="size-6 text-amber-600 dark:text-amber-400" />,
       active: counts.active_plants_count,
       inactive: counts.inactive_plants_count,
       bgColor: "bg-amber-50 dark:bg-amber-500/10",
@@ -25,7 +25,7 @@ export default function DashboardCounts({ counts }: { counts: DashboardCountsDat
     },
     {
       title: "Transit Mixers",
-      icon: <Truck className="size-4 text-emerald-600 dark:text-emerald-400" />,
+      icon: <TmIcon className="size-6 text-emerald-600 dark:text-emerald-400" />,
       active: counts.active_tms_count,
       inactive: counts.inactive_tms_count,
       bgColor: "bg-emerald-50 dark:bg-emerald-500/10",
@@ -33,7 +33,7 @@ export default function DashboardCounts({ counts }: { counts: DashboardCountsDat
     },
     {
       title: "Line Pumps",
-      icon: <TruckElectric className="size-4 text-blue-600 dark:text-blue-400" />,
+      icon: <PumpIcon className="size-6 text-blue-600 dark:text-blue-400" />,
       active: counts.active_line_pumps_count,
       inactive: counts.inactive_line_pumps_count,
       bgColor: "bg-blue-50 dark:bg-blue-500/10",
@@ -41,7 +41,7 @@ export default function DashboardCounts({ counts }: { counts: DashboardCountsDat
     },
     {
       title: "Boom Pumps",
-      icon: <TruckElectric className="size-4 text-purple-600 dark:text-purple-400" />,
+      icon: <PumpIcon className="size-6 text-purple-600 dark:text-purple-400" />,
       active: counts.active_boom_pumps_count,
       inactive: counts.inactive_boom_pumps_count,
       bgColor: "bg-purple-50 dark:bg-purple-500/10",
@@ -60,7 +60,7 @@ export default function DashboardCounts({ counts }: { counts: DashboardCountsDat
           <div className="flex items-center justify-between mb-4">
             <h4 className="font-semibold text-md text-gray-800 dark:text-white/90 mb-4 tracking-wide">{tile.title}</h4>
             <div
-              className={`flex items-center justify-center w-9 h-9 rounded-md border ${tile.borderColor} ${tile.bgColor} transition-transform duration-200 group-hover:scale-105`}
+              className={`flex items-center justify-center w-10 h-10 rounded-md border ${tile.borderColor} ${tile.bgColor}`}
             >
               {tile.icon}
             </div>

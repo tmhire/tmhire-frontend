@@ -298,7 +298,7 @@ export default function PlantsContainer() {
     // Handle capacity field with validation
     if (name === "capacity") {
       // Strictly prevent entering values greater than 99
-      if (value !== "" && Number(value) > 99) {
+      if (value !== "" && Number(value) > 999) {
         return; // Don't update the state if value exceeds 99
       }
 
@@ -306,7 +306,7 @@ export default function PlantsContainer() {
         setCapacityError(""); // Allow empty capacity
       } else {
         const numValue = Number(value);
-        if (numValue < 1 || numValue > 99) {
+        if (numValue < 1 || numValue > 999) {
           setCapacityError("Capacity must be between 1 and 99 m³/hr");
         } else if (!Number.isInteger(numValue * 10)) {
           setCapacityError("Capacity can have maximum one decimal place");
@@ -354,7 +354,7 @@ export default function PlantsContainer() {
     // Handle capacity field with validation
     if (name === "capacity") {
       // Strictly prevent entering values greater than 99
-      if (value !== "" && Number(value) > 99) {
+      if (value !== "" && Number(value) > 999) {
         return; // Don't update the state if value exceeds 99
       }
 
@@ -362,7 +362,7 @@ export default function PlantsContainer() {
         setEditCapacityError(""); // Allow empty capacity
       } else {
         const numValue = Number(value);
-        if (numValue < 1 || numValue > 99) {
+        if (numValue < 1 || numValue > 999) {
           setEditCapacityError("Capacity must be between 1 and 99 m³/hr");
         } else if (!Number.isInteger(numValue * 10)) {
           setEditCapacityError("Capacity can have maximum one decimal place");
