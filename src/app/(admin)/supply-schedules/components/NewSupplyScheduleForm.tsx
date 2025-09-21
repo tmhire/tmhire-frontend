@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import Button from "@/components/ui/button/Button";
-import { Dropdown } from "@/components/ui/dropdown/Dropdown";
-import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import Input from "@/components/form/input/InputField";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
 import {
@@ -26,7 +24,6 @@ import {
   Building,
   Truck,
   MapPin,
-  Plus,
 } from "lucide-react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { useApiClient } from "@/hooks/useApiClient";
@@ -169,13 +166,11 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [formDataRetrieved, setFormDataRetrieved] = useState(true);
-  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
   const [openPlantGroups, setOpenPlantGroups] = useState<Record<string, boolean>>({});
   const [overruleTMCount, setOverruleTMCount] = useState(false);
   const [customTMCount, setCustomTMCount] = useState(1);
 
   const [selectedProject, setSelectedProject] = useState<string>("");
-  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
 
   // Templates: past supply schedules
   interface PastSupplySchedule {
@@ -340,8 +335,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
         `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
       );
   }, [motherPlantName, formData.scheduleDate, schedulesForDayCount, selectedClient, selectedProject]);
-
-  const displayedScheduleName = computedScheduleName;
 
   const filteredSchedules = useMemo(() => {
     if (!searchTerm) return pastSchedules;
@@ -678,7 +671,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   const loads = Math.ceil((parseFloat(formData.quantity) || 0) / (avgTMCap && avgTMCap > 0 ? avgTMCap : 1));
   // const m3PerTM = tripsPerTM * (avgTMCap && avgTMCap > 0 ? avgTMCap : 1);
   const tmReq = cycleTimeMin > 0 ? Math.ceil(cycleTimeMin / parseFloat(formData.unloadingTime)) : 0;
-  const additionalTMValue = overruleTMCount ? Math.max(0, (customTMCount || 0) - tmReq) : 0;
+  // const additionalTMValue = overruleTMCount ? Math.max(0, (customTMCount || 0) - tmReq) : 0;
   const totalTMRequired = overruleTMCount ? customTMCount : tmReq;
   const tripsPerTM = tmReq > 0 ? loads / totalTMRequired : 0;
   // const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
@@ -701,10 +694,10 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   // Estimated TM trip distribution for Step 1 (pre-generation)
   const tripsPerTMExact = tripsPerTM > 0 ? tripsPerTM : 0;
   const floorTripsPerTM = Math.floor(tripsPerTMExact);
-  const ceilTripsPerTM = Math.ceil(tripsPerTMExact);
+  // const ceilTripsPerTM = Math.ceil(tripsPerTMExact);
   // const totalTripsApprox = totalTMRequired > 0 ? Math.max(0, Math.round(tripsPerTMExact * totalTMRequired)) : 0;
   const numCeilTms = loads - floorTripsPerTM * totalTMRequired;
-  const numFloorTms = totalTMRequired > 0 ? Math.max(0, totalTMRequired - numCeilTms) : 0;
+  // const numFloorTms = totalTMRequired > 0 ? Math.max(0, totalTMRequired - numCeilTms) : 0;
 
   // Build Date objects for schedule window and TM classification helpers
   const scheduleStartDate = useMemo(() => {
