@@ -172,7 +172,7 @@ export default function ScheduleViewPage() {
 
     const wb = XLSX.utils.book_new();
 
-    // Summary Sheet
+    // Summary Sheet with TM Trip Distribution and TM Wise Trip Details
     const summaryData: (string | number)[][] = [
       [
         "Scheduled Date",
@@ -211,10 +211,7 @@ export default function ScheduleViewPage() {
       ["Status", schedule.status],
       ["Schedule Name", schedule.schedule_name || "-"],
     ];
-    const wsSummary = XLSX.utils.aoa_to_sheet([["Field", "Value"], ...summaryData]);
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
-
-    // TM Trip Distribution Sheet
+    // Add TM Trip Distribution data
     if (schedule.output_table && schedule.output_table.length > 0) {
       const tmTripCounts: Record<string, number> = {};
       schedule.output_table.forEach((trip) => {
@@ -231,35 +228,117 @@ export default function ScheduleViewPage() {
         .map(([trips, tmCount], idx) => [idx + 1, Number(tmCount), Number(trips), Number(tmCount) * Number(trips)]);
       const totalTMs = Object.keys(tmTripCounts).length;
       const totalTrips = schedule.output_table.length;
-      const wsTMDist = XLSX.utils.aoa_to_sheet([
-        ["Sl. No", "NO OF TMs (A)", "NO OF TRIPS/TM (B)", "TOTAL TRIPS (A) x (B)"],
-        ...rows,
-        ["TOTAL", totalTMs, "", totalTrips],
-      ]);
-      XLSX.utils.book_append_sheet(wb, wsTMDist, "TM Trip Dist");
+      
+      // Add spacing after summary data
+      summaryData.push(["", ""], ["TM Trip Distribution", ""]);
+      summaryData.push(["Sl. No", "NO OF TMs (A)", "NO OF TRIPS/TM (B)", "TOTAL TRIPS (A) x (B)"]);
+      rows.forEach(row => summaryData.push(row));
+      summaryData.push(["TOTAL", totalTMs, "", totalTrips]);
     }
 
-    // Pump Details Sheet
+    // Helper functions for time calculations
+    function formatOverallRange(trips: Schedule["output_table"], preferredFormat?: string) {
+      if (!trips.length) return "-";
+      const starts = trips
+        .map((t) => t.plant_start)
+        .filter(Boolean)
+        .map((t) => new Date(t));
+      const ends = trips
+        .map((t) => t.return)
+        .filter(Boolean)
+        .map((t) => new Date(t));
+      if (!starts.length || !ends.length) return "-";
+      const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
+      const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
+      const sTime = formatTimeByPreference(minStart, preferredFormat);
+      const eTime = formatTimeByPreference(maxEnd, preferredFormat);
+      return `${sTime} - ${eTime}`;
+    }
+
+    function getTotalHours(trips: Schedule["output_table"]) {
+      if (!trips.length) return 0;
+      const starts = trips
+        .map((t) => t.plant_start)
+        .filter(Boolean)
+        .map((t) => new Date(t));
+      const ends = trips
+        .map((t) => t.return)
+        .filter(Boolean)
+        .map((t) => new Date(t));
+      if (!starts.length || !ends.length) return 0;
+      const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
+      const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
+      return (maxEnd.getTime() - minStart.getTime()) / (1000 * 60 * 60);
+    }
+
+    // Add TM Wise Trip Details
+    if (schedule.output_table && schedule.output_table.length > 0) {
+      const preferred = profile?.preferred_format;
+      const tmTrips: Record<string, Schedule["output_table"]> = {};
+      schedule.output_table.forEach((trip) => {
+        if (!tmTrips[trip.tm_id]) tmTrips[trip.tm_id] = [];
+        tmTrips[trip.tm_id].push(trip);
+      });
+      Object.values(tmTrips).forEach((trips) => trips.sort((a, b) => a.trip_no - b.trip_no));
+      const tmIds = Object.keys(tmTrips);
+      const maxTrips = Math.max(...Object.values(tmTrips).map((trips) => trips.length));
+      const tmIdToIdentifier: Record<string, string> = {};
+      schedule.output_table.forEach((trip) => {
+        if (trip.tm_id && trip.tm_no) tmIdToIdentifier[trip.tm_id] = trip.tm_no;
+      });
+
+      // Add spacing before TM Wise Trip Details
+      summaryData.push(["", ""], ["TM Wise Trip Details", ""]);
+      const header = [
+        "S.No.",
+        "TM",
+        ...Array.from({ length: maxTrips }, (_, i) => `Trip ${i + 1}`),
+        "Start-End Time",
+        "Total Hours",
+      ];
+      summaryData.push(header);
+
+      tmIds.forEach((tmId, index) => {
+        const trips = tmTrips[tmId];
+        const tripTimes = Array.from({ length: maxTrips }).map((_, i) => {
+          const trip = trips[i];
+          return trip
+            ? `${formatTimeByPreference(trip.plant_start, preferred)} - ${formatTimeByPreference(trip.return, preferred)}`
+            : "-";
+        });
+        const overallRange = formatOverallRange(trips);
+        const totalHours = getTotalHours(trips);
+        summaryData.push([
+          index + 1,
+          tmIdToIdentifier[tmId] || tmId,
+          ...tripTimes,
+          overallRange,
+          totalHours ? formatHoursAndMinutes(totalHours) : "-",
+        ]);
+      });
+
+      const totalHoursArr = tmIds.map((tmId) => getTotalHours(tmTrips[tmId]));
+      const avgTotalHours = totalHoursArr.length ? totalHoursArr.reduce((a, b) => a + b, 0) / totalHoursArr.length : 0;
+      summaryData.push([
+        "Avg",
+        "",
+        ...Array.from({ length: maxTrips }).map(() => ""),
+        "",
+        avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-",
+      ]);
+    }
+
+    const wsSummary = XLSX.utils.aoa_to_sheet([["Field", "Value"], ...summaryData]);
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+    // Schedule Table Sheet with Pump Details
     if (schedule.output_table && schedule.output_table.length > 0) {
       const preferred = profile?.preferred_format;
       const pump = schedule.available_pumps.find((p) => p.id === schedule.pump);
       const pumpIdentifier = pump ? pump.identifier : "N/A";
+      const pumpStartFromPlant = calculatePumpStartTimeFromPlant(schedule, preferred);
+      const siteReachTime = calculatePumpSiteReachTime(schedule, preferred);
       const pumpStart = schedule.output_table[0]?.pump_start;
-      const pumpStartFromPlant = (() => {
-        if (!pumpStart) return "N/A";
-        const ps = new Date(pumpStart);
-        const fixing = schedule.input_params.pump_fixing_time || 0;
-        const onward = schedule.input_params.pump_onward_time || 0;
-        const t = new Date(ps.getTime() - (fixing + onward) * 60 * 1000);
-        return formatTimeByPreference(t, preferred);
-      })();
-      const siteReachTime = (() => {
-        if (!pumpStart) return "N/A";
-        const ps = new Date(pumpStart);
-        const fixing = schedule.input_params.pump_fixing_time || 0;
-        const t = new Date(ps.getTime() - fixing * 60 * 1000);
-        return formatTimeByPreference(t, preferred);
-      })();
       const pumpStartTime = pumpStart ? formatTimeByPreference(pumpStart, preferred) : "N/A";
       const pumpingHours = schedule.input_params.quantity / schedule.input_params.pumping_speed;
       const pumpEndTime = (() => {
@@ -286,39 +365,35 @@ export default function ScheduleViewPage() {
         const hours = (sl.getTime() - startFromPlant.getTime()) / (1000 * 60 * 60);
         return formatHoursAndMinutes(hours);
       })();
-      const wsPump = XLSX.utils.aoa_to_sheet([
-        [
-          "Pump",
-          "Start Time from Plant",
-          "Site Reach Time",
-          "Fixing Time (min)",
-          "Pump Start Time",
-          "Pumping Hours",
-          "Pump End Time",
-          "Removal Time (min)",
-          "Site Leave Time",
-          "Total Hours Engaged",
-        ],
-        [
-          pumpIdentifier,
-          pumpStartFromPlant,
-          siteReachTime,
-          schedule.input_params.pump_fixing_time || 0,
-          pumpStartTime,
-          formatHoursAndMinutes(pumpingHours),
-          pumpEndTime,
-          schedule.input_params.pump_removal_time || 0,
-          siteLeaveTime,
-          totalHoursEngaged,
-        ],
-      ]);
-      XLSX.utils.book_append_sheet(wb, wsPump, "Pump Details");
-    }
 
-    // Schedule Table Sheet
-    if (schedule.output_table && schedule.output_table.length > 0) {
-      const preferred = profile?.preferred_format;
-      const header1 = [
+      // Add pump details at the top of schedule table
+      const pumpDetailsHeader = [
+        "Pump",
+        "Start Time from Plant",
+        "Site Reach Time",
+        "Fixing Time (min)",
+        "Pump Start Time",
+        "Pumping Hours",
+        "Pump End Time",
+        "Removal Time (min)",
+        "Site Leave Time",
+        "Total Hours Engaged",
+      ];
+      const pumpDetailsRow = [
+        pumpIdentifier,
+        pumpStartFromPlant,
+        siteReachTime,
+        schedule.input_params.pump_fixing_time || 0,
+        pumpStartTime,
+        formatHoursAndMinutes(pumpingHours),
+        pumpEndTime,
+        schedule.input_params.pump_removal_time || 0,
+        siteLeaveTime,
+        totalHoursEngaged,
+      ];
+
+      // Schedule table data
+      const scheduleHeader = [
         "Trip No",
         "TM No",
         "Plant - Name",
@@ -332,7 +407,7 @@ export default function ScheduleViewPage() {
         "Cycle Time (min)",
         "Cushion Time (min)",
       ];
-      const rows = schedule.output_table.map((trip) => [
+      const scheduleRows = schedule.output_table.map((trip) => [
         trip.trip_no,
         trip.tm_no,
         trip.plant_name ? trip.plant_name : "N / A",
@@ -346,104 +421,18 @@ export default function ScheduleViewPage() {
         typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-",
         typeof trip.cushion_time !== "undefined" ? (trip.cushion_time / 60).toFixed(0) : "-",
       ]);
-      const wsSchedule = XLSX.utils.aoa_to_sheet([header1, ...rows]);
-      XLSX.utils.book_append_sheet(wb, wsSchedule, "Schedule Table");
-    }
 
-    // TM Wise Trip Details Sheet
-    if (schedule.output_table && schedule.output_table.length > 0) {
-      const preferred = profile?.preferred_format;
-      const tmTrips: Record<string, Schedule["output_table"]> = {};
-      schedule.output_table.forEach((trip) => {
-        if (!tmTrips[trip.tm_id]) tmTrips[trip.tm_id] = [];
-        tmTrips[trip.tm_id].push(trip);
-      });
-      Object.values(tmTrips).forEach((trips) => trips.sort((a, b) => a.trip_no - b.trip_no));
-      const tmIds = Object.keys(tmTrips);
-      const maxTrips = Math.max(...Object.values(tmTrips).map((trips) => trips.length));
-
-      const tmIdToIdentifier: Record<string, string> = {};
-      schedule.output_table.forEach((trip) => {
-        if (trip.tm_id && trip.tm_no) tmIdToIdentifier[trip.tm_id] = trip.tm_no;
-      });
-
-      const header = [
-        "S.No.",
-        "TM",
-        ...Array.from({ length: maxTrips }, (_, i) => `Trip ${i + 1}`),
-        "Start-End Time",
-        "Total Hours",
-      ] as string[];
-
-      function formatOverallRange(trips: Schedule["output_table"]) {
-        if (!trips.length) return "-";
-        const starts = trips
-          .map((t) => t.plant_start)
-          .filter(Boolean)
-          .map((t) => new Date(t));
-        const ends = trips
-          .map((t) => t.return)
-          .filter(Boolean)
-          .map((t) => new Date(t));
-        if (!starts.length || !ends.length) return "-";
-        const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
-        const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
-        const sTime = formatTimeByPreference(minStart, preferred);
-        const eTime = formatTimeByPreference(maxEnd, preferred);
-        return `${sTime} - ${eTime}`;
-      }
-
-      function getTotalHours(trips: Schedule["output_table"]) {
-        if (!trips.length) return 0;
-        const starts = trips
-          .map((t) => t.plant_start)
-          .filter(Boolean)
-          .map((t) => new Date(t));
-        const ends = trips
-          .map((t) => t.return)
-          .filter(Boolean)
-          .map((t) => new Date(t));
-        if (!starts.length || !ends.length) return 0;
-        const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
-        const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
-        return (maxEnd.getTime() - minStart.getTime()) / (1000 * 60 * 60);
-      }
-
-      const body: (string | number)[][] = tmIds.map((tmId, index) => {
-        const trips = tmTrips[tmId];
-        const overallRange = formatOverallRange(trips);
-        const totalHours = getTotalHours(trips);
-        const tripCells = Array.from({ length: maxTrips }).map((_, i) => {
-          const trip = trips[i];
-          return trip
-            ? `${formatTimeByPreference(trip.plant_start, preferred)} - ${formatTimeByPreference(
-                trip.return,
-                preferred
-              )}`
-            : "-";
-        });
-        return [
-          index + 1,
-          tmIdToIdentifier[tmId] || tmId,
-          ...tripCells,
-          overallRange,
-          totalHours ? formatHoursAndMinutes(totalHours) : "-",
-        ];
-      });
-
-      const totalHoursArr = tmIds.map((tmId) => getTotalHours(tmTrips[tmId]));
-      const avgTotalHours = totalHoursArr.length ? totalHoursArr.reduce((a, b) => a + b, 0) / totalHoursArr.length : 0;
-
-      const footer = [
-        "Avg",
-        "",
-        ...Array.from({ length: maxTrips }).map(() => ""),
-        "",
-        avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-",
-      ];
-
-      const wsTmWise = XLSX.utils.aoa_to_sheet([header, ...body, footer]);
-      XLSX.utils.book_append_sheet(wb, wsTmWise, "TM Wise Trips");
+      // Combine pump details and schedule table with spacing
+      const wsSchedule = XLSX.utils.aoa_to_sheet([
+        ["Pump Details"],
+        pumpDetailsHeader,
+        pumpDetailsRow,
+        [""], // Empty row for spacing
+        ["Schedule Table"],
+        scheduleHeader,
+        ...scheduleRows,
+      ]);
+      XLSX.utils.book_append_sheet(wb, wsSchedule, "Schedule Details");
     }
 
     XLSX.writeFile(wb, `${schedule.schedule_name || "pumping-schedule"}-${schedule._id}.xlsx`);

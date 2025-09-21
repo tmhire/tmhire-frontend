@@ -111,7 +111,15 @@ export default function PlantsContainer() {
       !contactNumber1Error &&
       !capacityError
     );
-  }, [newPlant, nameError, contactName1Error, contactName2Error, contactNumber1Error, contactNumber2Error, capacityError]);
+  }, [
+    newPlant,
+    nameError,
+    contactName1Error,
+    contactName2Error,
+    contactNumber1Error,
+    contactNumber2Error,
+    capacityError,
+  ]);
 
   // Form validation for edit modal
   const isEditFormValid = useMemo(() => {
@@ -126,7 +134,8 @@ export default function PlantsContainer() {
       validateName(editedPlant.contact_name1.trim()) &&
       validateMobile(editedPlant.contact_number1.trim()) &&
       validateAddress(editedPlant.address.trim()) &&
-      (editedPlant.coordinates === "" || (editedPlant.coordinates && validateCoordinates(editedPlant.coordinates.trim()))) &&
+      (editedPlant.coordinates === "" ||
+        (editedPlant.coordinates && validateCoordinates(editedPlant.coordinates.trim()))) &&
       (editedPlant.contact_name2 === "" ||
         (editedPlant.contact_name2 && validateName(editedPlant.contact_name2.trim()))) &&
       (editedPlant.contact_number2 === "" ||
@@ -623,7 +632,11 @@ export default function PlantsContainer() {
                 >
                   Status: {selectedStatus || "All"}
                 </Button>
-                <Dropdown isOpen={isStatusFilterOpen} onClose={() => setIsStatusFilterOpen(false)} className="w-48 text-xs">
+                <Dropdown
+                  isOpen={isStatusFilterOpen}
+                  onClose={() => setIsStatusFilterOpen(false)}
+                  className="w-48 text-xs"
+                >
                   <div className="p-2 text-gray-800 dark:text-white/90">
                     <button
                       className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -704,44 +717,48 @@ export default function PlantsContainer() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Capacity m³/hr
               </label>
-              <Input
-                type="number"
-                name="capacity"
-                placeholder="Enter plant capacity (1-999)"
-                value={newPlant.capacity || ""}
-                onChange={handleInputChange}
-                step={0.1}
-                min="1"
-                max="999"
-              />
+              <div className="flex flex-row items-center gap-2 w-full">
+                <div className="relative w-full">
+                  <Input
+                    type="number"
+                    name="capacity"
+                    placeholder="Enter plant capacity (1-999)"
+                    value={newPlant.capacity || ""}
+                    onChange={handleInputChange}
+                    step={0.1}
+                    min="1"
+                    max="999"
+                    className="w-full"
+                  />
+                </div>
+                <span className="text-xs text-gray-500 font-medium whitespace-nowrap">or</span>
+              </div>
               {capacityError && <span className="text-xs text-red-600 mt-1 block">{capacityError}</span>}
             </div>
+
             <div className="w-full">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex flex-row justify-between">
-                Loading Time (min)   {newPlant?.capacity && (
-                  <span className="text-[10px] text-gray-500 block">
-                    Using Avg TM Cap: {avgTMCap}
-                  </span>
+                Loading Time (min){" "}
+                {newPlant?.capacity && (
+                  <span className="text-[10px] text-gray-500 block">Using Avg TM Cap: {avgTMCap}</span>
                 )}
               </label>
-              <div className="relative">
-                <Input
-                  type="number"
-                  name="capacity"
-                  placeholder="Enter plant capacity to calculate"
-                  value={
-                    newPlant?.capacity
-                      ? Math.ceil((newPlant.capacity / avgTMCap) / 5) * 5
-                      : ""
-                  }
-                  disabled
-                  className="pr-28" // add right padding so text doesn't overlap
-                />
-                {newPlant?.capacity && (
-                  <span className="absolute inset-y-0 right-2 flex items-center text-[10px] text-gray-500">
-                    (rounded off to nearest 5)
-                  </span>
-                )}
+              <div className="flex flex-row items-center gap-2 w-full">
+                <div className="relative w-full">
+                  <Input
+                    type="number"
+                    name="capacity"
+                    placeholder="Enter capacity"
+                    value={newPlant?.capacity ? Math.ceil(newPlant.capacity / avgTMCap / 5) * 5 : ""}
+                    disabled
+                    className="pr-28" // add right padding so text doesn't overlap
+                  />
+                  {newPlant?.capacity && (
+                    <span className="absolute inset-y-0 right-2 flex items-center text-[10px] text-gray-500">
+                      (rounded off to nearest 5)
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -755,7 +772,6 @@ export default function PlantsContainer() {
                 value={newPlant.location}
                 onChange={handleInputChange}
                 maxLength={30}
-
               />
             </div>
             <div className="w-full">
@@ -920,10 +936,9 @@ export default function PlantsContainer() {
               </div>
               <div className="w-full">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex flex-row justify-between">
-                  Loading Time (min)   {editedPlant?.capacity && (
-                    <span className="text-[10px] text-gray-500 block">
-                      Using Avg TM Cap: {avgTMCap}
-                    </span>
+                  Loading Time (min){" "}
+                  {editedPlant?.capacity && (
+                    <span className="text-[10px] text-gray-500 block">Using Avg TM Cap: {avgTMCap}</span>
                   )}
                 </label>
                 <div className="relative">
@@ -931,11 +946,7 @@ export default function PlantsContainer() {
                     type="number"
                     name="capacity"
                     placeholder="Enter plant capacity to calculate"
-                    value={
-                      editedPlant?.capacity
-                        ? Math.ceil((editedPlant.capacity / avgTMCap) / 5) * 5
-                        : ""
-                    }
+                    value={editedPlant?.capacity ? Math.ceil(editedPlant.capacity / avgTMCap / 5) * 5 : ""}
                     disabled
                     className="pr-28" // add right padding so text doesn't overlap
                   />
@@ -946,9 +957,7 @@ export default function PlantsContainer() {
                   )}
                 </div>
 
-                {editCapacityError && (
-                  <span className="text-xs text-red-600 mt-1 block">{editCapacityError}</span>
-                )}
+                {editCapacityError && <span className="text-xs text-red-600 mt-1 block">{editCapacityError}</span>}
               </div>
             </div>
             <div className="flex flex-row w-full gap-2">
