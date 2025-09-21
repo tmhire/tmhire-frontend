@@ -126,7 +126,7 @@ export default function ScheduleViewPage() {
   // Delete schedule mutation
   const deleteScheduleMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetchWithAuth(`/schedules/${id}`, {
+      const response = await fetchWithAuth(`/schedules/${id}?delete_type=temporarily`, {
         method: "DELETE",
       });
       if (!response) throw new Error("No response from server");
@@ -228,11 +228,11 @@ export default function ScheduleViewPage() {
         .map(([trips, tmCount], idx) => [idx + 1, Number(tmCount), Number(trips), Number(tmCount) * Number(trips)]);
       const totalTMs = Object.keys(tmTripCounts).length;
       const totalTrips = schedule.output_table.length;
-      
+
       // Add spacing after summary data
       summaryData.push(["", ""], ["TM Trip Distribution", ""]);
       summaryData.push(["Sl. No", "NO OF TMs (A)", "NO OF TRIPS/TM (B)", "TOTAL TRIPS (A) x (B)"]);
-      rows.forEach(row => summaryData.push(row));
+      rows.forEach((row) => summaryData.push(row));
       summaryData.push(["TOTAL", totalTMs, "", totalTrips]);
     }
 
@@ -303,7 +303,10 @@ export default function ScheduleViewPage() {
         const tripTimes = Array.from({ length: maxTrips }).map((_, i) => {
           const trip = trips[i];
           return trip
-            ? `${formatTimeByPreference(trip.plant_start, preferred)} - ${formatTimeByPreference(trip.return, preferred)}`
+            ? `${formatTimeByPreference(trip.plant_start, preferred)} - ${formatTimeByPreference(
+                trip.return,
+                preferred
+              )}`
             : "-";
         });
         const overallRange = formatOverallRange(trips);

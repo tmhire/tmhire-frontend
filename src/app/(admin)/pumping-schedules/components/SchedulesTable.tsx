@@ -170,10 +170,10 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
               {data.map((schedule, index) => (
                 <React.Fragment key={schedule._id}>
-                    <TableRow 
-                      className={schedule.status === "generated" ? "hover:bg-gray-50 dark:hover:bg-gray-800/50" : ""}
-                      onClick={() => schedule.status === "generated" && handleView(schedule)}
-                    >
+                  <TableRow
+                    className={schedule.status === "generated" ? "hover:bg-gray-50 dark:hover:bg-gray-800/50" : ""}
+                    onClick={() => schedule.status === "generated" && handleView(schedule)}
+                  >
                     <TableCell className="px-2 py-3 text-sm text-start">
                       <span className="text-gray-800 dark:text-white/90">{index + 1}</span>
                     </TableCell>
@@ -202,16 +202,28 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
                     </TableCell>
                     <TableCell className="px-2 py-3 text-sm text-start">
                       <span className="text-gray-800 dark:text-white/90">
-                        {schedule.output_table[0]?.plant_start ? 
-                          `${formatTimeByPreference(schedule.output_table[0].plant_start,profile?.preferred_format)} - ${formatTimeByPreference(schedule.output_table[schedule.output_table.length - 1].return,profile?.preferred_format)}` : 
-                          '-'}
+                        {schedule.output_table[0]?.plant_start
+                          ? `${formatTimeByPreference(
+                              schedule.output_table[0].plant_start,
+                              profile?.preferred_format
+                            )} - ${formatTimeByPreference(
+                              schedule.output_table[schedule.output_table.length - 1].return,
+                              profile?.preferred_format
+                            )}`
+                          : "-"}
                       </span>
                     </TableCell>
                     <TableCell className="px-2 py-3 text-sm text-start">
                       <span className="text-gray-800 dark:text-white/90">
-                        {schedule.input_params.pump_start ? 
-                          `${formatTimeByPreference(schedule.input_params.pump_start,profile?.preferred_format)} - ${formatTimeByPreference(schedule.output_table[schedule.output_table.length - 1]?.unloading_time,profile?.preferred_format)}` : 
-                          '-'}
+                        {schedule.input_params.pump_start
+                          ? `${formatTimeByPreference(
+                              schedule.input_params.pump_start,
+                              profile?.preferred_format
+                            )} - ${formatTimeByPreference(
+                              schedule.output_table[schedule.output_table.length - 1]?.unloading_time,
+                              profile?.preferred_format
+                            )}`
+                          : "-"}
                       </span>
                     </TableCell>
                     <TableCell className="px-2 py-3 text-sm text-start">

@@ -20,7 +20,7 @@ interface Schedule {
   client_id: string;
   site_address: string;
   project_name: string;
-  mother_plant_name: string
+  mother_plant_name: string;
   pump_type: string;
   status: string;
   input_params: {
@@ -82,7 +82,7 @@ export default function SchedulesContainer() {
   // Delete schedule mutation
   const deleteScheduleMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetchWithAuth(`/schedules/${id}`, {
+      const response = await fetchWithAuth(`/schedules/${id}?delete_type=temporarily`, {
         method: "DELETE",
       });
       if (!response) throw new Error("No response from server");
@@ -151,7 +151,8 @@ export default function SchedulesContainer() {
         schedule.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         schedule.site_address.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesStatus = selectedStatus === "" || schedule.status === selectedStatus;
+      const matchesStatus =
+        (schedule.status !== "deleted" && selectedStatus === "") || schedule.status === selectedStatus;
 
       const matchesClient = selectedClient === "" || schedule.client_name === selectedClient;
 
@@ -318,7 +319,7 @@ export default function SchedulesContainer() {
                         setIsStatusFilterOpen(false);
                       }}
                     >
-                      {status}
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
                     </button>
                   ))}
                 </div>

@@ -296,7 +296,7 @@ export default function SupplyScheduleViewPage() {
   // Delete schedule mutation
   const deleteScheduleMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetchWithAuth(`/schedules/${id}`, {
+      const response = await fetchWithAuth(`/schedules/${id}?delete_type=temporarily`, {
         method: "DELETE",
       });
       if (!response) throw new Error("No response from server");
