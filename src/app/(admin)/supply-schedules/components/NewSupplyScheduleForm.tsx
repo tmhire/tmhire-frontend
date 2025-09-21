@@ -128,7 +128,6 @@ const steps = [
   { id: 1.1, name: "Pour Details", type: "subStep" },
   { id: 1.2, name: "Transit Mixer Trip Log", type: "subStep" },
   { id: 2, name: "TM Selection" },
-  { id: 3, name: "Generate Schedule" },
 ];
 
 export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: string }) {
