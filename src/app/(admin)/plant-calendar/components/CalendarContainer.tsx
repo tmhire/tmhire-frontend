@@ -40,6 +40,8 @@ type Plant = {
   name: string;
   location: string;
   address: string;
+  capacity: number;
+  status: string;
 };
 
 type Task = {
@@ -53,17 +55,12 @@ type Task = {
   actualEnd: string;
 };
 
-type HourlyUtilization = {
-  hour: number;
-  fraction: string;
-  utilization: number;
-};
-
 type PlantRow = {
   id: string; // plant id
   name: string; // plant name
+  tm_per_hour: number;
   tasks: Task[];
-  hourlyUtilization: HourlyUtilization[];
+  hourlyUtilization: number[];
 };
 
 const TASK_TYPE_COLORS: Record<string, string> = {
@@ -80,16 +77,15 @@ const TASK_TYPE_COLORS: Record<string, string> = {
 
 const getTaskType = (id: string) => id.split("-")[0];
 
-const buildHourlyUtilization = (tasks: Task[], selectedDate: string): HourlyUtilization[] => {
-  const dayStart = new Date(`${selectedDate}T00:00:00`).getTime();
-  const dayEnd = new Date(`${selectedDate}T24:00:00`).getTime();
-  const TM_PER_HOUR = 6; // Given 60/10 = 6 trucks per hour capacity
-
-  // Initialize hourly counters
-  const hourlyTMs: { [hour: number]: number } = {};
-  for (let i = 0; i < 24; i++) {
-    hourlyTMs[i] = 0;
-  }
+const buildHourlyUtilization = (
+  tasks: Task[],
+  hourlyUtilization: number[],
+  selectedDate: string,
+  customStartHour: number | undefined
+): number[] => {
+  const customStartHourString: string = !!customStartHour ? String(customStartHour).padStart(2, "0") : "00";
+  const dayStart = new Date(`${selectedDate}T${customStartHourString}:00:00`).getTime();
+  const dayEnd = new Date(dayStart + 86400000).getTime(); // 24(hour) * 60(minutes) * 60(seconds) * 1000(ms) = 84600000
 
   // Count TMs per hour
   tasks.forEach((task) => {
@@ -101,17 +97,13 @@ const buildHourlyUtilization = (tasks: Task[], selectedDate: string): HourlyUtil
     // Increment counter for each hour this task spans
     for (let hour = taskStartHour; hour < taskEndHour; hour++) {
       if (hour >= 0 && hour < 24) {
-        hourlyTMs[hour]++;
+        hourlyUtilization[hour]++;
       }
     }
   });
 
   // Convert to fraction display format
-  return Object.entries(hourlyTMs).map(([hour, count]) => ({
-    hour: parseInt(hour),
-    fraction: `${count}/${TM_PER_HOUR}`,
-    utilization: count / TM_PER_HOUR
-  }));
+  return hourlyUtilization;
 };
 
 // const calculateDurationMinutes = (start: string, end: string): number => {
@@ -122,62 +114,64 @@ const buildHourlyUtilization = (tasks: Task[], selectedDate: string): HourlyUtil
 
 // Removed unused formatting functions
 
-function transformApiDataToPlantRows(apiData: ApiResponse, plantMap: Map<string, Plant>, date: string): PlantRow[] {
+function transformApiDataToPlantRows(
+  apiData: ApiResponse,
+  plantMap: Map<string, Plant>,
+  date: string,
+  avgTMCap: number,
+  customStartHour: number | undefined
+): PlantRow[] {
   const plantIdToRow: Map<string, PlantRow> = new Map();
 
   // First, initialize rows for all plants
   plantMap.forEach((plantInfo, plantId) => {
+    const load_time = !!plantInfo.capacity ? Math.ceil(plantInfo.capacity / avgTMCap / 5) * 5 : 5;
     plantIdToRow.set(plantId, {
       id: plantId,
       name: `${plantInfo.name} (${plantInfo.location})`,
+      tm_per_hour: 60 / load_time,
       tasks: [],
-      hourlyUtilization: Array.from({ length: 24 }, (_, hour) => ({
-        hour,
-        fraction: '0/6',
-        utilization: 0
-      }))
+      hourlyUtilization: Array.from({ length: 24 }, () => 0),
     });
   });
 
   const assignItemTasks = (item: ApiItem, itemType: "mixer" | "pump") => {
     const plantId = item.plant;
     const plantInfo = plantMap.get(plantId);
+    const load_time = !!plantInfo?.capacity ? Math.ceil(plantInfo.capacity / avgTMCap / 5) * 5 : 5;
     if (!plantIdToRow.has(plantId)) {
-      plantIdToRow.set(plantId, { 
-        id: plantId, 
+      plantIdToRow.set(plantId, {
+        id: plantId,
         name: plantInfo ? `${plantInfo.name} (${plantInfo.location})` : plantId,
+        tm_per_hour: 60 / load_time,
         tasks: [],
-        hourlyUtilization: Array.from({ length: 24 }, (_, hour) => ({
-          hour,
-          fraction: '0/6',
-          utilization: 0
-        }))
+        hourlyUtilization: Array.from({ length: 24 }, () => 0),
       });
     }
-      const row = plantIdToRow.get(plantId)!;
-      const tasks: Task[] = (item.tasks || []).map((task) => {
-        const rawType = getTaskType(task.id);
-        const mappedType =
-          itemType === "mixer" && rawType === "work"
-            ? "unload"
-            : itemType === "pump" && rawType === "work"
-              ? "pump"
-              : rawType;
-        return {
-          id: task.id,
-          color: TASK_TYPE_COLORS[mappedType] || "bg-gray-500",
-          client: task.client,
-          project: task.project,
-          schedule_no: task.schedule_no,
-          type: mappedType,
-          actualStart: task.start,
-          actualEnd: task.end,
-        };
-      });
-      row.tasks.push(...tasks);
-      
-      // Calculate hourly utilization for the plant
-      row.hourlyUtilization = buildHourlyUtilization(row.tasks, date);
+    const row = plantIdToRow.get(plantId)!;
+    const tasks: Task[] = (item.tasks || []).map((task) => {
+      const rawType = getTaskType(task.id);
+      const mappedType =
+        itemType === "mixer" && rawType === "work"
+          ? "unload"
+          : itemType === "pump" && rawType === "work"
+          ? "pump"
+          : rawType;
+      return {
+        id: task.id,
+        color: TASK_TYPE_COLORS[mappedType] || "bg-gray-500",
+        client: task.client,
+        project: task.project,
+        schedule_no: task.schedule_no,
+        type: mappedType,
+        actualStart: task.start,
+        actualEnd: task.end,
+      };
+    });
+    row.tasks.push(...tasks);
+
+    // Calculate hourly utilization for the plant
+    row.hourlyUtilization = buildHourlyUtilization(tasks, row.hourlyUtilization, date, customStartHour);
   };
 
   (apiData.data.mixers || []).forEach((m) => assignItemTasks(m, "mixer"));
@@ -187,6 +181,7 @@ function transformApiDataToPlantRows(apiData: ApiResponse, plantMap: Map<string,
   const rows = Array.from(plantIdToRow.values()).map((r) => ({
     ...r,
     tasks: r.tasks.sort((a, b) => new Date(a.actualStart).getTime() - new Date(b.actualStart).getTime()),
+    // hourlyUtilization: buildHourlyUtilization(r.tasks, r.hourlyUtilization, date, customStartHour),
   }));
 
   // Sort rows by plant name
@@ -214,6 +209,7 @@ export default function CalendarContainer() {
   const [customStartHour, setCustomStartHour] = useState<number | undefined>(session?.custom_start_hour);
   const [rows, setRows] = useState<PlantRow[]>([]);
   // const [tasks, setTasks] = useState<Task[]>([]); // Removed unused state
+  const [isStartHourFilterOpen, setIsStartHourFilterOpen] = useState(false);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -232,12 +228,25 @@ export default function CalendarContainer() {
     },
     enabled: status === "authenticated",
   });
-  
+
   // Create a map of plants with additional details
   const plantMap = useMemo(() => {
     if (!plantsData) return new Map<string, Plant>();
     return new Map(plantsData.map((p) => [p._id, p]));
   }, [plantsData]);
+
+  const { data: avgTMCapData } = useQuery<{ average_capacity: number }>({
+    queryKey: ["average-tm-capacity"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/tms/average-capacity");
+      const data = await response.json();
+      if (data.success && data.data && typeof data.data.average_capacity === "number") {
+        return { average_capacity: data.data.average_capacity };
+      }
+      throw new Error("Failed to fetch average TM capacity");
+    },
+  });
+  const avgTMCap = Math.ceil(avgTMCapData?.average_capacity || 0) ?? null;
 
   const handleDateChange = (newDate: string) => {
     setSelectedDate(newDate);
@@ -257,7 +266,7 @@ export default function CalendarContainer() {
       });
       const data: ApiResponse = await response.json();
       if (data.success) {
-        const transformed = transformApiDataToPlantRows(data, plantMap, selectedDate);
+        const transformed = transformApiDataToPlantRows(data, plantMap, selectedDate, avgTMCap, customStartHour);
         setRows(transformed);
       } else {
         setError(data.message || "Failed to fetch gantt data");
@@ -303,47 +312,13 @@ export default function CalendarContainer() {
     return `${String(hour).padStart(2, "0")}:00`;
   };
 
-  const getTimeSlots = () => Array.from({ length: 24 }, (_, i) => ((customStartHour || 0) + i) % 24);
-
-  const buildHourlyUtilization = (tasks: Task[], selectedDate: string) => {
-    const dayStart = new Date(`${selectedDate}T00:00:00`).getTime();
-    const dayEnd = new Date(`${selectedDate}T24:00:00`).getTime();
-    const TM_PER_HOUR = 6; // Given 60/10 = 6 trucks per hour capacity
-
-    // Initialize hourly counters
-    const hourlyTMs: { [hour: number]: number } = {};
-    for (let i = 0; i < 24; i++) {
-      hourlyTMs[i] = 0;
-    }
-
-    // Count TMs per hour
-    tasks.forEach((task) => {
-      const startMs = new Date(task.actualStart).getTime();
-      const endMs = new Date(task.actualEnd).getTime();
-      const taskStartHour = Math.floor((Math.max(startMs, dayStart) - dayStart) / (1000 * 60 * 60));
-      const taskEndHour = Math.ceil((Math.min(endMs, dayEnd) - dayStart) / (1000 * 60 * 60));
-
-      // Increment counter for each hour this task spans
-      for (let hour = taskStartHour; hour < taskEndHour; hour++) {
-        if (hour >= 0 && hour < 24) {
-          hourlyTMs[hour]++;
-        }
-      }
-    });
-
-    // Convert to fraction display format
-    return Object.entries(hourlyTMs).map(([hour, count]) => ({
-      hour: parseInt(hour),
-      fraction: `${count}/${TM_PER_HOUR}`,
-      utilization: count / TM_PER_HOUR
-    }));
-  };
+  const getTimeSlots = () => Array.from({ length: 24 }, (_, i) => i % 24);
 
   // Client legend removed to anonymize busy blocks
 
-  const computeUsedHours = (tasks: Task[]): number => {
-    const hourlyUtilization = buildHourlyUtilization(tasks, selectedDate);
-    const totalTMs = hourlyUtilization.reduce((sum, hour) => sum + parseInt(hour.fraction.split('/')[0]), 0);
+  const computeUsedHours = (row: PlantRow): number => {
+    const hourlyUtilization = row.hourlyUtilization;
+    const totalTMs = hourlyUtilization.reduce((sum, hour) => sum + hour, 0);
     return Math.round((totalTMs / 6) * 100) / 100; // Normalized by trucks per hour (6)
   };
 
@@ -419,10 +394,11 @@ export default function CalendarContainer() {
 
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
-                    ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
-                    : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
-                    } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                    showFilters
+                      ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
+                      : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
+                  } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
                 >
                   <Filter className="h-4 w-4" />
                   Filters
@@ -433,12 +409,30 @@ export default function CalendarContainer() {
                 <div className="flex flex-row items-center justify-end gap-2 w-full">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Hour</label>
                   <button
-                    onClick={() => setCustomStartHour(((customStartHour || 0) + 1) % 24)}
+                    onClick={() => setIsStartHourFilterOpen(!isStartHourFilterOpen)}
                     className="px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     title="Start Hour"
                   >
                     {`${String(customStartHour).padStart(2, "0")}:00`}
                   </button>
+                  {isStartHourFilterOpen && (
+                    <div className="absolute z-20 mt-1 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-60 overflow-y-auto">
+                      <div className="p-2 text-gray-800 dark:text-white/90">
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <button
+                            key={i}
+                            className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            onClick={() => {
+                              setCustomStartHour(i);
+                              setIsStartHourFilterOpen(false);
+                            }}
+                          >
+                            {`${String(i).padStart(2, "0")}:00`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <DatePickerInput value={selectedDate} onChange={handleDateChange} className="w-48" />
                 <button
@@ -500,7 +494,7 @@ export default function CalendarContainer() {
                     <button
                       onClick={() => {
                         setTimeFormat(timeFormat === "24h" ? "12h" : "24h");
-                        setCustomStartHour(0);
+                        // setCustomStartHour(0);
                       }}
                       className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     >
@@ -541,10 +535,11 @@ export default function CalendarContainer() {
                   {getTimeSlots().map((time) => (
                     <div
                       key={time}
-                      className={`flex-1 px-1 py-3 text-center tracking-tight leading-tight font-medium text-gray-500 text-[8.5px] dark:text-gray-400 border-r ${time === 23
-                        ? "border-r-2 border-r-gray-400 dark:border-r-white/[0.2]"
-                        : "border-gray-300 dark:border-white/[0.05]"
-                        } min-w-[40px]`}
+                      className={`flex-1 px-1 py-3 text-center tracking-tight leading-tight font-medium text-gray-500 text-[8.5px] dark:text-gray-400 border-r ${
+                        time === 23
+                          ? "border-r-2 border-r-gray-400 dark:border-r-white/[0.2]"
+                          : "border-gray-300 dark:border-white/[0.05]"
+                      } min-w-[40px]`}
                     >
                       {formatTime(time)}
                     </div>
@@ -562,7 +557,7 @@ export default function CalendarContainer() {
                   ) : (
                     filteredRows.map((row, idx) => {
                       const slots = getTimeSlots();
-                      const usedHours = computeUsedHours(row.tasks);
+                      const usedHours = computeUsedHours(row);
 
                       return (
                         <div key={row.id} className="flex group transition-colors white">
@@ -570,13 +565,13 @@ export default function CalendarContainer() {
                             {idx + 1}
                           </div>
                           <div
-                            className={`w-48 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0 truncate`} 
+                            className={`w-48 px-5 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0 truncate`}
                           >
                             {row.name}
                           </div>
                           <div className="flex-1 flex relative">
                             {slots.map((time) => {
-                              const utilization = row.hourlyUtilization.find(h => h.hour === time);
+                              const count = row.hourlyUtilization[time];
                               return (
                                 <div
                                   key={`${row.id}-${time}`}
@@ -586,19 +581,17 @@ export default function CalendarContainer() {
                                       : "border-gray-300 dark:border-white/[0.05]"
                                   } relative min-w-[40px] flex items-center justify-center`}
                                 >
-                                  <Tooltip
-                                    content={`${utilization?.fraction || '0/6'} trucks utilized`}
-                                  >
-                                    <span 
+                                  <Tooltip content={`${count || "0"}/${row.tm_per_hour} trucks utilized`}>
+                                    <span
                                       className={`text-xs ${
-                                        (utilization?.utilization || 0) >= 0.8 
-                                          ? 'text-red-600 dark:text-red-400' 
-                                          : (utilization?.utilization || 0) >= 0.5 
-                                            ? 'text-yellow-600 dark:text-yellow-400'
-                                            : 'text-gray-600 dark:text-gray-400'
+                                        (count / row.tm_per_hour || 0) >= 0.8
+                                          ? "text-red-600 dark:text-red-400"
+                                          : (count / row.tm_per_hour || 0) >= 0.5
+                                          ? "text-yellow-600 dark:text-yellow-400"
+                                          : "text-gray-600 dark:text-gray-400"
                                       }`}
                                     >
-                                      {utilization?.fraction || '0/6'}
+                                      {`${count || "0"}/${row.tm_per_hour}` || "0/6"}
                                     </span>
                                   </Tooltip>
                                 </div>
