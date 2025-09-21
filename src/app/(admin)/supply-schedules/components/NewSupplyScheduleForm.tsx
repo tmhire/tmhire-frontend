@@ -666,15 +666,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     .map((v) => parseFloat(v) || 0)
     .reduce((a, b) => a + b, 0);
 
-  // const cycleTimeHr = cycleTimeMin / 60;
   const totalPumpingHours = speed > 0 ? quantity / speed : 0;
-  const loads = Math.ceil((parseFloat(formData.quantity) || 0) / (avgTMCap && avgTMCap > 0 ? avgTMCap : 1));
-  // const m3PerTM = tripsPerTM * (avgTMCap && avgTMCap > 0 ? avgTMCap : 1);
-  const tmReq = cycleTimeMin > 0 ? Math.ceil(cycleTimeMin / parseFloat(formData.unloadingTime)) : 0;
-  // const additionalTMValue = overruleTMCount ? Math.max(0, (customTMCount || 0) - tmReq) : 0;
-  const totalTMRequired = overruleTMCount ? customTMCount : tmReq;
-  const tripsPerTM = tmReq > 0 ? loads / totalTMRequired : 0;
-  // const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
   const [startHour, startMin] = (formData.startTime || "00:00").split(":").map((n) => parseInt(n, 10));
 
   const startTotalMin = startHour * 60 + startMin;
@@ -688,16 +680,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   // format back to HH:mm
   const pad = (n: number) => n.toString().padStart(2, "0");
   const pumpEndTime = pumpMinutes ? `${pad(endHour)}:${pad(endMin)}` : `${0}:${0}`;
-
-  // REMOVED: duplicate schedule window and classifier (moved earlier to avoid conditional hooks)
-
-  // Estimated TM trip distribution for Step 1 (pre-generation)
-  const tripsPerTMExact = tripsPerTM > 0 ? tripsPerTM : 0;
-  const floorTripsPerTM = Math.floor(tripsPerTMExact);
-  // const ceilTripsPerTM = Math.ceil(tripsPerTMExact);
-  // const totalTripsApprox = totalTMRequired > 0 ? Math.max(0, Math.round(tripsPerTMExact * totalTMRequired)) : 0;
-  const numCeilTms = loads - floorTripsPerTM * totalTMRequired;
-  // const numFloorTms = totalTMRequired > 0 ? Math.max(0, totalTMRequired - numCeilTms) : 0;
 
   // Build Date objects for schedule window and TM classification helpers
   const scheduleStartDate = useMemo(() => {
