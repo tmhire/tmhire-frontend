@@ -1,9 +1,18 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
+
+export const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
 
 export function formatTimeByPreference(date: string | number | Date, preferredFormat = "12h") {
   if (!date) return "-";
@@ -22,10 +31,10 @@ export function formatTimeByPreference(date: string | number | Date, preferredFo
 
 export function formatHoursAndMinutes(decimalHours: number): string {
   if (isNaN(decimalHours) || decimalHours < 0) return "0 hrs 0 mins";
-  
+
   const hours = Math.floor(decimalHours);
   const minutes = Math.round((decimalHours - hours) * 60);
-  
+
   if (hours === 0) {
     return `${minutes} mins`;
   } else if (minutes === 0) {
@@ -36,29 +45,29 @@ export function formatHoursAndMinutes(decimalHours: number): string {
 }
 
 export const validateMobile = (value: string) => {
-    return /^\d{10}$/.test(value);
+  return /^\d{10}$/.test(value);
 };
 
 export const validateName = (value: string) => {
-    return /^[A-Za-z0-9 ]{1,25}$/.test(value.trim());
+  return /^[A-Za-z0-9 ]{1,25}$/.test(value.trim());
 };
 
 export const validateProfileName = (value: string) => {
-    return /^[A-Za-z0-9 ]{1,30}$/.test(value.trim());
+  return /^[A-Za-z0-9 ]{1,30}$/.test(value.trim());
 };
 
 export const validateCity = (value: string) => {
-    return /^[A-Za-z0-9 ]{1,20}$/.test(value.trim());
+  return /^[A-Za-z0-9 ]{1,20}$/.test(value.trim());
 };
 
 export const validateCompanyName = (value: string) => {
-    return /^[A-Za-z0-9 ]{1,50}$/.test(value.trim());
+  return /^[A-Za-z0-9 ]{1,50}$/.test(value.trim());
 };
 
 export const validateAddress = (value: string) => {
-    return value.trim().length <= 60;
+  return value.trim().length <= 60;
 };
 
 export const validateCoordinates = (value: string) => {
-    return value.trim().length <= 60;
+  return value.trim().length <= 60;
 };

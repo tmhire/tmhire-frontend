@@ -21,7 +21,7 @@ interface Schedule {
   project_id: string;
   project_name: string;
   client_name: string;
-  schedule_name: string;
+  schedule_no: string;
   client_id: string;
   site_supervisor_id: string;
   site_supervisor_name: string;
@@ -209,7 +209,7 @@ export default function ScheduleViewPage() {
       ["Return Time (mins) (E)", `${schedule.input_params.return_time}`],
       ["Total TM Cycle Time (A+B+C+D+E)", `${formatHoursAndMinutes(schedule.cycle_time)}`],
       ["Status", schedule.status],
-      ["Schedule Name", schedule.schedule_name || "-"],
+      ["Schedule Name", schedule.schedule_no || "-"],
     ];
     const wsSummary = XLSX.utils.aoa_to_sheet([["Field", "Value"], ...summaryData]);
     XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
@@ -446,7 +446,7 @@ export default function ScheduleViewPage() {
       XLSX.utils.book_append_sheet(wb, wsTmWise, "TM Wise Trips");
     }
 
-    XLSX.writeFile(wb, `${schedule.schedule_name || "pumping-schedule"}-${schedule._id}.xlsx`);
+    XLSX.writeFile(wb, `${schedule.schedule_no || "pumping-schedule"}-${schedule._id}.xlsx`);
   };
 
   if (isLoading) {
@@ -470,9 +470,9 @@ export default function ScheduleViewPage() {
             <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
               {schedule.status}
             </Badge>
-            {schedule.schedule_name && (
+            {schedule.schedule_no && (
               <Badge size="sm" color={"info"}>
-                {schedule.schedule_name}
+                {schedule.schedule_no}
               </Badge>
             )}
           </h2>

@@ -1,35 +1,61 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useParams, useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useApiClient } from "@/hooks/useApiClient";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
 import { formatTimeByPreference, formatHoursAndMinutes } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
+import Button from "@/components/ui/button/Button";
+import { Download, Pencil, Trash2 } from "lucide-react";
+import { useState } from "react";
+import * as XLSX from "xlsx";
+import { Modal } from "@/components/ui/modal";
 
 interface SupplySchedule {
   _id: string;
+  user_id: string;
+  project_id: string;
+  project_name: string;
   client_name: string;
+  schedule_no: string;
   client_id: string;
+  site_supervisor_id: string;
+  site_supervisor_name: string;
+  mother_plant_name: string;
   site_address: string;
   status: string;
-  type: "supply";
+  concreteGrade: number;
+  pumping_speed: number;
+  cycle_time: number;
+  total_trips: number;
+  trips_per_tm: number;
+  type: string;
+  created_at: string;
+  last_updated: string;
   input_params: {
-    unloading_time: number;
     quantity: number;
     pumping_speed: number;
     onward_time: number;
     return_time: number;
     buffer_time: number;
+    load_time: number;
     pump_start: string;
     schedule_date: string;
+    pump_start_time_from_plant: string;
+    pump_fixing_time: number;
+    pump_removal_time: number;
+    unloading_time: number;
+    pump_onward_time?: number;
   };
   output_table: Array<{
     trip_no: number;
     tm_no: string;
     tm_id: string;
+    plant_load: string;
+    plant_buffer: string;
     plant_start: string;
     pump_start: string;
     unloading_time: string;
@@ -41,14 +67,15 @@ interface SupplySchedule {
     plant_name?: string;
   }>;
   tm_count: number;
-  created_at: string;
-  last_updated: string;
 }
 
 export default function SupplyScheduleViewPage() {
+  const router = useRouter();
   const params = useParams();
   const { fetchWithAuth } = useApiClient();
   const { profile } = useProfile();
+  const queryClient = useQueryClient();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const { data: schedule, isLoading } = useQuery<SupplySchedule>({
     queryKey: ["supply-schedule", params.id],
@@ -59,6 +86,246 @@ export default function SupplyScheduleViewPage() {
       return data.data;
     },
   });
+
+  const handleExportExcel = () => {
+    if (!schedule) return;
+
+    const wb = XLSX.utils.book_new();
+
+    // Summary Sheet
+    const summaryData: (string | number)[][] = [
+      [
+        "Scheduled Date",
+        schedule.input_params.schedule_date
+          ? new Date(schedule.input_params.schedule_date).toLocaleDateString(["en-GB"], {
+              day: "2-digit",
+              month: "2-digit",
+              year: "2-digit",
+            })
+          : "-",
+      ],
+      [
+        "Pump Start Time at Site",
+        schedule.input_params.pump_start
+          ? new Date(schedule.input_params.pump_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          : "-",
+      ],
+      // ["Type of Pump", schedule.pump_type || "-"],
+      ["Pumping Speed m³/hour", `${schedule.input_params.pumping_speed}`],
+      ["Client Name", schedule.client_name || "-"],
+      ["Project Name & Site Location", `${schedule.project_name || "-"}, ${schedule.site_address || "-"}`],
+      // ["Placement Zone", schedule.pumping_job || "-"],
+      ["Mother Plant", schedule.mother_plant_name || "-"],
+      ["Site Supervisor", schedule.site_supervisor_name || "-"],
+      // ["Slump at Site", `${schedule.slump_at_site ?? "-"}`],
+      // ["One way Km from Mother Plant", `${schedule.mother_plant_km ?? "-"}`],
+      // ["Floor Height", `${schedule.floor_height ?? "-"}`],
+      ["RMC Grade", schedule.concreteGrade ? `M ${schedule.concreteGrade}` : "-"],
+      ["Total Qty Pumped in m³", `${schedule.input_params.quantity}`],
+      ["Pre-Start Time (mins) (A)", `${schedule.input_params.buffer_time}`],
+      ["Load Time (mins) (B)", `${schedule.input_params.load_time}`],
+      ["Onward Time (mins) (C)", `${schedule.input_params.onward_time}`],
+      ["Unloading Time (mins) (D)", `${schedule.input_params.unloading_time}`],
+      ["Return Time (mins) (E)", `${schedule.input_params.return_time}`],
+      ["Total TM Cycle Time (A+B+C+D+E)", `${formatHoursAndMinutes(schedule.cycle_time)}`],
+      ["Status", schedule.status],
+      ["Schedule Name", schedule.schedule_no || "-"],
+    ];
+    const wsSummary = XLSX.utils.aoa_to_sheet([["Field", "Value"], ...summaryData]);
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+    // TM Trip Distribution Sheet
+    if (schedule.output_table && schedule.output_table.length > 0) {
+      const tmTripCounts: Record<string, number> = {};
+      schedule.output_table.forEach((trip) => {
+        if (!tmTripCounts[trip.tm_id]) tmTripCounts[trip.tm_id] = 0;
+        tmTripCounts[trip.tm_id]++;
+      });
+      const tripsToTmCount: Record<number, number> = {};
+      Object.values(tmTripCounts).forEach((tripCount) => {
+        if (!tripsToTmCount[tripCount]) tripsToTmCount[tripCount] = 0;
+        tripsToTmCount[tripCount]++;
+      });
+      const rows = Object.entries(tripsToTmCount)
+        .sort((a, b) => Number(b[0]) - Number(a[0]))
+        .map(([trips, tmCount], idx) => [idx + 1, Number(tmCount), Number(trips), Number(tmCount) * Number(trips)]);
+      const totalTMs = Object.keys(tmTripCounts).length;
+      const totalTrips = schedule.output_table.length;
+      const wsTMDist = XLSX.utils.aoa_to_sheet([
+        ["Sl. No", "NO OF TMs (A)", "NO OF TRIPS/TM (B)", "TOTAL TRIPS (A) x (B)"],
+        ...rows,
+        ["TOTAL", totalTMs, "", totalTrips],
+      ]);
+      XLSX.utils.book_append_sheet(wb, wsTMDist, "TM Trip Dist");
+    }
+
+    // Schedule Table Sheet
+    if (schedule.output_table && schedule.output_table.length > 0) {
+      const preferred = profile?.preferred_format;
+      const header1 = [
+        "Trip No",
+        "TM No",
+        "Plant - Name",
+        "Plant - Prepare Time",
+        "Plant - Load Time",
+        "Plant - Start Time",
+        "Pump - Start Time",
+        "Pump - End Time",
+        "Return Time",
+        "Cum. Volume",
+        "Cycle Time (min)",
+        "Cushion Time (min)",
+      ];
+      const rows = schedule.output_table.map((trip) => [
+        trip.trip_no,
+        trip.tm_no,
+        trip.plant_name ? trip.plant_name : "N / A",
+        trip.plant_buffer ? formatTimeByPreference(trip.plant_buffer, preferred) : "-",
+        trip.plant_load ? formatTimeByPreference(trip.plant_load, preferred) : "-",
+        formatTimeByPreference(trip.plant_start, preferred),
+        trip.pump_start ? formatTimeByPreference(trip.pump_start, preferred) : "-",
+        trip.unloading_time ? formatTimeByPreference(trip.unloading_time, preferred) : "-",
+        trip.return ? formatTimeByPreference(trip.return, preferred) : "-",
+        `${trip.completed_capacity} m³`,
+        typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-",
+        typeof trip.cushion_time !== "undefined" ? (trip.cushion_time / 60).toFixed(0) : "-",
+      ]);
+      const wsSchedule = XLSX.utils.aoa_to_sheet([header1, ...rows]);
+      XLSX.utils.book_append_sheet(wb, wsSchedule, "Schedule Table");
+    }
+
+    // TM Wise Trip Details Sheet
+    if (schedule.output_table && schedule.output_table.length > 0) {
+      const preferred = profile?.preferred_format;
+      const tmTrips: Record<string, SupplySchedule["output_table"]> = {};
+      schedule.output_table.forEach((trip) => {
+        if (!tmTrips[trip.tm_id]) tmTrips[trip.tm_id] = [];
+        tmTrips[trip.tm_id].push(trip);
+      });
+      Object.values(tmTrips).forEach((trips) => trips.sort((a, b) => a.trip_no - b.trip_no));
+      const tmIds = Object.keys(tmTrips);
+      const maxTrips = Math.max(...Object.values(tmTrips).map((trips) => trips.length));
+
+      const tmIdToIdentifier: Record<string, string> = {};
+      schedule.output_table.forEach((trip) => {
+        if (trip.tm_id && trip.tm_no) tmIdToIdentifier[trip.tm_id] = trip.tm_no;
+      });
+
+      const header = [
+        "S.No.",
+        "TM",
+        ...Array.from({ length: maxTrips }, (_, i) => `Trip ${i + 1}`),
+        "Start-End Time",
+        "Total Hours",
+      ] as string[];
+
+      function formatOverallRange(trips: SupplySchedule["output_table"]) {
+        if (!trips.length) return "-";
+        const starts = trips
+          .map((t) => t.plant_start)
+          .filter(Boolean)
+          .map((t) => new Date(t));
+        const ends = trips
+          .map((t) => t.return)
+          .filter(Boolean)
+          .map((t) => new Date(t));
+        if (!starts.length || !ends.length) return "-";
+        const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
+        const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
+        const sTime = formatTimeByPreference(minStart, preferred);
+        const eTime = formatTimeByPreference(maxEnd, preferred);
+        return `${sTime} - ${eTime}`;
+      }
+
+      function getTotalHours(trips: SupplySchedule["output_table"]) {
+        if (!trips.length) return 0;
+        const starts = trips
+          .map((t) => t.plant_start)
+          .filter(Boolean)
+          .map((t) => new Date(t));
+        const ends = trips
+          .map((t) => t.return)
+          .filter(Boolean)
+          .map((t) => new Date(t));
+        if (!starts.length || !ends.length) return 0;
+        const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
+        const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
+        return (maxEnd.getTime() - minStart.getTime()) / (1000 * 60 * 60);
+      }
+
+      const body: (string | number)[][] = tmIds.map((tmId, index) => {
+        const trips = tmTrips[tmId];
+        const overallRange = formatOverallRange(trips);
+        const totalHours = getTotalHours(trips);
+        const tripCells = Array.from({ length: maxTrips }).map((_, i) => {
+          const trip = trips[i];
+          return trip
+            ? `${formatTimeByPreference(trip.plant_start, preferred)} - ${formatTimeByPreference(
+                trip.return,
+                preferred
+              )}`
+            : "-";
+        });
+        return [
+          index + 1,
+          tmIdToIdentifier[tmId] || tmId,
+          ...tripCells,
+          overallRange,
+          totalHours ? formatHoursAndMinutes(totalHours) : "-",
+        ];
+      });
+
+      const totalHoursArr = tmIds.map((tmId) => getTotalHours(tmTrips[tmId]));
+      const avgTotalHours = totalHoursArr.length ? totalHoursArr.reduce((a, b) => a + b, 0) / totalHoursArr.length : 0;
+
+      const footer = [
+        "Avg",
+        "",
+        ...Array.from({ length: maxTrips }).map(() => ""),
+        "",
+        avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-",
+      ];
+
+      const wsTmWise = XLSX.utils.aoa_to_sheet([header, ...body, footer]);
+      XLSX.utils.book_append_sheet(wb, wsTmWise, "TM Wise Trips");
+    }
+
+    XLSX.writeFile(wb, `${schedule.schedule_no || "supply-schedule"}-${schedule._id}.xlsx`);
+  };
+
+  // Delete schedule mutation
+  const deleteScheduleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetchWithAuth(`/schedules/${id}`, {
+        method: "DELETE",
+      });
+      if (!response) throw new Error("No response from server");
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message || "Failed to delete schedule");
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      setIsDeleteModalOpen(false);
+      router.push("/supply-schedules");
+    },
+  });
+
+  const handleEdit = () => {
+    router.push(`/supply-schedules/${params.id}`);
+  };
+
+  const handleDelete = () => {
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteScheduleMutation.mutateAsync(params.id as string);
+    } catch (error) {
+      console.error("Error deleting schedule:", error);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -75,12 +342,33 @@ export default function SupplyScheduleViewPage() {
   return (
     <div className="w-full mx-auto">
       <div className="mb-3">
-        <h2 className="text-xl font-semibold text-black dark:text-white flex gap-3">
-          <span>Concrete Supply - Schedule Summary</span>
-          <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
-            {schedule.status}
-          </Badge>
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-black dark:text-white flex gap-3">
+            <span>Concrete Supply - Schedule Summary</span>
+            <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
+              {schedule.status}
+            </Badge>
+          </h2>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={handleExportExcel} className="flex items-center gap-1">
+              <Download size={14} />
+              Export
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleEdit} className="flex items-center gap-1">
+              <Pencil size={14} />
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDelete}
+              className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-500 border-red-600 dark:border-red-400"
+            >
+              <Trash2 size={14} />
+              Delete
+            </Button>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
@@ -506,7 +794,9 @@ export default function SupplyScheduleViewPage() {
                       <td key={i} className="px-2 py-2"></td>
                     ))}
                     <td className="px-2 py-2 text-center"></td>
-                    <td className="px-2 py-2 text-right">{avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-"}</td>
+                    <td className="px-2 py-2 text-right">
+                      {avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-"}
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -514,6 +804,31 @@ export default function SupplyScheduleViewPage() {
           );
         })()}
       </div>
+
+      {/* Delete Modal */}
+      <Modal className="max-w-[500px] p-5" isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
+        <div className="p-6">
+          <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Delete Schedule</h4>
+          <p className="mb-6 dark:text-white/90">
+            Are you sure you want to delete this schedule? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-4">
+            <Button onClick={() => setIsDeleteModalOpen(false)} variant="outline">
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmDelete} variant="warning" disabled={deleteScheduleMutation.isPending}>
+              {deleteScheduleMutation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <Spinner size="sm" />
+                  <span>Deleting...</span>
+                </div>
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

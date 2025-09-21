@@ -38,7 +38,7 @@ import TimeInput from "@/components/form/input/TimeInput";
 // Removed Chart.js pie in favor of custom SVG DonutChart
 import { Spinner } from "@/components/ui/spinner";
 import Tooltip from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 
 interface Client {
@@ -83,6 +83,7 @@ type TeamMember = {
   name: string;
   designation?: string;
 };
+
 interface CalculateTMResponse {
   tm_count: number;
   schedule_id: string;
@@ -149,15 +150,6 @@ const steps = [
 const pumpColors = {
   line: "bg-blue-100 text-blue-700",
   boom: "bg-green-100 text-green-700",
-};
-
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 };
 
 // Helper function to format date and time for tooltips
@@ -423,9 +415,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   useEffect(() => {
     if (!template || template === "none" || schedule_id || pastSchedulesLoading) return;
     setSelectedPastSchedule(template);
-    if (selectedPastSchedule) {
+    if (template) {
       // Prefill form with past schedule data
-      const pastSchedule = pastSchedules?.find((s) => s._id === selectedPastSchedule);
+      const pastSchedule = pastSchedules?.find((s) => s._id === template);
       if (pastSchedule) {
         setSelectedClient(pastSchedule.client_id);
         setSelectedProject(pastSchedule.project_id);
@@ -453,10 +445,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           setOverruleTMCount(true);
           setCustomTMCount(pastSchedule.tm_overrule);
         }
+        // Move to first sub-step
+        setStep(1.1);
       }
     }
-    // Move to first sub-step
-    setStep(1.1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template, pastSchedules]);
 
@@ -486,8 +478,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             data.data.input_params.unloading_time && data.data.input_params.unloading_time !== 0
               ? data.data.input_params.unloading_time.toString()
               : pumping_speed && avgTMCap
-                ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
-                : "",
+              ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
+              : "",
           pumpOnwardTime: data.data.input_params.pump_onward_time.toString(),
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
@@ -514,7 +506,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         });
         setComputedScheduleName(
           data?.data?.schedule_no ||
-          `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
+            `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
         );
         const tm_ids = new Set();
         const tmSequence: string[] = [];
@@ -542,6 +534,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         setOverruleTMCount(
           data?.data?.tm_overrule && data?.data?.tm_count ? data?.data?.tm_overrule !== data?.data?.tm_count : false
         );
+        setHasChanged(false);
+
         return true;
       }
       return false;
@@ -1353,10 +1347,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 >
                   {/* Step Circle */}
                   <motion.div
-                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${step >= s.id
-                      ? "border-brand-500 bg-brand-500 text-white shadow-lg"
-                      : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                      }`}
+                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${
+                      step >= s.id
+                        ? "border-brand-500 bg-brand-500 text-white shadow-lg"
+                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                    }`}
                     animate={{
                       scale: s.type === "subStep" ? (step === s.id ? 0.9 : 0.8) : step === s.id ? 1.3 : 1,
                       boxShadow: step === s.id ? "0 0 20px rgba(var(--brand-500-rgb, 59, 130, 246), 0.5)" : "none",
@@ -1385,8 +1380,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                   {/* Step Name */}
                   <motion.span
-                    className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
-                      }`}
+                    className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${
+                      step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
+                    }`}
                     animate={{
                       fontWeight: step >= s.id ? 500 : 400,
                     }}
@@ -1431,18 +1427,20 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               {/* Start from Scratch Option */}
               <div className="lg:col-span-1">
                 <div
-                  className={`h-full p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 ${!selectedPastSchedule
-                    ? "border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg"
-                    : "border-gray-200 hover:border-brand-300 hover:shadow-md dark:border-gray-700 dark:hover:border-brand-600"
-                    }`}
+                  className={`h-full p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                    !selectedPastSchedule
+                      ? "border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg"
+                      : "border-gray-200 hover:border-brand-300 hover:shadow-md dark:border-gray-700 dark:hover:border-brand-600"
+                  }`}
                   onClick={() => setSelectedPastSchedule("")}
                 >
                   <div className="text-center">
                     <div
-                      className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${!selectedPastSchedule
-                        ? "bg-brand-500 text-white"
-                        : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                        }`}
+                      className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
+                        !selectedPastSchedule
+                          ? "bg-brand-500 text-white"
+                          : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                      }`}
                     >
                       <FileText className="w-8 h-8" />
                     </div>
@@ -1451,10 +1449,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       Create a completely new schedule without default values. You&apos;ll input all details manually.
                     </p>
                     <button
-                      className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${!selectedPastSchedule
-                        ? "bg-brand-500 text-white hover:bg-brand-600"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                        }`}
+                      className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
+                        !selectedPastSchedule
+                          ? "bg-brand-500 text-white hover:bg-brand-600"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                      }`}
                     >
                       {!selectedPastSchedule ? "Selected" : "Choose this option"}
                     </button>
@@ -1465,17 +1464,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               {/* Use Past Schedule Option */}
               <div className="lg:col-span-2">
                 <div
-                  className={`p-6 rounded-xl border-2 transition-all duration-200 ${selectedPastSchedule
-                    ? "border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg"
-                    : "border-gray-200 dark:border-gray-700"
-                    }`}
+                  className={`p-6 rounded-xl border-2 transition-all duration-200 ${
+                    selectedPastSchedule
+                      ? "border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg"
+                      : "border-gray-200 dark:border-gray-700"
+                  }`}
                 >
                   <div className="flex items-center mb-4">
                     <div
-                      className={`inline-flex items-center justify-center w-12 h-12 rounded-full mr-4 ${selectedPastSchedule
-                        ? "bg-brand-500 text-white"
-                        : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                        }`}
+                      className={`inline-flex items-center justify-center w-12 h-12 rounded-full mr-4 ${
+                        selectedPastSchedule
+                          ? "bg-brand-500 text-white"
+                          : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                      }`}
                     >
                       <Clock className="w-6 h-6" />
                     </div>
@@ -1516,10 +1517,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       filteredSchedules?.map((schedule) => (
                         <div
                           key={schedule._id}
-                          className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${selectedPastSchedule === schedule._id
-                            ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
-                            : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
-                            }`}
+                          className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
+                            selectedPastSchedule === schedule._id
+                              ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
+                              : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
+                          }`}
                           onClick={() => setSelectedPastSchedule(schedule._id)}
                         >
                           <div className="flex items-start justify-between">
@@ -1529,8 +1531,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                   {schedule.schedule_no}
                                 </h4>
                                 <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium ${pumpColors[schedule.pump_type]
-                                    }`}
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    pumpColors[schedule.pump_type]
+                                  }`}
                                 >
                                   {schedule?.pump_type?.toUpperCase()}
                                 </span>
@@ -1565,10 +1568,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <Truck className="w-4 h-4" />
-                                    <span>{new Date(schedule.input_params.pump_start).toLocaleTimeString("en-US", {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })}
+                                    <span>
+                                      {new Date(schedule.input_params.pump_start).toLocaleTimeString("en-US", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
                                     </span>
                                   </div>
                                 </div>
@@ -1576,10 +1580,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             </div>
 
                             <div
-                              className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPastSchedule === schedule._id
-                                ? "border-brand-500 bg-brand-500"
-                                : "border-gray-300 dark:border-gray-600"
-                                }`}
+                              className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                selectedPastSchedule === schedule._id
+                                  ? "border-brand-500 bg-brand-500"
+                                  : "border-gray-300 dark:border-gray-600"
+                              }`}
                             >
                               {selectedPastSchedule === schedule._id && (
                                 <div className="w-2 h-2 rounded-full bg-white"></div>
@@ -1611,17 +1616,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 )}
                 // disabled={!selectedPastSchedule || selectedPastSchedule === ""}
                 onClick={() => {
+                  const params = new URLSearchParams(searchParams.toString());
                   if (!selectedPastSchedule) {
                     setSelectedPastSchedule("");
-                    setStep(1.1);
+                    params.delete("template");
                   } else {
-                    const params = new URLSearchParams(searchParams.toString());
                     params.set("template", selectedPastSchedule || "none");
-                    router.replace(`?${params.toString()}`);
                   }
+                  router.replace(`?${params.toString()}`, { scroll: false });
+                  setStep(1.1);
                 }}
               >
-                Continue</button>
+                Continue
+              </button>
             </div>
           </div>
         ) : step === 1.1 ? (
@@ -1633,12 +1640,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900/40 py-1 px-3 rounded-full">
                   Company Timings -
                   {profile?.preferred_format === "12h"
-                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
-                    } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) + 24 < 24 ? "PM" : "AM"
-                    } NEXT DAY`
+                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${
+                        (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
+                      } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${
+                        (profile?.custom_start_hour ?? 0) + 24 < 24 ? "PM" : "AM"
+                      } NEXT DAY`
                     : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 TODAY TO ${String(
-                      ((profile?.custom_start_hour ?? 0) + 24) % 24
-                    ).padStart(2, "0")}:00 TOMORROW`}
+                        ((profile?.custom_start_hour ?? 0) + 24) % 24
+                      ).padStart(2, "0")}:00 TOMORROW`}
                 </span>
               </div>
 
@@ -1886,8 +1895,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     value={
                       selectedProject && projects.find((p) => p._id === selectedProject)?.mother_plant_id
                         ? (plantsData || []).find(
-                          (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                        )?.name || "Unknown Plant"
+                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
+                          )?.name || "Unknown Plant"
                         : ""
                     }
                     disabled
@@ -2040,9 +2049,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <Input
                     type="number"
                     name="floorHeight"
-                    value={formData.floorHeight !== undefined && formData.floorHeight !== null
-                      ? formData.floorHeight
-                      : ""}
+                    value={
+                      formData.floorHeight !== undefined && formData.floorHeight !== null ? formData.floorHeight : ""
+                    }
                     onChange={(e) => {
                       const value = e.target.value;
                       const numValue = parseFloat(value);
@@ -2707,10 +2716,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <div className="flex items-center gap-3 py-2 pl-4">
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select 1 Pump</h3>
                     <span
-                      className={`px-3 py-1 text-sm font-medium rounded-full ${pumpType === "line"
-                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                        : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                        }`}
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${
+                        pumpType === "line"
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                          : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                      }`}
                     >
                       {pumpType === "line" ? "Line Pump" : "Boom Pump"}
                     </span>
@@ -2862,10 +2872,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                                   </p>
                                                   {/* Pump Type Chip */}
                                                   <span
-                                                    className={`px-2 py-1 text-xs font-medium rounded-full ${pumpType === "line"
-                                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                                      }`}
+                                                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                                      pumpType === "line"
+                                                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                                        : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                                    }`}
                                                   >
                                                     {pumpType === "line" ? "Line" : "Boom"}
                                                   </span>
@@ -2971,10 +2982,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
                                 {/* Pump Type Chip */}
                                 <span
-                                  className={`px-2 py-1 text-xs font-medium rounded-full ${pumpType === "line"
-                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                    : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                    }`}
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    pumpType === "line"
+                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                  }`}
                                 >
                                   {pumpType === "line" ? "Line" : "Boom"}
                                 </span>
@@ -3154,7 +3166,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 </div>
                 {/* Left Column - TM Selection */}
                 <div className="space-y-6">
-
                   <div className="space-y-4">
                     {calculatedTMs && calculatedTMs.available_tms && calculatedTMs.available_tms.length > 0 ? (
                       (() => {
@@ -3464,10 +3475,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-2 ml-24 dark:bg-gray-900 dark:border-gray-700">
         {step === 1.1 && (
           <div className="flex justify-between mt-2">
-            <Button onClick={handleBack} variant="outline" className="flex items-center gap-2">
-              <ArrowLeft size={16} />
-              Back to Select Template
-            </Button>
+            {!schedule_id ? (
+              <Button onClick={handleBack} variant="outline" className="flex items-center gap-2">
+                <ArrowLeft size={16} />
+                Back to Select Template
+              </Button>
+            ) : (
+              <span></span>
+            )}
             <span>
               <span className="text-red-500">*</span> Compulsory, all other fields are optional
             </span>
