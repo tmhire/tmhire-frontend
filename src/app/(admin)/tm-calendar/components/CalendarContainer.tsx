@@ -1078,14 +1078,14 @@ export default function CalendarContainer() {
                                 >
                                   <div
                                     key={tasks[0].client + i}
-                                    className={`absolute - h-6 rounded ${clientColor} opacity-90 z-0`}
+                                    className={`absolute - h-6 rounded ${clientColor} opacity-90 z-0 truncate`}
                                     style={{
                                       left: `${(offset / timeSlotsLength) * 100 - 0.25}%`,
                                       width: `${(width / timeSlotsLength) * 100 + 0.5}%`,
                                       zIndex: 1,
                                     }}
                                   >
-                                    <span className="text-white text-[10px] items-center justify-center flex h-full">
+                                    <span className="text-white text-[10px] items-center justify-center flex h-full truncate">
                                       {`${(tasks[0].client || "").slice(0, 5)}-${(tasks[0].project || "").slice(
                                         0,
                                         5
