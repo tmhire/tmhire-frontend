@@ -145,11 +145,7 @@ function transformApiDataToPlantRows(
     let plantInfo = plantMap.get(plantId);
     if (!plantInfo) {
       const matchedEntry = Array.from(plantMap.entries()).find(([, p]) => {
-        return (
-          p._id === plantId ||
-          p.name === plantId ||
-          `${p.name} (${p.location})` === plantId
-        );
+        return p._id === plantId || p.name === plantId || `${p.name} (${p.location})` === plantId;
       });
       if (matchedEntry) {
         const [resolvedId, resolvedPlant] = matchedEntry;
@@ -612,7 +608,7 @@ export default function CalendarContainer() {
                                     utilization === 0
                                       ? "bg-green-300 dark:bg-green-900/40" // free
                                       : utilization >= 1
-                                      ? "bg-red-400 dark:bg-red-900/50" // full
+                                      ? "bg-red-300 dark:bg-red-900/50" // full
                                       : utilization >= 0.75
                                       ? "bg-orange-300 dark:bg-orange-900/40" // high
                                       : utilization >= 0.5
@@ -623,17 +619,20 @@ export default function CalendarContainer() {
                                   } relative min-w-[40px] flex items-center justify-center`}
                                 >
                                   <Tooltip content={`${count || "0"}/${row.tm_per_hour} trucks utilized`}>
-                                    <span
-                                      className={`text-xs ${
-                                        (count / row.tm_per_hour || 0) >= 0.8
-                                          ? "text-red-600 dark:text-red-400"
-                                          : (count / row.tm_per_hour || 0) >= 0.5
-                                          ? "text-yellow-600 dark:text-yellow-400"
-                                          : "text-gray-600 dark:text-gray-400"
-                                      }`}
-                                    >
-                                      {`${count || "0"}/${row.tm_per_hour}` || "0/6"}
-                                    </span>
+                                    {(() => {
+                                      let textColor = "";
+                                      if (utilization >= 1) textColor = "text-red-600 dark:text-red-400";
+                                      else if (utilization >= 0.75) textColor = "text-orange-600 dark:text-orange-400";
+                                      else if (utilization >= 0.5) textColor = "text-yellow-600 dark:text-yellow-400";
+                                      else if (utilization > 0) textColor = "text-blue-600 dark:text-blue-400";
+                                      else textColor = "text-green-600 dark:text-green-400"; // free
+
+                                      return (
+                                        <span className={`text-xs ${textColor}`}>
+                                          {`${count || "0"}/${row.tm_per_hour}`}
+                                        </span>
+                                      );
+                                    })()}
                                   </Tooltip>
                                 </div>
                               );
