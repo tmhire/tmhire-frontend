@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 import { useApiClient } from "@/hooks/useApiClient";
 import { Spinner } from "@/components/ui/spinner";
 import Button from "@/components/ui/button/Button";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
-import ScheduleWiseTable from "./ScheduleWiseTable";
-import TruckWiseTable from "./TruckWiseTable";
+import ScheduleWiseTable, { type ScheduleWiseTableExportHandle } from "./ScheduleWiseTable";
+import TruckWiseTable, { type TruckWiseTableExportHandle } from "./TruckWiseTable";
+import * as XLSX from "xlsx";
+ 
 
 type Schedule = {
   _id: string;
@@ -67,6 +69,8 @@ export default function ReportsContainer() {
   const [reportType, setReportType] = useState<"schedule-wise" | "truck-wise">("schedule-wise");
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [city, setCity] = useState<string>(session?.city || "");
+  const scheduleRef = useRef<ScheduleWiseTableExportHandle | null>(null);
+  const truckRef = useRef<TruckWiseTableExportHandle | null>(null);
   
 
   React.useEffect(() => {
@@ -131,6 +135,22 @@ export default function ReportsContainer() {
     setSelectedDate(date);
   };
 
+  const handleExport = () => {
+    const wb = XLSX.utils.book_new();
+    const sheets = reportType === "schedule-wise"
+      ? scheduleRef.current?.getExportSheets()
+      : truckRef.current?.getExportSheets();
+    if (!sheets || sheets.length === 0) return;
+    sheets.forEach((sheet) => {
+      const ws = XLSX.utils.aoa_to_sheet(sheet.rows);
+      const safeName = (sheet.name || "Sheet")
+        .replace(/[\\\/:\*\?\[\]]/g, "-")
+        .slice(0, 31) || "Sheet";
+      XLSX.utils.book_append_sheet(wb, ws, safeName);
+    });
+    XLSX.writeFile(wb, `${reportType}-${selectedDate}.xlsx`);
+  };
+
   return (
     <div className="grid grid-cols-12 gap-4 md:gap-6">
       {/* Date Picker and Report Type Row */}
@@ -181,6 +201,9 @@ export default function ReportsContainer() {
               Truck Wise
             </button>
           </div>
+          <Button variant="outline" className="h-8" onClick={handleExport}>
+            Export
+          </Button>
         </div>
       </div>
 
@@ -193,12 +216,14 @@ export default function ReportsContainer() {
         <div className="col-span-12">
           {reportType === "schedule-wise" ? (
             <ScheduleWiseTable 
+              ref={scheduleRef}
               data={filtered} 
               plantIdToName={plantIdToName}
               selectedDate={selectedDate}
             />
           ) : (
             <TruckWiseTable 
+              ref={truckRef}
               data={filtered} 
               plantIdToName={plantIdToName}
               selectedDate={selectedDate}

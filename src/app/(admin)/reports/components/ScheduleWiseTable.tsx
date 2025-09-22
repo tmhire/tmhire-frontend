@@ -3,7 +3,7 @@
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import Button from "@/components/ui/button/Button";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
-import { useState } from "react";
+import { forwardRef, useImperativeHandle, useState } from "react";
 import { formatTimeByPreference } from "@/lib/utils";
 
 type Schedule = {
@@ -55,6 +55,15 @@ type Schedule = {
   cancellation_reason?: string;
 };
 
+export type ScheduleWiseTableExportSheet = {
+  name: string;
+  rows: (string | number)[][];
+};
+
+export type ScheduleWiseTableExportHandle = {
+  getExportSheets: () => ScheduleWiseTableExportSheet[];
+};
+
 type ScheduleWiseTableProps = {
   data: Schedule[];
   plantIdToName: Record<string, string>;
@@ -71,7 +80,8 @@ const cancellationReasons = [
   "OTHER",
 ];
 
-export default function ScheduleWiseTable({ data, selectedDate }: ScheduleWiseTableProps) {
+const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWiseTableProps>(
+  ({ data, selectedDate }: ScheduleWiseTableProps, exportRef) => {
   const [editingCancellation, setEditingCancellation] = useState<string | null>(null);
   const [editingReason, setEditingReason] = useState<string>("");
 
@@ -100,6 +110,85 @@ export default function ScheduleWiseTable({ data, selectedDate }: ScheduleWiseTa
     setEditingCancellation(null);
     setEditingReason("");
   };
+
+  useImperativeHandle(exportRef, () => ({
+    getExportSheets: () => {
+      const rows: (string | number)[][] = [];
+      rows.push([
+        "SL. NO",
+        "DATE",
+        "SCH. NO",
+        "CUSTOMER NAME",
+        "PROJECT NAME",
+        "PUMP/SUPPLY",
+        "QTY IN m³",
+        "PUMP ALLOCATED",
+        "TM ALLOCATED",
+        "TM QUEUE",
+        "TOTAL TM DEPLOYED",
+        "PUMP START-END TIME",
+        "TM START-END TIME",
+        "SCH CANCELLED BY",
+        "REASON FOR CANCELLATION",
+      ]);
+
+      data.forEach((schedule, index) => {
+        const calculatePumpEnd = (s: Schedule): string | null => {
+          const { input_params } = s;
+          if (!input_params?.pump_start) return null;
+          const startTime = new Date(input_params.pump_start);
+          const pumpingHours = input_params.pumping_speed > 0 ? input_params.quantity / input_params.pumping_speed : 0;
+          const totalMinutes = (input_params.pump_fixing_time || 0) + pumpingHours * 60 + (input_params.pump_removal_time || 0);
+          const endTime = new Date(startTime.getTime() + totalMinutes * 60 * 1000);
+          return endTime.toISOString();
+        };
+
+        const calculateTmTimes = (s: Schedule) => {
+          if (!s.output_table || s.output_table.length === 0)
+            return { tmStart: null as string | null, tmEnd: null as string | null };
+          const tmStart = s.output_table[0]?.plant_start || null;
+          const tmEnd = s.output_table[s.output_table.length - 1]?.return || null;
+          return { tmStart, tmEnd };
+        };
+
+        const pumpAllocated = schedule.input_params.pump_start ? 1 : 0;
+        const tmQueue = schedule.tm_overrule ? schedule.tm_overrule - schedule.tm_count : 0;
+        const totalTmDeployed = schedule.tm_overrule ? schedule.tm_overrule : schedule.tm_count;
+        const pumpStartEnd = schedule.input_params.pump_start
+          ? `${formatTimeByPreference(schedule.input_params.pump_start)} to ${
+              calculatePumpEnd(schedule) ? formatTimeByPreference(calculatePumpEnd(schedule)!) : "-"
+            }`
+          : "-";
+        const { tmStart, tmEnd } = calculateTmTimes(schedule);
+        const tmStartEnd = tmStart && tmEnd ? `${formatTimeByPreference(tmStart)} to ${formatTimeByPreference(tmEnd)}` : "-";
+
+        rows.push([
+          index + 1,
+          formatDate(schedule.input_params.schedule_date),
+          schedule.schedule_no || "-",
+          schedule.client_name || "-",
+          schedule.project_name || "-",
+          getPumpSupplyType(schedule.type),
+          schedule.input_params.quantity,
+          pumpAllocated,
+          schedule.tm_count,
+          tmQueue,
+          totalTmDeployed,
+          pumpStartEnd,
+          tmStartEnd,
+          schedule.cancelled_by || "-",
+          schedule.cancellation_reason || "-",
+        ]);
+      });
+
+      return [
+        {
+          name: `Schedule Wise - ${formatDate(selectedDate)}`,
+          rows,
+        },
+      ];
+    },
+  }));
 
   if (!data || data.length === 0) {
     return (
@@ -344,3 +433,8 @@ export default function ScheduleWiseTable({ data, selectedDate }: ScheduleWiseTa
     </div>
   );
 }
+);
+
+ScheduleWiseTable.displayName = "ScheduleWiseTable";
+
+export default ScheduleWiseTable;

@@ -5,6 +5,7 @@ import { formatTimeByPreference, formatHoursAndMinutes } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
+import { forwardRef, useImperativeHandle } from "react";
 
 type Schedule = {
   _id: string;
@@ -71,6 +72,16 @@ type Pump = {
   status?: string;
 };
 
+export type TruckWiseTableExportSheet = {
+  name: string;
+  rows: (string | number)[][];
+  merges?: { s: { r: number; c: number }; e: { r: number; c: number } }[];
+};
+
+export type TruckWiseTableExportHandle = {
+  getExportSheets: () => TruckWiseTableExportSheet[];
+};
+
 type TruckWiseTableProps = {
   data: Schedule[];
   plantIdToName: Record<string, string>;
@@ -99,7 +110,8 @@ type TMSchedule = {
   }>;
 };
 
-export default function TruckWiseTable({ data, selectedDate }: TruckWiseTableProps) {
+const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProps>(
+  ({ data, selectedDate }: TruckWiseTableProps, exportRef) => {
   const { status } = useSession();
   const { fetchWithAuth } = useApiClient();
 
@@ -306,6 +318,90 @@ export default function TruckWiseTable({ data, selectedDate }: TruckWiseTablePro
   };
 
   const totals = calculateTotals();
+
+  // Build export sheets mirroring UI tables
+  useImperativeHandle(exportRef, () => ({
+    getExportSheets: () => {
+      // Build a single, side-by-side sheet with a shared TM No. column
+      const combinedRows: (string | number)[][] = [];
+      const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [];
+
+      // Define column blocks
+      const mainCols = [
+        "TM/LP/BP",
+        ...buildSlots().slice().reverse().map((s) => s.label),
+        "TOTAL USED HOURS",
+        "TOTAL UNUSED HOURS",
+      ];
+      const scheduleBlockCols = ["CUSTOMER NAME", "PROJECT", "TM ENGAGED HOURS"];
+
+      // Header rows
+      const superHeaderRow: (string | number)[] = [];
+      const headerRow: (string | number)[] = [];
+
+      // Shared first column
+      superHeaderRow.push("");
+      headerRow.push("TM No.");
+
+      // Main block super header and subheaders
+      superHeaderRow.push(`TRUCK WISE - ${formatDate(selectedDate)}`);
+      // Fill empties to match merged span
+      for (let i = 1; i < mainCols.length; i++) superHeaderRow.push("");
+      headerRow.push(...mainCols);
+
+      // Record merge for main block (row 0, columns 1..mainCols.length)
+      merges.push({ s: { r: 0, c: 1 }, e: { r: 0, c: mainCols.length } });
+
+      // Detail blocks super headers and subheaders
+      const ordinal = (n: number) => (n === 1 ? "1ST" : n === 2 ? "2ND" : n === 3 ? "3RD" : `${n}TH`);
+      let currentColStart = 1 + mainCols.length + 1; // after TM No (col0) and main block (col1..mainCols.length)
+      for (let scheduleNumber = 1; scheduleNumber <= 6; scheduleNumber++) {
+        superHeaderRow.push(`${ordinal(scheduleNumber)} SCHEDULE`);
+        // Fill empties to match merged span
+        for (let i = 1; i < scheduleBlockCols.length; i++) superHeaderRow.push("");
+        headerRow.push(...scheduleBlockCols);
+        // Merge this super header across its 3 columns
+        const startC = currentColStart - 1; // zero-based index for first col in this block
+        const endC = startC + scheduleBlockCols.length - 1;
+        merges.push({ s: { r: 0, c: startC }, e: { r: 0, c: endC } });
+        currentColStart += scheduleBlockCols.length;
+      }
+
+      combinedRows.push(superHeaderRow);
+      combinedRows.push(headerRow);
+
+      // Data rows aligned by TM No
+      allTrucks.forEach((tm) => {
+        const row: (string | number)[] = [];
+        row.push(tm.tmNo);
+        // Main block values
+        const slotUsed = tm.timeSlots
+          .slice()
+          .reverse()
+          .map((slot) => formatHoursAndMinutes(Math.max(0, 4 - slot.freeHours)) as unknown as number);
+        row.push(
+          tm.tmType,
+          ...slotUsed,
+          formatHoursAndMinutes(24 - tm.totalFreeHours) as unknown as number,
+          formatHoursAndMinutes(tm.totalFreeHours) as unknown as number
+        );
+        // Detail blocks for schedules 1..6
+        for (let scheduleNumber = 1; scheduleNumber <= 6; scheduleNumber++) {
+          const schedule = tm.schedules[scheduleNumber - 1];
+          row.push(
+            schedule?.customer || "-",
+            schedule?.project || "-",
+            schedule ? `${schedule.startTime} - ${schedule.endTime}` : "-"
+          );
+        }
+        combinedRows.push(row);
+      });
+
+      return [
+        { name: `Truck Wise - ${formatDate(selectedDate)}`, rows: combinedRows, merges },
+      ];
+    },
+  }));
 
   if (tmsLoading || pumpsLoading) {
     return (
@@ -550,4 +646,9 @@ export default function TruckWiseTable({ data, selectedDate }: TruckWiseTablePro
     </div>
   );
 }
+);
+
+TruckWiseTable.displayName = "TruckWiseTable";
+
+export default TruckWiseTable;
 
