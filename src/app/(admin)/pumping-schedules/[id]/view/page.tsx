@@ -769,7 +769,6 @@ export default function ScheduleViewPage() {
                           // Color coding based on pump type
                           const isLinePump = schedule.pump_type === "line";
                           const bgColor = isLinePump ? "bg-blue-500" : "bg-green-500";
-                          const textColor = "text-white";
 
                           return (
                             <div
