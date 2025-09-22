@@ -111,15 +111,7 @@ export default function PlantsContainer() {
       !contactNumber1Error &&
       !capacityError
     );
-  }, [
-    newPlant,
-    nameError,
-    contactName1Error,
-    contactName2Error,
-    contactNumber1Error,
-    contactNumber2Error,
-    capacityError,
-  ]);
+  }, [newPlant, nameError, contactName1Error, contactNumber1Error, capacityError]);
 
   // Form validation for edit modal
   const isEditFormValid = useMemo(() => {
