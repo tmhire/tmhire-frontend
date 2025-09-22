@@ -102,7 +102,7 @@ export default function PlantsContainer() {
     const contactName2 = newPlant.contact_name2?.trim() ?? "";
     const contactNumber2 = newPlant.contact_number2?.trim() ?? "";
     const coordinates = newPlant.coordinates?.trim() ?? "";
-    
+
     return (
       name !== "" &&
       location !== "" &&
@@ -336,7 +336,7 @@ export default function PlantsContainer() {
       } else {
         const numValue = Number(value);
         if (numValue < 1 || numValue > 999) {
-          setCapacityError("Capacity must be between 1 and 99 m³/hr");
+          setCapacityError("Capacity must be between 1 and 999 m³/hr");
         } else if (!Number.isInteger(numValue * 10)) {
           setCapacityError("Capacity can have maximum one decimal place");
         } else {
@@ -769,7 +769,9 @@ export default function PlantsContainer() {
                     type="number"
                     name="capacity"
                     placeholder="Enter capacity"
-                    value={newPlant?.capacity ? Math.ceil(newPlant.capacity / avgTMCap / 5) * 5 : ""}
+                    value={newPlant?.capacity
+                      ? Math.ceil(avgTMCap / (newPlant.capacity / 60) / 5) * 5
+                      : ""}
                     disabled
                     className="pr-28" // add right padding so text doesn't overlap
                   />
@@ -966,7 +968,9 @@ export default function PlantsContainer() {
                     type="number"
                     name="capacity"
                     placeholder="Enter plant capacity to calculate"
-                    value={editedPlant?.capacity ? Math.ceil(editedPlant.capacity / avgTMCap / 5) * 5 : ""}
+                    value={editedPlant?.capacity
+                      ? Math.ceil(avgTMCap / (editedPlant.capacity / 60) / 5) * 5
+                      : ""}
                     disabled
                     className="pr-28" // add right padding so text doesn't overlap
                   />
