@@ -10,7 +10,6 @@ import DatePickerInput from "@/components/form/input/DatePickerInput";
 import ScheduleWiseTable, { type ScheduleWiseTableExportHandle } from "./ScheduleWiseTable";
 import TruckWiseTable, { type TruckWiseTableExportHandle } from "./TruckWiseTable";
 import * as XLSX from "xlsx";
- 
 
 type Schedule = {
   _id: string;
@@ -71,7 +70,6 @@ export default function ReportsContainer() {
   const [city, setCity] = useState<string>(session?.city || "");
   const scheduleRef = useRef<ScheduleWiseTableExportHandle | null>(null);
   const truckRef = useRef<TruckWiseTableExportHandle | null>(null);
-  
 
   React.useEffect(() => {
     if (session && session?.user) {
@@ -101,7 +99,6 @@ export default function ReportsContainer() {
     enabled: status === "authenticated",
   });
 
-
   const plantIdToName = useMemo(() => {
     return (plants || []).reduce((acc, p) => {
       acc[p._id] = p.name;
@@ -113,8 +110,9 @@ export default function ReportsContainer() {
     if (!schedules) return [] as Schedule[];
     return schedules.filter((s) => {
       // Only show schedules with status "generated"
-      const matchesStatus = s.status === "generated";
-      
+      const matchesStatus =
+        reportType === "schedule-wise" ? s.status === "generated" || s.status === "canceled" : s.status === "generated";
+
       // Filter by selected date
       const matchesDate = !selectedDate || s.input_params.schedule_date === selectedDate;
 
@@ -130,22 +128,18 @@ export default function ReportsContainer() {
     );
   }
 
-
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
   };
 
   const handleExport = () => {
     const wb = XLSX.utils.book_new();
-    const sheets = reportType === "schedule-wise"
-      ? scheduleRef.current?.getExportSheets()
-      : truckRef.current?.getExportSheets();
+    const sheets =
+      reportType === "schedule-wise" ? scheduleRef.current?.getExportSheets() : truckRef.current?.getExportSheets();
     if (!sheets || sheets.length === 0) return;
     sheets.forEach((sheet) => {
       const ws = XLSX.utils.aoa_to_sheet(sheet.rows);
-      const safeName = (sheet.name || "Sheet")
-        .replace(/[\\\/:\*\?\[\]]/g, "-")
-        .slice(0, 31) || "Sheet";
+      const safeName = (sheet.name || "Sheet").replace(/[\\\/:\*\?\[\]]/g, "-").slice(0, 31) || "Sheet";
       XLSX.utils.book_append_sheet(wb, ws, safeName);
     });
     XLSX.writeFile(wb, `${reportType}-${selectedDate}.xlsx`);
@@ -175,7 +169,7 @@ export default function ReportsContainer() {
             </div>
           </div>
         </div>
-        
+
         {/* Report Type Selection */}
         <div className="flex items-center space-x-3">
           <span className="text-sm text-gray-500 dark:text-gray-400">Report Type:</span>
@@ -215,24 +209,17 @@ export default function ReportsContainer() {
       ) : (
         <div className="col-span-12">
           {reportType === "schedule-wise" ? (
-            <ScheduleWiseTable 
+            <ScheduleWiseTable
               ref={scheduleRef}
-              data={filtered} 
+              data={filtered}
               plantIdToName={plantIdToName}
               selectedDate={selectedDate}
             />
           ) : (
-            <TruckWiseTable 
-              ref={truckRef}
-              data={filtered} 
-              plantIdToName={plantIdToName}
-              selectedDate={selectedDate}
-            />
+            <TruckWiseTable ref={truckRef} data={filtered} plantIdToName={plantIdToName} selectedDate={selectedDate} />
           )}
         </div>
       )}
     </div>
   );
 }
-
-
