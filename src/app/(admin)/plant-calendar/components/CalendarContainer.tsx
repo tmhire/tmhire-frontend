@@ -129,7 +129,7 @@ function transformApiDataToPlantRows(
   // First, initialize rows for all plants
   plantMap.forEach((plantInfo, plantId) => {
     const effectiveAvgCap = avgTMCap && avgTMCap > 0 ? avgTMCap : 6; // fallback to 6 m³ if unavailable
-    const load_time = !!plantInfo.capacity ? Math.ceil(plantInfo.capacity / effectiveAvgCap / 5) * 5 : 5;
+    const load_time = !!plantInfo.capacity ? Math.ceil(effectiveAvgCap / (plantInfo.capacity / 60) / 5) * 5 : 5;
     plantIdToRow.set(plantId, {
       id: plantId,
       name: `${plantInfo.name}`,
@@ -140,10 +140,28 @@ function transformApiDataToPlantRows(
   });
 
   const assignItemTasks = (item: ApiItem, itemType: "mixer" | "pump") => {
-    const plantId = item.plant;
-    const plantInfo = plantMap.get(plantId);
+    // Normalize plant reference to a valid plant _id from /plants
+    let plantId = item.plant;
+    let plantInfo = plantMap.get(plantId);
+    if (!plantInfo) {
+      const matchedEntry = Array.from(plantMap.entries()).find(([, p]) => {
+        return (
+          p._id === plantId ||
+          p.name === plantId ||
+          `${p.name} (${p.location})` === plantId
+        );
+      });
+      if (matchedEntry) {
+        const [resolvedId, resolvedPlant] = matchedEntry;
+        plantId = resolvedId;
+        plantInfo = resolvedPlant;
+      } else {
+        // Skip if we cannot resolve this plant to a known plant id to avoid duplicates
+        return;
+      }
+    }
     const effectiveAvgCap = avgTMCap && avgTMCap > 0 ? avgTMCap : 6;
-    const load_time = !!plantInfo?.capacity ? Math.ceil(plantInfo.capacity / effectiveAvgCap / 5) * 5 : 5;
+    const load_time = !!plantInfo?.capacity ? Math.ceil(effectiveAvgCap / (plantInfo?.capacity / 60) / 5) * 5 : 5;
     if (!plantIdToRow.has(plantId)) {
       plantIdToRow.set(plantId, {
         id: plantId,
@@ -292,7 +310,7 @@ export default function CalendarContainer() {
 
   const filteredRows = rows.filter((row) => {
     const matchesSearch = row.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPlant = selectedPlant.length === 0 || selectedPlant.includes(row.name);
+    const matchesPlant = selectedPlant.length === 0 || selectedPlant.includes(row.id);
     const matchesClient =
       selectedClient.length === 0 || row.tasks.some((t) => t.client && selectedClient.includes(t.client));
     const matchesProject =
@@ -301,7 +319,10 @@ export default function CalendarContainer() {
     return matchesSearch && matchesPlant && matchesClient && matchesProject;
   });
 
-  const plants = Array.from(new Set(rows.map((r) => r.name)));
+  // Build plant options from /plants to avoid duplicates and keep a stable id/value
+  const plantOptions = useMemo(() => {
+    return (plantsData || []).map((p) => ({ id: p._id, name: p.name }));
+  }, [plantsData]);
   const clients = Array.from(new Set(rows.flatMap((r) => r.tasks.map((t) => t.client)).filter(Boolean))) as string[];
   const derivedTaskProjects = Array.from(
     new Set(rows.flatMap((r) => r.tasks.map((t) => t.project || t.client)).filter(Boolean))
@@ -457,11 +478,11 @@ export default function CalendarContainer() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="relative">
                     <SearchableDropdown
-                      options={plants}
+                      options={plantOptions}
                       value={selectedPlant}
                       onChange={(value) => setSelectedPlant(Array.isArray(value) ? value : [])}
-                      getOptionLabel={(o: string) => o}
-                      getOptionValue={(o: string) => o}
+                      getOptionLabel={(o: { id: string; name: string }) => o.name}
+                      getOptionValue={(o: { id: string; name: string }) => o.id}
                       label="Plant"
                       placeholder="All Plants"
                       multiple
