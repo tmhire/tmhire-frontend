@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, Filter, Calendar } from "lucide-react";
+import { Search, Filter, Calendar, ZoomIn, ZoomOut } from "lucide-react";
 import { useApiClient } from "@/hooks/useApiClient";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
@@ -187,8 +187,8 @@ const transformApiData = (apiData: ApiResponse, plantMap: Map<string, string>): 
         itemType === "mixer" && rawType === "work"
           ? "unload"
           : itemType === "pump" && rawType === "work"
-            ? "pump"
-            : rawType;
+          ? "pump"
+          : rawType;
       return {
         id: task.id,
         color: TASK_TYPE_COLORS[mappedType] || "bg-gray-500",
@@ -265,6 +265,18 @@ export default function CalendarContainer() {
   const [ganttData, setGanttData] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Zoom state
+  const zoomLevels = React.useMemo(
+    () => [
+      { id: "sm", colMinWidth: 36, timeFontSize: 8, pillFontSize: 9 },
+      { id: "md", colMinWidth: 48, timeFontSize: 10, pillFontSize: 10 },
+      { id: "lg", colMinWidth: 64, timeFontSize: 12, pillFontSize: 11 },
+      { id: "xl", colMinWidth: 80, timeFontSize: 14, pillFontSize: 12 },
+    ],
+    []
+  );
+  const [zoomIndex, setZoomIndex] = useState(0);
+  const currentZoom = zoomLevels[zoomIndex];
 
   // Dropdown states
   const [isItemFilterOpen, setIsItemFilterOpen] = useState(false);
@@ -527,7 +539,6 @@ export default function CalendarContainer() {
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 w-full">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between w-full mb-1 gap-4">
-
             {/* Header */}
             <div className=" w-1/3">
               <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Schedule Calendar</h2>
@@ -535,14 +546,13 @@ export default function CalendarContainer() {
                 Manage and monitor mixer schedules across all production lines
               </p>
             </div>
-
           </div>
         </div>
 
-            {/* Loading State */}
-            <div className="flex items-center justify-center h-64 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05]">
-              <div className="text-gray-500 dark:text-gray-400">Loading calendar data...</div>
-            </div>
+        {/* Loading State */}
+        <div className="flex items-center justify-center h-64 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05]">
+          <div className="text-gray-500 dark:text-gray-400">Loading calendar data...</div>
+        </div>
       </div>
     );
   }
@@ -565,538 +575,552 @@ export default function CalendarContainer() {
   }
 
   return (
-    <div className="w-full">
-      <div className="flex flex-wrap items-center justify-between gap-3 w-full">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between w-full mb-1 gap-4">
+    <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between w-full mb-1 gap-4">
+        {/* Header */}
+        <div className=" w-1/3">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Schedule Calendar</h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            Manage and monitor mixer schedules across all production lines
+          </p>
+        </div>
 
-          {/* Header */}
-          <div className=" w-1/3">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Schedule Calendar</h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Manage and monitor mixer schedules across all production lines
-            </p>
-          </div>
+        {/* Controls Bar */}
+        <div className="w-2/3 lg:w-auto bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4">
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+            {/* Left side - Search and Filters */}
+            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <input
+                  type="text"
+                  placeholder="Search mixers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none w-full sm:w-64"
+                />
+              </div>
 
-          {/* Controls Bar */}
-          <div className="w-2/3 lg:w-auto bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4">
-            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-              {/* Left side - Search and Filters */}
-              <div className="flex flex-col sm:flex-row gap-3 flex-1">
-                {/* Search */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <input
-                    type="text"
-                    placeholder="Search mixers..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none w-full sm:w-64"
-                  />
-                </div>
-
-                {/* Filter Toggle */}
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
+              {/* Filter Toggle */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  showFilters
                     ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
                     : "bg-white dark:bg-white/[0.05] border-gray-200 dark:border-white/[0.05] text-gray-700 dark:text-gray-300"
-                    } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
-                >
-                  <Filter className="h-4 w-4" />
-                  Filters
-                </button>
-              </div>
-
-              {/* Right side - Date Selection */}
-              <div className="flex items-center gap-3">
-                <div className="flex flex-row items-center justify-end gap-2 w-full">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Hour</label>
-                  <button
-                    onClick={() => setIsStartHourFilterOpen(!isStartHourFilterOpen)}
-                    className="px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                    title="Start Hour"
-                  >
-                    {`${String(customStartHour).padStart(2, "0")}:00`}
-                  </button>
-                  {isStartHourFilterOpen && (
-                    <div className="absolute z-20 mt-1 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-60 overflow-y-auto">
-                      <div className="p-2 text-gray-800 dark:text-white/90">
-                        {Array.from({ length: 24 }, (_, i) => (
-                          <button
-                            key={i}
-                            className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                            onClick={() => {
-                              setCustomStartHour(i);
-                              setIsStartHourFilterOpen(false);
-                            }}
-                          >
-                            {`${String(i).padStart(2, "0")}:00`}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <DatePickerInput value={selectedDate} onChange={handleDateChange} className="w-48" />
-                <button
-                  onClick={() => handleDateChange(new Date().toISOString().split("T")[0])}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.05] rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.08] transition-colors"
-                >
-                  <Calendar className="h-4 w-4" />
-                  Today
-                </button>
-              </div>
+                } hover:bg-gray-50 dark:hover:bg-white/[0.08]`}
+              >
+                <Filter className="h-4 w-4" />
+                Filters
+              </button>
             </div>
 
+            {/* Right side - Date Selection */}
+            <div className="flex items-center gap-3">
+              <div className="flex flex-row items-center justify-end gap-2 w-full">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Hour</label>
+                <button
+                  onClick={() => setIsStartHourFilterOpen(!isStartHourFilterOpen)}
+                  className="px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  title="Start Hour"
+                >
+                  {`${String(customStartHour).padStart(2, "0")}:00`}
+                </button>
+                {isStartHourFilterOpen && (
+                  <div className="absolute z-20 mt-1 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-60 overflow-y-auto">
+                    <div className="p-2 text-gray-800 dark:text-white/90">
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <button
+                          key={i}
+                          className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                          onClick={() => {
+                            setCustomStartHour(i);
+                            setIsStartHourFilterOpen(false);
+                          }}
+                        >
+                          {`${String(i).padStart(2, "0")}:00`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <DatePickerInput value={selectedDate} onChange={handleDateChange} className="w-48" />
+              <button
+                onClick={() => handleDateChange(new Date().toISOString().split("T")[0])}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.05] rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.08] transition-colors"
+              >
+                <Calendar className="h-4 w-4" />
+                Today
+              </button>
+            </div>
           </div>
         </div>
-        {/* Expandable Filters */}
-        {showFilters && (
-          <div className="w-full mb-1 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4">
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-              {/* Item Filter */}
-              <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  TM or Pump
-                </label>
-                <button
-                  onClick={() => setIsItemFilterOpen(!isItemFilterOpen)}
-                  className="dropdown-toggle w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                >
-                  {selectedItem === "all" ? "All Vehicles" : selectedItem === "mixer" ? "TMs" : "Pumps"}
-                </button>
-                <Dropdown isOpen={isItemFilterOpen} onClose={() => setIsItemFilterOpen(false)} className="w-full">
+      </div>
+      {/* Expandable Filters */}
+      {showFilters && (
+        <div className="w-full mb-1 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+            {/* Item Filter */}
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TM or Pump</label>
+              <button
+                onClick={() => setIsItemFilterOpen(!isItemFilterOpen)}
+                className="dropdown-toggle w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              >
+                {selectedItem === "all" ? "All Vehicles" : selectedItem === "mixer" ? "TMs" : "Pumps"}
+              </button>
+              <Dropdown isOpen={isItemFilterOpen} onClose={() => setIsItemFilterOpen(false)} className="w-full">
+                <div className="p-2 text-gray-800 dark:text-white/90">
+                  <button
+                    className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                    onClick={() => {
+                      setSelectedItem("all");
+                      setIsItemFilterOpen(false);
+                    }}
+                  >
+                    All Vehicles
+                  </button>
+                  <button
+                    className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                    onClick={() => {
+                      setSelectedItem("mixer");
+                      setIsItemFilterOpen(false);
+                    }}
+                  >
+                    TMs
+                  </button>
+                  <button
+                    className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                    onClick={() => {
+                      setSelectedItem("pump");
+                      setIsItemFilterOpen(false);
+                    }}
+                  >
+                    Pumps
+                  </button>
+                </div>
+              </Dropdown>
+            </div>
+
+            {/* Plant Filter */}
+            <div className="relative">
+              <SearchableDropdown
+                options={plants}
+                value={selectedPlant}
+                onChange={(value) => setSelectedPlant(Array.isArray(value) ? value : [])}
+                getOptionLabel={(o: string) => o}
+                getOptionValue={(o: string) => o}
+                label="Plant"
+                placeholder="All Plants"
+                multiple
+              />
+            </div>
+
+            {/* Client Filter */}
+            <div className="relative">
+              <SearchableDropdown
+                options={clients}
+                value={selectedClient}
+                onChange={(value) => setSelectedClient(Array.isArray(value) ? value : [])}
+                getOptionLabel={(o: string) => o}
+                getOptionValue={(o: string) => o}
+                label="Client"
+                placeholder="All Clients"
+                multiple
+              />
+            </div>
+
+            {/* Pump Filter */}
+            <div className="relative">
+              <SearchableDropdown
+                options={availablePumps}
+                value={selectedPump}
+                onChange={(value) => setSelectedPump(Array.isArray(value) ? value : [])}
+                getOptionLabel={(o: string) => o}
+                getOptionValue={(o: string) => o}
+                label="Pumps"
+                placeholder="All Pumps"
+                multiple
+              />
+            </div>
+
+            {/* TM Filter */}
+            <div className="relative">
+              <SearchableDropdown
+                options={availableTMs}
+                value={selectedTM}
+                onChange={(value) => setSelectedTM(Array.isArray(value) ? value : [])}
+                getOptionLabel={(o: string) => o}
+                getOptionValue={(o: string) => o}
+                label="Transit Mixers"
+                placeholder="All TMs"
+                multiple
+              />
+            </div>
+
+            {/* Projects Filter */}
+            <div className="relative">
+              <SearchableDropdown
+                options={availableProjects}
+                value={selectedProject}
+                onChange={(value) => setSelectedProject(Array.isArray(value) ? value : [])}
+                getOptionLabel={(o: string) => o}
+                getOptionValue={(o: string) => o}
+                label="Projects"
+                placeholder="All Projects"
+                multiple
+              />
+            </div>
+
+            {/* Time Format Filter */}
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Time Format</label>
+              <button
+                onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
+                className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              >
+                {timeFormat === "24h" ? "24-Hour Format" : "12-Hour Format"}
+              </button>
+              {isTimeFormatOpen && (
+                <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
                   <div className="p-2 text-gray-800 dark:text-white/90">
                     <button
                       className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                       onClick={() => {
-                        setSelectedItem("all");
-                        setIsItemFilterOpen(false);
+                        setCustomStartHour(0); // reset to 00:00
+                        setTimeFormat("24h");
+                        setIsTimeFormatOpen(false);
                       }}
                     >
-                      All Vehicles
+                      24-Hour Format
                     </button>
                     <button
                       className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                       onClick={() => {
-                        setSelectedItem("mixer");
-                        setIsItemFilterOpen(false);
+                        setCustomStartHour(0); // reset to 00:00
+                        setTimeFormat("12h");
+                        setIsTimeFormatOpen(false);
                       }}
                     >
-                      TMs
-                    </button>
-                    <button
-                      className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                      onClick={() => {
-                        setSelectedItem("pump");
-                        setIsItemFilterOpen(false);
-                      }}
-                    >
-                      Pumps
+                      12-Hour Format
                     </button>
                   </div>
-                </Dropdown>
-              </div>
-
-              {/* Plant Filter */}
-              <div className="relative">
-                <SearchableDropdown
-                  options={plants}
-                  value={selectedPlant}
-                  onChange={(value) => setSelectedPlant(Array.isArray(value) ? value : [])}
-                  getOptionLabel={(o: string) => o}
-                  getOptionValue={(o: string) => o}
-                  label="Plant"
-                  placeholder="All Plants"
-                  multiple
-                />
-              </div>
-
-              {/* Client Filter */}
-              <div className="relative">
-                <SearchableDropdown
-                  options={clients}
-                  value={selectedClient}
-                  onChange={(value) => setSelectedClient(Array.isArray(value) ? value : [])}
-                  getOptionLabel={(o: string) => o}
-                  getOptionValue={(o: string) => o}
-                  label="Client"
-                  placeholder="All Clients"
-                  multiple
-                />
-              </div>
-
-              {/* Pump Filter */}
-              <div className="relative">
-                <SearchableDropdown
-                  options={availablePumps}
-                  value={selectedPump}
-                  onChange={(value) => setSelectedPump(Array.isArray(value) ? value : [])}
-                  getOptionLabel={(o: string) => o}
-                  getOptionValue={(o: string) => o}
-                  label="Pumps"
-                  placeholder="All Pumps"
-                  multiple
-                />
-              </div>
-
-              {/* TM Filter */}
-              <div className="relative">
-                <SearchableDropdown
-                  options={availableTMs}
-                  value={selectedTM}
-                  onChange={(value) => setSelectedTM(Array.isArray(value) ? value : [])}
-                  getOptionLabel={(o: string) => o}
-                  getOptionValue={(o: string) => o}
-                  label="Transit Mixers"
-                  placeholder="All TMs"
-                  multiple
-                />
-              </div>
-
-              {/* Projects Filter */}
-              <div className="relative">
-                <SearchableDropdown
-                  options={availableProjects}
-                  value={selectedProject}
-                  onChange={(value) => setSelectedProject(Array.isArray(value) ? value : [])}
-                  getOptionLabel={(o: string) => o}
-                  getOptionValue={(o: string) => o}
-                  label="Projects"
-                  placeholder="All Projects"
-                  multiple
-                />
-              </div>
-
-              {/* Time Format Filter */}
-              <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Time Format
-                </label>
-                <button
-                  onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
-                  className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                >
-                  {timeFormat === "24h" ? "24-Hour Format" : "12-Hour Format"}
-                </button>
-                {isTimeFormatOpen && (
-                  <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
-                    <div className="p-2 text-gray-800 dark:text-white/90">
-                      <button
-                        className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                        onClick={() => {
-                          setCustomStartHour(0); // reset to 00:00
-                          setTimeFormat("24h");
-                          setIsTimeFormatOpen(false);
-                        }}
-                      >
-                        24-Hour Format
-                      </button>
-                      <button
-                        className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                        onClick={() => {
-                          setCustomStartHour(0); // reset to 00:00
-                          setTimeFormat("12h");
-                          setIsTimeFormatOpen(false);
-                        }}
-                      >
-                        12-Hour Format
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {/* Show custom start hour selector if 24h-custom is selected */}
-              </div>
+                </div>
+              )}
+              {/* Show custom start hour selector if 24h-custom is selected */}
             </div>
           </div>
-        )}
-
-        {/* Date Display */}
-        <div className="mb-1 w-full">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {new Date(selectedDate).toLocaleDateString("en-US", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}{" "}
-            -{" "}
-            {new Date(new Date(selectedDate).setDate(new Date(selectedDate).getDate() + 1)).toLocaleDateString(
-              "en-US",
-              {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              }
-            )}
-          </h2>
         </div>
+      )}
 
-        {/* Gantt Chart */}
-        <div className="relative rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] w-full ">
-          <div className="w-full overflow-x-auto">
-            <div className="min-w-full w-full">
-              {/* Time Header */}
-              <div className="flex border-b border-gray-300 dark:border-white/[0.05] sticky top-0 z-15 bg-white dark:bg-white/[0.03] pr-3">
-                {/* Serial Number Column */}
-                <div className="w-16 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] text-center flex-shrink-0">
-                  SNo
-                </div>
-                <div className="w-32 px-5 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] flex-shrink-0">
-                  Mixer ID
-                </div>
-                {getTimeSlots().map((time) => (
-                  <div
-                    key={time}
-                    className={`flex-1 px-1 py-3 text-center tracking-tight leading-tight font-medium text-gray-500 text-[8.5px] dark:text-gray-400 border-r ${time === 23
+      {/* Date Display */}
+      <div className="mb-1 w-full flex flex-row justify-between">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          {new Date(selectedDate).toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}{" "}
+          -{" "}
+          {new Date(new Date(selectedDate).setDate(new Date(selectedDate).getDate() + 1)).toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
+        </h2>
+        {/* Zoom Controls */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setZoomIndex((z) => Math.max(0, z - 1))}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 dark:border-white/[0.05] bg-white dark:bg-white/[0.05] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.08]"
+            title="Zoom out"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setZoomIndex((z) => Math.min(zoomLevels.length - 1, z + 1))}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 dark:border-white/[0.05] bg-white dark:bg-white/[0.05] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.08]"
+            title="Zoom in"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Scrollable Gantt Chart Container */}
+      <div className="relative rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] w-full max-w-[calc(100vw-48px)]">
+        {/* Inner wrapper that can grow horizontally */}
+        <div className="w-full overflow-x-auto">
+          <div className="min-w-full">
+            {" "}
+            {/* Changed from w-full to min-w-full */}
+            {/* Inner content grows but container scrolls */} {/* Time Header */}
+            <div className="flex border-b border-gray-300 dark:border-white/[0.05] sticky top-0 z-15 bg-white dark:bg-white/[0.03] pr-3 ">
+              {/* Serial Number Column */}
+              <div className="w-16 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] text-center flex-shrink-0">
+                SNo
+              </div>
+              <div className="w-32 px-5 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] flex-shrink-0">
+                Mixer ID
+              </div>
+              {getTimeSlots().map((time) => (
+                <div
+                  key={time}
+                  className={`flex-1 px-1 py-3 text-center tracking-tight leading-tight font-medium text-gray-500 dark:text-gray-400 border-r ${
+                    time === 23
                       ? "border-r-2 border-r-gray-400 dark:border-r-white/[0.2]"
                       : "border-gray-300 dark:border-white/[0.05]"
-                      } min-w-[40px]`}
+                  }`}
+                  style={{ minWidth: `${currentZoom.colMinWidth}px`, fontSize: `${currentZoom.timeFontSize}px` }}
+                >
+                  {formatTime(time)}
+                </div>
+              ))}
+              {/* Free Time Column */}
+              <div className="w-24 px-1 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center flex-shrink-0">
+                <div className="flex items-center justify-center gap-1">
+                  <span>Unused Hrs</span>
+                  <button
+                    onClick={() => setSortDirection(sortDirection === "desc" ? "asc" : "desc")}
+                    className=" hover:bg-gray-100 dark:hover:bg-white/[0.05] rounded transition-colors"
+                    title={`Sort ${sortDirection === "desc" ? "ascending" : "descending"}`}
                   >
-                    {formatTime(time)}
-                  </div>
-                ))}
-                {/* Free Time Column */}
-                <div className="w-24 px-1 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center flex-shrink-0">
-                  <div className="flex items-center justify-center gap-1">
-                    <span>Unused Hrs</span>
-                    <button
-                      onClick={() => setSortDirection(sortDirection === "desc" ? "asc" : "desc")}
-                      className=" hover:bg-gray-100 dark:hover:bg-white/[0.05] rounded transition-colors"
-                      title={`Sort ${sortDirection === "desc" ? "ascending" : "descending"}`}
-                    >
-                      {sortDirection === "desc" ? "↓" : "↑"}
-                    </button>
-                  </div>
+                    {sortDirection === "desc" ? "↓" : "↑"}
+                  </button>
                 </div>
               </div>
+            </div>
+            {/* Gantt Rows */}
+            <div className="divide-y divide-gray-400 dark:divide-white/[0.05] custom-scrollbar pr-[6.5px] overflow-y-auto max-h-96">
+              {filteredData.length === 0 ? (
+                <div className="flex items-center justify-center py-8 text-gray-500 dark:text-gray-400">
+                  No mixers found for the selected criteria
+                </div>
+              ) : (
+                // Sort data by free time in descending order, keeping TMs and pumps separate
+                [...filteredData]
+                  .sort((a, b) => {
+                    // Calculate free time for both items
+                    let freeTimeA = 24;
+                    let freeTimeB = 24;
 
-              {/* Gantt Rows */}
-              <div className="divide-y divide-gray-400 dark:divide-white/[0.05] custom-scrollbar pr-[6.5px] overflow-y-auto max-h-96">
-                {filteredData.length === 0 ? (
-                  <div className="flex items-center justify-center py-8 text-gray-500 dark:text-gray-400">
-                    No mixers found for the selected criteria
-                  </div>
-                ) : (
-                  // Sort data by free time in descending order, keeping TMs and pumps separate
-                  [...filteredData]
-                    .sort((a, b) => {
-                      // Calculate free time for both items
-                      let freeTimeA = 24;
-                      let freeTimeB = 24;
+                    a.tasks.forEach((task) => {
+                      freeTimeA -= calculateDuration(task.actualStart, task.actualEnd) / 60;
+                    });
+                    b.tasks.forEach((task) => {
+                      freeTimeB -= calculateDuration(task.actualStart, task.actualEnd) / 60;
+                    });
 
-                      a.tasks.forEach((task) => {
-                        freeTimeA -= calculateDuration(task.actualStart, task.actualEnd) / 60;
-                      });
-                      b.tasks.forEach((task) => {
-                        freeTimeB -= calculateDuration(task.actualStart, task.actualEnd) / 60;
-                      });
+                    freeTimeA = Math.round(freeTimeA);
+                    freeTimeB = Math.round(freeTimeB);
 
-                      freeTimeA = Math.round(freeTimeA);
-                      freeTimeB = Math.round(freeTimeB);
+                    // If both are same type, sort by free time based on sortDirection
+                    if (a.item === b.item) {
+                      return sortDirection === "desc" ? freeTimeB - freeTimeA : freeTimeA - freeTimeB;
+                    }
 
-                      // If both are same type, sort by free time based on sortDirection
-                      if (a.item === b.item) {
-                        return sortDirection === "desc" ? freeTimeB - freeTimeA : freeTimeA - freeTimeB;
+                    // Keep TMs and pumps separate by maintaining original order for different types
+                    return 0;
+                  })
+                  .map((item, idx) => {
+                    // --- NEW LOGIC FOR DYNAMIC TIMESLOTS ---
+
+                    const slots = getTimeSlots();
+                    const windowStart = slots[0];
+                    const windowEnd = slots[0] !== 0 ? (slots[slots.length - 1] % 24) + 25 : 24;
+                    // Helper to check if a time is within the window, considering wrap-around
+                    const isInWindow = (start: number, end: number) => {
+                      if (windowStart < windowEnd) {
+                        return end > windowStart && start < windowEnd;
+                      } else {
+                        // Wraps around midnight
+                        return end > windowStart || start < windowEnd;
                       }
-
-                      // Keep TMs and pumps separate by maintaining original order for different types
-                      return 0;
-                    })
-                    .map((item, idx) => {
-                      // --- NEW LOGIC FOR DYNAMIC TIMESLOTS ---
-
-                      const slots = getTimeSlots();
-                      const windowStart = slots[0];
-                      const windowEnd = slots[0] !== 0 ? (slots[slots.length - 1] % 24) + 25 : 24;
-                      // Helper to check if a time is within the window, considering wrap-around
-                      const isInWindow = (start: number, end: number) => {
-                        if (windowStart < windowEnd) {
-                          return end > windowStart && start < windowEnd;
-                        } else {
-                          // Wraps around midnight
-                          return end > windowStart || start < windowEnd;
-                        }
-                      };
-                      // Helper to get offset and width in the current window
-                      const getBarProps = (start: number, end: number) => {
-                        let barStart = start;
-                        let barEnd = end;
-                        if (windowStart < windowEnd) {
-                          barStart = Math.max(start, windowStart);
+                    };
+                    // Helper to get offset and width in the current window
+                    const getBarProps = (start: number, end: number) => {
+                      let barStart = start;
+                      let barEnd = end;
+                      if (windowStart < windowEnd) {
+                        barStart = Math.max(start, windowStart);
+                        barEnd = Math.min(end, windowEnd + 1);
+                      } else {
+                        // Wraps around midnight
+                        if (start < windowStart && end <= windowStart) {
+                          // Task is in the early part of the window (after midnight)
+                          barStart = start;
                           barEnd = Math.min(end, windowEnd + 1);
+                        } else if (start >= windowStart) {
+                          // Task is in the late part of the window (before midnight)
+                          barStart = Math.max(start, windowStart);
+                          barEnd = end;
                         } else {
-                          // Wraps around midnight
-                          if (start < windowStart && end <= windowStart) {
-                            // Task is in the early part of the window (after midnight)
-                            barStart = start;
-                            barEnd = Math.min(end, windowEnd + 1);
-                          } else if (start >= windowStart) {
-                            // Task is in the late part of the window (before midnight)
-                            barStart = Math.max(start, windowStart);
-                            barEnd = end;
-                          } else {
-                            // Task spans the wrap
-                            barStart = start;
-                            barEnd = end;
-                          }
+                          // Task spans the wrap
+                          barStart = start;
+                          barEnd = end;
                         }
-                        // Calculate offset and width in slots
-                        const offset = (barStart - windowStart + 24) % 24;
-                        let width = barEnd - barStart;
-                        // Clamp width to not exceed window
-                        if (width < 0) width = 0;
-                        // Clamp width so bar does not extend past the last visible slot
-                        if (offset + width > slots.length) {
-                          width = slots.length - offset;
-                          if (width < 0) width = 0;
-                        }
-                        return { offset, width };
-                      };
-
-                      // // --- Group tasks by client for background pills ---
-                      // const clientTaskGroups: Record<string, Task[]> = {};
-                      // item.tasks.forEach((task) => {
-                      //   if (!clientTaskGroups[task.client]) clientTaskGroups[task.client] = [];
-                      //   clientTaskGroups[task.client].push(task);
-                      // });
-
-                      function groupConsecutiveTasks(tasks: Task[]): Task[][] {
-                        if (!tasks.length) return [];
-
-                        // Ensure tasks are sorted by actualStart
-                        const sortedTasks = [...tasks].sort(
-                          (a, b) => new Date(a.actualStart).getTime() - new Date(b.actualStart).getTime()
-                        );
-
-                        const groups: Task[][] = [];
-                        let currentGroup: Task[] = [sortedTasks[0]];
-
-                        for (let i = 1; i < sortedTasks.length; i++) {
-                          const prevEnd = new Date(sortedTasks[i - 1].actualEnd).getTime();
-                          const currStart = new Date(sortedTasks[i].actualStart).getTime();
-
-                          // Check if current task starts exactly 1 minute after previous task ends
-                          if (currStart === prevEnd) {
-                            currentGroup.push(sortedTasks[i]);
-                          } else {
-                            groups.push(currentGroup);
-                            currentGroup = [sortedTasks[i]];
-                          }
-                        }
-
-                        // Push the last group
-                        groups.push(currentGroup);
-
-                        return groups;
                       }
-                      const uniqueTasks = groupConsecutiveTasks(item.tasks);
-                      // // --- Calculate Free Time ---
-                      // const busyIntervals: { start: number; end: number }[] = item.tasks
-                      //   .map((task) => {
-                      //     let s = new Date(task.actualStart).getTime() / 3600000;
-                      //     let e = new Date(task.actualEnd).getTime() / 3600000;
-                      //     if (windowStart < windowEnd) {
-                      //       s = Math.max(s, windowStart);
-                      //       e = Math.min(e, windowEnd + 1);
-                      //       if (e <= s) return null;
-                      //     } else {
-                      //       if (s < windowStart && e <= windowStart) {
-                      //         s = s;
-                      //         e = Math.min(e, windowEnd + 1);
-                      //         if (e <= s) return null;
-                      //       } else if (s >= windowStart) {
-                      //         s = Math.max(s, windowStart);
-                      //         e = e;
-                      //         if (e <= s) return null;
-                      //       } else {
-                      //         s = s;
-                      //         e = e;
-                      //       }
-                      //     }
-                      //     return { start: s, end: e };
-                      //   })
-                      //   .filter(Boolean) as { start: number; end: number }[];
-                      // busyIntervals.sort((a, b) => a.start - b.start);
-                      // const merged: { start: number; end: number }[] = [];
-                      // for (const interval of busyIntervals) {
-                      //   if (!merged.length || merged[merged.length - 1].end < interval.start) {
-                      //     merged.push({ ...interval });
-                      //   } else {
-                      //     merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, interval.end);
-                      //   }
-                      // }
-                      let freeTime = 24;
-                      item.tasks.forEach((task) => {
-                        freeTime -= calculateDuration(task.actualStart, task.actualEnd) / 60;
-                      });
-                      freeTime = Math.round(freeTime);
-                      return (
-                        <div key={item.id} className="flex group transition-colors white">
-                          {/* Serial Number */}
-                          <div className="w-16 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
-                            {idx + 1}
-                          </div>
-                          {/* Mixer Name */}
-                          <div
-                            className={`w-32 px-5 py-1  ${(item.item === "pump" && item.type && typeRowColors[item.type]) || ""
-                              } 
-                          ${(item.item === "mixer" && typeRowColors["tm"]) || ""
-                              }  text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0`}
-                          >
-                            {item.name.length > 13 ? ".." + item.name.slice(-13) : item.name}
-                            {/* {item.name} */}
-                          </div>
-                          {/* Time Slots */}
-                          <div className="flex-1 flex relative">
-                            {/* Render background pills for each client */}
-                            {uniqueTasks.map((tasks, i) => {
-                              // Find earliest start and latest end for this client
-                              const starts = tasks.map((t) => new Date(t.actualStart).getTime());
-                              const ends = tasks.map((t) => new Date(t.actualEnd).getTime());
-                              const minStart =
-                                (Math.min(...starts) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
-                              const maxEnd =
-                                (Math.max(...ends) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
+                      // Calculate offset and width in slots
+                      const offset = (barStart - windowStart + 24) % 24;
+                      let width = barEnd - barStart;
+                      // Clamp width to not exceed window
+                      if (width < 0) width = 0;
+                      // Clamp width so bar does not extend past the last visible slot
+                      if (offset + width > slots.length) {
+                        width = slots.length - offset;
+                        if (width < 0) width = 0;
+                      }
+                      return { offset, width };
+                    };
 
-                              if (!isInWindow(minStart, maxEnd)) return null;
-                              const { offset, width } = getBarProps(minStart, maxEnd);
-                              if (width <= 0) return null;
-                              // Get client color from clientColors map
-                              const clientColor = clientColors.get(tasks[0].client) || "bg-gray-300";
-                              const timeSlotsLength = getTimeSlots().length;
-                              return (
-                                <Tooltip
+                    // // --- Group tasks by client for background pills ---
+                    // const clientTaskGroups: Record<string, Task[]> = {};
+                    // item.tasks.forEach((task) => {
+                    //   if (!clientTaskGroups[task.client]) clientTaskGroups[task.client] = [];
+                    //   clientTaskGroups[task.client].push(task);
+                    // });
+
+                    function groupConsecutiveTasks(tasks: Task[]): Task[][] {
+                      if (!tasks.length) return [];
+
+                      // Ensure tasks are sorted by actualStart
+                      const sortedTasks = [...tasks].sort(
+                        (a, b) => new Date(a.actualStart).getTime() - new Date(b.actualStart).getTime()
+                      );
+
+                      const groups: Task[][] = [];
+                      let currentGroup: Task[] = [sortedTasks[0]];
+
+                      for (let i = 1; i < sortedTasks.length; i++) {
+                        const prevEnd = new Date(sortedTasks[i - 1].actualEnd).getTime();
+                        const currStart = new Date(sortedTasks[i].actualStart).getTime();
+
+                        // Check if current task starts exactly 1 minute after previous task ends
+                        if (currStart === prevEnd) {
+                          currentGroup.push(sortedTasks[i]);
+                        } else {
+                          groups.push(currentGroup);
+                          currentGroup = [sortedTasks[i]];
+                        }
+                      }
+
+                      // Push the last group
+                      groups.push(currentGroup);
+
+                      return groups;
+                    }
+                    const uniqueTasks = groupConsecutiveTasks(item.tasks);
+                    // // --- Calculate Free Time ---
+                    // const busyIntervals: { start: number; end: number }[] = item.tasks
+                    //   .map((task) => {
+                    //     let s = new Date(task.actualStart).getTime() / 3600000;
+                    //     let e = new Date(task.actualEnd).getTime() / 3600000;
+                    //     if (windowStart < windowEnd) {
+                    //       s = Math.max(s, windowStart);
+                    //       e = Math.min(e, windowEnd + 1);
+                    //       if (e <= s) return null;
+                    //     } else {
+                    //       if (s < windowStart && e <= windowStart) {
+                    //         s = s;
+                    //         e = Math.min(e, windowEnd + 1);
+                    //         if (e <= s) return null;
+                    //       } else if (s >= windowStart) {
+                    //         s = Math.max(s, windowStart);
+                    //         e = e;
+                    //         if (e <= s) return null;
+                    //       } else {
+                    //         s = s;
+                    //         e = e;
+                    //       }
+                    //     }
+                    //     return { start: s, end: e };
+                    //   })
+                    //   .filter(Boolean) as { start: number; end: number }[];
+                    // busyIntervals.sort((a, b) => a.start - b.start);
+                    // const merged: { start: number; end: number }[] = [];
+                    // for (const interval of busyIntervals) {
+                    //   if (!merged.length || merged[merged.length - 1].end < interval.start) {
+                    //     merged.push({ ...interval });
+                    //   } else {
+                    //     merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, interval.end);
+                    //   }
+                    // }
+                    let freeTime = 24;
+                    item.tasks.forEach((task) => {
+                      freeTime -= calculateDuration(task.actualStart, task.actualEnd) / 60;
+                    });
+                    freeTime = Math.round(freeTime);
+                    return (
+                      <div key={item.id} className="flex group transition-colors white">
+                        {/* Serial Number */}
+                        <div className="w-16 px-2 py-1 text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
+                          {idx + 1}
+                        </div>
+                        {/* Mixer Name */}
+                        <div
+                          className={`w-32 px-5 py-1  ${
+                            (item.item === "pump" && item.type && typeRowColors[item.type]) || ""
+                          }
+                               
+                          ${
+                            (item.item === "mixer" && typeRowColors["tm"]) || ""
+                          }  text-gray-700 text-xs dark:text-white/90 border-r border-gray-300 dark:border-white/[0.05] flex items-center flex-shrink-0`}
+                        >
+                          {item.name.length > 13 ? ".." + item.name.slice(-13) : item.name}
+                          {/* {item.name} */}
+                        </div>
+                        {/* Time Slots */}
+                        <div className="flex-1 flex relative">
+                          {/* Render background pills for each client */}
+                          {uniqueTasks.map((tasks, i) => {
+                            // Find earliest start and latest end for this client
+                            const starts = tasks.map((t) => new Date(t.actualStart).getTime());
+                            const ends = tasks.map((t) => new Date(t.actualEnd).getTime());
+                            const minStart =
+                              (Math.min(...starts) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
+                            const maxEnd =
+                              (Math.max(...ends) - new Date(`${selectedDate}T00:00:00.000Z`).getTime()) / 3600000;
+
+                            if (!isInWindow(minStart, maxEnd)) return null;
+                            const { offset, width } = getBarProps(minStart, maxEnd);
+                            if (width <= 0) return null;
+                            // Get client color from clientColors map
+                            const clientColor = clientColors.get(tasks[0].client) || "bg-gray-300";
+                            const timeSlotsLength = getTimeSlots().length;
+                            return (
+                              <Tooltip
+                                key={tasks[0].client + i}
+                                content={`Schedule No.: ${tasks[0].schedule_no}\nClient: ${tasks[0].client}\nProject: ${
+                                  tasks[0].project
+                                }\n${formatDateTimeForTooltip(tasks[0].actualStart)} to ${formatDateTimeForTooltip(
+                                  tasks[tasks.length - 1].actualEnd
+                                )}\nDuration: ${formatHoursAndMinutes(width)}`}
+                              >
+                                <div
                                   key={tasks[0].client + i}
-                                  content={`Schedule No.: ${tasks[0].schedule_no}\nClient: ${tasks[0].client
-                                    }\nProject: ${tasks[0].project}\n${formatDateTimeForTooltip(
-                                      tasks[0].actualStart
-                                    )} to ${formatDateTimeForTooltip(
-                                      tasks[tasks.length - 1].actualEnd
-                                    )}\nDuration: ${formatHoursAndMinutes(width)}`}
+                                  className={`absolute - h-6 rounded ${clientColor} opacity-90 z-0 truncate`}
+                                  style={{
+                                    left: `${(offset / timeSlotsLength) * 100 - 0.25}%`,
+                                    width: `${(width / timeSlotsLength) * 100 + 0.5}%`,
+                                    zIndex: 1,
+                                  }}
                                 >
-                                  <div
-                                    key={tasks[0].client + i}
-                                    className={`absolute - h-6 rounded ${clientColor} opacity-90 z-0`}
-                                    style={{
-                                      left: `${(offset / timeSlotsLength) * 100 - 0.25}%`,
-                                      width: `${(width / timeSlotsLength) * 100 + 0.5}%`,
-                                      zIndex: 1,
-                                    }}
+                                  <span
+                                    className="text-white items-center justify-center flex h-full truncate"
+                                    style={{ fontSize: `${currentZoom.pillFontSize}px` }}
                                   >
-                                    <span className="text-white text-[10px] items-center justify-center flex h-full">
-                                      {`${(tasks[0].client || "").slice(0, 5)}-${(tasks[0].project || "").slice(
-                                        0,
-                                        5
-                                      )}`}
-                                    </span>
-                                  </div>
-                                </Tooltip>
-                              );
-                            })}
-                            {/* Render bars for each task by type that overlaps the window */}
-                            {/* {item.tasks.map((task, i) => {
+                                    {`${(tasks[0].client || "").slice(0, 5)}-${(tasks[0].project || "").slice(0, 5)}`}
+                                  </span>
+                                </div>
+                              </Tooltip>
+                            );
+                          })}
+                          {/* Render bars for each task by type that overlaps the window */}
+                          {/* {item.tasks.map((task, i) => {
                               const start =
                                 (new Date(task.actualStart).getTime() -
                                   new Date(`${selectedDate}T00:00:00.000Z`).getTime()) /
@@ -1137,87 +1161,88 @@ export default function CalendarContainer() {
                                 </Tooltip>
                               );
                             })} */}
-                            {/* Render slot borders */}
-                            {slots.map((time) => (
-                              <div
-                                key={time}
-                                className={`flex-1 h-6 border-r ${time === 23
+                          {/* Render slot borders */}
+                          {slots.map((time) => (
+                            <div
+                              key={time}
+                              className={`flex-1 h-6 border-r ${
+                                time === 23
                                   ? "border-r-2 border-r-gray-400 dark:border-r-white/[0.2]"
                                   : "border-gray-300 dark:border-white/[0.05]"
-                                  } relative min-w-[40px]`}
-                              />
-                            ))}
-                          </div>
-                          {/* Free Time */}
-                          <div className="w-24 px-1 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
-                            {freeTime}
-                          </div>
+                              } relative`}
+                              style={{ minWidth: `${currentZoom.colMinWidth}px` }}
+                            />
+                          ))}
                         </div>
-                      );
-                    })
-                )}
-              </div>
+                        {/* Free Time */}
+                        <div className="w-24 px-1 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
+                          {freeTime}
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
             </div>
           </div>
         </div>
-        {/* Legends: Client and Task Types side by side */}
-        <div className="mt-1 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4 w-full">
-          <div className="flex flex-wrap md:flex-nowrap gap-4 w-full">
-            {/* Client Legend - left half */}
-            <div className="flex-1 min-w-[200px] md:border-r md:pr-6 border-gray-200 dark:border-white/[0.05]">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Clients</h3>
-              <div className="flex flex-wrap gap-4">
-                {clientLegend.map(({ name }) => {
-                  const stats = clientStats[name];
-                  let timeString = "0m";
-                  if (stats) {
-                    const hours = Math.floor(stats.totalMinutes / 60);
-                    const minutes = stats.totalMinutes % 60;
-                    timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-                  }
-                  // Get client color from clientColors map
-                  const color = clientColors.get(name) || "bg-gray-300";
-                  return (
-                    <div key={name} className="flex flex-col items-start gap-1 min-w-[160px]">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-4 h-4 ${color} rounded`}></div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">{name}</span>
+      </div>
+      {/* Legends: Client and Task Types side by side */}
+      <div className="mt-1 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-white/[0.05] p-4 w-full">
+        <div className="flex flex-wrap md:flex-nowrap gap-4 w-full">
+          {/* Client Legend - left half */}
+          <div className="flex-1 min-w-[200px] md:border-r md:pr-6 border-gray-200 dark:border-white/[0.05]">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Clients</h3>
+            <div className="flex flex-wrap gap-4">
+              {clientLegend.map(({ name }) => {
+                const stats = clientStats[name];
+                let timeString = "0m";
+                if (stats) {
+                  const hours = Math.floor(stats.totalMinutes / 60);
+                  const minutes = stats.totalMinutes % 60;
+                  timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                }
+                // Get client color from clientColors map
+                const color = clientColors.get(name) || "bg-gray-300";
+                return (
+                  <div key={name} className="flex flex-col items-start gap-1 min-w-[160px]">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-4 h-4 ${color} rounded`}></div>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">{name}</span>
+                    </div>
+                    <div className="ml-6 text-xs text-gray-500 dark:text-gray-400">
+                      <div>
+                        Total Scheduled: <span className="font-medium">{stats ? timeString : "0m"}</span>
                       </div>
-                      <div className="ml-6 text-xs text-gray-500 dark:text-gray-400">
-                        <div>
-                          Total Scheduled: <span className="font-medium">{stats ? timeString : "0m"}</span>
-                        </div>
-                        <div>
-                          Mixers Used: <span className="font-medium">{stats ? stats.mixers.size : 0}</span>
-                        </div>
-                        {/* <div>
+                      <div>
+                        Mixers Used: <span className="font-medium">{stats ? stats.mixers.size : 0}</span>
+                      </div>
+                      {/* <div>
                             Schedules: <span className="font-medium">{stats ? stats.schedules : 0}</span>
                           </div> */}
-                      </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
-            {/* Vehicle Type Legend - right half */}
-            <div className="flex-1 min-w-[200px] md:pl-6">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Vehicle Types</h3>
-              <div className="flex flex-wrap gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-yellow-500/70"></div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Transit Mixer</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-blue-500/70"></div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Line Pump</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-green-500/70"></div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Boom Pump</span>
-                </div>
-                <div className="mt-2 w-full text-xs text-gray-500 dark:text-gray-400">
-                  Note: The vertical dark border in the timeline indicates day separation at 00:00
-                </div>
+          </div>
+          {/* Vehicle Type Legend - right half */}
+          <div className="flex-1 min-w-[200px] md:pl-6">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Vehicle Types</h3>
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-yellow-500/70"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Transit Mixer</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-blue-500/70"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Line Pump</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-green-500/70"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Boom Pump</span>
+              </div>
+              <div className="mt-2 w-full text-xs text-gray-500 dark:text-gray-400">
+                Note: The vertical dark border in the timeline indicates day separation at 00:00
               </div>
             </div>
           </div>

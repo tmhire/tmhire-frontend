@@ -790,18 +790,17 @@ export default function ScheduleViewPage() {
                           // Color coding based on pump type
                           const isLinePump = schedule.pump_type === "line";
                           const bgColor = isLinePump ? "bg-blue-500" : "bg-green-500";
-                          const textColor = "text-white";
 
                           return (
                             <div
                               className={`flex w-fit rounded-md border-2 border-black shadow items-center gap-2 pr-2  ${bgColor}`}
                             >
                               <label
-                                className={`flex flex-col justify-between bg-blue-700 rounded-l-sm p-2 text-[8px] ${textColor}`}
+                                className={`flex flex-col justify-between bg-blue-700 rounded-l-sm p-2 text-[8px]`}
                               >
-                                <span className="text-xs text-white-400">{isLinePump ? "LINE" : "BOOM"}</span>
+                                <span className="text-xs text-white">{isLinePump ? "LINE" : "BOOM"}</span>
                               </label>
-                              <label className={`p-1 px-1 font-mono text-sm font-medium items-center text-white`}>
+                              <label className={`p-1 px-1 font-mono text-sm font-medium items-center text-black`}>
                                 {pump.identifier}
                               </label>
                             </div>

@@ -92,67 +92,87 @@ export default function PlantsContainer() {
   const [capacityError, setCapacityError] = useState<string>("");
   const [editCapacityError, setEditCapacityError] = useState<string>("");
 
-  // Form validation for create modal
+  // Create modal validation
   const isCreateFormValid = useMemo(() => {
+    const name = newPlant.name?.trim() ?? "";
+    const location = newPlant.location?.trim() ?? "";
+    const address = newPlant.address?.trim() ?? "";
+    const contactName1 = newPlant.contact_name1?.trim() ?? "";
+    const contactNumber1 = newPlant.contact_number1?.trim() ?? "";
+    const contactName2 = newPlant.contact_name2?.trim() ?? "";
+    const contactNumber2 = newPlant.contact_number2?.trim() ?? "";
+    const coordinates = newPlant.coordinates?.trim() ?? "";
+
     return (
-      newPlant.name.trim() !== "" &&
-      newPlant.location.trim() !== "" &&
-      newPlant.address.trim() !== "" &&
-      newPlant.contact_name1.trim() !== "" &&
-      newPlant.contact_number1.trim() !== "" &&
-      (!newPlant.capacity || (newPlant.capacity > 0 && newPlant.capacity <= 99)) &&
-      validateName(newPlant.name.trim()) &&
-      validateName(newPlant.contact_name1.trim()) &&
-      validateMobile(newPlant.contact_number1.trim()) &&
-      validateAddress(newPlant.address.trim()) &&
-      (newPlant.coordinates === "" || (newPlant.coordinates && validateCoordinates(newPlant.coordinates.trim()))) &&
+      name !== "" &&
+      location !== "" &&
+      address !== "" &&
+      contactName1 !== "" &&
+      contactNumber1 !== "" &&
+      (!newPlant.capacity || (newPlant.capacity > 0 && newPlant.capacity <= 999)) &&
+      validateName(name) &&
+      validateName(contactName1) &&
+      validateMobile(contactNumber1) &&
+      validateAddress(address) &&
+      (coordinates === "" || validateCoordinates(coordinates)) &&
+      (contactName2 === "" || validateName(contactName2)) &&
+      (contactNumber2 === "" || validateMobile(contactNumber2)) &&
       !nameError &&
       !contactName1Error &&
       !contactNumber1Error &&
-      !capacityError
+      !capacityError &&
+      (contactName2 === "" || !contactName2Error) &&
+      (contactNumber2 === "" || !contactNumber2Error)
     );
   }, [
     newPlant,
     nameError,
     contactName1Error,
-    contactName2Error,
     contactNumber1Error,
+    contactName2Error,
     contactNumber2Error,
     capacityError,
   ]);
 
-  // Form validation for edit modal
+
+  // Edit modal validation
   const isEditFormValid = useMemo(() => {
+    const name = editedPlant.name?.trim() ?? "";
+    const location = editedPlant.location?.trim() ?? "";
+    const address = editedPlant.address?.trim() ?? "";
+    const contactName1 = editedPlant.contact_name1?.trim() ?? "";
+    const contactNumber1 = editedPlant.contact_number1?.trim() ?? "";
+    const contactName2 = editedPlant.contact_name2?.trim() ?? "";
+    const contactNumber2 = editedPlant.contact_number2?.trim() ?? "";
+    const coordinates = editedPlant.coordinates?.trim() ?? "";
+
     return (
-      editedPlant.name.trim() !== "" &&
-      editedPlant.location.trim() !== "" &&
-      editedPlant.address.trim() !== "" &&
-      editedPlant.contact_name1.trim() !== "" &&
-      editedPlant.contact_number1.trim() !== "" &&
-      (!editedPlant.capacity || (editedPlant.capacity > 0 && editedPlant.capacity <= 99)) &&
-      validateName(editedPlant.name.trim()) &&
-      validateName(editedPlant.contact_name1.trim()) &&
-      validateMobile(editedPlant.contact_number1.trim()) &&
-      validateAddress(editedPlant.address.trim()) &&
-      (editedPlant.coordinates === "" ||
-        (editedPlant.coordinates && validateCoordinates(editedPlant.coordinates.trim()))) &&
-      (editedPlant.contact_name2 === "" ||
-        (editedPlant.contact_name2 && validateName(editedPlant.contact_name2.trim()))) &&
-      (editedPlant.contact_number2 === "" ||
-        (editedPlant.contact_number2 && validateMobile(editedPlant.contact_number2.trim()))) &&
+      name !== "" &&
+      location !== "" &&
+      address !== "" &&
+      contactName1 !== "" &&
+      contactNumber1 !== "" &&
+      (!editedPlant.capacity || (editedPlant.capacity > 0 && editedPlant.capacity <= 999)) &&
+      validateName(name) &&
+      validateName(contactName1) &&
+      validateMobile(contactNumber1) &&
+      validateAddress(address) &&
+      (coordinates === "" || validateCoordinates(coordinates)) &&
+      (contactName2 === "" || validateName(contactName2)) &&
+      (contactNumber2 === "" || validateMobile(contactNumber2)) &&
       !editNameError &&
       !editContactName1Error &&
-      !editContactName2Error &&
       !editContactNumber1Error &&
-      !editContactNumber2Error &&
-      !editCapacityError
+      !editCapacityError &&
+      (contactName2 === "" || !editContactName2Error) &&
+      (contactNumber2 === "" || !editContactNumber2Error)
     );
   }, [
     editedPlant,
     editNameError,
     editContactName1Error,
-    editContactName2Error,
     editContactNumber1Error,
+    editContactName2Error,
     editContactNumber2Error,
     editCapacityError,
   ]);
@@ -316,7 +336,7 @@ export default function PlantsContainer() {
       } else {
         const numValue = Number(value);
         if (numValue < 1 || numValue > 999) {
-          setCapacityError("Capacity must be between 1 and 99 m³/hr");
+          setCapacityError("Capacity must be between 1 and 999 m³/hr");
         } else if (!Number.isInteger(numValue * 10)) {
           setCapacityError("Capacity can have maximum one decimal place");
         } else {
@@ -738,7 +758,7 @@ export default function PlantsContainer() {
 
             <div className="w-full">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex flex-row justify-between">
-                Loading Time (min){" "}
+                Loading Time /TM (min)
                 {newPlant?.capacity && (
                   <span className="text-[10px] text-gray-500 block">Using Avg TM Cap: {avgTMCap}</span>
                 )}
@@ -749,7 +769,9 @@ export default function PlantsContainer() {
                     type="number"
                     name="capacity"
                     placeholder="Enter capacity"
-                    value={newPlant?.capacity ? Math.ceil(newPlant.capacity / avgTMCap / 5) * 5 : ""}
+                    value={newPlant?.capacity
+                      ? Math.ceil(avgTMCap / (newPlant.capacity / 60) / 5) * 5
+                      : ""}
                     disabled
                     className="pr-28" // add right padding so text doesn't overlap
                   />
@@ -936,7 +958,7 @@ export default function PlantsContainer() {
               </div>
               <div className="w-full">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex flex-row justify-between">
-                  Loading Time (min){" "}
+                  Loading Time /TM (min)
                   {editedPlant?.capacity && (
                     <span className="text-[10px] text-gray-500 block">Using Avg TM Cap: {avgTMCap}</span>
                   )}
@@ -946,7 +968,9 @@ export default function PlantsContainer() {
                     type="number"
                     name="capacity"
                     placeholder="Enter plant capacity to calculate"
-                    value={editedPlant?.capacity ? Math.ceil(editedPlant.capacity / avgTMCap / 5) * 5 : ""}
+                    value={editedPlant?.capacity
+                      ? Math.ceil(avgTMCap / (editedPlant.capacity / 60) / 5) * 5
+                      : ""}
                     disabled
                     className="pr-28" // add right padding so text doesn't overlap
                   />

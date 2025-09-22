@@ -88,19 +88,22 @@ const buildHourlyUtilization = (
   const dayEnd = new Date(dayStart + 86400000).getTime(); // 24(hour) * 60(minutes) * 60(seconds) * 1000(ms) = 84600000
 
   // Count TMs per hour
-  tasks.forEach((task) => {
-    const startMs = new Date(task.actualStart).getTime();
-    const endMs = new Date(task.actualEnd).getTime();
-    const taskStartHour = Math.floor((Math.max(startMs, dayStart) - dayStart) / (1000 * 60 * 60));
-    const taskEndHour = Math.ceil((Math.min(endMs, dayEnd) - dayStart) / (1000 * 60 * 60));
+  // Only count TM load tasks for utilization
+  tasks
+    .filter((task) => task.type === "load")
+    .forEach((task) => {
+      const startMs = new Date(task.actualStart).getTime();
+      const endMs = new Date(task.actualEnd).getTime();
+      const taskStartHour = Math.floor((Math.max(startMs, dayStart) - dayStart) / (1000 * 60 * 60));
+      const taskEndHour = Math.ceil((Math.min(endMs, dayEnd) - dayStart) / (1000 * 60 * 60));
 
-    // Increment counter for each hour this task spans
-    for (let hour = taskStartHour; hour < taskEndHour; hour++) {
-      if (hour >= 0 && hour < 24) {
-        hourlyUtilization[hour]++;
+      // Increment counter for each hour this task spans
+      for (let hour = taskStartHour; hour < taskEndHour; hour++) {
+        if (hour >= 0 && hour < 24) {
+          hourlyUtilization[hour]++;
+        }
       }
-    }
-  });
+    });
 
   // Convert to fraction display format
   return hourlyUtilization;
@@ -125,10 +128,11 @@ function transformApiDataToPlantRows(
 
   // First, initialize rows for all plants
   plantMap.forEach((plantInfo, plantId) => {
-    const load_time = !!plantInfo.capacity ? Math.ceil(plantInfo.capacity / avgTMCap / 5) * 5 : 5;
+    const effectiveAvgCap = avgTMCap && avgTMCap > 0 ? avgTMCap : 6; // fallback to 6 m³ if unavailable
+    const load_time = !!plantInfo.capacity ? Math.ceil(effectiveAvgCap / (plantInfo.capacity / 60) / 5) * 5 : 5;
     plantIdToRow.set(plantId, {
       id: plantId,
-      name: `${plantInfo.name} (${plantInfo.location})`,
+      name: `${plantInfo.name}`,
       tm_per_hour: 60 / load_time,
       tasks: [],
       hourlyUtilization: Array.from({ length: 24 }, () => 0),
@@ -136,9 +140,24 @@ function transformApiDataToPlantRows(
   });
 
   const assignItemTasks = (item: ApiItem, itemType: "mixer" | "pump") => {
-    const plantId = item.plant;
-    const plantInfo = plantMap.get(plantId);
-    const load_time = !!plantInfo?.capacity ? Math.ceil(plantInfo.capacity / avgTMCap / 5) * 5 : 5;
+    // Normalize plant reference to a valid plant _id from /plants
+    let plantId = item.plant;
+    let plantInfo = plantMap.get(plantId);
+    if (!plantInfo) {
+      const matchedEntry = Array.from(plantMap.entries()).find(([, p]) => {
+        return p._id === plantId || p.name === plantId || `${p.name} (${p.location})` === plantId;
+      });
+      if (matchedEntry) {
+        const [resolvedId, resolvedPlant] = matchedEntry;
+        plantId = resolvedId;
+        plantInfo = resolvedPlant;
+      } else {
+        // Skip if we cannot resolve this plant to a known plant id to avoid duplicates
+        return;
+      }
+    }
+    const effectiveAvgCap = avgTMCap && avgTMCap > 0 ? avgTMCap : 6;
+    const load_time = !!plantInfo?.capacity ? Math.ceil(effectiveAvgCap / (plantInfo?.capacity / 60) / 5) * 5 : 5;
     if (!plantIdToRow.has(plantId)) {
       plantIdToRow.set(plantId, {
         id: plantId,
@@ -287,7 +306,7 @@ export default function CalendarContainer() {
 
   const filteredRows = rows.filter((row) => {
     const matchesSearch = row.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPlant = selectedPlant.length === 0 || selectedPlant.includes(row.name);
+    const matchesPlant = selectedPlant.length === 0 || selectedPlant.includes(row.id);
     const matchesClient =
       selectedClient.length === 0 || row.tasks.some((t) => t.client && selectedClient.includes(t.client));
     const matchesProject =
@@ -296,14 +315,18 @@ export default function CalendarContainer() {
     return matchesSearch && matchesPlant && matchesClient && matchesProject;
   });
 
-  const plants = Array.from(new Set(rows.map((r) => r.name)));
+  // Build plant options from /plants to avoid duplicates and keep a stable id/value
+  const plantOptions = useMemo(() => {
+    return (plantsData || []).map((p) => ({ id: p._id, name: p.name }));
+  }, [plantsData]);
   const clients = Array.from(new Set(rows.flatMap((r) => r.tasks.map((t) => t.client)).filter(Boolean))) as string[];
   const derivedTaskProjects = Array.from(
     new Set(rows.flatMap((r) => r.tasks.map((t) => t.project || t.client)).filter(Boolean))
   ) as string[];
   const availableProjects = derivedTaskProjects;
 
-  const formatTime = (hour: number) => {
+  const formatTime = (slotIndex: number) => {
+    const hour = ((customStartHour || 0) + slotIndex) % 24;
     if (timeFormat === "12h") {
       const period = hour >= 12 ? "PM" : "AM";
       const displayHour = hour % 12 || 12;
@@ -312,14 +335,15 @@ export default function CalendarContainer() {
     return `${String(hour).padStart(2, "0")}:00`;
   };
 
-  const getTimeSlots = () => Array.from({ length: 24 }, (_, i) => i % 24);
+  const getTimeSlots = () => Array.from({ length: 24 }, (_, i) => i);
 
   // Client legend removed to anonymize busy blocks
 
   const computeUsedHours = (row: PlantRow): number => {
     const hourlyUtilization = row.hourlyUtilization;
     const totalTMs = hourlyUtilization.reduce((sum, hour) => sum + hour, 0);
-    return Math.round((totalTMs / 6) * 100) / 100; // Normalized by trucks per hour (6)
+    const denominator = row.tm_per_hour > 0 ? row.tm_per_hour : 6;
+    return Math.round((totalTMs / denominator) * 100) / 100;
   };
 
   if (loading) {
@@ -413,7 +437,7 @@ export default function CalendarContainer() {
                     className="px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     title="Start Hour"
                   >
-                    {`${String(customStartHour).padStart(2, "0")}:00`}
+                    {`${String(customStartHour ?? 0).padStart(2, "0")}:00`}
                   </button>
                   {isStartHourFilterOpen && (
                     <div className="absolute z-20 mt-1 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-60 overflow-y-auto">
@@ -447,14 +471,14 @@ export default function CalendarContainer() {
 
             {showFilters && (
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.05]">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="relative">
                     <SearchableDropdown
-                      options={plants}
+                      options={plantOptions}
                       value={selectedPlant}
                       onChange={(value) => setSelectedPlant(Array.isArray(value) ? value : [])}
-                      getOptionLabel={(o: string) => o}
-                      getOptionValue={(o: string) => o}
+                      getOptionLabel={(o: { id: string; name: string }) => o.name}
+                      getOptionValue={(o: { id: string; name: string }) => o.id}
                       label="Plant"
                       placeholder="All Plants"
                       multiple
@@ -522,7 +546,7 @@ export default function CalendarContainer() {
             </h2>
           </div>
 
-          <div className="relative rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] w-full ">
+          <div className="relative rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] w-full">
             <div className="w-full overflow-x-auto">
               <div className="min-w-full w-full">
                 <div className="flex border-b border-gray-300 dark:border-white/[0.05] sticky top-0 z-15 bg-white dark:bg-white/[0.03] pr-3">
@@ -549,7 +573,7 @@ export default function CalendarContainer() {
                   </div>
                 </div>
 
-                <div className="divide-y divide-gray-400 dark:divide-white/[0.05] custom-scrollbar pr-[6.5px] overflow-y-auto max-h-96">
+                <div className="divide-y divide-gray-400 dark:divide-white/[0.05] custom-scrollbar overflow-y-auto max-h-96">
                   {filteredRows.length === 0 ? (
                     <div className="flex items-center justify-center py-8 text-gray-500 dark:text-gray-400">
                       No plants found for the selected criteria
@@ -572,6 +596,7 @@ export default function CalendarContainer() {
                           <div className="flex-1 flex relative">
                             {slots.map((time) => {
                               const count = row.hourlyUtilization[time];
+                              const utilization = count / row.tm_per_hour;
                               return (
                                 <div
                                   key={`${row.id}-${time}`}
@@ -579,26 +604,41 @@ export default function CalendarContainer() {
                                     time === 23
                                       ? "border-r-2 border-r-gray-400 dark:border-r-white/[0.2]"
                                       : "border-gray-300 dark:border-white/[0.05]"
+                                  } ${
+                                    utilization === 0
+                                      ? "bg-green-300 dark:bg-green-900/40" // free
+                                      : utilization >= 1
+                                      ? "bg-red-300 dark:bg-red-900/50" // full
+                                      : utilization >= 0.75
+                                      ? "bg-orange-300 dark:bg-orange-900/40" // high
+                                      : utilization >= 0.5
+                                      ? "bg-yellow-300 dark:bg-yellow-900/40" // medium
+                                      : utilization > 0
+                                      ? "bg-blue-200 dark:bg-blue-900/30" // low
+                                      : ""
                                   } relative min-w-[40px] flex items-center justify-center`}
                                 >
                                   <Tooltip content={`${count || "0"}/${row.tm_per_hour} trucks utilized`}>
-                                    <span
-                                      className={`text-xs ${
-                                        (count / row.tm_per_hour || 0) >= 0.8
-                                          ? "text-red-600 dark:text-red-400"
-                                          : (count / row.tm_per_hour || 0) >= 0.5
-                                          ? "text-yellow-600 dark:text-yellow-400"
-                                          : "text-gray-600 dark:text-gray-400"
-                                      }`}
-                                    >
-                                      {`${count || "0"}/${row.tm_per_hour}` || "0/6"}
-                                    </span>
+                                    {(() => {
+                                      let textColor = "";
+                                      if (utilization >= 1) textColor = "text-red-600 dark:text-red-400";
+                                      else if (utilization >= 0.75) textColor = "text-orange-600 dark:text-orange-400";
+                                      else if (utilization >= 0.5) textColor = "text-yellow-600 dark:text-yellow-400";
+                                      else if (utilization > 0) textColor = "text-blue-600 dark:text-blue-400";
+                                      else textColor = "text-green-600 dark:text-green-400"; // free
+
+                                      return (
+                                        <span className={`text-xs ${textColor}`}>
+                                          {`${count || "0"}/${row.tm_per_hour}`}
+                                        </span>
+                                      );
+                                    })()}
                                   </Tooltip>
                                 </div>
                               );
                             })}
                           </div>
-                          <div className="w-24 mr-2 px-1 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
+                          <div className="w-24 mr-4 px-1 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
                             {usedHours}
                           </div>
                         </div>
