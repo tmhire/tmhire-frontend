@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
-import { Trash2, Eye } from "lucide-react";
+import { Trash2, Eye, CopyX } from "lucide-react";
 import Button from "@/components/ui/button/Button";
 import Tooltip from "@/components/ui/tooltip";
 
@@ -42,9 +42,10 @@ interface SupplySchedule {
 interface SupplySchedulesTableProps {
   data: SupplySchedule[];
   onDelete: (schedule: SupplySchedule) => void;
+  onCancel: (schedule: SupplySchedule) => void;
 }
 
-export default function SupplySchedulesTable({ data, onDelete }: SupplySchedulesTableProps) {
+export default function SupplySchedulesTable({ data, onDelete, onCancel }: SupplySchedulesTableProps) {
   const router = useRouter();
 
   const handleView = (schedule: SupplySchedule) => {
@@ -190,6 +191,15 @@ export default function SupplySchedulesTable({ data, onDelete }: SupplySchedules
                       className="flex items-center gap-1"
                     >
                       Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onCancel(schedule)}
+                      className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                    >
+                      <CopyX size={14} />
+                      Cancel
                     </Button>
                     <Button
                       size="sm"

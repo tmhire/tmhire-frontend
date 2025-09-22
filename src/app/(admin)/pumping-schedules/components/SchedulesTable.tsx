@@ -1,7 +1,7 @@
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import React from "react";
 import Button from "@/components/ui/button/Button";
-import { Pencil, Trash2 } from "lucide-react";
+import { CopyX, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Badge from "@/components/ui/badge/Badge";
 // import Tooltip from "@/components/ui/tooltip";
@@ -45,9 +45,10 @@ interface Schedule {
 interface SchedulesTableProps {
   data: Schedule[];
   onDelete: (schedule: Schedule) => void;
+  onCancel: (schedule: Schedule) => void;
 }
 
-export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) {
+export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTableProps) {
   const router = useRouter();
   const { profile } = useProfile();
 
@@ -240,6 +241,14 @@ export default function SchedulesTable({ data, onDelete }: SchedulesTableProps) 
                           className="flex items-center gap-1"
                         >
                           <Pencil size={14} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onCancel(schedule)}
+                          className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                        >
+                          <CopyX size={14} />
                         </Button>
                         <Button
                           size="sm"

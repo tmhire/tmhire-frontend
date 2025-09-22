@@ -113,6 +113,8 @@ interface PastSchedule {
   client_name: string;
   project_id: string;
   project_name: string;
+  plant_id: string;
+  plant_name: string;
   pump_type: "line" | "boom";
   concreteGrade: string;
   pumping_job: string;
@@ -261,6 +263,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [customTMCount, setCustomTMCount] = useState(1);
   // 1. Add state for selectedProject and projects
   const [selectedProject, setSelectedProject] = useState<string>("");
+  const [selectedPlant, setSelectedPlant] = useState<string>("");
   // Add state for project dropdown open/close
 
   // Add state for pumping job dropdown open/close
@@ -376,9 +379,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const projects: Project[] = useMemo(() => projectsData ?? [], [projectsData]);
 
   // Mother plant name from selected project (computed after projects are available)
-  const motherPlantId = selectedProject ? projects.find((p) => p._id === selectedProject)?.mother_plant_id : "";
-  const motherPlantName = motherPlantId
-    ? (plantsData || []).find((plant) => plant._id === motherPlantId)?.name || "Unknown Plant"
+  const motherPlantName = selectedPlant
+    ? (plantsData || []).find((plant) => plant._id === selectedPlant)?.name || "Unknown Plant"
     : "";
 
   // Build computed and displayed schedule names
@@ -396,9 +398,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       plantsData.length === 0
     )
       return;
-    const mother_plant_id = projects.find((project) => project._id === selectedProject)?.mother_plant_id;
-    if (!mother_plant_id) return;
-    const capacity = plantsData.find((plant) => plant._id === mother_plant_id)?.capacity;
+    if (!selectedPlant) return;
+    const capacity = plantsData.find((plant) => plant._id === selectedPlant)?.capacity;
     if (!capacity) return;
     const loadTime = Math.ceil(capacity / avgTMCap / 5) * 5;
 
@@ -421,6 +422,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       if (pastSchedule) {
         setSelectedClient(pastSchedule.client_id);
         setSelectedProject(pastSchedule.project_id);
+        setSelectedPlant(pastSchedule.plant_id || "");
         setPumpType(pastSchedule.pump_type);
         setFormData((prev) => ({
           ...prev,
@@ -466,6 +468,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       if (data.success) {
         setSelectedClient(data.data.client_id);
         setSelectedProject(data.data.project_id);
+        setSelectedPlant(data.data.plant_id || "");
         setSelectedPump(data.data.pump);
         setPumpType(data.data.pump_type || "line");
         const pumping_speed = data.data.input_params.pumping_speed;
@@ -557,6 +560,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           schedule_no: computedScheduleName,
           client_id: selectedClient,
           project_id: selectedProject,
+          plant_id: selectedPlant,
           // pump: selectedPump,
           concreteGrade: formData.concreteGrade,
           pumping_speed: formData.speed,
@@ -686,6 +690,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             schedule_no: computedScheduleName,
             client_id: selectedClient,
             project_id: selectedProject,
+            plant_id: selectedPlant,
             pump: selectedPump,
             concreteGrade: formData.concreteGrade,
             pumping_speed: formData.speed,
@@ -838,12 +843,18 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   const handleNext = async () => {
     if (step === 1) {
-      if (selectedPastSchedule) {
+      const params = new URLSearchParams(searchParams.toString());
+      if (!selectedPastSchedule) {
+        setSelectedPastSchedule("");
+        params.delete("template");
+      } else {
+        params.set("template", selectedPastSchedule || "none");
         // Prefill form with past schedule data
         const pastSchedule = pastSchedules?.find((s) => s._id === selectedPastSchedule);
         if (pastSchedule) {
           setSelectedClient(pastSchedule.client_id);
           setSelectedProject(pastSchedule.project_id);
+          setSelectedPlant(pastSchedule.plant_id);
           setPumpType(pastSchedule.pump_type);
           setFormData((prev) => ({
             ...prev,
@@ -869,7 +880,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           }
         }
       }
-      // Move to first sub-step
+      router.replace(`?${params.toString()}`, { scroll: false });
       setStep(1.1);
     } else if (step === 1.1) {
       // Move to second sub-step
@@ -1616,15 +1627,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 )}
                 // disabled={!selectedPastSchedule || selectedPastSchedule === ""}
                 onClick={() => {
-                  const params = new URLSearchParams(searchParams.toString());
-                  if (!selectedPastSchedule) {
-                    setSelectedPastSchedule("");
-                    params.delete("template");
-                  } else {
-                    params.set("template", selectedPastSchedule || "none");
-                  }
-                  router.replace(`?${params.toString()}`, { scroll: false });
-                  setStep(1.1);
+                  handleNext();
                 }}
               >
                 Continue
@@ -1886,22 +1889,22 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                 {/* Supply from Which Plant (Mother Plant) */}
                 <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {/* <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Supply from Which Plant <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    name="motherPlant"
-                    value={
-                      selectedProject && projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                        ? (plantsData || []).find(
-                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                          )?.name || "Unknown Plant"
-                        : ""
-                    }
-                    disabled
-                    placeholder="Auto filled from project"
-                    className="w-full"
+                  </label> */}
+                  <SearchableDropdown
+                    options={plantsData || []}
+                    value={selectedPlant}
+                    onChange={(value: string | string[]) => {
+                      setSelectedPlant(value as string);
+                      setHasChanged(true);
+                    }}
+                    getOptionLabel={(plant) => plant.name}
+                    getOptionValue={(plant) => plant._id}
+                    placeholder="Select a Plant"
+                    label="Supply from Which Plant"
+                    required
+                    multiple={false}
                   />
                 </div>
 
@@ -2755,11 +2758,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           if (!grouped[group]) grouped[group] = [];
                           grouped[group].push(pump);
                         });
-                        // Sort groups: mother plant first, then others alphabetically, then unassigned last
-                        const motherPlantName = (() => {
-                          const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
-                          return motherId ? plantIdToName[motherId] || "" : "";
-                        })();
 
                         const groupOrder = Object.keys(grouped)
                           .filter((g) => g !== "Unassigned")
@@ -3181,11 +3179,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           if (!grouped[group]) grouped[group] = [];
                           grouped[group].push(tm);
                         });
-                        // Sort groups: mother plant first, then others alphabetically, then unassigned last
-                        const motherPlantName = (() => {
-                          const motherId = projects.find((p) => p._id === selectedProject)?.mother_plant_id;
-                          return motherId ? plantIdToName[motherId] || "" : "";
-                        })();
 
                         const groupOrder = Object.keys(grouped)
                           .filter((g) => g !== "Unassigned")

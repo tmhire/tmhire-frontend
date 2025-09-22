@@ -11,6 +11,8 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
+import { CanceledBy, CancelReason, DeleteType } from "@/types/common.types";
+import Radio from "@/components/form/input/Radio";
 
 interface SupplySchedule {
   _id: string;
@@ -56,6 +58,9 @@ export default function SupplySchedulesContainer() {
   const [selectedSite, setSelectedSite] = useState<string>("");
   const [selectedDate] = useState<string>("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [canceledBy, setCanceledBy] = useState<CanceledBy>(CanceledBy.client);
+  const [reasonForCancel, setReasonForCancel] = useState<CancelReason>(CancelReason.ecl);
   const [selectedSchedule, setSelectedSchedule] = useState<SupplySchedule | null>(null);
   const [timeStatusFilter, setTimeStatusFilter] = useState<string>("All");
   const [isTimeStatusFilterOpen, setIsTimeStatusFilterOpen] = useState(false);
@@ -75,17 +80,20 @@ export default function SupplySchedulesContainer() {
 
   // Delete schedule mutation
   const deleteScheduleMutation = useMutation({
-    mutationFn: async (scheduleId: string) => {
-      const response = await fetchWithAuth(`/schedules/${scheduleId}`, {
-        method: "DELETE",
-      });
+    mutationFn: async (variables: { id: string; deleteType: DeleteType }) => {
+      let query = `/schedules/${variables.id}?delete_type=${variables.deleteType}`;
+      if (variables.deleteType === DeleteType.cancel) {
+        query += `&canceled_by=${canceledBy}&cancel_reason=${reasonForCancel}`;
+      }
+      const response = await fetchWithAuth(query, { method: "DELETE" });
       if (!response) throw new Error("No response from server");
       const data = await response.json();
       if (!data.success) throw new Error(data.message || "Failed to delete schedule");
-      return data;
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["supply-schedules"] });
+      setIsCancelModalOpen(false);
       setIsDeleteModalOpen(false);
       setSelectedSchedule(null);
     },
@@ -95,15 +103,20 @@ export default function SupplySchedulesContainer() {
     router.push("/supply-schedules/new");
   };
 
+  const handleCancel = (schedule: SupplySchedule) => {
+    setSelectedSchedule(schedule);
+    setIsCancelModalOpen(true);
+  };
+
   const handleDelete = (schedule: SupplySchedule) => {
     setSelectedSchedule(schedule);
     setIsDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = async (deleteType: DeleteType = DeleteType.cancel) => {
     if (!selectedSchedule) return;
     try {
-      await deleteScheduleMutation.mutateAsync(selectedSchedule._id);
+      await deleteScheduleMutation.mutateAsync({ id: selectedSchedule._id, deleteType });
     } catch (error) {
       console.error("Error deleting schedule:", error);
     }
@@ -124,7 +137,7 @@ export default function SupplySchedulesContainer() {
     };
   }, [schedulesData]);
 
-    // Filter schedules based on search query and filters
+  // Filter schedules based on search query and filters
   const filteredSchedules = useMemo(() => {
     if (!schedulesData) return [];
 
@@ -154,33 +167,36 @@ export default function SupplySchedulesContainer() {
       const matchesDate = !selectedDate || schedule.input_params.schedule_date === selectedDate;
 
       // Time-based status filter
-      const matchesTimeStatus = timeStatusFilter === "All" ? true : (() => {
-        const scheduleDate = parseScheduleDate(schedule.input_params.schedule_date);
-        // Remove time for comparison (treat as local date)
-        const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const schedDate = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate());
-        
-        switch (timeStatusFilter) {
-          case "Today":
-            return schedDate.getTime() === nowDate.getTime();
-          case "Tomorrow":
-            const tomorrow = new Date(nowDate);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            return schedDate.getTime() === tomorrow.getTime();
-          case "This Week":
-            const weekStart = new Date(nowDate);
-            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-            const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekEnd.getDate() + 6);
-            return schedDate >= weekStart && schedDate <= weekEnd;
-          case "Past":
-            return schedDate < nowDate;
-          case "Upcoming":
-            return schedDate > nowDate;
-          default:
-            return true;
-        }
-      })();
+      const matchesTimeStatus =
+        timeStatusFilter === "All"
+          ? true
+          : (() => {
+              const scheduleDate = parseScheduleDate(schedule.input_params.schedule_date);
+              // Remove time for comparison (treat as local date)
+              const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+              const schedDate = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate());
+
+              switch (timeStatusFilter) {
+                case "Today":
+                  return schedDate.getTime() === nowDate.getTime();
+                case "Tomorrow":
+                  const tomorrow = new Date(nowDate);
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  return schedDate.getTime() === tomorrow.getTime();
+                case "This Week":
+                  const weekStart = new Date(nowDate);
+                  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+                  const weekEnd = new Date(weekStart);
+                  weekEnd.setDate(weekEnd.getDate() + 6);
+                  return schedDate >= weekStart && schedDate <= weekEnd;
+                case "Past":
+                  return schedDate < nowDate;
+                case "Upcoming":
+                  return schedDate > nowDate;
+                default:
+                  return true;
+              }
+            })();
 
       return matchesSearch && matchesStatus && matchesClient && matchesSite && matchesDate && matchesTimeStatus;
     });
@@ -380,11 +396,83 @@ export default function SupplySchedulesContainer() {
                 <Spinner text="Loading schedules..." />
               </div>
             ) : (
-              <SupplySchedulesTable data={filteredSchedules} onDelete={handleDelete} />
+              <SupplySchedulesTable data={filteredSchedules} onDelete={handleDelete} onCancel={handleCancel} />
             )}
           </div>
         </div>
       </div>
+
+      {/* Cancel Modal */}
+      <Modal className="max-w-[500px] p-5" isOpen={isCancelModalOpen} onClose={() => setIsCancelModalOpen(false)}>
+        <div className="p-6">
+          <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Cancel Schedule</h4>
+          <p className="mb-6">Are you sure you want to cancel this schedule?</p>
+          {/* Radio Group */}
+          <div className="mb-6">
+            <label className="block font-medium text-gray-700 dark:text-white/90 mb-2">
+              Who wants to delete the schedule?
+            </label>
+            <div className="flex items-center gap-6">
+              {Object.values(CanceledBy).map((option) => (
+                <>
+                  <Radio
+                    id={`canceledBy-${option}`}
+                    name="canceledBy"
+                    value={option}
+                    checked={canceledBy === option}
+                    onChange={(value) => setCanceledBy(value as CanceledBy)}
+                    label={option}
+                  />
+                </>
+              ))}
+            </div>
+          </div>
+
+          {/* Dropdown */}
+          <div className="mb-6">
+            <label className="block font-medium text-gray-700 dark:text-white/90 mb-2">Reason:</label>
+            <select
+              className="w-full rounded-md border border-gray-300 p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white/90"
+              value={reasonForCancel}
+              onChange={(e) => setReasonForCancel(e.target.value as CancelReason)}
+            >
+              <option value="" disabled>
+                Select a reason
+              </option>
+              {Object.values(CancelReason).map((option) => (
+                <option key={option} value={option}>
+                  {option
+                    .replace(/_/g, " ")
+                    .split(" ")
+                    .reduce((acc, word) => acc + word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() + " ", "")
+                    .trim()}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-4">
+            <Button onClick={() => setIsCancelModalOpen(false)} variant="outline">
+              No
+            </Button>
+            <Button
+              onClick={() => handleConfirmDelete(DeleteType.cancel)}
+              variant="warning"
+              disabled={deleteScheduleMutation.isPending}
+            >
+              {deleteScheduleMutation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <Spinner size="sm" />
+                  <span>Canceling...</span>
+                </div>
+              ) : (
+                "Yes"
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Delete Modal */}
       <Modal className="max-w-[500px] p-5" isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
@@ -410,4 +498,4 @@ export default function SupplySchedulesContainer() {
       </Modal>
     </div>
   );
-} 
+}

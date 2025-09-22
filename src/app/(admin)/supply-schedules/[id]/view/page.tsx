@@ -9,10 +9,12 @@ import Badge from "@/components/ui/badge/Badge";
 import { formatTimeByPreference, formatHoursAndMinutes } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
 import Button from "@/components/ui/button/Button";
-import { Download, Pencil, Trash2 } from "lucide-react";
+import { Download, Pencil, Trash2, CopyX } from "lucide-react";
 import { useState } from "react";
 import * as XLSX from "xlsx";
 import { Modal } from "@/components/ui/modal";
+import Radio from "@/components/form/input/Radio";
+import { CanceledBy, CancelReason, DeleteType } from "@/types/common.types";
 
 interface SupplySchedule {
   _id: string;
@@ -76,6 +78,9 @@ export default function SupplyScheduleViewPage() {
   const { profile } = useProfile();
   const queryClient = useQueryClient();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [canceledBy, setCanceledBy] = useState<CanceledBy>(CanceledBy.client);
+  const [reasonForCancel, setReasonForCancel] = useState<CancelReason>(CancelReason.ecl);
 
   const { data: schedule, isLoading } = useQuery<SupplySchedule>({
     queryKey: ["supply-schedule", params.id],
@@ -295,10 +300,12 @@ export default function SupplyScheduleViewPage() {
 
   // Delete schedule mutation
   const deleteScheduleMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetchWithAuth(`/schedules/${id}?delete_type=temporarily`, {
-        method: "DELETE",
-      });
+    mutationFn: async (variables: { id: string; deleteType: DeleteType }) => {
+      let query = `/schedules/${variables.id}?delete_type=${variables.deleteType}`;
+      if (variables.deleteType === DeleteType.cancel) {
+        query += `&canceled_by=${canceledBy}&cancel_reason=${reasonForCancel}`;
+      }
+      const response = await fetchWithAuth(query, { method: "DELETE" });
       if (!response) throw new Error("No response from server");
       const data = await response.json();
       if (!data.success) throw new Error(data.message || "Failed to delete schedule");
@@ -306,6 +313,7 @@ export default function SupplyScheduleViewPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      setIsCancelModalOpen(false);
       setIsDeleteModalOpen(false);
       router.push("/supply-schedules");
     },
@@ -315,13 +323,17 @@ export default function SupplyScheduleViewPage() {
     router.push(`/supply-schedules/${params.id}`);
   };
 
+  const handleCancel = () => {
+    setIsCancelModalOpen(true);
+  };
+
   const handleDelete = () => {
     setIsDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = async (deleteType: DeleteType = DeleteType.cancel) => {
     try {
-      await deleteScheduleMutation.mutateAsync(params.id as string);
+      await deleteScheduleMutation.mutateAsync({ id: params.id as string, deleteType });
     } catch (error) {
       console.error("Error deleting schedule:", error);
     }
@@ -357,6 +369,15 @@ export default function SupplyScheduleViewPage() {
             <Button size="sm" variant="outline" onClick={handleEdit} className="flex items-center gap-1">
               <Pencil size={14} />
               Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCancel}
+              className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-500 border-red-600 dark:border-red-400"
+            >
+              <CopyX size={14} />
+              Cancel
             </Button>
             <Button
               size="sm"
@@ -804,6 +825,79 @@ export default function SupplyScheduleViewPage() {
           );
         })()}
       </div>
+
+      {/* Cancel Modal */}
+      <Modal className="max-w-[500px] p-5" isOpen={isCancelModalOpen} onClose={() => setIsCancelModalOpen(false)}>
+        <div className="p-6">
+          <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Cancel Schedule</h4>
+          <p className="mb-6 dark:text-white/90">Are you sure you want to cancel this schedule?</p>
+
+          {/* Radio Group */}
+          <div className="mb-6">
+            <label className="block font-medium text-gray-700 dark:text-white/90 mb-2">
+              Who wants to delete the schedule?
+            </label>
+            <div className="flex items-center gap-6">
+              {Object.values(CanceledBy).map((option) => (
+                <>
+                  <Radio
+                    id={`canceledBy-${option}`}
+                    name="canceledBy"
+                    value={option}
+                    checked={canceledBy === option}
+                    onChange={(value) => setCanceledBy(value as CanceledBy)}
+                    label={option}
+                  />
+                </>
+              ))}
+            </div>
+          </div>
+
+          {/* Dropdown */}
+          <div className="mb-6">
+            <label className="block font-medium text-gray-700 dark:text-white/90 mb-2">Reason:</label>
+            <select
+              className="w-full rounded-md border border-gray-300 p-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white/90"
+              value={reasonForCancel}
+              onChange={(e) => setReasonForCancel(e.target.value as CancelReason)}
+            >
+              <option value="" disabled>
+                Select a reason
+              </option>
+              {Object.values(CancelReason).map((option) => (
+                <option key={option} value={option}>
+                  {option
+                    .replace(/_/g, " ")
+                    .split(" ")
+                    .reduce((acc, word) => acc + word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() + " ", "")
+                    .trim()}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-4">
+            <Button onClick={() => setIsCancelModalOpen(false)} variant="outline">
+              No
+            </Button>
+            <Button
+              onClick={() => handleConfirmDelete(DeleteType.cancel)}
+              variant="warning"
+              disabled={deleteScheduleMutation.isPending}
+            >
+              {deleteScheduleMutation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <Spinner size="sm" />
+                  <span>Canceling...</span>
+                </div>
+              ) : (
+                "Yes"
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Delete Modal */}
       <Modal className="max-w-[500px] p-5" isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
