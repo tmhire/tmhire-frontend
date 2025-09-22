@@ -308,7 +308,8 @@ export default function CalendarContainer() {
   ) as string[];
   const availableProjects = derivedTaskProjects;
 
-  const formatTime = (hour: number) => {
+  const formatTime = (slotIndex: number) => {
+    const hour = ((customStartHour || 0) + slotIndex) % 24;
     if (timeFormat === "12h") {
       const period = hour >= 12 ? "PM" : "AM";
       const displayHour = hour % 12 || 12;
@@ -317,7 +318,7 @@ export default function CalendarContainer() {
     return `${String(hour).padStart(2, "0")}:00`;
   };
 
-  const getTimeSlots = () => Array.from({ length: 24 }, (_, i) => i % 24);
+  const getTimeSlots = () => Array.from({ length: 24 }, (_, i) => i);
 
   // Client legend removed to anonymize busy blocks
 
@@ -419,7 +420,7 @@ export default function CalendarContainer() {
                     className="px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     title="Start Hour"
                   >
-                    {`${String(customStartHour).padStart(2, "0")}:00`}
+                    {`${String(customStartHour ?? 0).padStart(2, "0")}:00`}
                   </button>
                   {isStartHourFilterOpen && (
                     <div className="absolute z-20 mt-1 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05] max-h-60 overflow-y-auto">
@@ -453,7 +454,7 @@ export default function CalendarContainer() {
 
             {showFilters && (
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.05]">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="relative">
                     <SearchableDropdown
                       options={plants}

@@ -252,6 +252,23 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [formDataRetrieved, setFormDataRetrieved] = useState(true);
+  
+  // Sync pipeline fixing/removal times with pump type
+  useEffect(() => {
+    if (pumpType === "boom") {
+      setFormData((prev) => ({
+        ...prev,
+        pumpFixingTime: "0",
+        pumpRemovalTime: "0",
+      }));
+    } else if (pumpType === "line") {
+      setFormData((prev) => ({
+        ...prev,
+        pumpFixingTime: prev.pumpFixingTime === "0" ? "" : prev.pumpFixingTime,
+        pumpRemovalTime: prev.pumpRemovalTime === "0" ? "" : prev.pumpRemovalTime,
+      }));
+    }
+  }, [pumpType]);
   // Dropdown open state for custom dropdowns
 
   // const [isPumpDropdownOpen, setIsPumpDropdownOpen] = useState(false);
@@ -2125,6 +2142,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     type="number"
                     name="pumpFixingTime"
                     value={formData.pumpFixingTime || ""}
+                    disabled={pumpType === "boom"}
                     onChange={(e) => {
                       const value = e.target.value;
                       const numValue = parseFloat(value);
@@ -2147,6 +2165,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     type="number"
                     name="pumpRemovalTime"
                     value={formData.pumpRemovalTime || ""}
+                    disabled={pumpType === "boom"}
                     onChange={(e) => {
                       const value = e.target.value;
                       const numValue = parseFloat(value);

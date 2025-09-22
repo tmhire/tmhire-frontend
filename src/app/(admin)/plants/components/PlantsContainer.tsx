@@ -730,7 +730,7 @@ export default function PlantsContainer() {
 
             <div className="w-full">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex flex-row justify-between">
-                Loading Time (min){" "}
+                Loading Time /TM (min)
                 {newPlant?.capacity && (
                   <span className="text-[10px] text-gray-500 block">Using Avg TM Cap: {avgTMCap}</span>
                 )}
@@ -928,7 +928,7 @@ export default function PlantsContainer() {
               </div>
               <div className="w-full">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex flex-row justify-between">
-                  Loading Time (min){" "}
+                Loading Time /TM (min)
                   {editedPlant?.capacity && (
                     <span className="text-[10px] text-gray-500 block">Using Avg TM Cap: {avgTMCap}</span>
                   )}
