@@ -190,10 +190,10 @@ export default function ScheduleViewPage() {
         "Scheduled Date",
         schedule.input_params.schedule_date
           ? new Date(schedule.input_params.schedule_date).toLocaleDateString(["en-GB"], {
-              day: "2-digit",
-              month: "2-digit",
-              year: "2-digit",
-            })
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+          })
           : "-",
       ],
       [
@@ -316,9 +316,9 @@ export default function ScheduleViewPage() {
           const trip = trips[i];
           return trip
             ? `${formatTimeByPreference(trip.plant_start, preferred)} - ${formatTimeByPreference(
-                trip.return,
-                preferred
-              )}`
+              trip.return,
+              preferred
+            )}`
             : "-";
         });
         const overallRange = formatOverallRange(trips);
@@ -481,11 +481,15 @@ export default function ScheduleViewPage() {
             )}
           </h2>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={handleExportExcel} className="flex items-center gap-1">
+            <Button size="sm" variant="outline" onClick={handleExportExcel} className="flex items-center gap-1"
+              disabled={schedule.status !== "generated"}
+            >
               <Download size={14} />
               Export
             </Button>
-            <Button size="sm" variant="outline" onClick={handleEdit} className="flex items-center gap-1">
+            <Button size="sm" variant="outline" onClick={handleEdit} className="flex items-center gap-1"
+              disabled={schedule.status !== "generated" && schedule.status !== "draft"}
+            >
               <Pencil size={14} />
               Edit
             </Button>
@@ -494,6 +498,7 @@ export default function ScheduleViewPage() {
               variant="outline"
               onClick={handleCancel}
               className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-500 border-red-600 dark:border-red-400"
+              disabled={schedule.status !== "generated"}
             >
               <CopyX size={14} />
               Cancel
@@ -502,6 +507,7 @@ export default function ScheduleViewPage() {
               size="sm"
               variant="outline"
               onClick={handleDelete}
+              disabled={schedule.status !== "generated" && schedule.status !== "draft" && schedule.status !== "canceled"}
               className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-500 border-red-600 dark:border-red-400"
             >
               <Trash2 size={14} />
@@ -531,9 +537,9 @@ export default function ScheduleViewPage() {
               <p className="text-base text-gray-800 dark:text-white/90">
                 {schedule.input_params.pump_start
                   ? new Date(schedule.input_params.pump_start).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
                   : "N/A"}
               </p>
             </div>
@@ -1180,9 +1186,9 @@ export default function ScheduleViewPage() {
                             <td key={i} className="px-2 py-2 text-left text-gray-800 dark:text-white/90">
                               {trip
                                 ? `${formatTimeByPreference(
-                                    trip.plant_start,
-                                    profile?.preferred_format
-                                  )} - ${formatTimeByPreference(trip.return, profile?.preferred_format)}`
+                                  trip.plant_start,
+                                  profile?.preferred_format
+                                )} - ${formatTimeByPreference(trip.return, profile?.preferred_format)}`
                                 : "-"}
                             </td>
                           );

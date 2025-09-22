@@ -362,11 +362,23 @@ export default function SupplyScheduleViewPage() {
             </Badge>
           </h2>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={handleExportExcel} className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleExportExcel}
+              className="flex items-center gap-1"
+              disabled={schedule.status !== "generated"}
+            >
               <Download size={14} />
               Export
             </Button>
-            <Button size="sm" variant="outline" onClick={handleEdit} className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleEdit}
+              className="flex items-center gap-1"
+              disabled={schedule.status !== "generated" && schedule.status !== "draft"}
+            >
               <Pencil size={14} />
               Edit
             </Button>
@@ -375,6 +387,7 @@ export default function SupplyScheduleViewPage() {
               variant="outline"
               onClick={handleCancel}
               className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-500 border-red-600 dark:border-red-400"
+              disabled={schedule.status !== "generated"}
             >
               <CopyX size={14} />
               Cancel
@@ -383,6 +396,7 @@ export default function SupplyScheduleViewPage() {
               size="sm"
               variant="outline"
               onClick={handleDelete}
+              disabled={schedule.status !== "generated" && schedule.status !== "draft" && schedule.status !== "canceled"}
               className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-500 border-red-600 dark:border-red-400"
             >
               <Trash2 size={14} />
@@ -394,7 +408,7 @@ export default function SupplyScheduleViewPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
         {/* Summary Card */}
-        <div className="md:col-span-2 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl p-6 flex flex-col justify-center h-full">
+        <div className="md:col-span-2 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl p-6 flex flex-col justify-start h-full">
           <div className="grid grid-cols-4 gap-x-8 gap-y-4">
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Scheduled Date</h4>

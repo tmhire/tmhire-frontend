@@ -207,7 +207,7 @@ export default function SchedulesContainer() {
         <h2 className="text-xl font-semibold text-black dark:text-white">Pumping Schedules Management</h2>
         <Button onClick={handleAddSchedule} className="flex items-center gap-2" size="sm">
           <PlusIcon className="w-4 h-4" />
-          Add Schedule
+          Add Pumping Schedule
         </Button>
       </div>
 

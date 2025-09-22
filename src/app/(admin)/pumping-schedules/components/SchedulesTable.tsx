@@ -65,11 +65,9 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
     switch (status.toLowerCase()) {
       case "generated":
         return "success";
-      case "pending":
+      case "deleted":
         return "warning";
-      case "completed":
-        return "success";
-      case "cancelled":
+      case "canceled":
         return "error";
       default:
         return "primary";
@@ -94,73 +92,73 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
               <TableRow>
                 <TableCell
                   isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Sl. No
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Client Name
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Project
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Qty
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Supply Plant
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Schedule Date
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   TM Count
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Pump Type
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   TM Job Time
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Pump Operation Time
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Status
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Actions
                 </TableCell>
@@ -173,7 +171,7 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
                 <React.Fragment key={schedule._id}>
                   <TableRow
                     className={schedule.status === "generated" ? "hover:bg-gray-50 dark:hover:bg-gray-800/50" : ""}
-                    onClick={() => schedule.status === "generated" && handleView(schedule)}
+                    onClick={() => handleView(schedule)}
                   >
                     <TableCell className="px-2 py-3 text-sm text-start">
                       <span className="text-gray-800 dark:text-white/90">{index + 1}</span>
@@ -205,12 +203,12 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
                       <span className="text-gray-800 dark:text-white/90">
                         {schedule.output_table[0]?.plant_start
                           ? `${formatTimeByPreference(
-                              schedule.output_table[0].plant_start,
-                              profile?.preferred_format
-                            )} - ${formatTimeByPreference(
-                              schedule.output_table[schedule.output_table.length - 1].return,
-                              profile?.preferred_format
-                            )}`
+                            schedule.output_table[0].plant_start,
+                            profile?.preferred_format
+                          )} - ${formatTimeByPreference(
+                            schedule.output_table[schedule.output_table.length - 1].return,
+                            profile?.preferred_format
+                          )}`
                           : "-"}
                       </span>
                     </TableCell>
@@ -218,12 +216,12 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
                       <span className="text-gray-800 dark:text-white/90">
                         {schedule.input_params.pump_start
                           ? `${formatTimeByPreference(
-                              schedule.input_params.pump_start,
-                              profile?.preferred_format
-                            )} - ${formatTimeByPreference(
-                              schedule.output_table[schedule.output_table.length - 1]?.unloading_time,
-                              profile?.preferred_format
-                            )}`
+                            schedule.input_params.pump_start,
+                            profile?.preferred_format
+                          )} - ${formatTimeByPreference(
+                            schedule.output_table[schedule.output_table.length - 1]?.unloading_time,
+                            profile?.preferred_format
+                          )}`
                           : "-"}
                       </span>
                     </TableCell>
@@ -239,6 +237,7 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
                           variant="outline"
                           onClick={() => handleEdit(schedule)}
                           className="flex items-center gap-1"
+                          disabled={schedule.status !== "generated" && schedule.status !== "draft"}
                         >
                           <Pencil size={14} />
                         </Button>
@@ -247,6 +246,7 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
                           variant="outline"
                           onClick={() => onCancel(schedule)}
                           className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                          disabled={schedule.status !== "generated"}
                         >
                           <CopyX size={14} />
                         </Button>
@@ -255,6 +255,7 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
                           variant="outline"
                           onClick={() => onDelete(schedule)}
                           className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                          disabled={schedule.status !== "generated" && schedule.status !== "draft" && schedule.status !== "canceled"}
                         >
                           <Trash2 size={14} />
                         </Button>
