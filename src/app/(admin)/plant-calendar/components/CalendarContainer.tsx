@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Calendar, Filter, Search } from "lucide-react";
+import { Calendar, Clock, Filter, Search } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -339,12 +339,25 @@ export default function CalendarContainer() {
 
   // Client legend removed to anonymize busy blocks
 
-  const computeUsedHours = (row: PlantRow): number => {
-    const hourlyUtilization = row.hourlyUtilization;
-    const totalTMs = hourlyUtilization.reduce((sum, hour) => sum + hour, 0);
-    const denominator = row.tm_per_hour > 0 ? row.tm_per_hour : 6;
-    return Math.round((totalTMs / denominator) * 100) / 100;
-  };
+  // const computeUsedHours = (row: PlantRow): number => {
+  //   const hourlyUtilization = row.hourlyUtilization;
+  //   const totalTMs = hourlyUtilization.reduce((sum, hour) => sum + hour, 0);
+  //   const denominator = row.tm_per_hour > 0 ? row.tm_per_hour : 6;
+  //   return Math.round((totalTMs / denominator) * 100) / 100;
+  // };
+
+  const startHour = session?.custom_start_hour ?? 0; // default 7
+  const format = session?.preferred_format ?? "12h";
+
+  function formatHour(hour: number) {
+    if (format === "24h") {
+      return `${hour.toString().padStart(2, "0")}:00`;
+    }
+    const suffix = hour >= 12 ? "PM" : "AM";
+    const adjusted = hour % 12 === 0 ? 12 : hour % 12;
+    return `${adjusted.toString().padStart(2, "0")}:00 ${suffix}`;
+  }
+  const endHour = (startHour + 24) % 24;
 
   if (loading) {
     return (
@@ -396,9 +409,18 @@ export default function CalendarContainer() {
     <div className="w-full">
       <div className="flex flex-wrap items-center justify-between gap-3 w-full">
         <div className="w-full">
-          <div className="mb-6 w-full">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Plant Schedule Calendar</h2>
-            <p className="text-gray-600 dark:text-gray-400">Manage and monitor schedules grouped by plant</p>
+          <div className="mb-6 w-full flex flex-row justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Plant Schedule Calendar</h2>
+              <p className="text-gray-600 dark:text-gray-400">Manage and monitor schedules grouped by plant</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <span className="text-sm text-gray-500 dark:text-gray-400">Scheduled Timings:</span>
+              <span className="px-3 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-sm font-medium text-gray-800 dark:text-gray-200">
+                {formatHour(startHour)} TO {formatHour(endHour)} NEXT DAY
+              </span>
+            </div>
           </div>
 
           {/* Main Controls */}
@@ -549,7 +571,7 @@ export default function CalendarContainer() {
           <div className="relative rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] w-full">
             <div className="w-full overflow-x-auto">
               <div className="min-w-full w-full">
-                <div className="flex border-b border-gray-300 dark:border-white/[0.05] sticky top-0 z-15 bg-white dark:bg-white/[0.03] pr-3">
+                <div className="flex border-b border-gray-300 dark:border-white/[0.05] sticky top-0 z-15 bg-white dark:bg-white/[0.03]">
                   <div className="w-16 px-2 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-r border-gray-300 dark:border-white/[0.05] text-center flex-shrink-0">
                     SNo
                   </div>
@@ -559,18 +581,11 @@ export default function CalendarContainer() {
                   {getTimeSlots().map((time) => (
                     <div
                       key={time}
-                      className={`flex-1 px-1 py-3 text-center tracking-tight leading-tight font-medium text-gray-500 text-[8.5px] dark:text-gray-400 border-r ${
-                        time === 23
-                          ? "border-r-2 border-r-gray-400 dark:border-r-white/[0.2]"
-                          : "border-gray-300 dark:border-white/[0.05]"
-                      } min-w-[40px]`}
+                      className={`flex-1 px-1 py-3 text-center tracking-tight leading-tight font-medium text-gray-500 text-[8.5px] dark:text-gray-400 border-r ${"border-gray-300 dark:border-white/[0.05]"} min-w-[40px]`}
                     >
                       {formatTime(time)}
                     </div>
                   ))}
-                  <div className="w-24 mr-1 px-1 py-3 font-medium text-gray-500 text-xs dark:text-gray-400 border-l border-gray-300 dark:border-white/[0.05] text-center flex-shrink-0">
-                    Used Hrs
-                  </div>
                 </div>
 
                 <div className="divide-y divide-gray-400 dark:divide-white/[0.05] custom-scrollbar overflow-y-auto max-h-96">
@@ -581,7 +596,6 @@ export default function CalendarContainer() {
                   ) : (
                     filteredRows.map((row, idx) => {
                       const slots = getTimeSlots();
-                      const usedHours = computeUsedHours(row);
 
                       return (
                         <div key={row.id} className="flex group transition-colors white">
@@ -600,11 +614,7 @@ export default function CalendarContainer() {
                               return (
                                 <div
                                   key={`${row.id}-${time}`}
-                                  className={`flex-1 h-6 border-r ${
-                                    time === 23
-                                      ? "border-r-2 border-r-gray-400 dark:border-r-white/[0.2]"
-                                      : "border-gray-300 dark:border-white/[0.05]"
-                                  } ${
+                                  className={`flex-1 h-6 border-r ${"border-gray-300 dark:border-white/[0.05]"} ${
                                     utilization === 0
                                       ? "bg-green-300 dark:bg-green-900/40" // free
                                       : utilization >= 1
@@ -637,9 +647,6 @@ export default function CalendarContainer() {
                                 </div>
                               );
                             })}
-                          </div>
-                          <div className="w-24 mr-4 px-1 py-1 text-gray-700 text-xs dark:text-white/90 border-l border-gray-300 dark:border-white/[0.05] flex items-center justify-center flex-shrink-0">
-                            {usedHours}
                           </div>
                         </div>
                       );

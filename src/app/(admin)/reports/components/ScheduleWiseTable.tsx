@@ -174,7 +174,7 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
       return (
         <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
           <div className="p-8 text-center">
-            <p className="text-gray-500 dark:text-gray-400">No schedules found for the selected date</p>
+            <p className="text-gray-500 dark:text-gray-400">No schedules found for the selected date or plant</p>
           </div>
         </div>
       );
@@ -211,8 +211,8 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
           </h3>
 
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-            <div className="overflow-x-auto custom-scrollbar">
-              <Table className="min-w-max">
+            <div className="overflow-hidden">
+              <Table className="w-full">
                 <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                   <TableRow>
                     <TableCell

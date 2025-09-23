@@ -203,12 +203,12 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
                       <span className="text-gray-800 dark:text-white/90">
                         {schedule.output_table[0]?.plant_start
                           ? `${formatTimeByPreference(
-                            schedule.output_table[0].plant_start,
-                            profile?.preferred_format
-                          )} - ${formatTimeByPreference(
-                            schedule.output_table[schedule.output_table.length - 1].return,
-                            profile?.preferred_format
-                          )}`
+                              schedule.output_table[0].plant_start,
+                              profile?.preferred_format
+                            )} - ${formatTimeByPreference(
+                              schedule.output_table[schedule.output_table.length - 1].return,
+                              profile?.preferred_format
+                            )}`
                           : "-"}
                       </span>
                     </TableCell>
@@ -216,12 +216,12 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
                       <span className="text-gray-800 dark:text-white/90">
                         {schedule.input_params.pump_start
                           ? `${formatTimeByPreference(
-                            schedule.input_params.pump_start,
-                            profile?.preferred_format
-                          )} - ${formatTimeByPreference(
-                            schedule.output_table[schedule.output_table.length - 1]?.unloading_time,
-                            profile?.preferred_format
-                          )}`
+                              schedule.input_params.pump_start,
+                              profile?.preferred_format
+                            )} - ${formatTimeByPreference(
+                              schedule.output_table[schedule.output_table.length - 1]?.unloading_time,
+                              profile?.preferred_format
+                            )}`
                           : "-"}
                       </span>
                     </TableCell>
@@ -241,24 +241,27 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
                         >
                           <Pencil size={14} />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onCancel(schedule)}
-                          className="flex items-center gap-1 text-red-600 hover:text-red-700"
-                          disabled={schedule.status !== "generated"}
-                        >
-                          <CopyX size={14} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onDelete(schedule)}
-                          className="flex items-center gap-1 text-red-600 hover:text-red-700"
-                          disabled={schedule.status !== "generated" && schedule.status !== "draft" && schedule.status !== "canceled"}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
+                        {schedule.status === "draft" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onDelete(schedule)}
+                            className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        )}
+
+                        {schedule.status === "generated" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onCancel(schedule)}
+                            className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                          >
+                            <CopyX size={14} />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

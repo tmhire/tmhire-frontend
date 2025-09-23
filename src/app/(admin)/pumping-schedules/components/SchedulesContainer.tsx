@@ -161,6 +161,8 @@ export default function SchedulesContainer() {
     return schedulesData.filter((schedule) => {
       const matchesSearch =
         searchQuery === "" ||
+        schedule.mother_plant_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        schedule.project_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         schedule.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         schedule.site_address.toLowerCase().includes(searchQuery.toLowerCase());
 

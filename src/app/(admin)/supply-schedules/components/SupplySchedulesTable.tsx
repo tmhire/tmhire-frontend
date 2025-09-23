@@ -193,7 +193,9 @@ export default function SupplySchedulesTable({ data, onDelete, onCancel }: Suppl
                     <span className="text-gray-800 dark:text-white/90">{schedule.mother_plant_name ?? "-"}</span>
                   </TableCell>
                   <TableCell className="px-2 py-3 text-sm text-start">
-                    <span className="text-gray-800 dark:text-white/90">{formatDate(schedule.input_params.schedule_date)}</span>
+                    <span className="text-gray-800 dark:text-white/90">
+                      {formatDate(schedule.input_params.schedule_date)}
+                    </span>
                   </TableCell>
                   <TableCell className="px-2 py-3 text-sm text-gray-500 text-start dark:text-gray-400">
                     {schedule.tm_count}
@@ -246,29 +248,27 @@ export default function SupplySchedulesTable({ data, onDelete, onCancel }: Suppl
                       >
                         <Pencil size={14} />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onCancel(schedule)}
-                        className="flex items-center gap-1 text-red-600 hover:text-red-700"
-                        disabled={schedule.status !== "generated"}
-                      >
-                        <CopyX size={14} />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onDelete(schedule)}
-                        className="flex items-center gap-1 text-red-600 hover:text-red-700"
-                        disabled={
-                          schedule.status !== "generated" &&
-                          schedule.status !== "draft" &&
-                          schedule.status !== "canceled" &&
-                          schedule.status !== "cancelled"
-                        }
-                      >
-                        <Trash2 size={14} />
-                      </Button>
+                      {schedule.status === "draft" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onDelete(schedule)}
+                          className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      )}
+
+                      {schedule.status === "generated" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onCancel(schedule)}
+                          className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                        >
+                          <CopyX size={14} />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

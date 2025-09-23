@@ -382,26 +382,29 @@ export default function SupplyScheduleViewPage() {
               <Pencil size={14} />
               Edit
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleCancel}
-              className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-500 border-red-600 dark:border-red-400"
-              disabled={schedule.status !== "generated"}
-            >
-              <CopyX size={14} />
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleDelete}
-              disabled={schedule.status !== "generated" && schedule.status !== "draft" && schedule.status !== "canceled"}
-              className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-500 border-red-600 dark:border-red-400"
-            >
-              <Trash2 size={14} />
-              Delete
-            </Button>
+            {schedule.status === "draft" && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleDelete}
+                className="flex items-center gap-1 text-red-600 hover:text-red-700"
+              >
+                <Trash2 size={14} />
+                Delete
+              </Button>
+            )}
+
+            {schedule.status === "generated" && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCancel}
+                className="flex items-center gap-1 text-red-600 hover:text-red-700"
+              >
+                <CopyX size={14} />
+                Cancel
+              </Button>
+            )}
           </div>
         </div>
       </div>
