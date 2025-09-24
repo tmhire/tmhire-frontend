@@ -107,6 +107,8 @@ type TMSchedule = {
     startTime: string;
     endTime: string;
     duration: number;
+    scheduleId: string;
+    scheduleNo: string;
   }>;
 };
 
@@ -295,6 +297,8 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                 startTime: formatTimeByPreference(trip.plant_start),
                 endTime: formatTimeByPreference(trip.return),
                 duration: Math.max(0, endHour - startHour),
+                scheduleId: schedule._id,
+                scheduleNo: schedule.schedule_no,
               });
             }
           });
@@ -311,6 +315,39 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
     };
 
     const allTrucks = processAllTrucks();
+
+    // Get unique schedules from all trucks
+    const getUniqueSchedules = () => {
+      const scheduleMap = new Map<string, {
+        scheduleId: string;
+        scheduleNo: string;
+        customer: string;
+        project: string;
+        startTime: string;
+        endTime: string;
+        duration: number;
+      }>();
+
+      allTrucks.forEach(truck => {
+        truck.schedules.forEach(schedule => {
+          if (!scheduleMap.has(schedule.scheduleId)) {
+            scheduleMap.set(schedule.scheduleId, {
+              scheduleId: schedule.scheduleId,
+              scheduleNo: schedule.scheduleNo,
+              customer: schedule.customer,
+              project: schedule.project,
+              startTime: schedule.startTime,
+              endTime: schedule.endTime,
+              duration: schedule.duration,
+            });
+          }
+        });
+      });
+
+      return Array.from(scheduleMap.values()).sort((a, b) => a.scheduleNo.localeCompare(b.scheduleNo));
+    };
+
+    const uniqueSchedules = getUniqueSchedules();
 
     // Calculate totals by type
     const calculateTotals = () => {
@@ -376,10 +413,10 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
         merges.push({ s: { r: 0, c: 2 }, e: { r: 0, c: 1 + mainCols.length } });
 
         // Detail blocks super headers and subheaders
-        const ordinal = (n: number) => (n === 1 ? "1ST" : n === 2 ? "2ND" : n === 3 ? "3RD" : `${n}TH`);
         let currentColStart = 2 + mainCols.length + 1; // after SL. NO (col0), TM No. (col1) and main block (col2..)
-        for (let scheduleNumber = 1; scheduleNumber <= 6; scheduleNumber++) {
-          superHeaderRow.push(`${ordinal(scheduleNumber)} SCHEDULE`);
+        for (let scheduleIndex = 0; scheduleIndex < Math.min(6, uniqueSchedules.length); scheduleIndex++) {
+          const schedule = uniqueSchedules[scheduleIndex];
+          superHeaderRow.push(`SCHEDULE ${schedule.scheduleNo}`);
           // Fill empties to match merged span
           for (let i = 1; i < scheduleBlockCols.length; i++) superHeaderRow.push("");
           headerRow.push(...scheduleBlockCols);
@@ -409,12 +446,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
             formatHoursAndMinutes(tm.totalFreeHours) as unknown as number
           );
           // Detail blocks for schedules 1..6
-          for (let scheduleNumber = 1; scheduleNumber <= 6; scheduleNumber++) {
-            const schedule = tm.schedules[scheduleNumber - 1];
+          for (let scheduleIndex = 0; scheduleIndex < Math.min(6, uniqueSchedules.length); scheduleIndex++) {
+            const uniqueSchedule = uniqueSchedules[scheduleIndex];
+            const tmSchedule = tm.schedules.find(s => s.scheduleId === uniqueSchedule.scheduleId);
             row.push(
-              schedule?.customer || "-",
-              schedule?.project || "-",
-              schedule ? `${schedule.startTime} - ${schedule.endTime}` : "-"
+              tmSchedule?.customer || "-",
+              tmSchedule?.project || "-",
+              tmSchedule ? `${tmSchedule.startTime} - ${tmSchedule.endTime}` : "-"
             );
           }
           combinedRows.push(row);
@@ -677,21 +715,14 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
         </div>
 
         {/* Schedule Detail Tables */}
-        {[1, 2, 3, 4, 5, 6].map((scheduleNumber) => (
+        {uniqueSchedules.slice(0, 6).map((schedule) => (
           <div
-            key={scheduleNumber}
+            key={schedule.scheduleId}
             className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
           >
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {scheduleNumber === 1
-                  ? "1ST"
-                  : scheduleNumber === 2
-                  ? "2ND"
-                  : scheduleNumber === 3
-                  ? "3RD"
-                  : `${scheduleNumber}TH`}{" "}
-                SCHEDULE
+                SCHEDULE {schedule.scheduleNo}
               </h3>
 
               <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
@@ -733,7 +764,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                     </TableHeader>
                     <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                       {allTrucks.map((tm, idx) => {
-                        const schedule = tm.schedules[scheduleNumber - 1];
+                        const tmSchedule = tm.schedules.find(s => s.scheduleId === schedule.scheduleId);
                         return (
                           <TableRow key={tm.tmNo}>
                             <TableCell className="px-3 py-3 text-center text-xs text-gray-800 dark:text-white/90">
@@ -743,13 +774,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                               {tm.tmNo}
                             </TableCell>
                             <TableCell className="px-3 py-3 text-center text-xs text-gray-800 dark:text-white/90">
-                              {schedule?.customer || "-"}
+                              {tmSchedule?.customer || "-"}
                             </TableCell>
                             <TableCell className="px-3 py-3 text-center text-xs text-gray-800 dark:text-white/90">
-                              {schedule?.project || "-"}
+                              {tmSchedule?.project || "-"}
                             </TableCell>
                             <TableCell className="px-3 py-3 text-center text-xs text-gray-800 dark:text-white/90">
-                              {schedule ? `${schedule.startTime} - ${schedule.endTime}` : "-"}
+                              {tmSchedule ? `${tmSchedule.startTime} - ${tmSchedule.endTime}` : "-"}
                             </TableCell>
                           </TableRow>
                         );
