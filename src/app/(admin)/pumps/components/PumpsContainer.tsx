@@ -125,8 +125,7 @@ export default function PumpsContainer() {
       editedPump.plant_id.trim() !== "" &&
       editedPump.make.trim() !== "" &&
       !editCapacityError &&
-      (editedPump.driver_name === "" ||
-        (editedPump.driver_name && validateName(editedPump.driver_name.trim()))) &&
+      (editedPump.driver_name === "" || (editedPump.driver_name && validateName(editedPump.driver_name.trim()))) &&
       (editedPump.driver_contact === "" ||
         (editedPump.driver_contact && validateMobile(editedPump.driver_contact.trim()))) &&
       !editDriverNameError &&
@@ -137,13 +136,23 @@ export default function PumpsContainer() {
   const handleIdentifierInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.toUpperCase();
     const sanitized = raw.replace(/[^A-Z0-9\s]/g, "");
+
     setNewPump((prev) => ({
       ...prev,
       identifier: sanitized,
     }));
 
+    // format validation
     if (sanitized && !/^[A-Z]{0,2}\s?\d{0,2}\s?[A-Z]{0,2}\s?\d{0,4}$/.test(sanitized)) {
       setError("Invalid. Correct format: XX 00 AA 0000");
+      return;
+    }
+
+    // uniqueness validation
+    const exists = pumpsData?.some((pump) => pump.identifier.replace(/\s+/g, "") === sanitized.replace(/\s+/g, ""));
+
+    if (exists) {
+      setError("Pump Number already exists");
     } else {
       setError("");
     }
@@ -365,7 +374,7 @@ export default function PumpsContainer() {
       if (Number(value) > 999) {
         return; // Don't update the state if value exceeds 999
       }
-      
+
       const numValue = Number(value);
       if (numValue < 1 || numValue > 999) {
         setEditCapacityError("Capacity must be between 1 and 999 m³");
@@ -412,7 +421,7 @@ export default function PumpsContainer() {
       if (Number(value) > 999) {
         return; // Don't update the state if value exceeds 999
       }
-      
+
       const numValue = Number(value);
       if (numValue < 1 || numValue > 999) {
         setCapacityError("Capacity must be between 1 and 999 m³");
@@ -931,17 +940,17 @@ export default function PumpsContainer() {
               </Dropdown>
             </div>
           </div>
-                      <div className="col-span-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
-              <Input
-                type="text"
-                name="remarks"
-                placeholder="Enter remarks (max 50 characters)"
-                value={newPump.remarks || ""}
-                onChange={handleInputChange}
-                maxLength={50}
-              />
-            </div>
+          <div className="col-span-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
+            <Input
+              type="text"
+              name="remarks"
+              placeholder="Enter remarks (max 50 characters)"
+              value={newPump.remarks || ""}
+              onChange={handleInputChange}
+              maxLength={50}
+            />
+          </div>
           <div className="col-span-4 justify-end flex flex-row gap-4">
             <Button variant="outline" onClick={handleCloseCreateModal}>
               Cancel
@@ -971,10 +980,10 @@ export default function PumpsContainer() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity</label>
-              <Input 
-                type="number" 
-                name="capacity" 
-                value={editedPump.capacity} 
+              <Input
+                type="number"
+                name="capacity"
+                value={editedPump.capacity}
                 onChange={handleEditInputChange}
                 step={0.1}
                 min="1"
@@ -1121,10 +1130,10 @@ export default function PumpsContainer() {
             </div>
             <div className="col-span-4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
-              <Input 
-                type="text" 
-                name="remarks" 
-                value={editedPump.remarks || ""} 
+              <Input
+                type="text"
+                name="remarks"
+                value={editedPump.remarks || ""}
                 onChange={handleEditInputChange}
                 maxLength={50}
               />
