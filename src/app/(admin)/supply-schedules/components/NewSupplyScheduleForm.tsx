@@ -170,6 +170,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   const [customTMCount, setCustomTMCount] = useState(1);
 
   const [selectedProject, setSelectedProject] = useState<string>("");
+  const [selectedPlant, setSelectedPlant] = useState<string>("");
 
   // Templates: past supply schedules
   interface PastSupplySchedule {
@@ -179,6 +180,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     client_name: string;
     project_id: string;
     project_name: string;
+    plant_id: string;
+    plant_name: string;
     concreteGrade: string;
     input_params: {
       quantity: number;
@@ -355,6 +358,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       if (data.success) {
         setSelectedClient(data.data.client_id);
         setSelectedProject(data.data.project_id);
+        setSelectedPlant(data.data.plant_id || "");
         const pumping_speed = data.data.input_params.pumping_speed;
         setFormData({
           scheduleDate: data.data.input_params.schedule_date,
@@ -417,6 +421,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       console.error("Error fetching schedule:", error);
       return false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schedule_id, avgTMCap, formData.scheduleDate, motherPlantName, schedulesForDayCount]);
 
   // Template handling - prefill form when template is selected
@@ -428,6 +433,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       if (past) {
         setSelectedClient(past.client_id);
         setSelectedProject(past.project_id);
+        setSelectedPlant(past.plant_id || "");
         setFormData((prev) => ({
           ...prev,
           concreteGrade: past.concreteGrade,
@@ -458,6 +464,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
           schedule_no: computedScheduleName,
           client_id: selectedClient,
           project_id: selectedProject,
+          plant_id: selectedPlant,
           concreteGrade: formData.concreteGrade,
           type: "supply",
           input_params: {
@@ -495,6 +502,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     if (schedule_id && clientsData) {
       fetchSchedule();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schedule_id, clientsData]);
 
   useEffect(() => {
@@ -546,6 +554,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
             schedule_no: computedScheduleName,
             client_id: selectedClient,
             project_id: selectedProject,
+            plant_id: selectedPlant,
             concreteGrade: formData.concreteGrade,
             type: "supply",
             input_params: {
@@ -691,6 +700,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     // For supply schedules, we'll use a reasonable end time based on cycle time
     if (cycleTimeMin <= 0) return null;
     return new Date(scheduleStartDate.getTime() + cycleTimeMin * 60 * 1000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     scheduleStartDate,
     formData.bufferTime,
@@ -1385,22 +1395,22 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
 
                 {/* Supply from Which Plant (Mother Plant) */}
                 <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {/* <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Supply from Which Plant <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    name="motherPlant"
-                    value={
-                      selectedProject && projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                        ? (plantsData || []).find(
-                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                          )?.name || "Unknown Plant"
-                        : ""
-                    }
-                    disabled
-                    placeholder="Auto filled from project"
-                    className="w-full"
+                  </label> */}
+                  <SearchableDropdown
+                    options={plantsData || []}
+                    value={selectedPlant}
+                    onChange={(value: string | string[]) => {
+                      setSelectedPlant(value as string);
+                      setHasChanged(true);
+                    }}
+                    getOptionLabel={(plant) => plant.name}
+                    getOptionValue={(plant) => plant._id}
+                    placeholder="Select a Plant"
+                    label="Supply from Which Plant"
+                    required
+                    multiple={false}
                   />
                 </div>
 
