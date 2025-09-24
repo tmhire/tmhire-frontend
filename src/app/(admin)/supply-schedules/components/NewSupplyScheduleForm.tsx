@@ -1995,63 +1995,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                         </div>
                       )}
 
-                      {/* TM Overrule Section */}
-                      {!fleetOptions.useRoundTrip && (
-                        <div className="space-y-2">
-                          <label className="text-xs font-medium text-gray-900 dark:text-white">
-                            TMs Additional (Max TMs to wait at site)
-                          </label>
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
-                              onClick={() => {
-                                const nextAdditional = Math.max(
-                                  0,
-                                  (customTMCount || 0) - fleetOptions.vehicleCount - 1
-                                );
-                                const nextTotal = Math.max(1, fleetOptions.vehicleCount + nextAdditional);
-                                setOverruleTMCount(nextAdditional > 0);
-                                setCustomTMCount(nextTotal);
-                                setHasChanged(true);
-                              }}
-                            >
-                              -
-                            </button>
-                            <input
-                              type="number"
-                              min={0}
-                              className="no-spinner h-6 w-8 text-center px-1 rounded border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
-                              value={Math.max(0, (customTMCount || 0) - fleetOptions.vehicleCount)}
-                              onChange={(e) => {
-                                const raw = parseInt(e.target.value || "0", 10);
-                                const add = isNaN(raw) ? 0 : Math.max(0, raw);
-                                const nextTotal = Math.max(1, fleetOptions.vehicleCount + add);
-                                setOverruleTMCount(add > 0);
-                                setCustomTMCount(nextTotal);
-                                setHasChanged(true);
-                              }}
-                            />
-                            <button
-                              type="button"
-                              className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
-                              onClick={() => {
-                                const nextAdditional = Math.max(
-                                  0,
-                                  (customTMCount || 0) - fleetOptions.vehicleCount + 1
-                                );
-                                const nextTotal = Math.max(1, fleetOptions.vehicleCount + nextAdditional);
-                                setOverruleTMCount(true);
-                                setCustomTMCount(nextTotal);
-                                setHasChanged(true);
-                              }}
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
                       {/* Original Fleet Sizing Info */}
                       <div className="pt-2 border-t border-blue-200/60 dark:border-blue-800/60">
                         <div className="space-y-2.5">
