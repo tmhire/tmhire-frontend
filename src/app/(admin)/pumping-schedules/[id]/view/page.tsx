@@ -88,7 +88,34 @@ interface Schedule {
     status: string;
     availability: boolean;
   }>;
+  burst_table?: Array<{
+    trip_no: number;
+    tm_no: string;
+    tm_id: string;
+    plant_load: string;
+    plant_buffer: string;
+    plant_start: string;
+    pump_start: string;
+    unloading_time: string;
+    return: string;
+    completed_capacity: number;
+    cycle_time?: number;
+    trip_no_for_tm?: number;
+    cushion_time?: number | null;
+    plant_name?: string | null;
+    site_reach?: string;
+    waiting_time?: number;
+    queue?: number;
+  }>;
 }
+
+type TripRow = Schedule["output_table"][number] & {
+  site_reach?: string;
+  waiting_time?: number;
+  queue?: number;
+  plant_name?: string | null;
+  cushion_time?: number | null;
+};
 
 // Utility function to calculate pump start time from plant
 const calculatePumpStartTimeFromPlant = (schedule: Schedule, preferredFormat?: string): string => {
@@ -127,6 +154,7 @@ export default function ScheduleViewPage() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [canceledBy, setCanceledBy] = useState<CanceledBy>(CanceledBy.client);
   const [reasonForCancel, setReasonForCancel] = useState<CancelReason>(CancelReason.ecl);
+  const [useBurstModel, setUseBurstModel] = useState(false);
 
   // Delete schedule mutation
   const deleteScheduleMutation = useMutation({
@@ -530,7 +558,7 @@ export default function ScheduleViewPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
         {/* Summary Card */}
-        <div className="md:col-span-2 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl p-6 flex flex-col justify-center h-full">
+        <div className="md:col-span-2 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl p-6 flex flex-col justify-start h-full">
           <div className="grid grid-cols-4 gap-x-8 gap-y-4">
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Scheduled Date</h4>
@@ -717,6 +745,41 @@ export default function ScheduleViewPage() {
               </div>
             );
           })()}
+
+          {/* Model Toggle and Info */}
+          {schedule.burst_table && schedule.burst_table[0] && (
+            <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Schedule Model</h4>
+                <button
+                  type="button"
+                  onClick={() => setUseBurstModel((v) => !v)}
+                  className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors ${
+                    useBurstModel
+                      ? "border-blue-600 text-blue-700 dark:border-blue-400 dark:text-blue-300"
+                      : "border-gray-300 text-gray-700 dark:border-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{
+                      backgroundColor: useBurstModel ? "#2563eb" : "#9ca3af",
+                    }}
+                  />
+                  {useBurstModel ? "Burst model" : "0 Wait model"}
+                </button>
+              </div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                <p>
+                  <strong>0 Wait model:</strong> Considers unloading time and assumes no wait between consecutive pours.
+                </p>
+                <p>
+                  <strong>Burst model:</strong> Uses extra TMs as backup waiting system with calculated max wait limit
+                  from user input.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -918,86 +981,182 @@ export default function ScheduleViewPage() {
 
       <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mt-3">
         <div className="">
-          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Schedule Table</h4>
+          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">
+            Schedule Table - {useBurstModel ? "Burst Model" : "0 Wait Model"}
+          </h4>
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-100/20 dark:border-white/[0.05] dark:bg-white/[0.03]">
             <div className="max-w-full overflow-x-auto">
               <Table>
                 <thead className="border-b border-gray-100 dark:border-white/[0.05]">
                   {/* Main header row with merged columns */}
-                  <tr>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                      Trip No
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                      TM No
-                    </th>
-                    <th
-                      colSpan={4}
-                      className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
-                    >
-                      Plant
-                    </th>
-                    <th
-                      colSpan={2}
-                      className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
-                    >
-                      Pump - Unloading
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                      Return Time
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                      Cum. Volume
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                      Cycle Time (min)
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                      Cushion Time (min)
-                    </th>
-                  </tr>
+                  {!useBurstModel ? (
+                    <tr>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        Trip No
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        TM No
+                      </th>
+                      <th
+                        colSpan={4}
+                        className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
+                      >
+                        Plant
+                      </th>
+                      <th
+                        colSpan={2}
+                        className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
+                      >
+                        Pump - Unloading
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        Return Time
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        Cum. Volume
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        Cycle Time (min)
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        Cushion Time (min)
+                      </th>
+                    </tr>
+                  ) : (
+                    <tr>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        Trip No
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        TM No
+                      </th>
+                      <th
+                        colSpan={4}
+                        className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
+                      >
+                        Plant
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700">
+                        Site reach
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700">
+                        Waiting Time (min)
+                      </th>
+                      <th
+                        colSpan={2}
+                        className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
+                      >
+                        Pump - Unloading
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        Return Time
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        Queue
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        Cum. Volume
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        Cycle Time (min)
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        Cushion Time (min)
+                      </th>
+                    </tr>
+                  )}
                   {/* Sub-header row with individual column names */}
-                  <tr>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                      #
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                      #
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
-                      Name
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-l border-gray-200 dark:border-gray-700">
-                      Prepare Time
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-l border-gray-200 dark:border-gray-700">
-                      Load Time
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
-                      Start Time
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
-                      Start Time
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
-                      End Time
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                      #
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                      #
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                      #
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                      #
-                    </th>
-                  </tr>
+                  {!useBurstModel ? (
+                    <tr>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        #
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        #
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                        Name
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-l border-gray-200 dark:border-gray-700">
+                        Prepare Time
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-l border-gray-200 dark:border-gray-700">
+                        Load Time
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
+                        Start Time
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                        Start Time
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
+                        End Time
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        #
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        #
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        #
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        #
+                      </th>
+                    </tr>
+                  ) : (
+                    <tr>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        #
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        #
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                        Name
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-l border-gray-200 dark:border-gray-700">
+                        Prepare Time
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-l border-gray-200 dark:border-gray-700">
+                        Load Time
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
+                        Start Time
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                        Time
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                        #
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                        Start Time
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
+                        End Time
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        #
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        #
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        #
+                      </th>
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                        #
+                      </th>
+                    </tr>
+                  )}
                 </thead>
                 <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                  {schedule.output_table.map((trip) => (
+                  {(!useBurstModel
+                    ? (schedule.output_table as unknown as TripRow[])
+                    : ((schedule.burst_table || []) as unknown as TripRow[])
+                  ).map((trip) => (
                     <TableRow key={trip.trip_no}>
                       <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">{trip.trip_no}</span>
@@ -1005,14 +1164,12 @@ export default function ScheduleViewPage() {
                       <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">
                           {(() => {
-                            // Calculate total trips for this TM
-                            const tmTotalTrips = schedule.output_table.filter((t) => t.tm_id === trip.tm_id).length;
-                            // Find the current trip number for this TM (1-based index)
-                            const tmTrips = schedule.output_table
+                            const source = !useBurstModel ? schedule.output_table : schedule.burst_table || [];
+                            const tmTotalTrips = source.filter((t) => t.tm_id === trip.tm_id).length;
+                            const tmTrips = source
                               .filter((t) => t.tm_id === trip.tm_id)
                               .sort((a, b) => a.trip_no - b.trip_no);
                             const currentTripIndex = tmTrips.findIndex((t) => t.trip_no === trip.trip_no) + 1;
-
                             return (
                               <>
                                 <div className="flex w-fit rounded-md border-2 border-black bg-yellow-500 shadow items-center gap-2 pr-2">
@@ -1020,8 +1177,6 @@ export default function ScheduleViewPage() {
                                     <span className="text-xs text-white-400">
                                       ({currentTripIndex}/{tmTotalTrips})
                                     </span>
-                                    {/* <img className="h-3" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" /> */}
-                                    {/* IND */}
                                   </label>
                                   <label className="p-1 px-1 font-mono text-sm font-medium items-center text-black">
                                     {trip.tm_no}
@@ -1054,24 +1209,65 @@ export default function ScheduleViewPage() {
                           {formatTimeByPreference(trip.plant_start, profile?.preferred_format)}
                         </span>
                       </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
-                        <span className="text-gray-500 dark:text-gray-400">
-                          {trip.pump_start ? formatTimeByPreference(trip.pump_start, profile?.preferred_format) : "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
-                        <span className="text-gray-500 dark:text-gray-400">
-                          {trip.unloading_time
-                            ? formatTimeByPreference(trip.unloading_time, profile?.preferred_format)
-                            : "-"}
-                        </span>
-                      </TableCell>
+                      {!useBurstModel ? (
+                        <>
+                          <TableCell className="px-3 py-4 text-start">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {trip.pump_start
+                                ? formatTimeByPreference(trip.pump_start, profile?.preferred_format)
+                                : "-"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-3 py-4 text-start">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {trip.unloading_time
+                                ? formatTimeByPreference(trip.unloading_time, profile?.preferred_format)
+                                : "-"}
+                            </span>
+                          </TableCell>
+                        </>
+                      ) : (
+                        <>
+                          <TableCell className="px-3 py-4 text-start">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {trip.site_reach
+                                ? formatTimeByPreference(trip.site_reach, profile?.preferred_format)
+                                : "-"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-3 py-4 text-start">
+                            <span className="text-gray-800 dark:text-white/90">
+                              {typeof trip.waiting_time === "number" ? trip.waiting_time : "-"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-3 py-4 text-start">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {trip.pump_start
+                                ? formatTimeByPreference(trip.pump_start, profile?.preferred_format)
+                                : "-"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-3 py-4 text-start">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {trip.unloading_time
+                                ? formatTimeByPreference(trip.unloading_time, profile?.preferred_format)
+                                : "-"}
+                            </span>
+                          </TableCell>
+                        </>
+                      )}
                       <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
                           {trip.return ? formatTimeByPreference(trip.return, profile?.preferred_format) : "-"}
                         </span>
                       </TableCell>
-
+                      {useBurstModel && (
+                        <TableCell className="px-3 py-4 text-start">
+                          <span className="text-gray-800 dark:text-white/90">
+                            {typeof trip.queue === "number" ? trip.queue : "-"}
+                          </span>
+                        </TableCell>
+                      )}
                       <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">{trip.completed_capacity} m³</span>
                       </TableCell>
@@ -1082,7 +1278,9 @@ export default function ScheduleViewPage() {
                       </TableCell>
                       <TableCell className="px-3 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">
-                          {typeof trip.cushion_time !== "undefined" ? (trip.cushion_time / 60).toFixed(0) : "-"}
+                          {typeof trip.cushion_time !== "undefined" && trip.cushion_time !== null
+                            ? (trip.cushion_time / 60).toFixed(0)
+                            : "-"}
                         </span>
                       </TableCell>
                     </TableRow>
