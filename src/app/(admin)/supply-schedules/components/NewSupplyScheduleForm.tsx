@@ -196,6 +196,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     remarks?: string;
     site_supervisor_id?: string;
     tm_overrule?: number;
+    tm_count?: number;
+    trip_count?: number;
+    is_round_trip?: boolean;
   }
 
   const [selectedPastSchedule, setSelectedPastSchedule] = useState<string>("");
@@ -448,6 +451,11 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
           setOverruleTMCount(true);
           setCustomTMCount(past.tm_overrule);
         }
+        setFleetOptions({
+          tripsNeeded: past?.trip_count || 0,
+          useRoundTrip: past?.is_round_trip || false,
+          vehicleCount: past?.is_round_trip ? 1 : past?.tm_count || 1,
+        });
       }
     }
     // Move to first sub-step
@@ -2263,15 +2271,15 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                   {/* Left header */}
                   <div className="flex items-center gap-3 py-2 pl-4">
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
-                      Select {overruleTMCount ? customTMCount : calculatedTMs.tm_count || "N/A"} TMs
+                      Select {fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount || "N/A"} TMs
                     </h3>
                   </div>
 
                   {/* Right header */}
                   <div className="flex items-center gap-3 py-2">
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
-                      {tmSequence.length}/{overruleTMCount ? customTMCount : calculatedTMs.tm_count || "N/A"} selected -
-                      Arrange
+                      {tmSequence.length}/{fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount || "N/A"} selected
+                      - Arrange
                     </h3>
                   </div>
                 </div>
@@ -2630,10 +2638,10 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
               Back to Transit Mixer Trip Log
             </Button>
             <div className="flex items-center gap-4 justify-end flex-1">
-              {tmSequence.length !== (overruleTMCount ? customTMCount : calculatedTMs?.tm_count) && (
+              {tmSequence.length !== (fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount) && (
                 <div className="p-2 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg text-xs">
                   Select{" "}
-                  <span className="font-semibold">{overruleTMCount ? customTMCount : calculatedTMs?.tm_count}</span> TMs
+                  <span className="font-semibold">{fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount}</span> TMs
                   {!overruleTMCount && " to get optimum schedule."}
                   {overruleTMCount && "."}
                 </div>
@@ -2642,10 +2650,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 onClick={handleNext}
                 className="flex items-center gap-2 min-w-[140px]"
                 disabled={
-                  isGenerating ||
-                  (!overruleTMCount
-                    ? tmSequence.length !== calculatedTMs?.tm_count
-                    : tmSequence.length !== customTMCount || customTMCount < 1)
+                  isGenerating || tmSequence.length !== (fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount)
                 }
               >
                 {isGenerating ? "Generating..." : "Generate Schedule"}
