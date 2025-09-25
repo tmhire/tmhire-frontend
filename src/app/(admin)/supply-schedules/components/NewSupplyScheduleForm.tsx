@@ -170,6 +170,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   const [customTMCount, setCustomTMCount] = useState(1);
 
   const [selectedProject, setSelectedProject] = useState<string>("");
+  const [selectedPlant, setSelectedPlant] = useState<string>("");
 
   // Templates: past supply schedules
   interface PastSupplySchedule {
@@ -179,6 +180,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     client_name: string;
     project_id: string;
     project_name: string;
+    plant_id: string;
+    plant_name: string;
     concreteGrade: string;
     input_params: {
       quantity: number;
@@ -193,6 +196,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     remarks?: string;
     site_supervisor_id?: string;
     tm_overrule?: number;
+    tm_count?: number;
+    trip_count?: number;
+    is_round_trip?: boolean;
   }
 
   const [selectedPastSchedule, setSelectedPastSchedule] = useState<string>("");
@@ -355,6 +361,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       if (data.success) {
         setSelectedClient(data.data.client_id);
         setSelectedProject(data.data.project_id);
+        setSelectedPlant(data.data.plant_id || "");
         const pumping_speed = data.data.input_params.pumping_speed;
         setFormData({
           scheduleDate: data.data.input_params.schedule_date,
@@ -417,6 +424,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       console.error("Error fetching schedule:", error);
       return false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schedule_id, avgTMCap, formData.scheduleDate, motherPlantName, schedulesForDayCount]);
 
   // Template handling - prefill form when template is selected
@@ -428,6 +436,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       if (past) {
         setSelectedClient(past.client_id);
         setSelectedProject(past.project_id);
+        setSelectedPlant(past.plant_id || "");
         setFormData((prev) => ({
           ...prev,
           concreteGrade: past.concreteGrade,
@@ -442,6 +451,11 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
           setOverruleTMCount(true);
           setCustomTMCount(past.tm_overrule);
         }
+        setFleetOptions({
+          tripsNeeded: past?.trip_count || 0,
+          useRoundTrip: past?.is_round_trip || false,
+          vehicleCount: past?.is_round_trip ? 1 : past?.tm_count || 1,
+        });
       }
     }
     // Move to first sub-step
@@ -458,6 +472,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
           schedule_no: computedScheduleName,
           client_id: selectedClient,
           project_id: selectedProject,
+          plant_id: selectedPlant,
           concreteGrade: formData.concreteGrade,
           type: "supply",
           input_params: {
@@ -495,6 +510,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     if (schedule_id && clientsData) {
       fetchSchedule();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schedule_id, clientsData]);
 
   useEffect(() => {
@@ -546,6 +562,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
             schedule_no: computedScheduleName,
             client_id: selectedClient,
             project_id: selectedProject,
+            plant_id: selectedPlant,
             concreteGrade: formData.concreteGrade,
             type: "supply",
             input_params: {
@@ -691,6 +708,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     // For supply schedules, we'll use a reasonable end time based on cycle time
     if (cycleTimeMin <= 0) return null;
     return new Date(scheduleStartDate.getTime() + cycleTimeMin * 60 * 1000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     scheduleStartDate,
     formData.bufferTime,
@@ -1385,22 +1403,22 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
 
                 {/* Supply from Which Plant (Mother Plant) */}
                 <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {/* <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Supply from Which Plant <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    name="motherPlant"
-                    value={
-                      selectedProject && projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                        ? (plantsData || []).find(
-                            (plant) => plant._id === projects.find((p) => p._id === selectedProject)?.mother_plant_id
-                          )?.name || "Unknown Plant"
-                        : ""
-                    }
-                    disabled
-                    placeholder="Auto filled from project"
-                    className="w-full"
+                  </label> */}
+                  <SearchableDropdown
+                    options={plantsData || []}
+                    value={selectedPlant}
+                    onChange={(value: string | string[]) => {
+                      setSelectedPlant(value as string);
+                      setHasChanged(true);
+                    }}
+                    getOptionLabel={(plant) => plant.name}
+                    getOptionValue={(plant) => plant._id}
+                    placeholder="Select a Plant"
+                    label="Supply from Which Plant"
+                    required
+                    multiple={false}
                   />
                 </div>
 
@@ -2253,15 +2271,15 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                   {/* Left header */}
                   <div className="flex items-center gap-3 py-2 pl-4">
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
-                      Select {overruleTMCount ? customTMCount : calculatedTMs.tm_count || "N/A"} TMs
+                      Select {fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount || "N/A"} TMs
                     </h3>
                   </div>
 
                   {/* Right header */}
                   <div className="flex items-center gap-3 py-2">
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
-                      {tmSequence.length}/{overruleTMCount ? customTMCount : calculatedTMs.tm_count || "N/A"} selected -
-                      Arrange
+                      {tmSequence.length}/{fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount || "N/A"} selected
+                      - Arrange
                     </h3>
                   </div>
                 </div>
@@ -2620,10 +2638,10 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
               Back to Transit Mixer Trip Log
             </Button>
             <div className="flex items-center gap-4 justify-end flex-1">
-              {tmSequence.length !== (overruleTMCount ? customTMCount : calculatedTMs?.tm_count) && (
+              {tmSequence.length !== (fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount) && (
                 <div className="p-2 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg text-xs">
                   Select{" "}
-                  <span className="font-semibold">{overruleTMCount ? customTMCount : calculatedTMs?.tm_count}</span> TMs
+                  <span className="font-semibold">{fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount}</span> TMs
                   {!overruleTMCount && " to get optimum schedule."}
                   {overruleTMCount && "."}
                 </div>
@@ -2632,10 +2650,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 onClick={handleNext}
                 className="flex items-center gap-2 min-w-[140px]"
                 disabled={
-                  isGenerating ||
-                  (!overruleTMCount
-                    ? tmSequence.length !== calculatedTMs?.tm_count
-                    : tmSequence.length !== customTMCount || customTMCount < 1)
+                  isGenerating || tmSequence.length !== (fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount)
                 }
               >
                 {isGenerating ? "Generating..." : "Generate Schedule"}

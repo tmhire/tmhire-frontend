@@ -483,7 +483,11 @@ export default function SupplySchedulesContainer() {
             <Button onClick={() => setIsDeleteModalOpen(false)} variant="outline">
               Cancel
             </Button>
-            <Button onClick={handleConfirmDelete} variant="warning" disabled={deleteScheduleMutation.isPending}>
+            <Button
+              onClick={() => handleConfirmDelete(DeleteType.temporary)}
+              variant="warning"
+              disabled={deleteScheduleMutation.isPending}
+            >
               {deleteScheduleMutation.isPending ? (
                 <div className="flex items-center gap-2">
                   <Spinner size="sm" />
