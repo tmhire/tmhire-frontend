@@ -30,19 +30,20 @@ export function formatTimeByPreference(date: string | number | Date, preferredFo
 }
 
 export function formatHoursAndMinutes(decimalHours: number): string {
-  if (isNaN(decimalHours) || decimalHours < 0) return "0 hrs 0 mins";
+  if (isNaN(decimalHours) || decimalHours < 0) return "0 mins";
 
   const hours = Math.floor(decimalHours);
   const minutes = Math.round((decimalHours - hours) * 60);
 
-  if (hours === 0) {
-    return `${minutes} mins`;
+  if (decimalHours < 1) {
+    return `${Math.round(decimalHours * 60)} mins`;
   } else if (minutes === 0) {
     return `${hours} hrs`;
   } else {
     return `${hours} hrs ${minutes} mins`;
   }
 }
+
 
 export const validateMobile = (value: string) => {
   return /^\d{10}$/.test(value);

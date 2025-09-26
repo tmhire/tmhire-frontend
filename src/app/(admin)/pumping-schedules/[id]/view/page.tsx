@@ -880,7 +880,11 @@ export default function ScheduleViewPage() {
                               >
                                 <span className="text-xs text-white">{isLinePump ? "LINE" : "BOOM"}</span>
                               </label>
-                              <label className={`p-1 px-1 font-mono text-sm font-medium items-center text-black`}>
+                              <label
+                                className={`p-1 px-1 font-mono text-sm font-medium items-center ${
+                                  isLinePump ? "text-white" : "text-black"
+                                } `}
+                              >
                                 {pump.identifier}
                               </label>
                             </div>
@@ -903,7 +907,9 @@ export default function ScheduleViewPage() {
                     </TableCell>
                     <TableCell className="px-2 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
-                        {schedule?.output_table?.length > 0 ? schedule.output_table[0].pump_start : "N/A"}
+                        {schedule?.input_params.pump_fixing_time
+                          ? (schedule?.input_params.pump_fixing_time)
+                          : "N/A"}
                       </span>
                     </TableCell>
                     <TableCell className="px-2 py-4 text-start">
