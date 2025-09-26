@@ -278,6 +278,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [openPlantGroups, setOpenPlantGroups] = useState<Record<string, boolean>>({});
   const [overruleTMCount, setOverruleTMCount] = useState(false);
   const [customTMCount, setCustomTMCount] = useState(1);
+  const [isBurstModel, setIsBurstModel] = useState(false);
   // 1. Add state for selectedProject and projects
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [selectedPlant, setSelectedPlant] = useState<string>("");
@@ -524,6 +525,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           oneWayKm: data.data.mother_plant_km?.toString?.() || "",
           siteSupervisorId: data.data.site_supervisor_id || "",
         });
+        setIsBurstModel(!!data?.data?.input_params?.is_burst_model);
         setComputedScheduleName(
           data?.data?.schedule_no ||
             `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
@@ -596,6 +598,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             pump_start_time_from_plant: formData.pump_start_time_from_plant,
             pump_fixing_time: parseFloat(formData.pumpFixingTime),
             pump_removal_time: parseFloat(formData.pumpRemovalTime),
+            is_burst_model: !!isBurstModel,
           },
           site_address: selectedProject ? projects.find((p) => p._id === selectedProject)?.address || "" : "",
           pumping_job: formData.pumpingJob,
@@ -726,6 +729,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               pump_fixing_time: parseFloat(formData.pumpFixingTime),
               pump_removal_time: parseFloat(formData.pumpRemovalTime),
               unloading_time: parseFloat(formData.unloadingTime),
+            is_burst_model: !!isBurstModel,
             },
             site_address: selectedProject ? projects.find((p) => p._id === selectedProject)?.address || "" : "",
             pumping_job: formData.pumpingJob,
@@ -2251,7 +2255,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             </div>
           </div>
         ) : step === 1.3 ? (
-          <div className="space-y-4">
+          <div className="space-y-4 mb-20">
             {/* Transit Mixer Trip Details Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
               <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Transit Mixer Trip Log</h3>
@@ -2525,6 +2529,43 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             {totalTMRequired > 0 ? totalTMRequired : "-"}
                           </span>
                         </div>
+
+                        {additionalTMValue > 0 && (
+                          <div className="mt-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-900/40">
+                            <div className="px-3 py-2 border-b border-blue-200 dark:border-blue-800 flex items-center justify-between">
+                              <span className="text-xs font-semibold text-gray-900 dark:text-white">Pour Model</span>
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  className={`px-2.5 py-1 text-xs rounded border ${!isBurstModel ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-blue-300 dark:border-blue-700"}`}
+                                  onClick={() => setIsBurstModel(false)}
+                                >
+                                  0 Wait
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`px-2.5 py-1 text-xs rounded border ${isBurstModel ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-blue-300 dark:border-blue-700"}`}
+                                  onClick={() => setIsBurstModel(true)}
+                                >
+                                  Burst
+                                </button>
+                              </div>
+                            </div>
+                            <div className="p-3 space-y-2">
+                              {!isBurstModel ? (
+                                <div className="text-[11px] leading-5 text-gray-700 dark:text-gray-300">
+                                  <p className="font-semibold">0 Wait model</p>
+                                  <p>Assumes each TM unloads back-to-back. Unloading time is counted and the sequence is planned so consecutive pours have effectively no waiting gap.</p>
+                                </div>
+                              ) : (
+                                <div className="text-[11px] leading-5 text-gray-700 dark:text-gray-300">
+                                  <p className="font-semibold">Burst model</p>
+                                  <p>Uses the extra TMs as a standby buffer to absorb delays. A maximum acceptable wait between pours is calculated from your inputs to allow short bursts followed by brief waits.</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

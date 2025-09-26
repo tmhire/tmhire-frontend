@@ -8,10 +8,11 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components
 import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
 import { Modal } from "@/components/ui/modal";
-import { Pencil, Trash2, Download, CopyX } from "lucide-react";
+import { Pencil, Trash2, Download, CopyX, ArrowUpDown } from "lucide-react";
 import { formatTimeByPreference, formatHoursAndMinutes } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
 import { useState } from "react";
+import React from "react";
 import * as XLSX from "xlsx";
 import { CanceledBy, CancelReason, DeleteType } from "@/types/common.types";
 import Radio from "@/components/form/input/Radio";
@@ -58,6 +59,7 @@ interface Schedule {
     pump_removal_time: number;
     unloading_time: number;
     pump_onward_time?: number;
+    is_burst_model?: boolean;
   };
   output_table: Array<{
     trip_no: number;
@@ -155,6 +157,8 @@ export default function ScheduleViewPage() {
   const [canceledBy, setCanceledBy] = useState<CanceledBy>(CanceledBy.client);
   const [reasonForCancel, setReasonForCancel] = useState<CancelReason>(CancelReason.ecl);
   const [useBurstModel, setUseBurstModel] = useState(false);
+  const [isModelChangeModalOpen, setIsModelChangeModalOpen] = useState(false);
+  const [showGapRows, setShowGapRows] = useState(true);
 
   // Delete schedule mutation
   const deleteScheduleMutation = useMutation({
@@ -177,6 +181,64 @@ export default function ScheduleViewPage() {
     },
   });
 
+  // Update burst model mutation (send full schedule via PUT like NewScheduleForm)
+  const updateBurstModelMutation = useMutation({
+    mutationFn: async (nextIsBurstModel: boolean) => {
+      if (!schedule) throw new Error("Schedule not loaded");
+      const s = schedule;
+      const response = await fetchWithAuth(`/schedules/${params.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          schedule_no: s.schedule_no,
+          client_id: s.client_id,
+          project_id: s.project_id,
+          // plant_id intentionally omitted if not available in view payload
+          concreteGrade: s.concreteGrade,
+          pumping_speed: s.pumping_speed,
+          pump_type: s.pump_type,
+          input_params: {
+            quantity: s.input_params.quantity,
+            pumping_speed: s.input_params.pumping_speed ?? s.pumping_speed,
+            unloading_time: s.input_params.unloading_time,
+            onward_time: s.input_params.onward_time,
+            pump_onward_time: s.input_params.pump_onward_time ?? 0,
+            return_time: s.input_params.return_time,
+            buffer_time: s.input_params.buffer_time,
+            load_time: s.input_params.load_time,
+            pump_start: s.input_params.pump_start,
+            schedule_date: s.input_params.schedule_date,
+            pump_start_time_from_plant: s.input_params.pump_start_time_from_plant,
+            pump_fixing_time: s.input_params.pump_fixing_time,
+            pump_removal_time: s.input_params.pump_removal_time,
+            is_burst_model: nextIsBurstModel,
+          },
+          site_address: s.site_address,
+          pumping_job: s.pumping_job,
+          floor_height: s.floor_height,
+          pump_site_reach_time: s.pump_site_reach_time,
+          // tm_overrule omitted in view update
+          slump_at_site: s.slump_at_site,
+          mix_code: undefined,
+          remarks: undefined,
+          mother_plant_km: s.mother_plant_km,
+          site_supervisor_id: s.site_supervisor_id,
+        }),
+      });
+      if (!response) throw new Error("No response from server");
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message || "Failed to update burst model");
+      return data.data as Schedule;
+    },
+    onSuccess: (updated) => {
+      if (updated?.input_params?.is_burst_model !== undefined) {
+        setUseBurstModel(updated.input_params.is_burst_model);
+      }
+      queryClient.invalidateQueries({ queryKey: ["schedule", params.id] });
+      setIsModelChangeModalOpen(false);
+      router.push(`/pumping-schedules/${params.id}`);
+    },
+  });
+
   const handleEdit = () => {
     router.push(`/pumping-schedules/${params.id}`);
   };
@@ -187,6 +249,18 @@ export default function ScheduleViewPage() {
 
   const handleDelete = () => {
     setIsDeleteModalOpen(true);
+  };
+
+  const handleModelChange = () => {
+    setIsModelChangeModalOpen(true);
+  };
+
+  const handleConfirmModelChange = async () => {
+    try {
+      await updateBurstModelMutation.mutateAsync(!useBurstModel);
+    } catch (error) {
+      console.error("Error updating burst model:", error);
+    }
   };
 
   const handleConfirmDelete = async (deleteType: DeleteType = DeleteType.cancel) => {
@@ -206,6 +280,13 @@ export default function ScheduleViewPage() {
       return data.data;
     },
   });
+
+  // Update useBurstModel when schedule data is loaded
+  React.useEffect(() => {
+    if (schedule?.input_params?.is_burst_model !== undefined) {
+      setUseBurstModel(schedule.input_params.is_burst_model);
+    }
+  }, [schedule]);
 
   const handleExportExcel = () => {
     if (!schedule) return;
@@ -751,23 +832,29 @@ export default function ScheduleViewPage() {
             <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Schedule Model</h4>
-                <button
-                  type="button"
-                  onClick={() => setUseBurstModel((v) => !v)}
-                  className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-sm transition-colors ${
-                    useBurstModel
-                      ? "border-blue-600 text-blue-700 dark:border-blue-400 dark:text-blue-300"
-                      : "border-gray-300 text-gray-700 dark:border-gray-700 dark:text-gray-300"
-                  }`}
-                >
-                  <span
-                    className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{
-                      backgroundColor: useBurstModel ? "#2563eb" : "#9ca3af",
-                    }}
-                  />
-                  {useBurstModel ? "Burst model" : "0 Wait model"}
-                </button>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium ${!useBurstModel ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`}>
+                      0 Wait
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleModelChange}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                        useBurstModel ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          useBurstModel ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                    <span className={`text-xs font-medium ${useBurstModel ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`}>
+                      Burst
+                    </span>
+                  </div>
+                </div>
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                 <p>
@@ -907,9 +994,7 @@ export default function ScheduleViewPage() {
                     </TableCell>
                     <TableCell className="px-2 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
-                        {schedule?.input_params.pump_fixing_time
-                          ? (schedule?.input_params.pump_fixing_time)
-                          : "N/A"}
+                        {schedule?.input_params.pump_fixing_time ? schedule?.input_params.pump_fixing_time : "N/A"}
                       </span>
                     </TableCell>
                     <TableCell className="px-2 py-4 text-start">
@@ -987,9 +1072,29 @@ export default function ScheduleViewPage() {
 
       <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mt-3">
         <div className="">
-          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">
-            Schedule Table - {useBurstModel ? "Burst Model" : "0 Wait Model"}
-          </h4>
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              Schedule Table - {useBurstModel ? "Burst Model" : "0 Wait Model"}
+            </h4>
+            {useBurstModel && (
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-600 dark:text-gray-400">Show Gap Rows</label>
+                <button
+                  type="button"
+                  onClick={() => setShowGapRows(!showGapRows)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    showGapRows ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                      showGapRows ? "translate-x-5" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
+          </div>
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-100/20 dark:border-white/[0.05] dark:bg-white/[0.03]">
             <div className="max-w-full overflow-x-auto">
               <Table>
@@ -1159,11 +1264,29 @@ export default function ScheduleViewPage() {
                   )}
                 </thead>
                 <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                  {(!useBurstModel
-                    ? (schedule.output_table as unknown as TripRow[])
-                    : ((schedule.burst_table || []) as unknown as TripRow[])
-                  ).map((trip) => (
-                    <TableRow key={trip.trip_no}>
+                  {(() => {
+                    const rows = (!useBurstModel
+                      ? (schedule.output_table as unknown as TripRow[])
+                      : ((schedule.burst_table || []) as unknown as TripRow[])
+                    ).sort((a, b) => a.trip_no - b.trip_no);
+
+                    const getGapMinutes = (prev: TripRow | undefined, next: TripRow | undefined) => {
+                      if (!prev || !next) return null;
+                      const prevTime = prev.plant_buffer || prev.plant_load || prev.plant_start;
+                      const nextTime = next.plant_buffer || next.plant_load || next.plant_start;
+                      if (!prevTime || !nextTime) return null;
+                      const a = new Date(prevTime).getTime();
+                      const b = new Date(nextTime).getTime();
+                      if (isNaN(a) || isNaN(b)) return null;
+                      const diff = Math.round((b - a) / (1000 * 60));
+                      return diff >= 0 ? diff : null;
+                    };
+
+                    const rendered: React.ReactNode[] = [];
+                    rows.forEach((trip, idx) => {
+                      const keyBase = `${trip.tm_id}-${trip.trip_no}`;
+                      rendered.push(
+                        <TableRow key={keyBase}>
                       <TableCell className="px-2 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">{trip.trip_no}</span>
                       </TableCell>
@@ -1242,7 +1365,7 @@ export default function ScheduleViewPage() {
                             </span>
                           </TableCell>
                           <TableCell className="px-2 py-4 text-start">
-                            <span className="text-gray-800 dark:text-white/90">
+                                <span className="text-red-600 dark:text-red-400 ">
                               {typeof trip.waiting_time === "number" ? trip.waiting_time : "-"}
                             </span>
                           </TableCell>
@@ -1269,7 +1392,7 @@ export default function ScheduleViewPage() {
                       </TableCell>
                       {useBurstModel && (
                         <TableCell className="px-2 py-4 text-start">
-                          <span className="text-gray-800 dark:text-white/90">
+                          <span className="text-red-600 dark:text-red-400 ">
                             {typeof trip.queue === "number" ? trip.queue : "-"}
                           </span>
                         </TableCell>
@@ -1289,8 +1412,39 @@ export default function ScheduleViewPage() {
                             : "-"}
                         </span>
                       </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableRow>
+                      );
+
+                      if (useBurstModel && showGapRows && idx < rows.length - 1) {
+                        const gap = getGapMinutes(trip, rows[idx + 1]);
+                        if (gap !== null) {
+                          // Insert a thin gap row with only the Prepare Time cell populated
+                          rendered.push(
+                            <tr key={`${keyBase}-gap`} className="bg-red-50/40 dark:bg-red-900/10">
+                              <td className="px-2 py-1 text-start text-xs text-red-600 dark:text-red-400" />
+                              <td className="px-2 py-1 text-start text-xs text-red-600 dark:text-red-400" />
+                              <td className="px-2 py-1 text-start text-xs text-red-600 dark:text-red-400" />
+                              <td className="px-2 py-0 flex flex-row justify-start items-center gap-1 text-start text-xs  text-red-700 dark:text-red-400">
+                                {gap} min <ArrowUpDown size={"12px"}/>
+                              </td>
+                              <td className="px-2 py-1" />
+                              <td className="px-2 py-1" />
+                              <td className="px-2 py-1" />
+                              <td className="px-2 py-1" />
+                              <td className="px-2 py-1" />
+                              <td className="px-2 py-1" />
+                              <td className="px-2 py-1" />
+                              <td className="px-2 py-1" />
+                              <td className="px-2 py-1" />
+                              <td className="px-2 py-1" />
+                              <td className="px-2 py-1" />
+                            </tr>
+                          );
+                        }
+                      }
+                    });
+                    return rendered;
+                  })()}
                 </TableBody>
               </Table>
             </div>
@@ -1604,6 +1758,56 @@ export default function ScheduleViewPage() {
                 </div>
               ) : (
                 "Delete"
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Model Change Modal */}
+      <Modal
+        className="max-w-[650px] p-5"
+        isOpen={isModelChangeModalOpen}
+        onClose={() => setIsModelChangeModalOpen(false)}
+      >
+        <div className="p-6">
+          <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Change Schedule Model</h4>
+          <p className="mb-6 dark:text-white/90">
+            Are you sure you want to change the schedule model from{" "}
+            <strong>{useBurstModel ? "Burst" : "0 Wait"}</strong> to{" "}
+            <strong>{!useBurstModel ? "Burst" : "0 Wait"}</strong>?
+          </p>
+          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <h5 className="font-medium text-gray-800 dark:text-white/90 mb-2">Model Descriptions:</h5>
+            <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+              <p>
+                <strong>0 Wait model:</strong> Assumes each TM unloads back-to-back. Unloading time is counted and the
+                sequence is planned so consecutive pours have effectively no waiting gap.
+              </p>
+              <p>
+                <strong>Burst model:</strong> Uses the extra TMs as a standby buffer to absorb delays. A maximum
+                acceptable wait between pours is calculated from your inputs to allow short bursts followed by brief
+                waits.
+              </p>
+            </div>
+          </div>
+          <div className="mb-4 p-3 rounded border border-yellow-200 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 text-sm">
+            Changing the model will reset the generated schedule. You will need to select the Pump and TMs again and
+            re-generate the schedule.
+          </div>
+
+          <div className="flex justify-end gap-4">
+            <Button onClick={() => setIsModelChangeModalOpen(false)} variant="outline">
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmModelChange} variant="primary" disabled={updateBurstModelMutation.isPending}>
+              {updateBurstModelMutation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <Spinner size="sm" />
+                  <span>Updating...</span>
+                </div>
+              ) : (
+                "Confirm Change"
               )}
             </Button>
           </div>

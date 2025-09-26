@@ -76,6 +76,7 @@ type ScheduleWiseTableProps = {
 
 const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWiseTableProps>(
   ({ data, selectedDate }: ScheduleWiseTableProps, exportRef) => {
+
     const formatDate = (dateString: string) => {
       const date = new Date(dateString);
       return date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -83,6 +84,15 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
 
     const getPumpSupplyType = (type: string) => {
       return type === "supply" ? "S" : "P";
+    };
+
+    const handleRowClick = (schedule: Schedule) => {
+      const route =
+        schedule.type === "supply"
+          ? `/supply-schedules/${schedule._id}/view`
+          : `/pumping-schedules/${schedule._id}/view`;
+
+      window.open(route, "_blank"); // opens in new tab
     };
 
     useImperativeHandle(exportRef, () => ({
@@ -161,6 +171,43 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
           ]);
         });
 
+        // Add summary row to export
+        const exportSummary = data.reduce(
+          (acc, schedule) => {
+            acc.totalQuantity += schedule.input_params.quantity;
+            acc.totalPumpAllocated += schedule.input_params.pump_start ? 1 : 0;
+            acc.totalTmAllocated += schedule.tm_count;
+            acc.totalTmQueue += schedule.tm_overrule ? schedule.tm_overrule - schedule.tm_count : 0;
+            acc.totalTmDeployed += schedule.tm_overrule ? schedule.tm_overrule : schedule.tm_count;
+            return acc;
+          },
+          {
+            totalQuantity: 0,
+            totalPumpAllocated: 0,
+            totalTmAllocated: 0,
+            totalTmQueue: 0,
+            totalTmDeployed: 0,
+          }
+        );
+
+        rows.push([
+          "TOTAL",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-",
+          exportSummary.totalQuantity,
+          exportSummary.totalPumpAllocated,
+          exportSummary.totalTmAllocated,
+          exportSummary.totalTmQueue,
+          exportSummary.totalTmDeployed,
+          "-",
+          "-",
+          "-",
+          "-",
+        ]);
+
         return [
           {
             name: `Schedule Wise - ${formatDate(selectedDate)}`,
@@ -202,6 +249,30 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
 
       return { tmStart, tmEnd };
     };
+
+    // Calculate summary totals
+    const calculateSummary = () => {
+      const totals = data.reduce(
+        (acc, schedule) => {
+          acc.totalQuantity += schedule.input_params.quantity;
+          acc.totalPumpAllocated += schedule.input_params.pump_start ? 1 : 0;
+          acc.totalTmAllocated += schedule.tm_count;
+          acc.totalTmQueue += schedule.tm_overrule ? schedule.tm_overrule - schedule.tm_count : 0;
+          acc.totalTmDeployed += schedule.tm_overrule ? schedule.tm_overrule : schedule.tm_count;
+          return acc;
+        },
+        {
+          totalQuantity: 0,
+          totalPumpAllocated: 0,
+          totalTmAllocated: 0,
+          totalTmQueue: 0,
+          totalTmDeployed: 0,
+        }
+      );
+      return totals;
+    };
+
+    const summaryTotals = calculateSummary();
 
     return (
       <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -309,7 +380,11 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                   {data.map((schedule, index) => (
-                    <TableRow key={schedule._id}>
+                    <TableRow
+                      key={schedule._id}
+                      className="cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.05] transition-colors"
+                      onClick={() => handleRowClick(schedule)}
+                    >
                       <TableCell className="px-3 py-4 text-start text-sm text-gray-800 dark:text-white/90">
                         {index + 1}
                       </TableCell>
@@ -367,6 +442,55 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
                       </TableCell>
                     </TableRow>
                   ))}
+
+                  {/* Summary Row */}
+                  <TableRow className="bg-gray-50 dark:bg-white/[0.05] border-t-2 border-gray-300 dark:border-gray-600">
+                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                      TOTAL
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                      -
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                      -
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                      -
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                      -
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                      -
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                      {summaryTotals.totalQuantity}
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                      {summaryTotals.totalPumpAllocated}
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                      {summaryTotals.totalTmAllocated}
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                      {summaryTotals.totalTmQueue}
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                      {summaryTotals.totalTmDeployed}
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                      -
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                      -
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                      -
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                      -
+                    </TableCell>
+                  </TableRow>
                 </TableBody>
               </Table>
             </div>
