@@ -48,13 +48,11 @@ type ApiResponse = {
   };
 };
 
-type Plant = {
+type TM = {
   _id: string;
-  name: string;
-  location: string;
-  address: string;
-  capacity: number;
-  status: string;
+  identifier: string;
+  plant_id?: string;
+  status?: string;
 };
 
 type Task = {
@@ -71,6 +69,8 @@ type Task = {
 type PlantRow = {
   id: string; // plant id
   name: string; // plant name
+  location: string;
+  capacity: number;
   tm_per_hour: number;
   tasks: Task[];
   hourlyUtilization: number[];
@@ -164,6 +164,8 @@ function transformApiDataToPlantRows(
     return {
       id: p.id,
       name: p.name,
+      location: p.location,
+      capacity: p.capacity,
       tm_per_hour: p.tm_per_hour,
       tasks: tasks.sort((a, b) => new Date(a.actualStart).getTime() - new Date(b.actualStart).getTime()),
       hourlyUtilization: hourlyArray,
@@ -204,15 +206,15 @@ export default function CalendarContainer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status]);
 
-  const { data: plantsData } = useQuery<Plant[]>({
-    queryKey: ["plants"],
-    queryFn: async () => {
-      const response = await fetchWithAuth("/plants");
-      const data = await response.json();
-      return data.success ? data.data : [];
-    },
-    enabled: status === "authenticated",
-  });
+  // const { data: plantsData } = useQuery<Plant[]>({
+  //   queryKey: ["plants"],
+  //   queryFn: async () => {
+  //     const response = await fetchWithAuth("/plants");
+  //     const data = await response.json();
+  //     return data.success ? data.data : [];
+  //   },
+  //   enabled: status === "authenticated",
+  // });
 
   // // Create a map of plants with additional details
   // const plantMap = useMemo(() => {
@@ -232,6 +234,23 @@ export default function CalendarContainer() {
   //   },
   // });
   // const avgTMCap = Math.ceil(avgTMCapData?.average_capacity || 0) ?? null;
+
+  // Fetch all TMs
+  const { data: tms, isLoading: tmsLoading } = useQuery<TM[]>({
+    queryKey: ["tms"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/tms");
+      const data = await response.json();
+      if (data.success) return data.data as TM[];
+      return [];
+    },
+    enabled: status === "authenticated",
+  });
+
+  const tmMap = useMemo(() => {
+    if (!tms) return new Map<string, TM>();
+    return new Map(tms.map((tm) => [tm._id, tm]));
+  }, [tms]);
 
   const handleDateChange = (newDate: string) => {
     setSelectedDate(newDate);
@@ -284,8 +303,8 @@ export default function CalendarContainer() {
 
   // Build plant options from /plants to avoid duplicates and keep a stable id/value
   const plantOptions = useMemo(() => {
-    return (plantsData || []).map((p) => ({ id: p._id, name: p.name }));
-  }, [plantsData]);
+    return (rows || []).map((p) => ({ id: p.id, name: p.name }));
+  }, [rows]);
   const clients = Array.from(new Set(rows.flatMap((r) => r.tasks.map((t) => t.client)).filter(Boolean))) as string[];
   const derivedTaskProjects = Array.from(
     new Set(rows.flatMap((r) => r.tasks.map((t) => t.project || t.client)).filter(Boolean))
@@ -597,7 +616,10 @@ export default function CalendarContainer() {
                                 >
                                   <Tooltip
                                     content={`${count || "0"}/${row.tm_per_hour} trucks utilized\nTM IDs: ${
-                                      (row.hourTmIds[time] || []).join(", ") || "-"
+                                      (!tmsLoading
+                                        ? row.hourTmIds[time].map((tmId: string) => tmMap.get(tmId)?.identifier || tmId)
+                                        : row.hourTmIds[time] || []
+                                      ).join(", ") || "-"
                                     }`}
                                   >
                                     {(() => {
