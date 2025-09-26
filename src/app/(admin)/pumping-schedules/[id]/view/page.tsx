@@ -754,7 +754,7 @@ export default function ScheduleViewPage() {
                 <button
                   type="button"
                   onClick={() => setUseBurstModel((v) => !v)}
-                  className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors ${
+                  className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-sm transition-colors ${
                     useBurstModel
                       ? "border-blue-600 text-blue-700 dark:border-blue-400 dark:text-blue-300"
                       : "border-gray-300 text-gray-700 dark:border-gray-700 dark:text-gray-300"
@@ -861,7 +861,7 @@ export default function ScheduleViewPage() {
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                   <TableRow>
-                    <TableCell className="px-3 py-4 text-start">
+                    <TableCell className="px-2 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
                         {(() => {
                           const pump = schedule.available_pumps.find((pump) => pump.id === schedule.pump);
@@ -888,37 +888,37 @@ export default function ScheduleViewPage() {
                         })()}
                       </span>
                     </TableCell>
-                    {/* <TableCell className="px-3 py-4 text-start">
+                    {/* <TableCell className="px-2 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">{schedule.pump_type || "N/A"}</span>
                     </TableCell> */}
-                    <TableCell className="px-3 py-4 text-start">
+                    <TableCell className="px-2 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {calculatePumpStartTimeFromPlant(schedule, profile?.preferred_format)}
                       </span>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start">
+                    <TableCell className="px-2 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {calculatePumpSiteReachTime(schedule, profile?.preferred_format)}
                       </span>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start">
+                    <TableCell className="px-2 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
                         {schedule?.output_table?.length > 0 ? schedule.output_table[0].pump_start : "N/A"}
                       </span>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start">
+                    <TableCell className="px-2 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {schedule?.output_table?.length > 0
                           ? formatTimeByPreference(schedule.output_table[0].pump_start, profile?.preferred_format)
                           : "N/A"}
                       </span>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start">
+                    <TableCell className="px-2 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
                         {formatHoursAndMinutes(schedule.input_params.quantity / schedule.input_params.pumping_speed)}
                       </span>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start">
+                    <TableCell className="px-2 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {(() => {
                           if (!(schedule?.output_table?.length > 0)) return "N/A";
@@ -929,12 +929,12 @@ export default function ScheduleViewPage() {
                         })()}
                       </span>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start">
+                    <TableCell className="px-2 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
                         {schedule.input_params.pump_removal_time || "N/A"}
                       </span>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start">
+                    <TableCell className="px-2 py-4 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {(() => {
                           if (!(schedule?.output_table?.length > 0)) return "N/A";
@@ -948,7 +948,7 @@ export default function ScheduleViewPage() {
                         })()}
                       </span>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start">
+                    <TableCell className="px-2 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
                         {(() => {
                           if (!(schedule?.output_table?.length > 0)) return "N/A";
@@ -999,13 +999,13 @@ export default function ScheduleViewPage() {
                       </th>
                       <th
                         colSpan={4}
-                        className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
+                        className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 truncate border-x border-gray-200 dark:border-gray-700"
                       >
                         Plant
                       </th>
                       <th
                         colSpan={2}
-                        className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
+                        className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 truncate border-x border-gray-200 dark:border-gray-700"
                       >
                         Pump - Unloading
                       </th>
@@ -1024,7 +1024,7 @@ export default function ScheduleViewPage() {
                     </tr>
                   ) : (
                     <tr>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate ">
                         Trip No
                       </th>
                       <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
@@ -1032,19 +1032,19 @@ export default function ScheduleViewPage() {
                       </th>
                       <th
                         colSpan={4}
-                        className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
+                        className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 truncate border-x border-gray-200 dark:border-gray-700"
                       >
                         Plant
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 truncate border-x border-gray-200 dark:border-gray-700">
                         Site reach
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700">
-                        Waiting Time (min)
+                      <th className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 truncate border-x border-gray-200 dark:border-gray-700">
+                        Waiting (min)
                       </th>
                       <th
                         colSpan={2}
-                        className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 border-x border-gray-200 dark:border-gray-700"
+                        className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 truncate border-x border-gray-200 dark:border-gray-700"
                       >
                         Pump - Unloading
                       </th>
@@ -1074,22 +1074,22 @@ export default function ScheduleViewPage() {
                       <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                         #
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-l border-gray-200 dark:border-gray-700">
                         Name
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-l border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-r border-l border-gray-200 dark:border-gray-700">
                         Prepare Time
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-l border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-r border-l border-gray-200 dark:border-gray-700">
                         Load Time
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-r border-gray-200 dark:border-gray-700">
                         Start Time
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-l border-gray-200 dark:border-gray-700">
                         Start Time
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-r border-gray-200 dark:border-gray-700">
                         End Time
                       </th>
                       <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
@@ -1113,28 +1113,28 @@ export default function ScheduleViewPage() {
                       <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                         #
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-l border-gray-200 dark:border-gray-700">
                         Name
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-l border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-r border-l border-gray-200 dark:border-gray-700">
                         Prepare Time
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-l border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-r border-l border-gray-200 dark:border-gray-700">
                         Load Time
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-r border-gray-200 dark:border-gray-700">
                         Start Time
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-l border-gray-200 dark:border-gray-700">
                         Time
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-l border-gray-200 dark:border-gray-700">
                         #
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-l border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-l border-gray-200 dark:border-gray-700">
                         Start Time
                       </th>
-                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-r border-gray-200 dark:border-gray-700">
                         End Time
                       </th>
                       <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
@@ -1158,10 +1158,10 @@ export default function ScheduleViewPage() {
                     : ((schedule.burst_table || []) as unknown as TripRow[])
                   ).map((trip) => (
                     <TableRow key={trip.trip_no}>
-                      <TableCell className="px-3 py-4 text-start">
+                      <TableCell className="px-2 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">{trip.trip_no}</span>
                       </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
+                      <TableCell className="px-2 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">
                           {(() => {
                             const source = !useBurstModel ? schedule.output_table : schedule.burst_table || [];
@@ -1178,7 +1178,7 @@ export default function ScheduleViewPage() {
                                       ({currentTripIndex}/{tmTotalTrips})
                                     </span>
                                   </label>
-                                  <label className="p-1 px-1 font-mono text-sm font-medium items-center text-black">
+                                  <label className="p-1 px-1 font-mono text-sm font-medium items-center text-black truncate">
                                     {trip.tm_no}
                                   </label>
                                 </div>
@@ -1187,38 +1187,38 @@ export default function ScheduleViewPage() {
                           })()}
                         </span>
                       </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">
+                      <TableCell className="px-2 py-2 text-start">
+                        <span className="text-gray-800 dark:text-white/90 truncate text-sm">
                           {trip.plant_name ? trip.plant_name : "N / A"}
                         </span>
                       </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
+                      <TableCell className="px-2 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">
                           {trip.plant_buffer
                             ? formatTimeByPreference(trip.plant_buffer, profile?.preferred_format)
                             : "-"}
                         </span>
                       </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
+                      <TableCell className="px-2 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">
                           {trip.plant_load ? formatTimeByPreference(trip.plant_load, profile?.preferred_format) : "-"}
                         </span>
                       </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
+                      <TableCell className="px-2 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
                           {formatTimeByPreference(trip.plant_start, profile?.preferred_format)}
                         </span>
                       </TableCell>
                       {!useBurstModel ? (
                         <>
-                          <TableCell className="px-3 py-4 text-start">
+                          <TableCell className="px-2 py-4 text-start">
                             <span className="text-gray-500 dark:text-gray-400">
                               {trip.pump_start
                                 ? formatTimeByPreference(trip.pump_start, profile?.preferred_format)
                                 : "-"}
                             </span>
                           </TableCell>
-                          <TableCell className="px-3 py-4 text-start">
+                          <TableCell className="px-2 py-4 text-start">
                             <span className="text-gray-500 dark:text-gray-400">
                               {trip.unloading_time
                                 ? formatTimeByPreference(trip.unloading_time, profile?.preferred_format)
@@ -1228,26 +1228,26 @@ export default function ScheduleViewPage() {
                         </>
                       ) : (
                         <>
-                          <TableCell className="px-3 py-4 text-start">
+                          <TableCell className="px-2 py-4 text-start">
                             <span className="text-gray-500 dark:text-gray-400">
                               {trip.site_reach
                                 ? formatTimeByPreference(trip.site_reach, profile?.preferred_format)
                                 : "-"}
                             </span>
                           </TableCell>
-                          <TableCell className="px-3 py-4 text-start">
+                          <TableCell className="px-2 py-4 text-start">
                             <span className="text-gray-800 dark:text-white/90">
                               {typeof trip.waiting_time === "number" ? trip.waiting_time : "-"}
                             </span>
                           </TableCell>
-                          <TableCell className="px-3 py-4 text-start">
+                          <TableCell className="px-2 py-4 text-start">
                             <span className="text-gray-500 dark:text-gray-400">
                               {trip.pump_start
                                 ? formatTimeByPreference(trip.pump_start, profile?.preferred_format)
                                 : "-"}
                             </span>
                           </TableCell>
-                          <TableCell className="px-3 py-4 text-start">
+                          <TableCell className="px-2 py-4 text-start">
                             <span className="text-gray-500 dark:text-gray-400">
                               {trip.unloading_time
                                 ? formatTimeByPreference(trip.unloading_time, profile?.preferred_format)
@@ -1256,30 +1256,30 @@ export default function ScheduleViewPage() {
                           </TableCell>
                         </>
                       )}
-                      <TableCell className="px-3 py-4 text-start">
+                      <TableCell className="px-2 py-4 text-start">
                         <span className="text-gray-500 dark:text-gray-400">
                           {trip.return ? formatTimeByPreference(trip.return, profile?.preferred_format) : "-"}
                         </span>
                       </TableCell>
                       {useBurstModel && (
-                        <TableCell className="px-3 py-4 text-start">
+                        <TableCell className="px-2 py-4 text-start">
                           <span className="text-gray-800 dark:text-white/90">
                             {typeof trip.queue === "number" ? trip.queue : "-"}
                           </span>
                         </TableCell>
                       )}
-                      <TableCell className="px-3 py-4 text-start">
+                      <TableCell className="px-2 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">{trip.completed_capacity} m³</span>
                       </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
+                      <TableCell className="px-2 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">
                           {typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-"}
                         </span>
                       </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
+                      <TableCell className="px-2 py-4 text-start">
                         <span className="text-gray-800 dark:text-white/90">
                           {typeof trip.cushion_time !== "undefined" && trip.cushion_time !== null
-                            ? (trip.cushion_time / 60).toFixed(0)
+                            ? Math.max(0, trip.cushion_time / 60).toFixed(0)
                             : "-"}
                         </span>
                       </TableCell>
