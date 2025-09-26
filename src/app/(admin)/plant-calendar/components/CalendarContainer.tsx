@@ -9,29 +9,42 @@ import { useApiClient } from "@/hooks/useApiClient";
 import DatePickerInput from "@/components/form/input/DatePickerInput";
 import Tooltip from "@/components/ui/tooltip";
 import SearchableDropdown from "@/components/form/SearchableDropdown";
-type ApiTask = {
+type ApiPlantTask = {
   id: string;
   start: string;
   end: string;
-  client: string;
-  project: string;
-  schedule_no: string;
+  client?: string;
+  project?: string;
+  schedule_no?: string;
+  type: string;
+  tm_id: string;
 };
 
-type ApiItem = {
+type ApiPlantHourlyUtil = {
+  hour: number;
+  tm_count: number;
+  tm_ids: string[];
+  utilization_percentage: number;
+};
+
+type ApiPlantRow = {
   id: string;
   name: string;
-  plant: string; // plant id
-  type: "line" | "boom" | null;
-  tasks: ApiTask[];
+  location?: string;
+  capacity?: number;
+  tm_per_hour: number;
+  tasks: ApiPlantTask[];
+  hourly_utilization: ApiPlantHourlyUtil[];
 };
 
 type ApiResponse = {
   success: boolean;
   message: string;
   data: {
-    mixers: ApiItem[];
-    pumps: ApiItem[];
+    plants: ApiPlantRow[];
+    query_date: string;
+    total_plants: number;
+    total_tms_used: number;
   };
 };
 
@@ -61,6 +74,7 @@ type PlantRow = {
   tm_per_hour: number;
   tasks: Task[];
   hourlyUtilization: number[];
+  hourTmIds: string[][];
 };
 
 const TASK_TYPE_COLORS: Record<string, string> = {
@@ -77,37 +91,37 @@ const TASK_TYPE_COLORS: Record<string, string> = {
 
 const getTaskType = (id: string) => id.split("-")[0];
 
-const buildHourlyUtilization = (
-  tasks: Task[],
-  hourlyUtilization: number[],
-  selectedDate: string,
-  customStartHour: number | undefined
-): number[] => {
-  const customStartHourString: string = !!customStartHour ? String(customStartHour).padStart(2, "0") : "00";
-  const dayStart = new Date(`${selectedDate}T${customStartHourString}:00:00`).getTime();
-  const dayEnd = new Date(dayStart + 86400000).getTime(); // 24(hour) * 60(minutes) * 60(seconds) * 1000(ms) = 84600000
+// const buildHourlyUtilization = (
+//   tasks: Task[],
+//   hourlyUtilization: number[],
+//   selectedDate: string,
+//   customStartHour: number | undefined
+// ): number[] => {
+//   const customStartHourString: string = !!customStartHour ? String(customStartHour).padStart(2, "0") : "00";
+//   const dayStart = new Date(`${selectedDate}T${customStartHourString}:00:00`).getTime();
+//   const dayEnd = new Date(dayStart + 86400000).getTime(); // 24(hour) * 60(minutes) * 60(seconds) * 1000(ms) = 84600000
 
-  // Count TMs per hour
-  // Only count TM load tasks for utilization
-  tasks
-    .filter((task) => task.type === "load")
-    .forEach((task) => {
-      const startMs = new Date(task.actualStart).getTime();
-      const endMs = new Date(task.actualEnd).getTime();
-      const taskStartHour = Math.floor((Math.max(startMs, dayStart) - dayStart) / (1000 * 60 * 60));
-      const taskEndHour = Math.ceil((Math.min(endMs, dayEnd) - dayStart) / (1000 * 60 * 60));
+//   // Count TMs per hour
+//   // Only count TM load tasks for utilization
+//   tasks
+//     .filter((task) => task.type === "load")
+//     .forEach((task) => {
+//       const startMs = new Date(task.actualStart).getTime();
+//       const endMs = new Date(task.actualEnd).getTime();
+//       const taskStartHour = Math.floor((Math.max(startMs, dayStart) - dayStart) / (1000 * 60 * 60));
+//       const taskEndHour = Math.ceil((Math.min(endMs, dayEnd) - dayStart) / (1000 * 60 * 60));
 
-      // Increment counter for each hour this task spans
-      for (let hour = taskStartHour; hour < taskEndHour; hour++) {
-        if (hour >= 0 && hour < 24) {
-          hourlyUtilization[hour]++;
-        }
-      }
-    });
+//       // Increment counter for each hour this task spans
+//       for (let hour = taskStartHour; hour < taskEndHour; hour++) {
+//         if (hour >= 0 && hour < 24) {
+//           hourlyUtilization[hour]++;
+//         }
+//       }
+//     });
 
-  // Convert to fraction display format
-  return hourlyUtilization;
-};
+//   // Convert to fraction display format
+//   return hourlyUtilization;
+// };
 
 // const calculateDurationMinutes = (start: string, end: string): number => {
 //   const s = new Date(start).getTime();
@@ -118,92 +132,44 @@ const buildHourlyUtilization = (
 // Removed unused formatting functions
 
 function transformApiDataToPlantRows(
-  apiData: ApiResponse,
-  plantMap: Map<string, Plant>,
-  date: string,
-  avgTMCap: number,
-  customStartHour: number | undefined
+  apiData: ApiResponse
+  // plantMap: Map<string, Plant>,
+  // date: string,
+  // avgTMCap: number,
+  // customStartHour: number | undefined
 ): PlantRow[] {
-  const plantIdToRow: Map<string, PlantRow> = new Map();
-
-  // First, initialize rows for all plants
-  plantMap.forEach((plantInfo, plantId) => {
-    const effectiveAvgCap = avgTMCap && avgTMCap > 0 ? avgTMCap : 6; // fallback to 6 m³ if unavailable
-    const load_time = !!plantInfo.capacity ? Math.ceil(effectiveAvgCap / (plantInfo.capacity / 60) / 5) * 5 : 5;
-    plantIdToRow.set(plantId, {
-      id: plantId,
-      name: `${plantInfo.name}`,
-      tm_per_hour: 60 / load_time,
-      tasks: [],
-      hourlyUtilization: Array.from({ length: 24 }, () => 0),
-    });
-  });
-
-  const assignItemTasks = (item: ApiItem, itemType: "mixer" | "pump") => {
-    // Normalize plant reference to a valid plant _id from /plants
-    let plantId = item.plant;
-    let plantInfo = plantMap.get(plantId);
-    if (!plantInfo) {
-      const matchedEntry = Array.from(plantMap.entries()).find(([, p]) => {
-        return p._id === plantId || p.name === plantId || `${p.name} (${p.location})` === plantId;
-      });
-      if (matchedEntry) {
-        const [resolvedId, resolvedPlant] = matchedEntry;
-        plantId = resolvedId;
-        plantInfo = resolvedPlant;
-      } else {
-        // Skip if we cannot resolve this plant to a known plant id to avoid duplicates
-        return;
-      }
-    }
-    const effectiveAvgCap = avgTMCap && avgTMCap > 0 ? avgTMCap : 6;
-    const load_time = !!plantInfo?.capacity ? Math.ceil(effectiveAvgCap / (plantInfo?.capacity / 60) / 5) * 5 : 5;
-    if (!plantIdToRow.has(plantId)) {
-      plantIdToRow.set(plantId, {
-        id: plantId,
-        name: plantInfo ? `${plantInfo.name} (${plantInfo.location})` : plantId,
-        tm_per_hour: 60 / load_time,
-        tasks: [],
-        hourlyUtilization: Array.from({ length: 24 }, () => 0),
-      });
-    }
-    const row = plantIdToRow.get(plantId)!;
-    const tasks: Task[] = (item.tasks || []).map((task) => {
-      const rawType = getTaskType(task.id);
-      const mappedType =
-        itemType === "mixer" && rawType === "work"
-          ? "unload"
-          : itemType === "pump" && rawType === "work"
-          ? "pump"
-          : rawType;
+  const rows: PlantRow[] = (apiData.data.plants || []).map((p) => {
+    const tasks: Task[] = (p.tasks || []).map((task) => {
+      const rawType = getTaskType(task.id) || task.type;
+      const mappedType = rawType === "work" ? "unload" : rawType;
       return {
         id: task.id,
         color: TASK_TYPE_COLORS[mappedType] || "bg-gray-500",
-        client: task.client,
-        project: task.project,
-        schedule_no: task.schedule_no,
+        client: task.client || "",
+        project: task.project || "",
+        schedule_no: task.schedule_no || "",
         type: mappedType,
         actualStart: task.start,
         actualEnd: task.end,
       };
     });
-    row.tasks.push(...tasks);
-
-    // Calculate hourly utilization for the plant
-    row.hourlyUtilization = buildHourlyUtilization(tasks, row.hourlyUtilization, date, customStartHour);
-  };
-
-  (apiData.data.mixers || []).forEach((m) => assignItemTasks(m, "mixer"));
-  (apiData.data.pumps || []).forEach((p) => assignItemTasks(p, "pump"));
-
-  // Sort tasks per plant by start time for rendering
-  const rows = Array.from(plantIdToRow.values()).map((r) => ({
-    ...r,
-    tasks: r.tasks.sort((a, b) => new Date(a.actualStart).getTime() - new Date(b.actualStart).getTime()),
-    // hourlyUtilization: buildHourlyUtilization(r.tasks, r.hourlyUtilization, date, customStartHour),
-  }));
-
-  // Sort rows by plant name
+    const hourlyArray = Array.from({ length: 24 }, () => 0);
+    const hourTmIds: string[][] = Array.from({ length: 24 }, () => []);
+    (p.hourly_utilization || []).forEach((hu) => {
+      if (hu.hour >= 0 && hu.hour < 24) {
+        hourlyArray[hu.hour] = hu.tm_count || 0;
+        hourTmIds[hu.hour] = hu.tm_ids || [];
+      }
+    });
+    return {
+      id: p.id,
+      name: p.name,
+      tm_per_hour: p.tm_per_hour,
+      tasks: tasks.sort((a, b) => new Date(a.actualStart).getTime() - new Date(b.actualStart).getTime()),
+      hourlyUtilization: hourlyArray,
+      hourTmIds,
+    } as PlantRow;
+  });
   rows.sort((a, b) => a.name.localeCompare(b.name));
   return rows;
 }
@@ -248,24 +214,24 @@ export default function CalendarContainer() {
     enabled: status === "authenticated",
   });
 
-  // Create a map of plants with additional details
-  const plantMap = useMemo(() => {
-    if (!plantsData) return new Map<string, Plant>();
-    return new Map(plantsData.map((p) => [p._id, p]));
-  }, [plantsData]);
+  // // Create a map of plants with additional details
+  // const plantMap = useMemo(() => {
+  //   if (!plantsData) return new Map<string, Plant>();
+  //   return new Map(plantsData.map((p) => [p._id, p]));
+  // }, [plantsData]);
 
-  const { data: avgTMCapData } = useQuery<{ average_capacity: number }>({
-    queryKey: ["average-tm-capacity"],
-    queryFn: async () => {
-      const response = await fetchWithAuth("/tms/average-capacity");
-      const data = await response.json();
-      if (data.success && data.data && typeof data.data.average_capacity === "number") {
-        return { average_capacity: data.data.average_capacity };
-      }
-      throw new Error("Failed to fetch average TM capacity");
-    },
-  });
-  const avgTMCap = Math.ceil(avgTMCapData?.average_capacity || 0) ?? null;
+  // const { data: avgTMCapData } = useQuery<{ average_capacity: number }>({
+  //   queryKey: ["average-tm-capacity"],
+  //   queryFn: async () => {
+  //     const response = await fetchWithAuth("/tms/average-capacity");
+  //     const data = await response.json();
+  //     if (data.success && data.data && typeof data.data.average_capacity === "number") {
+  //       return { average_capacity: data.data.average_capacity };
+  //     }
+  //     throw new Error("Failed to fetch average TM capacity");
+  //   },
+  // });
+  // const avgTMCap = Math.ceil(avgTMCapData?.average_capacity || 0) ?? null;
 
   const handleDateChange = (newDate: string) => {
     setSelectedDate(newDate);
@@ -279,13 +245,14 @@ export default function CalendarContainer() {
       setLoading(true);
       setError(null);
       const time = `${String(customStartHour || 0).padStart(2, "0")}:00:00`;
-      const response = await fetchWithAuth("/calendar/gantt", {
+      const response = await fetchWithAuth("/calendar/gantt/plants", {
         method: "POST",
         body: JSON.stringify({ query_date: `${date}T${time}` }),
       });
       const data: ApiResponse = await response.json();
       if (data.success) {
-        const transformed = transformApiDataToPlantRows(data, plantMap, selectedDate, avgTMCap, customStartHour);
+        // const transformed = transformApiDataToPlantRows(data, plantMap, selectedDate, avgTMCap, customStartHour);
+        const transformed = transformApiDataToPlantRows(data);
         setRows(transformed);
       } else {
         setError(data.message || "Failed to fetch gantt data");
@@ -628,7 +595,11 @@ export default function CalendarContainer() {
                                       : ""
                                   } relative min-w-[40px] flex items-center justify-center`}
                                 >
-                                  <Tooltip content={`${count || "0"}/${row.tm_per_hour} trucks utilized`}>
+                                  <Tooltip
+                                    content={`${count || "0"}/${row.tm_per_hour} trucks utilized\nTM IDs: ${
+                                      (row.hourTmIds[time] || []).join(", ") || "-"
+                                    }`}
+                                  >
                                     {(() => {
                                       let textColor = "";
                                       if (utilization >= 1) textColor = "text-red-600 dark:text-red-400";

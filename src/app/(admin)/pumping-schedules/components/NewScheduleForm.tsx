@@ -254,7 +254,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [formDataRetrieved, setFormDataRetrieved] = useState(true);
-  
+
   // Sync pipeline fixing/removal times with pump type
   useEffect(() => {
     if (pumpType === "boom") {
@@ -437,28 +437,28 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       // Prefill form with past schedule data
       const pastSchedule = pastSchedules?.find((s) => s._id === template);
       if (pastSchedule) {
-        setSelectedClient(pastSchedule.client_id);
-        setSelectedProject(pastSchedule.project_id);
-        setSelectedPlant(pastSchedule.plant_id || "");
-        setPumpType(pastSchedule.pump_type);
+        setSelectedClient(pastSchedule?.client_id);
+        setSelectedProject(pastSchedule?.project_id);
+        setSelectedPlant(pastSchedule?.plant_id || "");
+        setPumpType(pastSchedule?.pump_type);
         setFormData((prev) => ({
           ...prev,
-          concreteGrade: pastSchedule.concreteGrade,
-          pumpingJob: pastSchedule.pumping_job,
-          pumpOnwardTime: pastSchedule.input_params.pump_onward_time.toString(),
-          onwardTime: pastSchedule.input_params.onward_time.toString(),
-          returnTime: pastSchedule.input_params.return_time.toString(),
-          bufferTime: pastSchedule.input_params.buffer_time.toString(),
-          loadTime: pastSchedule.input_params.load_time.toString(),
-          pumpFixingTime: pastSchedule.input_params.pump_fixing_time.toString(),
-          pumpRemovalTime: pastSchedule.input_params.pump_removal_time.toString(),
-          floorHeight: pastSchedule.floor_height.toString(),
-          pumpSiteReachTime: pastSchedule.pump_site_reach_time,
-          slumpAtSite: pastSchedule.slump_at_site?.toString() || "",
-          mixCode: pastSchedule.mix_code || "",
-          remarks: pastSchedule.remarks || "",
-          oneWayKm: pastSchedule.mother_plant_km?.toString() || "",
-          siteSupervisorId: pastSchedule.site_supervisor_id || "",
+          concreteGrade: pastSchedule?.concreteGrade,
+          pumpingJob: pastSchedule?.pumping_job,
+          pumpOnwardTime: pastSchedule?.input_params?.pump_onward_time?.toString(),
+          onwardTime: pastSchedule?.input_params?.onward_time?.toString(),
+          returnTime: pastSchedule?.input_params?.return_time?.toString(),
+          bufferTime: pastSchedule?.input_params?.buffer_time?.toString(),
+          loadTime: pastSchedule?.input_params?.load_time?.toString(),
+          pumpFixingTime: pastSchedule?.input_params?.pump_fixing_time?.toString(),
+          pumpRemovalTime: pastSchedule?.input_params?.pump_removal_time?.toString(),
+          floorHeight: pastSchedule?.floor_height?.toString(),
+          pumpSiteReachTime: pastSchedule?.pump_site_reach_time,
+          slumpAtSite: pastSchedule?.slump_at_site?.toString() || "",
+          mixCode: pastSchedule?.mix_code || "",
+          remarks: pastSchedule?.remarks || "",
+          oneWayKm: pastSchedule?.mother_plant_km?.toString() || "",
+          siteSupervisorId: pastSchedule?.site_supervisor_id || "",
         }));
         if (pastSchedule.tm_overrule) {
           setOverruleTMCount(true);
@@ -869,29 +869,29 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         // Prefill form with past schedule data
         const pastSchedule = pastSchedules?.find((s) => s._id === selectedPastSchedule);
         if (pastSchedule) {
-          setSelectedClient(pastSchedule.client_id);
-          setSelectedProject(pastSchedule.project_id);
-          setSelectedPlant(pastSchedule.plant_id);
-          setPumpType(pastSchedule.pump_type);
+          setSelectedClient(pastSchedule?.client_id);
+          setSelectedProject(pastSchedule?.project_id);
+          setSelectedPlant(pastSchedule?.plant_id);
+          setPumpType(pastSchedule?.pump_type);
           setFormData((prev) => ({
             ...prev,
-            concreteGrade: pastSchedule.concreteGrade,
-            pumpingJob: pastSchedule.pumping_job,
-            pumpOnwardTime: pastSchedule.input_params.pump_onward_time.toString(),
-            returnTime: pastSchedule.input_params.return_time.toString(),
-            bufferTime: pastSchedule.input_params.buffer_time.toString(),
-            loadTime: pastSchedule.input_params.load_time.toString(),
-            pumpFixingTime: pastSchedule.input_params.pump_fixing_time.toString(),
-            pumpRemovalTime: pastSchedule.input_params.pump_removal_time.toString(),
-            floorHeight: pastSchedule.floor_height.toString(),
-            pumpSiteReachTime: pastSchedule.pump_site_reach_time,
-            slumpAtSite: pastSchedule.slump_at_site?.toString() || "",
-            mixCode: pastSchedule.mix_code || "",
-            remarks: pastSchedule.remarks || "",
-            oneWayKm: pastSchedule.mother_plant_km?.toString() || "",
-            siteSupervisorId: pastSchedule.site_supervisor_id || "",
+            concreteGrade: pastSchedule?.concreteGrade,
+            pumpingJob: pastSchedule?.pumping_job,
+            pumpOnwardTime: pastSchedule?.input_params?.pump_onward_time?.toString(),
+            returnTime: pastSchedule?.input_params?.return_time?.toString(),
+            bufferTime: pastSchedule?.input_params?.buffer_time?.toString(),
+            loadTime: pastSchedule?.input_params?.load_time?.toString(),
+            pumpFixingTime: pastSchedule?.input_params?.pump_fixing_time?.toString(),
+            pumpRemovalTime: pastSchedule?.input_params?.pump_removal_time?.toString(),
+            floorHeight: pastSchedule?.floor_height?.toString(),
+            pumpSiteReachTime: pastSchedule?.pump_site_reach_time,
+            slumpAtSite: pastSchedule?.slump_at_site?.toString() || "",
+            mixCode: pastSchedule?.mix_code || "",
+            remarks: pastSchedule?.remarks || "",
+            oneWayKm: pastSchedule?.mother_plant_km?.toString() || "",
+            siteSupervisorId: pastSchedule?.site_supervisor_id || "",
           }));
-          if (pastSchedule.tm_overrule) {
+          if (pastSchedule?.tm_overrule) {
             setOverruleTMCount(true);
             setCustomTMCount(pastSchedule.tm_overrule);
           }
