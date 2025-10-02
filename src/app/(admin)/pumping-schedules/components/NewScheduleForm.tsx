@@ -1043,12 +1043,17 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const scheduleEndDate = useMemo(() => {
     if (!scheduleStartDate) return null;
     const quantityVal = parseFloat(formData.quantity) || 0;
-    const speedVal = parseFloat(formData.speed) || 0;
-    if (speedVal <= 0) return null;
-    const pumpMinutesLocal = Math.round((quantityVal / speedVal) * 60);
+    const avgCapVal = avgTMCap && avgTMCap > 0 ? avgTMCap : 0;
+    const unloadingMinutesVal = parseFloat(formData.unloadingTime) || 0;
+    if (avgCapVal <= 0 || unloadingMinutesVal <= 0) return null;
+    // no. of TM required = quantity / avgTMcap
+    const numberOfTmRequired = quantityVal / avgCapVal;
+    // Pumping hours = no. of TM required * (unloading time in hours)
+    // Pumping minutes = numberOfTmRequired * unloading time in minutes
+    const pumpMinutesLocal = Math.round(numberOfTmRequired * unloadingMinutesVal);
     if (!pumpMinutesLocal) return null;
     return new Date(scheduleStartDate.getTime() + pumpMinutesLocal * 60 * 1000);
-  }, [scheduleStartDate, formData.quantity, formData.speed]);
+  }, [scheduleStartDate, formData.quantity, formData.unloadingTime, avgTMCap]);
 
   type VehicleAvailabilityClass = "available" | "partially_unavailable" | "unavailable";
   const classifyVehicleAvailability = useCallback(
@@ -1268,7 +1273,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   };
 
   const quantity = parseFloat(formData.quantity) || 0;
-  const speed = parseFloat(formData.speed) || 0;
 
   const cycleTimeMin = [
     formData.bufferTime,
@@ -1281,7 +1285,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     .reduce((a, b) => a + b, 0);
 
   // const cycleTimeHr = cycleTimeMin / 60;
-  const totalPumpingHours = speed > 0 ? quantity / speed : 0;
+  // New formula:
+  // number of TM required = quantity / avgTMcap
+  // unloading time in hours = unloading time in minutes / 60
+  // pumping hours = number of TM required * unloading time in hours
+  const numberOfTmRequired = avgTMCap && avgTMCap > 0 ? quantity / avgTMCap : 0;
+  const unloadingTimeMinutes = parseFloat(formData.unloadingTime) || 0;
+  const unloadingTimeHours = unloadingTimeMinutes > 0 ? unloadingTimeMinutes / 60 : 0;
+  const totalPumpingHours = numberOfTmRequired > 0 && unloadingTimeHours > 0 ? numberOfTmRequired * unloadingTimeHours : 0;
   const loads = Math.ceil((parseFloat(formData.quantity) || 0) / (avgTMCap && avgTMCap > 0 ? avgTMCap : 1));
   // const m3PerTM = tripsPerTM * (avgTMCap && avgTMCap > 0 ? avgTMCap : 1);
   const tmReq = cycleTimeMin > 0 ? Math.ceil(cycleTimeMin / parseFloat(formData.unloadingTime)) : 0;
@@ -1292,7 +1303,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [startHour, startMin] = (formData.startTime || "00:00").split(":").map((n) => parseInt(n, 10));
 
   const startTotalMin = startHour * 60 + startMin;
-  const pumpMinutes = Math.round(totalPumpingHours * 60); // from earlier calculation
+  const pumpMinutes = Math.round(totalPumpingHours * 60); // hours → minutes
   const endTotalMin = startTotalMin + pumpMinutes;
 
   // keep it within 24h

@@ -155,14 +155,14 @@ const calculatePumpingHoursFromSchedule = (schedule: Schedule): number => {
 
   // Get all pump start and end times from the output table
   const pumpStartTimes = schedule.output_table
-    .map(trip => trip.pump_start)
+    .map((trip) => trip.pump_start)
     .filter(Boolean)
-    .map(time => new Date(time));
+    .map((time) => new Date(time));
 
   const pumpEndTimes = schedule.output_table
-    .map(trip => trip.unloading_time)
+    .map((trip) => trip.unloading_time)
     .filter(Boolean)
-    .map(time => new Date(time));
+    .map((time) => new Date(time));
 
   if (pumpStartTimes.length === 0 || pumpEndTimes.length === 0) {
     // Fallback to original calculation if no pump times
@@ -170,8 +170,8 @@ const calculatePumpingHoursFromSchedule = (schedule: Schedule): number => {
   }
 
   // Find the first pump start time and last pump end time
-  const firstPumpStart = new Date(Math.min(...pumpStartTimes.map(d => d.getTime())));
-  const lastPumpEnd = new Date(Math.max(...pumpEndTimes.map(d => d.getTime())));
+  const firstPumpStart = new Date(Math.min(...pumpStartTimes.map((d) => d.getTime())));
+  const lastPumpEnd = new Date(Math.max(...pumpEndTimes.map((d) => d.getTime())));
 
   // Calculate total pumping duration in hours
   const pumpingDurationMs = lastPumpEnd.getTime() - firstPumpStart.getTime();
@@ -1397,7 +1397,7 @@ export default function ScheduleViewPage() {
                           {useBurstModel && (
                             <TableCell className="px-2 py-4 text-start">
                               <span className="text-red-600 dark:text-red-400 ">
-                                {typeof trip.queue === "number" ? trip.queue : "-"}
+                                {typeof trip.queue === "number" ? trip.queue.toFixed(2) : "-"}
                               </span>
                             </TableCell>
                           )}
@@ -1476,7 +1476,7 @@ export default function ScheduleViewPage() {
           function formatOverallRange(trips: Schedule["output_table"], preferredFormat?: string) {
             if (!trips.length) return "-";
             const starts = trips
-              .map((t) => t.plant_start)
+              .map((t) => t.plant_buffer)
               .filter(Boolean)
               .map((t) => new Date(t));
             const ends = trips
@@ -1499,7 +1499,7 @@ export default function ScheduleViewPage() {
           function getTotalHours(trips: Schedule["output_table"]) {
             if (!trips.length) return 0;
             const starts = trips
-              .map((t) => t.plant_start)
+              .map((t) => t.plant_buffer)
               .filter(Boolean)
               .map((t) => new Date(t));
             const ends = trips
@@ -1558,7 +1558,7 @@ export default function ScheduleViewPage() {
                             <td key={i} className="px-2 py-2 text-left text-gray-800 dark:text-white/90">
                               {trip
                                 ? `${formatTimeByPreference(
-                                    trip.plant_start,
+                                    trip.plant_buffer,
                                     profile?.preferred_format
                                   )} - ${formatTimeByPreference(trip.return, profile?.preferred_format)}`
                                 : "-"}
