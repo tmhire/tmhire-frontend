@@ -55,6 +55,7 @@ interface Pump {
   plant_id: string;
   plant_name: string;
   identifier: string;
+  availability: boolean;
   type: "line" | "boom";
   capacity: number;
 }
@@ -71,7 +72,7 @@ interface UnavailableTimes {
 
 interface AvailableVehicle {
   id: string;
-  // _id: string;
+  _id: string;
   identifier: string;
   capacity: number;
   availability: boolean;
@@ -731,7 +732,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               pump_fixing_time: parseFloat(formData.pumpFixingTime),
               pump_removal_time: parseFloat(formData.pumpRemovalTime),
               unloading_time: parseFloat(formData.unloadingTime),
-            is_burst_model: !!isBurstModel,
+              is_burst_model: !!isBurstModel,
             },
             site_address: selectedProject ? projects.find((p) => p._id === selectedProject)?.address || "" : "",
             pumping_job: formData.pumpingJob,
@@ -1292,7 +1293,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const numberOfTmRequired = avgTMCap && avgTMCap > 0 ? quantity / avgTMCap : 0;
   const unloadingTimeMinutes = parseFloat(formData.unloadingTime) || 0;
   const unloadingTimeHours = unloadingTimeMinutes > 0 ? unloadingTimeMinutes / 60 : 0;
-  const totalPumpingHours = numberOfTmRequired > 0 && unloadingTimeHours > 0 ? numberOfTmRequired * unloadingTimeHours : 0;
+  const totalPumpingHours =
+    numberOfTmRequired > 0 && unloadingTimeHours > 0 ? numberOfTmRequired * unloadingTimeHours : 0;
   const loads = Math.ceil((parseFloat(formData.quantity) || 0) / (avgTMCap && avgTMCap > 0 ? avgTMCap : 1));
   // const m3PerTM = tripsPerTM * (avgTMCap && avgTMCap > 0 ? avgTMCap : 1);
   const tmReq = cycleTimeMin > 0 ? Math.ceil(cycleTimeMin / parseFloat(formData.unloadingTime)) : 0;
@@ -2156,7 +2158,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 {/* Pipeline Fixing Time at site */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pipeline Fixing Time at site (min) <span className="text-red-500">*</span>
+                    Pipeline Fixing Time at site (min){" "}
+                    <span className="text-red-500">{pumpType === "line" && "*"}</span>
                   </label>
                   <Input
                     type="number"
@@ -2179,7 +2182,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 {/* Pipeline Removal Time */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pipeline Removal Time (min) <span className="text-red-500">*</span>
+                    Pipeline Removal Time (min) <span className="text-red-500">{pumpType === "line" && "*"}</span>
                   </label>
                   <Input
                     type="number"
@@ -2550,14 +2553,22 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               <div className="flex gap-1">
                                 <button
                                   type="button"
-                                  className={`px-2.5 py-1 text-xs rounded border ${!isBurstModel ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-blue-300 dark:border-blue-700"}`}
+                                  className={`px-2.5 py-1 text-xs rounded border ${
+                                    !isBurstModel
+                                      ? "bg-blue-600 text-white border-blue-600"
+                                      : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-blue-300 dark:border-blue-700"
+                                  }`}
                                   onClick={() => setIsBurstModel(false)}
                                 >
                                   0 Wait
                                 </button>
                                 <button
                                   type="button"
-                                  className={`px-2.5 py-1 text-xs rounded border ${isBurstModel ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-blue-300 dark:border-blue-700"}`}
+                                  className={`px-2.5 py-1 text-xs rounded border ${
+                                    isBurstModel
+                                      ? "bg-blue-600 text-white border-blue-600"
+                                      : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-blue-300 dark:border-blue-700"
+                                  }`}
                                   onClick={() => setIsBurstModel(true)}
                                 >
                                   Burst
@@ -2568,12 +2579,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               {!isBurstModel ? (
                                 <div className="text-[11px] leading-5 text-gray-700 dark:text-gray-300">
                                   <p className="font-semibold">0 Wait model</p>
-                                  <p>Assumes each TM unloads back-to-back. Unloading time is counted and the sequence is planned so consecutive pours have effectively no waiting gap.</p>
+                                  <p>
+                                    Assumes each TM unloads back-to-back. Unloading time is counted and the sequence is
+                                    planned so consecutive pours have effectively no waiting gap.
+                                  </p>
                                 </div>
                               ) : (
                                 <div className="text-[11px] leading-5 text-gray-700 dark:text-gray-300">
                                   <p className="font-semibold">Burst model</p>
-                                  <p>Uses the extra TMs as a standby buffer to absorb delays. A maximum acceptable wait between pours is calculated from your inputs to allow short bursts followed by brief waits.</p>
+                                  <p>
+                                    Uses the extra TMs as a standby buffer to absorb delays. A maximum acceptable wait
+                                    between pours is calculated from your inputs to allow short bursts followed by brief
+                                    waits.
+                                  </p>
                                 </div>
                               )}
                             </div>
@@ -2917,7 +2935,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                               <span className="w-5 text-xs text-gray-500">{idx + 1}.</span>
                                               <input
                                                 type="checkbox"
-                                                checked={selectedPump === pump.id}
+                                                checked={selectedPump === pump._id}
                                                 disabled={(() => {
                                                   return (
                                                     classifyVehicleAvailability(
@@ -2929,7 +2947,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                                 })()}
                                                 onChange={(e) => {
                                                   if (e.target.checked) {
-                                                    setSelectedPump(pump.id);
+                                                    setSelectedPump(pump._id);
                                                   } else {
                                                     setSelectedPump("");
                                                   }
@@ -3041,9 +3059,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 {/* Right Column - Chosen Pump */}
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    {selectedPump && calculatedTMs && calculatedTMs.available_pumps ? (
+                    {selectedPump && calculatedTMs && filteredPumps ? (
                       (() => {
-                        const pump = calculatedTMs.available_pumps.find((p) => p.id.toString() === selectedPump);
+                        const pump = filteredPumps.find((p) => p._id.toString() === selectedPump);
                         if (!pump) return <div className="text-gray-500 dark:text-gray-400">Pump not found</div>;
                         const plantName =
                           (plantsData || []).find((pl) => pl._id === pump.plant_id)?.name || "Unassigned";
