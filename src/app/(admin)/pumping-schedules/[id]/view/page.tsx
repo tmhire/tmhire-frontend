@@ -215,52 +215,15 @@ export default function ScheduleViewPage() {
     },
   });
 
-  // Update burst model mutation (send full schedule via PUT like NewScheduleForm)
+  // Toggle burst model mutation (use new dedicated endpoint)
   const updateBurstModelMutation = useMutation({
-    mutationFn: async (nextIsBurstModel: boolean) => {
-      if (!schedule) throw new Error("Schedule not loaded");
-      const s = schedule;
-      const response = await fetchWithAuth(`/schedules/${params.id}`, {
+    mutationFn: async () => {
+      const response = await fetchWithAuth(`/schedules/${params.id}/toggle-burst-model`, {
         method: "PUT",
-        body: JSON.stringify({
-          schedule_no: s.schedule_no,
-          client_id: s.client_id,
-          project_id: s.project_id,
-          // plant_id intentionally omitted if not available in view payload
-          concreteGrade: s.concreteGrade,
-          pumping_speed: s.pumping_speed,
-          pump_type: s.pump_type,
-          input_params: {
-            quantity: s.input_params.quantity,
-            pumping_speed: s.input_params.pumping_speed ?? s.pumping_speed,
-            unloading_time: s.input_params.unloading_time,
-            onward_time: s.input_params.onward_time,
-            pump_onward_time: s.input_params.pump_onward_time ?? 0,
-            return_time: s.input_params.return_time,
-            buffer_time: s.input_params.buffer_time,
-            load_time: s.input_params.load_time,
-            pump_start: s.input_params.pump_start,
-            schedule_date: s.input_params.schedule_date,
-            pump_start_time_from_plant: s.input_params.pump_start_time_from_plant,
-            pump_fixing_time: s.input_params.pump_fixing_time,
-            pump_removal_time: s.input_params.pump_removal_time,
-            is_burst_model: nextIsBurstModel,
-          },
-          site_address: s.site_address,
-          pumping_job: s.pumping_job,
-          floor_height: s.floor_height,
-          pump_site_reach_time: s.pump_site_reach_time,
-          // tm_overrule omitted in view update
-          slump_at_site: s.slump_at_site,
-          mix_code: undefined,
-          remarks: undefined,
-          mother_plant_km: s.mother_plant_km,
-          site_supervisor_id: s.site_supervisor_id,
-        }),
       });
       if (!response) throw new Error("No response from server");
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || "Failed to update burst model");
+      if (!data.success) throw new Error(data.message || "Failed to toggle burst model");
       return data.data as Schedule;
     },
     onSuccess: (updated) => {
@@ -269,7 +232,6 @@ export default function ScheduleViewPage() {
       }
       queryClient.invalidateQueries({ queryKey: ["schedule", params.id] });
       setIsModelChangeModalOpen(false);
-      router.push(`/pumping-schedules/${params.id}`);
     },
   });
 
@@ -291,9 +253,9 @@ export default function ScheduleViewPage() {
 
   const handleConfirmModelChange = async () => {
     try {
-      await updateBurstModelMutation.mutateAsync(!useBurstModel);
+      await updateBurstModelMutation.mutateAsync();
     } catch (error) {
-      console.error("Error updating burst model:", error);
+      console.error("Error toggling burst model:", error);
     }
   };
 
@@ -868,7 +830,11 @@ export default function ScheduleViewPage() {
                 <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Schedule Model</h4>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <span className={`text-xs font-medium ${!useBurstModel ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`}>
+                    <span
+                      className={`text-xs font-medium ${
+                        !useBurstModel ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"
+                      }`}
+                    >
                       0 Wait
                     </span>
                     <button
@@ -884,7 +850,11 @@ export default function ScheduleViewPage() {
                         }`}
                       />
                     </button>
-                    <span className={`text-xs font-medium ${useBurstModel ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`}>
+                    <span
+                      className={`text-xs font-medium ${
+                        useBurstModel ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"
+                      }`}
+                    >
                       Burst
                     </span>
                   </div>
@@ -1299,9 +1269,10 @@ export default function ScheduleViewPage() {
                 </thead>
                 <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                   {(() => {
-                    const rows = (!useBurstModel
-                      ? (schedule.output_table as unknown as TripRow[])
-                      : ((schedule.burst_table || []) as unknown as TripRow[])
+                    const rows = (
+                      !useBurstModel
+                        ? (schedule.output_table as unknown as TripRow[])
+                        : ((schedule.burst_table || []) as unknown as TripRow[])
                     ).sort((a, b) => a.trip_no - b.trip_no);
 
                     const getGapMinutes = (prev: TripRow | undefined, next: TripRow | undefined) => {
@@ -1321,131 +1292,133 @@ export default function ScheduleViewPage() {
                       const keyBase = `${trip.tm_id}-${trip.trip_no}`;
                       rendered.push(
                         <TableRow key={keyBase}>
-                      <TableCell className="px-2 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">{trip.trip_no}</span>
-                      </TableCell>
-                      <TableCell className="px-2 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">
-                          {(() => {
-                            const source = !useBurstModel ? schedule.output_table : schedule.burst_table || [];
-                            const tmTotalTrips = source.filter((t) => t.tm_id === trip.tm_id).length;
-                            const tmTrips = source
-                              .filter((t) => t.tm_id === trip.tm_id)
-                              .sort((a, b) => a.trip_no - b.trip_no);
-                            const currentTripIndex = tmTrips.findIndex((t) => t.trip_no === trip.trip_no) + 1;
-                            return (
-                              <>
-                                <div className="flex w-fit rounded-md border-2 border-black bg-yellow-500 shadow items-center gap-2 pr-2">
-                                  <label className="flex flex-col justify-between bg-blue-700 rounded-l-sm p-2 text-[8px] text-white">
-                                    <span className="text-xs text-white-400">
-                                      ({currentTripIndex}/{tmTotalTrips})
-                                    </span>
-                                  </label>
-                                  <label className="p-1 px-1 font-mono text-sm font-medium items-center text-black truncate">
-                                    {trip.tm_no}
-                                  </label>
-                                </div>
-                              </>
-                            );
-                          })()}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-2 py-2 text-start">
-                        <span className="text-gray-800 dark:text-white/90 truncate text-sm">
-                          {trip.plant_name ? trip.plant_name : "N / A"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-2 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">
-                          {trip.plant_buffer
-                            ? formatTimeByPreference(trip.plant_buffer, profile?.preferred_format)
-                            : "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-2 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">
-                          {trip.plant_load ? formatTimeByPreference(trip.plant_load, profile?.preferred_format) : "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-2 py-4 text-start">
-                        <span className="text-gray-500 dark:text-gray-400">
-                          {formatTimeByPreference(trip.plant_start, profile?.preferred_format)}
-                        </span>
-                      </TableCell>
-                      {!useBurstModel ? (
-                        <>
                           <TableCell className="px-2 py-4 text-start">
-                            <span className="text-gray-500 dark:text-gray-400">
-                              {trip.pump_start
-                                ? formatTimeByPreference(trip.pump_start, profile?.preferred_format)
+                            <span className="text-gray-800 dark:text-white/90">{trip.trip_no}</span>
+                          </TableCell>
+                          <TableCell className="px-2 py-4 text-start">
+                            <span className="text-gray-800 dark:text-white/90">
+                              {(() => {
+                                const source = !useBurstModel ? schedule.output_table : schedule.burst_table || [];
+                                const tmTotalTrips = source.filter((t) => t.tm_id === trip.tm_id).length;
+                                const tmTrips = source
+                                  .filter((t) => t.tm_id === trip.tm_id)
+                                  .sort((a, b) => a.trip_no - b.trip_no);
+                                const currentTripIndex = tmTrips.findIndex((t) => t.trip_no === trip.trip_no) + 1;
+                                return (
+                                  <>
+                                    <div className="flex w-fit rounded-md border-2 border-black bg-yellow-500 shadow items-center gap-2 pr-2">
+                                      <label className="flex flex-col justify-between bg-blue-700 rounded-l-sm p-2 text-[8px] text-white">
+                                        <span className="text-xs text-white-400">
+                                          ({currentTripIndex}/{tmTotalTrips})
+                                        </span>
+                                      </label>
+                                      <label className="p-1 px-1 font-mono text-sm font-medium items-center text-black truncate">
+                                        {trip.tm_no}
+                                      </label>
+                                    </div>
+                                  </>
+                                );
+                              })()}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-2 py-2 text-start">
+                            <span className="text-gray-800 dark:text-white/90 truncate text-sm">
+                              {trip.plant_name ? trip.plant_name : "N / A"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-2 py-4 text-start">
+                            <span className="text-gray-800 dark:text-white/90">
+                              {trip.plant_buffer
+                                ? formatTimeByPreference(trip.plant_buffer, profile?.preferred_format)
+                                : "-"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-2 py-4 text-start">
+                            <span className="text-gray-800 dark:text-white/90">
+                              {trip.plant_load
+                                ? formatTimeByPreference(trip.plant_load, profile?.preferred_format)
                                 : "-"}
                             </span>
                           </TableCell>
                           <TableCell className="px-2 py-4 text-start">
                             <span className="text-gray-500 dark:text-gray-400">
-                              {trip.unloading_time
-                                ? formatTimeByPreference(trip.unloading_time, profile?.preferred_format)
-                                : "-"}
+                              {formatTimeByPreference(trip.plant_start, profile?.preferred_format)}
                             </span>
                           </TableCell>
-                        </>
-                      ) : (
-                        <>
-                          <TableCell className="px-2 py-4 text-start">
-                            <span className="text-gray-500 dark:text-gray-400">
-                              {trip.site_reach
-                                ? formatTimeByPreference(trip.site_reach, profile?.preferred_format)
-                                : "-"}
-                            </span>
-                          </TableCell>
-                          <TableCell className="px-2 py-4 text-start">
+                          {!useBurstModel ? (
+                            <>
+                              <TableCell className="px-2 py-4 text-start">
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {trip.pump_start
+                                    ? formatTimeByPreference(trip.pump_start, profile?.preferred_format)
+                                    : "-"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="px-2 py-4 text-start">
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {trip.unloading_time
+                                    ? formatTimeByPreference(trip.unloading_time, profile?.preferred_format)
+                                    : "-"}
+                                </span>
+                              </TableCell>
+                            </>
+                          ) : (
+                            <>
+                              <TableCell className="px-2 py-4 text-start">
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {trip.site_reach
+                                    ? formatTimeByPreference(trip.site_reach, profile?.preferred_format)
+                                    : "-"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="px-2 py-4 text-start">
                                 <span className="text-red-600 dark:text-red-400 ">
-                              {typeof trip.waiting_time === "number" ? trip.waiting_time : "-"}
+                                  {typeof trip.waiting_time === "number" ? trip.waiting_time : "-"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="px-2 py-4 text-start">
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {trip.pump_start
+                                    ? formatTimeByPreference(trip.pump_start, profile?.preferred_format)
+                                    : "-"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="px-2 py-4 text-start">
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {trip.unloading_time
+                                    ? formatTimeByPreference(trip.unloading_time, profile?.preferred_format)
+                                    : "-"}
+                                </span>
+                              </TableCell>
+                            </>
+                          )}
+                          <TableCell className="px-2 py-4 text-start">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {trip.return ? formatTimeByPreference(trip.return, profile?.preferred_format) : "-"}
+                            </span>
+                          </TableCell>
+                          {useBurstModel && (
+                            <TableCell className="px-2 py-4 text-start">
+                              <span className="text-red-600 dark:text-red-400 ">
+                                {typeof trip.queue === "number" ? trip.queue : "-"}
+                              </span>
+                            </TableCell>
+                          )}
+                          <TableCell className="px-2 py-4 text-start">
+                            <span className="text-gray-800 dark:text-white/90">{trip.completed_capacity} m³</span>
+                          </TableCell>
+                          <TableCell className="px-2 py-4 text-start">
+                            <span className="text-gray-800 dark:text-white/90">
+                              {typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-"}
                             </span>
                           </TableCell>
                           <TableCell className="px-2 py-4 text-start">
-                            <span className="text-gray-500 dark:text-gray-400">
-                              {trip.pump_start
-                                ? formatTimeByPreference(trip.pump_start, profile?.preferred_format)
+                            <span className="text-gray-800 dark:text-white/90">
+                              {typeof trip.cushion_time !== "undefined" && trip.cushion_time !== null
+                                ? Math.max(0, trip.cushion_time / 60).toFixed(0)
                                 : "-"}
                             </span>
                           </TableCell>
-                          <TableCell className="px-2 py-4 text-start">
-                            <span className="text-gray-500 dark:text-gray-400">
-                              {trip.unloading_time
-                                ? formatTimeByPreference(trip.unloading_time, profile?.preferred_format)
-                                : "-"}
-                            </span>
-                          </TableCell>
-                        </>
-                      )}
-                      <TableCell className="px-2 py-4 text-start">
-                        <span className="text-gray-500 dark:text-gray-400">
-                          {trip.return ? formatTimeByPreference(trip.return, profile?.preferred_format) : "-"}
-                        </span>
-                      </TableCell>
-                      {useBurstModel && (
-                        <TableCell className="px-2 py-4 text-start">
-                          <span className="text-red-600 dark:text-red-400 ">
-                            {typeof trip.queue === "number" ? trip.queue : "-"}
-                          </span>
-                        </TableCell>
-                      )}
-                      <TableCell className="px-2 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">{trip.completed_capacity} m³</span>
-                      </TableCell>
-                      <TableCell className="px-2 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">
-                          {typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-2 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">
-                          {typeof trip.cushion_time !== "undefined" && trip.cushion_time !== null
-                            ? Math.max(0, trip.cushion_time / 60).toFixed(0)
-                            : "-"}
-                        </span>
-                      </TableCell>
                         </TableRow>
                       );
 
@@ -1459,7 +1432,7 @@ export default function ScheduleViewPage() {
                               <td className="px-2 py-1 text-start text-xs text-red-600 dark:text-red-400" />
                               <td className="px-2 py-1 text-start text-xs text-red-600 dark:text-red-400" />
                               <td className="px-2 py-0 flex flex-row justify-start items-center gap-1 text-start text-xs  text-red-700 dark:text-red-400">
-                                {gap} min <ArrowUpDown size={"12px"}/>
+                                {gap} min <ArrowUpDown size={"12px"} />
                               </td>
                               <td className="px-2 py-1" />
                               <td className="px-2 py-1" />
