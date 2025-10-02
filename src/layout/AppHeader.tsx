@@ -12,7 +12,7 @@ import { useSidebar } from "../context/SidebarContext";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
-  const { isExpanded, isMobileOpen,isMobile, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const { isExpanded, isMobileOpen, isMobile, toggleSidebar, toggleMobileSidebar } = useSidebar();
 
   const { profile, loading } = useProfile();
   const { setIsSearchOpen } = useSearch();
@@ -91,7 +91,8 @@ const AppHeader: React.FC = () => {
                       {profile.company
                         .split(" ")
                         .map((word) => word[0])
-                        .join("")}
+                        .join("")
+                        .slice(0, 2)}
                     </div>
                   ) : (
                     <Truck className="text-white w-6 h-6" />
@@ -117,7 +118,8 @@ const AppHeader: React.FC = () => {
                       {profile.company
                         .split(" ")
                         .map((word) => word[0])
-                        .join("")}
+                        .join("")
+                        .slice(0, 2)}
                     </div>
                   ) : (
                     <Truck className="text-white w-6 h-6" />
@@ -145,11 +147,11 @@ const AppHeader: React.FC = () => {
                 />
               </svg>
             </button>
-
           </div>
           <div
-            className={`${isApplicationMenuOpen ? "flex" : "hidden"
-              } items-center justify-between w-full gap-4 px-5 py-4 lg:flex shadow-theme-md lg:justify-end lg:px-0 lg:shadow-none`}
+            className={`${
+              isApplicationMenuOpen ? "flex" : "hidden"
+            } items-center justify-between w-full gap-4 px-5 py-4 lg:flex shadow-theme-md lg:justify-end lg:px-0 lg:shadow-none`}
           >
             <div className="hidden lg:block">
               <button onClick={() => setIsSearchOpen(true)} className="relative w-full">

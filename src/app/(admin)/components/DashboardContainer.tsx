@@ -68,7 +68,7 @@ export default function DashboardContainer() {
     <div className="grid grid-cols-12 gap-4 md:gap-6">
       {/* Date Picker Row */}
       <div className="col-span-12 flex items-center justify-between py-4 pl-6 px-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700
-  sticky top-24 z-10">        <div className="flex items-center space-x-3">
+sticky top-24 z-5">        <div className="flex items-center space-x-3">
           <h3 className="text-lg font-semibold text-gray-700 dark:text-white">Dashboard Overview - {city}</h3>
           <div className="flex items-center space-x-3">
             <Button

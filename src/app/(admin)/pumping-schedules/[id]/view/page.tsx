@@ -146,6 +146,40 @@ const calculatePumpSiteReachTime = (schedule: Schedule, preferredFormat?: string
   return formatTimeByPreference(calculatedTime, preferredFormat);
 };
 
+// Calculate pumping hours from schedule table and output table data
+const calculatePumpingHoursFromSchedule = (schedule: Schedule): number => {
+  if (!schedule.output_table || schedule.output_table.length === 0) {
+    // Fallback to original calculation if no schedule data
+    return schedule.input_params.quantity / schedule.input_params.pumping_speed;
+  }
+
+  // Get all pump start and end times from the output table
+  const pumpStartTimes = schedule.output_table
+    .map(trip => trip.pump_start)
+    .filter(Boolean)
+    .map(time => new Date(time));
+
+  const pumpEndTimes = schedule.output_table
+    .map(trip => trip.unloading_time)
+    .filter(Boolean)
+    .map(time => new Date(time));
+
+  if (pumpStartTimes.length === 0 || pumpEndTimes.length === 0) {
+    // Fallback to original calculation if no pump times
+    return schedule.input_params.quantity / schedule.input_params.pumping_speed;
+  }
+
+  // Find the first pump start time and last pump end time
+  const firstPumpStart = new Date(Math.min(...pumpStartTimes.map(d => d.getTime())));
+  const lastPumpEnd = new Date(Math.max(...pumpEndTimes.map(d => d.getTime())));
+
+  // Calculate total pumping duration in hours
+  const pumpingDurationMs = lastPumpEnd.getTime() - firstPumpStart.getTime();
+  const pumpingHours = pumpingDurationMs / (1000 * 60 * 60); // Convert to hours
+
+  return pumpingHours;
+};
+
 export default function ScheduleViewPage() {
   const params = useParams();
   const router = useRouter();
@@ -464,7 +498,7 @@ export default function ScheduleViewPage() {
       const siteReachTime = calculatePumpSiteReachTime(schedule, preferred);
       const pumpStart = schedule.output_table[0]?.pump_start;
       const pumpStartTime = pumpStart ? formatTimeByPreference(pumpStart, preferred) : "N/A";
-      const pumpingHours = schedule.input_params.quantity / schedule.input_params.pumping_speed;
+      const pumpingHours = calculatePumpingHoursFromSchedule(schedule);
       const pumpEndTime = (() => {
         if (!pumpStart) return "N/A";
         const ps = new Date(pumpStart);
@@ -1006,7 +1040,7 @@ export default function ScheduleViewPage() {
                     </TableCell>
                     <TableCell className="px-2 py-4 text-start">
                       <span className="text-gray-800 dark:text-white/90">
-                        {formatHoursAndMinutes(schedule.input_params.quantity / schedule.input_params.pumping_speed)}
+                        {formatHoursAndMinutes(calculatePumpingHoursFromSchedule(schedule))}
                       </span>
                     </TableCell>
                     <TableCell className="px-2 py-4 text-start">
@@ -1014,7 +1048,7 @@ export default function ScheduleViewPage() {
                         {(() => {
                           if (!(schedule?.output_table?.length > 0)) return "N/A";
                           const pumpStart = new Date(schedule.output_table[0].pump_start);
-                          const pumpingHours = schedule.input_params.quantity / schedule.input_params.pumping_speed;
+                          const pumpingHours = calculatePumpingHoursFromSchedule(schedule);
                           const pumpEnd = new Date(pumpStart.getTime() + pumpingHours * 60 * 60 * 1000);
                           return formatTimeByPreference(pumpEnd, profile?.preferred_format);
                         })()}
@@ -1030,7 +1064,7 @@ export default function ScheduleViewPage() {
                         {(() => {
                           if (!(schedule?.output_table?.length > 0)) return "N/A";
                           const pumpStart = new Date(schedule.output_table[0].pump_start);
-                          const pumpingHours = schedule.input_params.quantity / schedule.input_params.pumping_speed;
+                          const pumpingHours = calculatePumpingHoursFromSchedule(schedule);
                           const pumpEnd = new Date(pumpStart.getTime() + pumpingHours * 60 * 60 * 1000);
                           const pumpSiteLeave = new Date(
                             pumpEnd.getTime() + schedule.input_params.pump_removal_time * 60 * 1000
@@ -1050,7 +1084,7 @@ export default function ScheduleViewPage() {
                             pumpStart.getTime() - (pumpFixingTime + pumpOnwardTime) * 60 * 1000
                           );
 
-                          const pumpingHours = schedule.input_params.quantity / schedule.input_params.pumping_speed;
+                          const pumpingHours = calculatePumpingHoursFromSchedule(schedule);
                           const pumpEnd = new Date(pumpStart.getTime() + pumpingHours * 60 * 60 * 1000);
                           const pumpSiteLeave = new Date(
                             pumpEnd.getTime() + schedule.input_params.pump_removal_time * 60 * 1000
