@@ -52,6 +52,8 @@ interface Client {
 
 interface Pump {
   _id: string;
+  plant_id: string;
+  plant_name: string;
   identifier: string;
   type: "line" | "boom";
   capacity: number;
@@ -940,7 +942,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     }
   };
 
-  // const filteredPumps = pumpsData?.filter((p: Pump) => p.type === pumpType) || [];
+  const filteredPumps = pumpsData?.filter((p: Pump) => p.type === pumpType) || [];
   const progressPercentage = (() => {
     if (step === 1) return 0;
     if (step === 1.1) return (100 / (steps.length - 1)) * 1;
@@ -2755,9 +2757,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 </div>
               )}
 
-              {calculatedTMs && calculatedTMs.available_pumps && (
+              {calculatedTMs && filteredPumps && (
                 <>
-                  {calculatedTMs.available_pumps.length < 1 ? (
+                  {filteredPumps.length < 1 ? (
                     <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center justify-between">
                       <span>Not enough available Pumps to fulfill the requirement. Please add more Pumps.</span>
                       <a
@@ -2806,16 +2808,17 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     }}
                     className="space-y-4"
                   >
-                    {calculatedTMs && calculatedTMs.available_pumps && calculatedTMs.available_pumps.length > 0 ? (
+                    {calculatedTMs && filteredPumps && filteredPumps.length > 0 ? (
                       (() => {
                         const plantIdToName = (plantsData || []).reduce((acc, plant) => {
                           acc[plant._id] = plant.name;
                           return acc;
                         }, {} as Record<string, string>);
                         const grouped: Record<string, typeof calculatedTMs.available_pumps> = {};
-                        calculatedTMs.available_pumps.forEach((pump) => {
+                        filteredPumps.forEach((pump) => {
                           const group = pump.plant_id ? plantIdToName[pump.plant_id] || "Unassigned" : "Unassigned";
                           if (!grouped[group]) grouped[group] = [];
+                          // @ts-expect-error: Pump type may not match AvailableVehicle, but we intentionally group pumps here
                           grouped[group].push(pump);
                         });
 
@@ -2929,7 +2932,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                                     {pump.identifier}
                                                   </p>
                                                   {/* Pump Type Chip */}
-                                                  <span
+                                                  {/* <span
                                                     className={`px-2 py-1 text-xs font-medium rounded-full ${
                                                       pumpType === "line"
                                                         ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
@@ -2937,7 +2940,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                                     }`}
                                                   >
                                                     {pumpType === "line" ? "Line" : "Boom"}
-                                                  </span>
+                                                  </span> */}
                                                 </div>
                                                 <div className="flex flex-row items-end gap-2">
                                                   {(() => {

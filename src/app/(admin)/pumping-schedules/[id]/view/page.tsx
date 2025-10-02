@@ -328,6 +328,69 @@ export default function ScheduleViewPage() {
       ["Status", schedule.status],
       ["Schedule Name", schedule.schedule_no || "-"],
     ];
+    // Add Pump Details under Summary
+    if (schedule.output_table && schedule.output_table.length > 0) {
+      const preferred = profile?.preferred_format;
+      const pump = schedule.available_pumps.find((p) => p.id === schedule.pump);
+      const pumpIdentifier = pump ? pump.identifier : "N/A";
+      const pumpStartFromPlant = calculatePumpStartTimeFromPlant(schedule, preferred);
+      const siteReachTime = calculatePumpSiteReachTime(schedule, preferred);
+      const pumpStart = schedule.output_table[0]?.pump_start;
+      const pumpStartTime = pumpStart ? formatTimeByPreference(pumpStart, preferred) : "N/A";
+      const pumpingHours = calculatePumpingHoursFromSchedule(schedule);
+      const pumpEndTime = (() => {
+        if (!pumpStart) return "N/A";
+        const ps = new Date(pumpStart);
+        const pe = new Date(ps.getTime() + pumpingHours * 60 * 60 * 1000);
+        return formatTimeByPreference(pe, preferred);
+      })();
+      const siteLeaveTime = (() => {
+        if (!pumpStart) return "N/A";
+        const ps = new Date(pumpStart);
+        const pe = new Date(ps.getTime() + pumpingHours * 60 * 60 * 1000);
+        const sl = new Date(pe.getTime() + (schedule.input_params.pump_removal_time || 0) * 60 * 1000);
+        return formatTimeByPreference(sl, preferred);
+      })();
+      const totalHoursEngaged = (() => {
+        if (!pumpStart) return "N/A";
+        const ps = new Date(pumpStart);
+        const fixing = schedule.input_params.pump_fixing_time || 0;
+        const onward = schedule.input_params.pump_onward_time || 0;
+        const startFromPlant = new Date(ps.getTime() - (fixing + onward) * 60 * 1000);
+        const pe = new Date(ps.getTime() + pumpingHours * 60 * 60 * 1000);
+        const sl = new Date(pe.getTime() + (schedule.input_params.pump_removal_time || 0) * 60 * 1000);
+        const hours = (sl.getTime() - startFromPlant.getTime()) / (1000 * 60 * 60);
+        return formatHoursAndMinutes(hours);
+      })();
+
+      summaryData.push(["", ""], ["Pump Details", ""]);
+      const pumpDetailsHeader = [
+        "Pump",
+        "Start Time from Plant",
+        "Site Reach Time",
+        "Fixing Time (min)",
+        "Pump Start Time",
+        "Pumping Hours",
+        "Pump End Time",
+        "Removal Time (min)",
+        "Site Leave Time",
+        "Total Hours Engaged",
+      ];
+      const pumpDetailsRow = [
+        pumpIdentifier,
+        pumpStartFromPlant,
+        siteReachTime,
+        schedule.input_params.pump_fixing_time || 0,
+        pumpStartTime,
+        formatHoursAndMinutes(pumpingHours),
+        pumpEndTime,
+        schedule.input_params.pump_removal_time || 0,
+        siteLeaveTime,
+        totalHoursEngaged,
+      ];
+      summaryData.push(pumpDetailsHeader);
+      summaryData.push(pumpDetailsRow);
+    }
     // Add TM Trip Distribution data
     if (schedule.output_table && schedule.output_table.length > 0) {
       const tmTripCounts: Record<string, number> = {};
@@ -451,67 +514,9 @@ export default function ScheduleViewPage() {
     const wsSummary = XLSX.utils.aoa_to_sheet([["Field", "Value"], ...summaryData]);
     XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
 
-    // Schedule Table Sheet with Pump Details
+    // Schedule Table Sheet
     if (schedule.output_table && schedule.output_table.length > 0) {
       const preferred = profile?.preferred_format;
-      const pump = schedule.available_pumps.find((p) => p.id === schedule.pump);
-      const pumpIdentifier = pump ? pump.identifier : "N/A";
-      const pumpStartFromPlant = calculatePumpStartTimeFromPlant(schedule, preferred);
-      const siteReachTime = calculatePumpSiteReachTime(schedule, preferred);
-      const pumpStart = schedule.output_table[0]?.pump_start;
-      const pumpStartTime = pumpStart ? formatTimeByPreference(pumpStart, preferred) : "N/A";
-      const pumpingHours = calculatePumpingHoursFromSchedule(schedule);
-      const pumpEndTime = (() => {
-        if (!pumpStart) return "N/A";
-        const ps = new Date(pumpStart);
-        const pe = new Date(ps.getTime() + pumpingHours * 60 * 60 * 1000);
-        return formatTimeByPreference(pe, preferred);
-      })();
-      const siteLeaveTime = (() => {
-        if (!pumpStart) return "N/A";
-        const ps = new Date(pumpStart);
-        const pe = new Date(ps.getTime() + pumpingHours * 60 * 60 * 1000);
-        const sl = new Date(pe.getTime() + (schedule.input_params.pump_removal_time || 0) * 60 * 1000);
-        return formatTimeByPreference(sl, preferred);
-      })();
-      const totalHoursEngaged = (() => {
-        if (!pumpStart) return "N/A";
-        const ps = new Date(pumpStart);
-        const fixing = schedule.input_params.pump_fixing_time || 0;
-        const onward = schedule.input_params.pump_onward_time || 0;
-        const startFromPlant = new Date(ps.getTime() - (fixing + onward) * 60 * 1000);
-        const pe = new Date(ps.getTime() + pumpingHours * 60 * 60 * 1000);
-        const sl = new Date(pe.getTime() + (schedule.input_params.pump_removal_time || 0) * 60 * 1000);
-        const hours = (sl.getTime() - startFromPlant.getTime()) / (1000 * 60 * 60);
-        return formatHoursAndMinutes(hours);
-      })();
-
-      // Add pump details at the top of schedule table
-      const pumpDetailsHeader = [
-        "Pump",
-        "Start Time from Plant",
-        "Site Reach Time",
-        "Fixing Time (min)",
-        "Pump Start Time",
-        "Pumping Hours",
-        "Pump End Time",
-        "Removal Time (min)",
-        "Site Leave Time",
-        "Total Hours Engaged",
-      ];
-      const pumpDetailsRow = [
-        pumpIdentifier,
-        pumpStartFromPlant,
-        siteReachTime,
-        schedule.input_params.pump_fixing_time || 0,
-        pumpStartTime,
-        formatHoursAndMinutes(pumpingHours),
-        pumpEndTime,
-        schedule.input_params.pump_removal_time || 0,
-        siteLeaveTime,
-        totalHoursEngaged,
-      ];
-
       // Schedule table data
       const scheduleHeader = [
         "Trip No",
@@ -542,17 +547,9 @@ export default function ScheduleViewPage() {
         typeof trip.cushion_time !== "undefined" ? (trip.cushion_time / 60).toFixed(0) : "-",
       ]);
 
-      // Combine pump details and schedule table with spacing
-      const wsSchedule = XLSX.utils.aoa_to_sheet([
-        ["Pump Details"],
-        pumpDetailsHeader,
-        pumpDetailsRow,
-        [""], // Empty row for spacing
-        ["Schedule Table"],
-        scheduleHeader,
-        ...scheduleRows,
-      ]);
-      XLSX.utils.book_append_sheet(wb, wsSchedule, "Schedule Details");
+      // Build schedule sheet with only schedule table and rename to "Schedule"
+      const wsSchedule = XLSX.utils.aoa_to_sheet([["Schedule"], scheduleHeader, ...scheduleRows]);
+      XLSX.utils.book_append_sheet(wb, wsSchedule, "Schedule");
     }
 
     XLSX.writeFile(wb, `${schedule.schedule_no || "pumping-schedule"}-${schedule._id}.xlsx`);
@@ -1444,7 +1441,6 @@ export default function ScheduleViewPage() {
                               <td className="px-2 py-1" />
                               <td className="px-2 py-1" />
                               <td className="px-2 py-1" />
-                              <td className="px-2 py-1" />
                             </tr>
                           );
                         }
@@ -1598,7 +1594,7 @@ export default function ScheduleViewPage() {
       </div>
 
       {/* PLANT WISE TRIP DETAILS TABLE */}
-      <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mt-3">
+      {/* <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mt-3">
         <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Plant Wise Trip Details</h4>
         {(() => {
           if (!schedule.output_table || schedule.output_table.length === 0) {
@@ -1669,7 +1665,7 @@ export default function ScheduleViewPage() {
             </div>
           );
         })()}
-      </div>
+      </div> */}
 
       {/* Cancel Modal */}
       <Modal className="max-w-[500px] p-5" isOpen={isCancelModalOpen} onClose={() => setIsCancelModalOpen(false)}>
