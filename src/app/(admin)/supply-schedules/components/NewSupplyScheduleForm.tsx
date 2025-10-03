@@ -125,9 +125,8 @@ const createTooltip = (unavailable_times: UnavailableTimes) => {
 
 const steps = [
   { id: 1, name: "Supply Schedule Details" },
-  { id: 1.1, name: "Pour Details", type: "subStep" },
-  { id: 1.2, name: "Transit Mixer Trip Log", type: "subStep" },
-  { id: 2, name: "TM Selection" },
+  { id: 2, name: "Manual Job Pour Details" },
+  { id: 3, name: "TM Selection" },
 ];
 
 export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: string }) {
@@ -136,7 +135,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   const searchParams = useSearchParams();
   const template = searchParams.get("template");
   const { fetchWithAuth } = useApiClient();
-  const [step, setStep] = useState(schedule_id ? 2 : (1 as number));
+  const [step, setStep] = useState(schedule_id ? 3 : (1 as number));
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [tmSequence, setTMSequence] = useState<string[]>([]);
   const [calculatedTMs, setCalculatedTMs] = useState<CalculateTMResponse | null>(null);
@@ -147,7 +146,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     scheduleDate: "",
     startTime: "",
     quantity: "",
-    speed: "",
     unloadingTime: "",
     onwardTime: "",
     returnTime: "",
@@ -156,12 +154,15 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     concreteGrade: "",
     siteSupervisorId: "",
     remarks: "",
+    oneWayKm: "",
+    slumpAtSite: "",
+    mixCode: "",
   });
 
   const [fleetOptions, setFleetOptions] = useState({
     tripsNeeded: 0,
     useRoundTrip: true,
-    vehicleCount: 1,
+    vehicleCount: 2,
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [formDataRetrieved, setFormDataRetrieved] = useState(true);
@@ -362,17 +363,13 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
         setSelectedClient(data.data.client_id);
         setSelectedProject(data.data.project_id);
         setSelectedPlant(data.data.plant_id || "");
-        const pumping_speed = data.data.input_params.pumping_speed;
         setFormData({
           scheduleDate: data.data.input_params.schedule_date,
           startTime: data.data.input_params.pump_start.split("T")[1],
           quantity: data.data.input_params.quantity.toString(),
-          speed: pumping_speed.toString(),
           unloadingTime:
             data.data.input_params.unloading_time && data.data.input_params.unloading_time !== 0
               ? data.data.input_params.unloading_time.toString()
-              : pumping_speed && avgTMCap
-              ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
               : "",
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
@@ -381,6 +378,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
           concreteGrade: data.data.concreteGrade,
           siteSupervisorId: data.data.site_supervisor_id || "",
           remarks: data.data.remarks?.toString?.() || "",
+          oneWayKm: data.data.one_way_km?.toString() || "",
+          slumpAtSite: data.data.slump_at_site?.toString() || "",
+          mixCode: data.data.mix_code?.toString() || "",
         });
         setComputedScheduleName(
           data?.data?.schedule_no ||
@@ -391,7 +391,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
         setFleetOptions({
           tripsNeeded: data?.data?.trip_count || 0,
           useRoundTrip: data?.data?.is_round_trip || false,
-          vehicleCount: data?.data?.is_round_trip ? 1 : data?.data?.tm_count,
+          vehicleCount: data?.data?.is_round_trip ? 1 : Math.max(2, data?.data?.tm_count || 2),
         });
         const tm_ids = new Set();
         const tmSequence: string[] = [];
@@ -444,8 +444,12 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
           returnTime: past.input_params.return_time.toString(),
           bufferTime: past.input_params.buffer_time.toString(),
           loadTime: past.input_params.load_time.toString(),
+          unloadingTime: past.input_params.unloading_time?.toString() || "",
           remarks: past.remarks || "",
           siteSupervisorId: past.site_supervisor_id || "",
+          oneWayKm: "",
+          slumpAtSite: "",
+          mixCode: "",
         }));
         if (past.tm_overrule) {
           setOverruleTMCount(true);
@@ -454,12 +458,12 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
         setFleetOptions({
           tripsNeeded: past?.trip_count || 0,
           useRoundTrip: past?.is_round_trip || false,
-          vehicleCount: past?.is_round_trip ? 1 : past?.tm_count || 1,
+          vehicleCount: past?.is_round_trip ? 1 : Math.max(2, past?.tm_count || 2),
         });
       }
     }
-    // Move to first sub-step
-    setStep(1.1 as number);
+    // Move to step 2
+    setStep(2 as number);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template, pastSchedules]);
 
@@ -485,6 +489,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
             pump_start: `${formData.scheduleDate}T${formData.startTime}`,
             schedule_date: formData.scheduleDate,
           },
+          one_way_km: formData.oneWayKm ? parseFloat(formData.oneWayKm) : undefined,
+          slump_at_site: formData.slumpAtSite ? parseFloat(formData.slumpAtSite) : undefined,
+          mix_code: formData.mixCode ? formData.mixCode : undefined,
           site_address: selectedProject ? projects.find((p) => p._id === selectedProject)?.address || "" : "",
           tm_count: fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount,
           trip_count: fleetOptions.tripsNeeded,
@@ -575,6 +582,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
               pump_start: `${formData.scheduleDate}T${formData.startTime}`,
               schedule_date: formData.scheduleDate,
             },
+            one_way_km: formData.oneWayKm ? parseFloat(formData.oneWayKm) : undefined,
+            slump_at_site: formData.slumpAtSite ? parseFloat(formData.slumpAtSite) : undefined,
+            mix_code: formData.mixCode ? formData.mixCode : undefined,
             site_address: selectedProject ? projects.find((p) => p._id === selectedProject)?.address || "" : "",
             tm_count: fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount,
             trip_count: fleetOptions.tripsNeeded,
@@ -638,39 +648,32 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
 
   const handleNext = async () => {
     if (step === 1) {
-      setStep(1.1 as number);
-    } else if (step === 1.1) {
-      setStep(1.2 as number);
-    } else if (step === 1.2) {
-      const success = await calculateRequiredTMs();
-      if (success) setStep(2);
+      setStep(2);
     } else if (step === 2) {
+      const success = await calculateRequiredTMs();
+      if (success) setStep(3);
+    } else if (step === 3) {
       const success = await generateSchedule();
       if (success) {
-        // Redirect to view page instead of going to step 3
+        // Redirect to view page instead of going to step 4
         router.push(`/supply-schedules/${calculatedTMs?.schedule_id}/view`);
       }
     }
   };
 
   const handleBack = () => {
-    if (step === 1.1) setStep(1);
-    else if (step === 1.2) setStep(1.1 as number);
-    else if (step === 2) setStep(1.2 as number);
+    if (step === 2) setStep(1);
+    else if (step === 3) setStep(2);
   };
 
   // removed unused handleSubmit
 
   const progressPercentage = (() => {
     if (step === 1) return 0;
-    if (step === 1.1) return (100 / (steps.length - 1)) * 1;
-    if (step === 1.2) return (100 / (steps.length - 1)) * 2;
-    if (step === 2) return 100;
+    if (step === 2) return 50;
+    if (step === 3) return 100;
     return 0;
   })();
-
-  const quantity = parseFloat(formData.quantity) || 0;
-  const speed = parseFloat(formData.speed) || 0;
 
   const cycleTimeMin = [
     formData.bufferTime,
@@ -681,21 +684,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   ]
     .map((v) => parseFloat(v) || 0)
     .reduce((a, b) => a + b, 0);
-
-  const totalPumpingHours = speed > 0 ? quantity / speed : 0;
-  const [startHour, startMin] = (formData.startTime || "00:00").split(":").map((n) => parseInt(n, 10));
-
-  const startTotalMin = startHour * 60 + startMin;
-  const pumpMinutes = Math.round(totalPumpingHours * 60); // from earlier calculation
-  const endTotalMin = startTotalMin + pumpMinutes;
-
-  // keep it within 24h
-  const endHour = Math.floor(endTotalMin / 60) % 24;
-  const endMin = endTotalMin % 60;
-
-  // format back to HH:mm
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  const pumpEndTime = pumpMinutes ? `${pad(endHour)}:${pad(endMin)}` : `${0}:${0}`;
 
   // Build Date objects for schedule window and TM classification helpers
   const scheduleStartDate = useMemo(() => {
@@ -803,51 +791,23 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     [schedule_id]
   );
 
-  const setPumpingSpeedAndUnloadingTime = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleInputChange(e);
-    const { name, value } = e.target;
-    if (value === "") return setFormData((prev) => ({ ...prev, unloadingTime: "", speed: "" }));
-    if (!avgTMCap || !value) return;
-    if (name === "speed") {
-      const speed = parseFloat(value);
-      if (!isNaN(speed) && speed > 0) {
-        return setFormData((prev) => ({
-          ...prev,
-          unloadingTime: ((avgTMCap / speed) * 60).toFixed(0),
-        }));
-      }
-    }
-    if (name === "unloadingTime") {
-      const unloading_time = parseFloat(value);
-      if (!isNaN(unloading_time) && unloading_time > 0) {
-        return setFormData((prev) => ({
-          ...prev,
-          speed: (avgTMCap / (unloading_time / 60)).toFixed(0),
-        }));
-      }
-    }
-  };
 
-  const isStep1FormValid = () => {
-    if (step === 1.1) {
-      // Pour Details validation
+  const isStep2FormValid = () => {
+    if (step === 2) {
+      // Manual Job Pour Details validation
+      const requiredFields = ["bufferTime", "loadTime", "onwardTime", "unloadingTime", "returnTime"];
+      
       return (
         !!selectedClient &&
         !!selectedProject &&
         !!formData.quantity &&
-        !!formData.speed &&
         !!formData.scheduleDate &&
-        !!formData.startTime
+        !!formData.startTime &&
+        requiredFields.every((field) => {
+          const value = formData[field as keyof typeof formData];
+          return value !== undefined && value !== null && value !== "" && value !== "0";
+        })
       );
-    } else if (step === 1.2) {
-      // Transit Mixer Trip Log validation
-      const requiredFields = ["bufferTime", "loadTime", "onwardTime", "unloadingTime", "returnTime"];
-
-      // Check if all required fields have values
-      return requiredFields.every((field) => {
-        const value = formData[field as keyof typeof formData];
-        return value !== undefined && value !== null && value !== "" && value !== "0";
-      });
     }
     return false;
   };
@@ -876,8 +836,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     <div className="w-full mx">
       <div className="flex flex-row w-full mb-4 items-center">
         <div className="w-1/3">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">New Supply Schedule</h2>
-          <p className="text-gray-500 dark:text-gray-400">Step {step} of 2</p>
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">New Supply/Manual Job Schedule</h2>
+          <p className="text-gray-500 dark:text-gray-400">Step {step} of 3</p>
         </div>
         <div className="w-full">
           <div className="relative">
@@ -1158,18 +1118,18 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                     params.set("template", selectedPastSchedule || "none");
                   }
                   router.replace(`?${params.toString()}`, { scroll: false });
-                  setStep(1.1);
+                  setStep(2);
                 }}
               >
                 Continue
               </button>
             </div>
           </div>
-        ) : step === 1.1 ? (
+        ) : step === 2 ? (
           <div className="space-y-4">
-            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30 mb-24">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30 mb-4">
               <div className="flex justify-between items-center mb-4 w-full">
-                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Pour Details</h3>
+                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Manual Job Pour Details</h3>
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900/40 py-1 px-3 rounded-full">
                   Company Timings -
                   {profile?.preferred_format === "12h"
@@ -1343,7 +1303,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 {/* Pumping Quantity */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pumping Quantity (m³) <span className="text-red-500">*</span>
+                    Supply Quantity (m³) <span className="text-red-500">*</span>
                   </label>
                   <Input
                     type="number"
@@ -1425,7 +1385,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 {/* Schedule Date of Pumping */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Schedule Date of Pumping <span className="text-red-500">*</span>
+                    Schedule Date of Supply <span className="text-red-500">*</span>
                   </label>
                   <DatePickerInput
                     value={formData.scheduleDate}
@@ -1441,7 +1401,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 {/* Pump Start Time */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pump Start Time (24h) <span className="text-red-500">*</span>
+                    Supply Start Time at Site (24h) <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <TimeInput
@@ -1461,87 +1421,65 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
               </div>
 
               <div className="grid grid-cols-10 gap-6 mt-6">
-                {/* Pumping Speed */}
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pumping Speed (m³/hr) <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex flex-row items-center gap-6">
-                    <Input
-                      type="number"
-                      name="speed"
-                      value={formData.speed || ""}
-                      onChange={setPumpingSpeedAndUnloadingTime}
-                      placeholder="Enter speed"
-                      min="0"
-                      className="w-full"
-                    />
-                    <span className="text-gray-600 dark:text-gray-400 font-medium">or</span>
-                  </div>
-                </div>
-                {/* Unloading Time */}
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Unloading Time (min) <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex flex-col gap-1">
-                    <Input
-                      id="unloadingTime"
-                      type="number"
-                      name="unloadingTime"
-                      value={formData.unloadingTime || ""}
-                      onChange={setPumpingSpeedAndUnloadingTime}
-                      min="0"
-                      placeholder={
-                        avgTMCap !== null ? "Auto-calculated from pumping speed" : "Enter pumping speed to calculate"
-                      }
-                      className="w-full"
-                    />
-                    {avgTMCap !== null && (
-                      <p className="text-xs text-gray-500">
-                        Based on avg. TM capacity: <span className="font-medium">{avgTMCap?.toFixed(0)} m³</span>
-                        <br />
-                        (Update this in the Transit Mixers page)
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Total Pumping Hours (Auto Fill) */}
+                {/* One Way Distance to Site from Plant */}
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Total Pumping Hours
+                    One Way Distance to Site from Plant (km)
+                  </label>
+                      <Input
+                        type="number"
+                        name="oneWayKm"
+                        value={formData.oneWayKm || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setFormData((prev) => ({ ...prev, oneWayKm: value }));
+                          setHasChanged(true);
+                        }}
+                        placeholder="Enter distance"
+                        min="0"
+                        step={0.1}
+                      />
+                </div>
+
+                {/* Slump at Site */}
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Slump at Site (mm)
+                  </label>
+                      <Input
+                        type="number"
+                        name="slumpAtSite"
+                        value={formData.slumpAtSite || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setFormData((prev) => ({ ...prev, slumpAtSite: value }));
+                          setHasChanged(true);
+                        }}
+                        placeholder="Enter slump"
+                        min="0"
+                        step={5}
+                      />
+                </div>
+
+                {/* Mix Code */}
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Mix Code
                   </label>
                   <Input
-                    type="text"
-                    name="pumpingHours"
-                    value={totalPumpingHours > 0 ? `${totalPumpingHours.toFixed(2)} hr` : "-"}
-                    disabled
-                    className="cursor-not-allowed bg-gray-100 dark:bg-gray-800"
+                    type="string"
+                    name="mixCode"
+                    value={formData.mixCode || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData((prev) => ({ ...prev, mixCode: value }));
+                      setHasChanged(true);
+                    }}
+                    placeholder="Enter mix code"
                   />
                 </div>
 
-                {/* Pump End Time (Auto Calculated) */}
-                <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 truncate -mr-2">
-                    Pump End Time <span className="text-gray-500 text-[10px] pl-1">(24h)</span>
-                  </label>
-                  <div className="relative">
-                    <TimeInput
-                      type="time"
-                      name="endTime"
-                      format="hh:mm"
-                      value={pumpEndTime}
-                      disabled
-                      className="cursor-not-allowed bg-gray-100 dark:bg-gray-800"
-                    />
-                    <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-                      <Clock className="size-5" />
-                    </span>
-                  </div>
-                </div>
-
-                <div className="col-span-2">
+                <div className="col-span-4">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Remarks</label>
                   <Input
                     type="string"
@@ -1557,14 +1495,11 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 </div>
               </div>
             </div>
-          </div>
-        ) : step === 1.2 ? (
-          <div className="space-y-4">
-            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
+
+            {/* TM Cycle Time Parameters Section */}
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30 mt-2 mb-20">
               <div className="flex justify-between items-center mb-4 w-full">
-                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4 flex justify-between items-center">
-                  Supply Details
-                </h3>
+                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">TM Cycle Time Parameters</h3>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -1950,7 +1885,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                               type="radio"
                               checked={!fleetOptions.useRoundTrip}
                               onChange={() => {
-                                setFleetOptions((prev) => ({ ...prev, useRoundTrip: false }));
+                                setFleetOptions((prev) => ({ ...prev, useRoundTrip: false, vehicleCount: Math.max(2, prev.vehicleCount) }));
                                 setHasChanged(true);
                               }}
                               className="text-blue-600"
@@ -1971,7 +1906,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                               type="button"
                               className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
                               onClick={() => {
-                                if (fleetOptions.vehicleCount > 1) {
+                                if (fleetOptions.vehicleCount > 2) {
                                   setFleetOptions((prev) => ({
                                     ...prev,
                                     vehicleCount: prev.vehicleCount - 1,
@@ -1984,14 +1919,14 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                             </button>
                             <input
                               type="number"
-                              min={1}
+                              min={2}
                               className="no-spinner h-6 w-8 text-center px-1 rounded border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
                               value={fleetOptions.vehicleCount}
                               onChange={(e) => {
-                                const value = parseInt(e.target.value) || 1;
+                                const value = parseInt(e.target.value) || 2;
                                 setFleetOptions((prev) => ({
                                   ...prev,
-                                  vehicleCount: Math.max(1, value),
+                                  vehicleCount: Math.max(2, value),
                                 }));
                                 setHasChanged(true);
                               }}
@@ -2131,7 +2066,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
               </div>
             </div>
           </div>
-        ) : step === 2 ? (
+        ) : step === 3 ? (
           // TM Selection Step
           !calculatedTMs || !plantsData ? (
             <div className="flex justify-center items-center py-12">
@@ -2157,34 +2092,16 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                           Select TMs from the list below
                         </h5>
                       </div>
-
                       {/* Calculation Display */}
                       <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                         <div className="flex items-center justify-center gap-3 flex-wrap">
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-600 dark:text-gray-400">Required:</span>
                             <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded-lg font-semibold">
-                              {calculatedTMs.tm_count} TMs
+                              {fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount || "N/A"} TMs
                             </span>
                           </div>
 
-                          {overruleTMCount && (
-                            <>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Overrule:</span>
-                                <span className="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400 rounded-lg font-semibold">
-                                  {customTMCount - calculatedTMs.tm_count} Added
-                                </span>
-                              </div>
-                            </>
-                          )}
-
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">=</span>
-                            <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 rounded-lg font-bold">
-                              {overruleTMCount ? customTMCount : calculatedTMs.tm_count} Total TMs
-                            </span>
-                          </div>
                         </div>
                       </div>
 
@@ -2591,7 +2508,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
         ) : null}
       </div>
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-2 ml-24 dark:bg-gray-900 dark:border-gray-700">
-        {step === 1.1 && (
+        {step === 2 && (
           <div className="flex justify-between mt-2">
             {!schedule_id ? (
               <Button onClick={handleBack} variant="outline" className="flex items-center gap-2">
@@ -2604,38 +2521,19 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
             <span>
               <span className="text-red-500">*</span> Compulsory, all other fields are optional
             </span>
-            <Button onClick={handleNext} className="flex items-center gap-2" disabled={!isStep1FormValid()}>
-              Next: Transit Mixer Trip Log
-              <ArrowRight size={16} />
-            </Button>
-          </div>
-        )}
-
-        {step === 1.2 && (
-          <div className="flex justify-between mt-2">
-            <Button onClick={handleBack} variant="outline" className="flex items-center gap-2">
-              <ArrowLeft size={16} />
-              Back to Pour Details
-            </Button>
-            <div>
-              <span className="text-red-500">*</span> Compulsory, all other fields are optional
-            </div>
-            <Button
-              onClick={handleNext}
-              className="flex items-center gap-2"
-              disabled={isCalculating || !isStep1FormValid()}
-            >
+            <Button onClick={handleNext} className="flex items-center gap-2" disabled={isCalculating || !isStep2FormValid()}>
               {isCalculating ? "Calculating..." : "Next: TM Selection"}
               {!isCalculating && <ArrowRight size={16} />}
             </Button>
           </div>
         )}
 
-        {step === 2 && (
+
+        {step === 3 && (
           <div className="flex justify-between items-center mt-2 gap-0">
             <Button variant="outline" onClick={handleBack} className="flex items-center gap-2">
               <ArrowLeft size={16} />
-              Back to Transit Mixer Trip Log
+              Back to Manual Job Pour Details
             </Button>
             <div className="flex items-center gap-4 justify-end flex-1">
               {tmSequence.length !== (fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount) && (
