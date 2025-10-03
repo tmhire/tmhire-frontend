@@ -78,6 +78,7 @@ interface Schedule {
     plant_name?: string;
   }>;
   tm_count: number;
+  tm_overrule: number;
   available_pumps: Array<{
     id: string;
     identifier: string;
@@ -740,6 +741,26 @@ export default function ScheduleViewPage() {
                 Total TM Cycle Time (A+B+C+D+E)
               </h4>
               <p className="text-base text-gray-800 dark:text-white/90">{formatHoursAndMinutes(schedule.cycle_time)}</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Optimum Fleet: Non-Stop Pour
+              </h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.tm_count || "N/A"}</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                TMs Additional
+              </h4>
+              <p className="text-base text-gray-800 dark:text-white/90">
+                {schedule.tm_overrule - schedule.tm_count || 0}
+              </p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total TM Required</h4>
+              <p className="text-base font-semibold text-blue-600 dark:text-blue-400">
+                {(schedule.tm_count || 0) + (schedule.tm_overrule || 0)}
+              </p>
             </div>
             {/* <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</h4>
