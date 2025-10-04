@@ -2533,6 +2533,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 const nextTotal = Math.max(1, tmReq + add);
                                 setOverruleTMCount(add > 0);
                                 setCustomTMCount(nextTotal);
+                                if (add > 0) {
+                                  setIsBurstModel(true); // Set default pour model to Burst when adding additional TMs
+                                }
                                 setHasChanged(true);
                               }}
                             />
@@ -2546,6 +2549,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 const nextTotal = Math.max(1, tmReq + nextAdditional);
                                 setOverruleTMCount(true);
                                 setCustomTMCount(nextTotal);
+                                setIsBurstModel(true); // Set default pour model to Burst when adding additional TMs
                                 setHasChanged(true);
                               }}
                             >

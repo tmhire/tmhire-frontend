@@ -53,6 +53,22 @@ export default function ClientsContainer() {
     legal_entity: "",
   });
 
+  // Form validation for create modal
+  const isCreateFormValid = useMemo(() => {
+    return (
+      newClient.name.trim() !== "" &&
+      newClient.legal_entity.trim() !== ""
+    );
+  }, [newClient]);
+
+  // Form validation for edit modal
+  const isEditFormValid = useMemo(() => {
+    return (
+      editedClient.name.trim() !== "" &&
+      editedClient.legal_entity.trim() !== ""
+    );
+  }, [editedClient]);
+
   // Legal entity options
   const legalEntityOptions = [
     "Private Limited Company (Pvt Ltd)",
@@ -408,7 +424,7 @@ export default function ClientsContainer() {
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Client</h4>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name <span className="text-red-500">*</span></label>
             <Input
               type="text"
               name="name"
@@ -419,7 +435,7 @@ export default function ClientsContainer() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Legal Entity</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Legal Entity <span className="text-red-500">*</span></label>
             <div className="relative">
               <button
                 type="button"
@@ -458,7 +474,7 @@ export default function ClientsContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
             Cancel
           </Button>
-          <Button size="sm" onClick={handleCreateClient} disabled={createClientMutation.isPending}>
+          <Button size="sm" onClick={handleCreateClient} disabled={createClientMutation.isPending || !isCreateFormValid}>
             {createClientMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />
@@ -477,11 +493,11 @@ export default function ClientsContainer() {
         {selectedClient && (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name <span className="text-red-500">*</span></label>
               <Input type="text" name="name" value={editedClient.name} onChange={handleEditInputChange} maxLength={30} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Legal Entity</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Legal Entity <span className="text-red-500">*</span></label>
               <div className="relative">
                 <button
                   type="button"
@@ -523,7 +539,7 @@ export default function ClientsContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsEditModalOpen(false)}>
             Cancel
           </Button>
-          <Button size="sm" onClick={handleSaveEdit} disabled={editClientMutation.isPending}>
+          <Button size="sm" onClick={handleSaveEdit} disabled={editClientMutation.isPending || !isEditFormValid}>
             {editClientMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />

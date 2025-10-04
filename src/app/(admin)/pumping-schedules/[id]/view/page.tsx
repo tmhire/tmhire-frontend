@@ -289,6 +289,9 @@ export default function ScheduleViewPage() {
     if (!schedule) return;
 
     const wb = XLSX.utils.book_new();
+    
+    // Determine which table to use based on current model
+    const currentTable = useBurstModel && schedule.burst_table ? schedule.burst_table : schedule.output_table;
 
     // Summary Sheet with TM Trip Distribution and TM Wise Trip Details
     const summaryData: (string | number)[][] = [
@@ -393,9 +396,9 @@ export default function ScheduleViewPage() {
       summaryData.push(pumpDetailsRow);
     }
     // Add TM Trip Distribution data
-    if (schedule.output_table && schedule.output_table.length > 0) {
+    if (currentTable && currentTable.length > 0) {
       const tmTripCounts: Record<string, number> = {};
-      schedule.output_table.forEach((trip) => {
+      currentTable.forEach((trip) => {
         if (!tmTripCounts[trip.tm_id]) tmTripCounts[trip.tm_id] = 0;
         tmTripCounts[trip.tm_id]++;
       });
@@ -408,7 +411,7 @@ export default function ScheduleViewPage() {
         .sort((a, b) => Number(b[0]) - Number(a[0]))
         .map(([trips, tmCount], idx) => [idx + 1, Number(tmCount), Number(trips), Number(tmCount) * Number(trips)]);
       const totalTMs = Object.keys(tmTripCounts).length;
-      const totalTrips = schedule.output_table.length;
+      const totalTrips = currentTable.length;
 
       // Add spacing after summary data
       summaryData.push(["", ""], ["TM Trip Distribution", ""]);
@@ -418,8 +421,8 @@ export default function ScheduleViewPage() {
     }
 
     // Helper functions for time calculations
-    function formatOverallRange(trips: Schedule["output_table"], preferredFormat?: string) {
-      if (!trips.length) return "-";
+    function formatOverallRange(trips: (Schedule["output_table"] | Schedule["burst_table"]) | undefined, preferredFormat?: string) {
+      if (!trips || !trips.length) return "-";
       const starts = trips
         .map((t) => t.plant_start)
         .filter(Boolean)
@@ -436,8 +439,8 @@ export default function ScheduleViewPage() {
       return `${sTime} - ${eTime}`;
     }
 
-    function getTotalHours(trips: Schedule["output_table"]) {
-      if (!trips.length) return 0;
+    function getTotalHours(trips: (Schedule["output_table"] | Schedule["burst_table"]) | undefined) {
+      if (!trips || !trips.length) return 0;
       const starts = trips
         .map((t) => t.plant_start)
         .filter(Boolean)
@@ -453,18 +456,21 @@ export default function ScheduleViewPage() {
     }
 
     // Add TM Wise Trip Details
-    if (schedule.output_table && schedule.output_table.length > 0) {
+    if (currentTable && currentTable.length > 0) {
       const preferred = profile?.preferred_format;
-      const tmTrips: Record<string, Schedule["output_table"]> = {};
-      schedule.output_table.forEach((trip) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tmTrips: Record<string, any[]> = {};
+      currentTable.forEach((trip) => {
         if (!tmTrips[trip.tm_id]) tmTrips[trip.tm_id] = [];
         tmTrips[trip.tm_id].push(trip);
       });
-      Object.values(tmTrips).forEach((trips) => trips.sort((a, b) => a.trip_no - b.trip_no));
+      Object.values(tmTrips).forEach((trips) => {
+        if (trips) trips.sort((a, b) => a.trip_no - b.trip_no);
+      });
       const tmIds = Object.keys(tmTrips);
-      const maxTrips = Math.max(...Object.values(tmTrips).map((trips) => trips.length));
+      const maxTrips = Math.max(...Object.values(tmTrips).map((trips) => trips?.length || 0));
       const tmIdToIdentifier: Record<string, string> = {};
-      schedule.output_table.forEach((trip) => {
+      currentTable.forEach((trip) => {
         if (trip.tm_id && trip.tm_no) tmIdToIdentifier[trip.tm_id] = trip.tm_no;
       });
 
@@ -481,8 +487,10 @@ export default function ScheduleViewPage() {
 
       tmIds.forEach((tmId, index) => {
         const trips = tmTrips[tmId];
+        if (!trips) return;
+        
         const tripTimes = Array.from({ length: maxTrips }).map((_, i) => {
-          const trip = trips[i];
+          const trip = trips?.[i];
           return trip
             ? `${formatTimeByPreference(trip.plant_start, preferred)} - ${formatTimeByPreference(
                 trip.return,
@@ -516,10 +524,27 @@ export default function ScheduleViewPage() {
     XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
 
     // Schedule Table Sheet
-    if (schedule.output_table && schedule.output_table.length > 0) {
+    if (currentTable && currentTable.length > 0) {
       const preferred = profile?.preferred_format;
-      // Schedule table data
-      const scheduleHeader = [
+      
+      // Schedule table data - different headers based on model
+      const scheduleHeader = useBurstModel ? [
+        "Trip No",
+        "TM No",
+        "Plant - Name",
+        "Plant - Prepare Time",
+        "Plant - Load Time",
+        "Plant - Start Time",
+        "Site Reach",
+        "Waiting (min)",
+        "Pump - Start Time",
+        "Pump - End Time",
+        "Return Time",
+        "Queue",
+        "Cum. Volume",
+        "Cycle Time (min)",
+        "Cushion Time (min)",
+      ] : [
         "Trip No",
         "TM No",
         "Plant - Name",
@@ -533,23 +558,54 @@ export default function ScheduleViewPage() {
         "Cycle Time (min)",
         "Cushion Time (min)",
       ];
-      const scheduleRows = schedule.output_table.map((trip) => [
-        trip.trip_no,
-        trip.tm_no,
-        trip.plant_name ? trip.plant_name : "N / A",
-        trip.plant_buffer ? formatTimeByPreference(trip.plant_buffer, preferred) : "-",
-        trip.plant_load ? formatTimeByPreference(trip.plant_load, preferred) : "-",
-        formatTimeByPreference(trip.plant_start, preferred),
-        trip.pump_start ? formatTimeByPreference(trip.pump_start, preferred) : "-",
-        trip.unloading_time ? formatTimeByPreference(trip.unloading_time, preferred) : "-",
-        trip.return ? formatTimeByPreference(trip.return, preferred) : "-",
-        `${trip.completed_capacity} m³`,
-        typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-",
-        typeof trip.cushion_time !== "undefined" ? (trip.cushion_time / 60).toFixed(0) : "-",
-      ]);
 
-      // Build schedule sheet with only schedule table and rename to "Schedule"
-      const wsSchedule = XLSX.utils.aoa_to_sheet([["Schedule"], scheduleHeader, ...scheduleRows]);
+      const scheduleRows = currentTable.map((trip) => {
+        const baseRow = [
+          trip.trip_no,
+          trip.tm_no,
+          trip.plant_name ? trip.plant_name : "N / A",
+          trip.plant_buffer ? formatTimeByPreference(trip.plant_buffer, preferred) : "-",
+          trip.plant_load ? formatTimeByPreference(trip.plant_load, preferred) : "-",
+          formatTimeByPreference(trip.plant_start, preferred),
+        ];
+
+        if (useBurstModel) {
+          // Add burst model specific columns - cast to burst table type
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const burstTrip = trip as any;
+          baseRow.push(
+            burstTrip.site_reach ? formatTimeByPreference(burstTrip.site_reach, preferred) : "-",
+            typeof burstTrip.waiting_time === "number" ? burstTrip.waiting_time : "-",
+            trip.pump_start ? formatTimeByPreference(trip.pump_start, preferred) : "-",
+            trip.unloading_time ? formatTimeByPreference(trip.unloading_time, preferred) : "-",
+            trip.return ? formatTimeByPreference(trip.return, preferred) : "-",
+            typeof burstTrip.queue === "number" ? burstTrip.queue.toFixed(2) : "-",
+            `${trip.completed_capacity} m³`,
+            typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-",
+            typeof trip.cushion_time !== "undefined" && trip.cushion_time !== null
+              ? Math.max(0, trip.cushion_time / 60).toFixed(0)
+              : "-"
+          );
+        } else {
+          // Add 0-wait model columns
+          baseRow.push(
+            trip.pump_start ? formatTimeByPreference(trip.pump_start, preferred) : "-",
+            trip.unloading_time ? formatTimeByPreference(trip.unloading_time, preferred) : "-",
+            trip.return ? formatTimeByPreference(trip.return, preferred) : "-",
+            `${trip.completed_capacity} m³`,
+            typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-",
+            typeof trip.cushion_time !== "undefined" && trip.cushion_time !== null
+              ? Math.max(0, trip.cushion_time / 60).toFixed(0)
+              : "-"
+          );
+        }
+
+        return baseRow;
+      });
+
+      // Build schedule sheet with model-specific title
+      const sheetTitle = useBurstModel ? "Schedule (Burst Model)" : "Schedule (0 Wait Model)";
+      const wsSchedule = XLSX.utils.aoa_to_sheet([[sheetTitle], scheduleHeader, ...scheduleRows]);
       XLSX.utils.book_append_sheet(wb, wsSchedule, "Schedule");
     }
 

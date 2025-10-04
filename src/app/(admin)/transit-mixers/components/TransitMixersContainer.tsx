@@ -630,7 +630,7 @@ export default function TransitMixersContainer() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              TM No. (Format: XX 00 AA 0000)
+              TM No. (Format: XX 00 AA 0000) <span className="text-red-500">*</span>
             </label>
             <div>
               <Input
@@ -644,7 +644,7 @@ export default function TransitMixersContainer() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity (m³)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity (m³) <span className="text-red-500">*</span></label>
             <Input
               type="number"
               name="capacity"
@@ -658,7 +658,7 @@ export default function TransitMixersContainer() {
             {capacityError && <p className="text-red-500 text-xs mt-1">{capacityError}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plant</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plant <span className="text-red-500">*</span></label>
             <select
               name="plant_id"
               value={newMixer.plant_id || ""}
@@ -674,7 +674,7 @@ export default function TransitMixersContainer() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status <span className="text-red-500">*</span></label>
             <select
               name="status"
               value={newMixer.status || "active"}
@@ -686,7 +686,7 @@ export default function TransitMixersContainer() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Name <span className="text-red-500">*</span></label>
             <Input
               type="text"
               name="driver_name"
@@ -699,7 +699,7 @@ export default function TransitMixersContainer() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Driver Mobile Number
+              Driver Mobile Number <span className="text-red-500">*</span>
             </label>
             <Input
               type="text"
@@ -747,12 +747,12 @@ export default function TransitMixersContainer() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                TM No. (Format: XX 00 AA 0000)
+                TM No. (Format: XX 00 AA 0000) <span className="text-red-500">*</span>
               </label>
               <Input type="text" name="identifier" value={selectedMixer.identifier} onChange={handleEditInputChange} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity (m³)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity (m³) <span className="text-red-500">*</span></label>
               <Input
                 type="number"
                 name="capacity"
@@ -765,7 +765,7 @@ export default function TransitMixersContainer() {
               {editCapacityError && <p className="text-red-500 text-xs mt-1">{editCapacityError}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plant</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plant <span className="text-red-500">*</span></label>
               <select
                 name="plant_id"
                 value={selectedMixer.plant_id || ""}
@@ -781,7 +781,7 @@ export default function TransitMixersContainer() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status <span className="text-red-500">*</span></label>
               <select
                 name="status"
                 value={selectedMixer.status || "active"}
@@ -793,7 +793,7 @@ export default function TransitMixersContainer() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Name <span className="text-red-500">*</span></label>
               <Input
                 type="text"
                 name="driver_name"
@@ -805,7 +805,7 @@ export default function TransitMixersContainer() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Driver Mobile Number
+                Driver Mobile Number <span className="text-red-500">*</span>
               </label>
               <Input
                 type="text"

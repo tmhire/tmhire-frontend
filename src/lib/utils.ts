@@ -53,6 +53,10 @@ export const validateName = (value: string) => {
   return /^[A-Za-z0-9 ]{1,25}$/.test(value.trim());
 };
 
+export const validatePlantName = (value: string) => {
+  return /^.{1,25}$/.test(value.trim());
+};
+
 export const validateProfileName = (value: string) => {
   return /^[A-Za-z0-9 ]{1,30}$/.test(value.trim());
 };

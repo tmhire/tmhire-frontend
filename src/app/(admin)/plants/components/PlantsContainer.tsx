@@ -11,7 +11,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
-import { validateMobile, validateName, validateAddress, validateCoordinates } from "@/lib/utils";
+import { validateMobile, validateName, validatePlantName, validateAddress, validateCoordinates } from "@/lib/utils";
 import { useToast } from "@/hooks/useToast";
 
 interface Plant {
@@ -111,8 +111,8 @@ export default function PlantsContainer() {
       address !== "" &&
       contactName1 !== "" &&
       contactNumber1 !== "" &&
-      (!newPlant.capacity || (newPlant.capacity > 0 && newPlant.capacity <= 999)) &&
-      validateName(name) &&
+      newPlant.capacity && newPlant.capacity > 0 && newPlant.capacity <= 999 &&
+      validatePlantName(name) &&
       validateName(contactName1) &&
       validateMobile(contactNumber1) &&
       validateAddress(address) &&
@@ -154,8 +154,8 @@ export default function PlantsContainer() {
       address !== "" &&
       contactName1 !== "" &&
       contactNumber1 !== "" &&
-      (!editedPlant.capacity || (editedPlant.capacity > 0 && editedPlant.capacity <= 999)) &&
-      validateName(name) &&
+      editedPlant.capacity && editedPlant.capacity > 0 && editedPlant.capacity <= 999 &&
+      validatePlantName(name) &&
       validateName(contactName1) &&
       validateMobile(contactNumber1) &&
       validateAddress(address) &&
@@ -362,8 +362,8 @@ export default function PlantsContainer() {
     // Handle name fields with validation
     if (name === "name" || name === "contact_name1" || name === "contact_name2") {
       if (value.length > 25) return; // Prevent typing more than 25 characters
-      if (value && !validateName(value)) {
-        if (name === "name") setNameError("Name must be 1-25 alphanumeric characters");
+      if (value && !(name === "name" ? validatePlantName(value) : validateName(value))) {
+        if (name === "name") setNameError("Name must be 1-25 characters");
         else if (name === "contact_name1") setContactName1Error("Contact name must be 1-25 alphanumeric characters");
         else if (name === "contact_name2") setContactName2Error("Contact name must be 1-25 alphanumeric characters");
       } else {
@@ -418,8 +418,8 @@ export default function PlantsContainer() {
     // Handle name fields with validation
     if (name === "name" || name === "contact_name1" || name === "contact_name2") {
       if (value.length > 25) return; // Prevent typing more than 25 characters
-      if (value && !validateName(value)) {
-        if (name === "name") setEditNameError("Name must be 1-25 alphanumeric characters");
+      if (value && !(name === "name" ? validatePlantName(value) : validateName(value))) {
+        if (name === "name") setEditNameError("Name must be 1-25 characters");
         else if (name === "contact_name1")
           setEditContactName1Error("Contact name must be 1-25 alphanumeric characters");
         else if (name === "contact_name2")
@@ -736,7 +736,7 @@ export default function PlantsContainer() {
         <div className="space-y-4">
           <div className="flex flex-row w-full gap-2">
             <div className="w-full">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name <span className="text-red-500">*</span></label>
               <Input
                 type="text"
                 name="name"
@@ -749,7 +749,7 @@ export default function PlantsContainer() {
             </div>
             <div className="w-full">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Capacity m³/hr
+                Capacity m³/hr <span className="text-red-500">*</span>
               </label>
               <div className="flex flex-row items-center gap-2 w-full">
                 <div className="relative w-full">
@@ -800,7 +800,7 @@ export default function PlantsContainer() {
           </div>
           <div className="flex flex-row w-full gap-2">
             <div className="w-full">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location <span className="text-red-500">*</span></label>
               <Input
                 type="text"
                 name="location"
@@ -822,7 +822,7 @@ export default function PlantsContainer() {
               />
             </div>
             <div className="w-full">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status <span className="text-red-500">*</span></label>
               <select
                 name="status"
                 value={newPlant.status || ""}
@@ -836,21 +836,21 @@ export default function PlantsContainer() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address</label>
-            <Input
-              type="text"
-              name="address"
-              placeholder="Enter plant address (max 60 characters)"
-              value={newPlant.address}
-              onChange={handleInputChange}
-              maxLength={60}
-            />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address <span className="text-red-500">*</span></label>
+              <Input
+                type="text"
+                name="address"
+                placeholder="Enter plant address (max 120 characters)"
+                value={newPlant.address}
+                onChange={handleInputChange}
+                maxLength={120}
+              />
           </div>
 
           <div className="flex flex-row w-full gap-2">
             <div className="w-full">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 ">
-                Contact 1 Name
+                Contact 1 Name <span className="text-red-500">*</span>
               </label>
               <Input
                 type="text"
@@ -864,7 +864,7 @@ export default function PlantsContainer() {
             </div>
             <div className="w-full">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Contact 1 Mobile Number
+                Contact 1 Mobile Number <span className="text-red-500">*</span>
               </label>
               <Input
                 type="text"
@@ -943,7 +943,7 @@ export default function PlantsContainer() {
           <div className="space-y-4">
             <div className="flex flex-row w-full gap-2">
               <div className="w-full">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name <span className="text-red-500">*</span></label>
                 <Input
                   type="text"
                   name="name"
@@ -956,7 +956,7 @@ export default function PlantsContainer() {
               </div>
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Capacity m³/hr
+                  Capacity m³/hr <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="number"
@@ -1000,7 +1000,7 @@ export default function PlantsContainer() {
             </div>
             <div className="flex flex-row w-full gap-2">
               <div className="w-full">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Location <span className="text-red-500">*</span></label>
                 <Input
                   type="text"
                   name="location"
@@ -1022,7 +1022,7 @@ export default function PlantsContainer() {
                 />
               </div>
               <div className="w-full">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status <span className="text-red-500">*</span></label>
                 <select
                   name="status"
                   value={editedPlant.status || ""}
@@ -1036,21 +1036,21 @@ export default function PlantsContainer() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address <span className="text-red-500">*</span></label>
               <Input
                 type="text"
                 name="address"
                 value={editedPlant.address}
                 onChange={handleEditInputChange}
-                placeholder="Enter plant address (max 60 characters)"
-                maxLength={60}
+                placeholder="Enter plant address (max 120 characters)"
+                maxLength={120}
               />
             </div>
 
             <div className="flex flex-row w-full gap-2">
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 ">
-                  Contact 1 Name
+                  Contact 1 Name <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="text"
@@ -1066,7 +1066,7 @@ export default function PlantsContainer() {
               </div>
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Contact 1 Mobile Number
+                  Contact 1 Mobile Number <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="text"

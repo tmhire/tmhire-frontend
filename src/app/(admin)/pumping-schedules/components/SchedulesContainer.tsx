@@ -3,18 +3,18 @@
 import SchedulesTable from "./SchedulesTable";
 import { PlusIcon, Search } from "lucide-react";
 import Button from "@/components/ui/button/Button";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { Modal } from "@/components/ui/modal";
 // import Input from "@/components/form/input/InputField";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { CanceledBy, CancelReason, DeleteType } from "@/types/common.types";
 import Radio from "@/components/form/input/Radio";
-// import DatePickerInput from "@/components/form/input/DatePickerInput";
+import DatePickerInput from "@/components/form/input/DatePickerInput";
 
 interface Schedule {
   _id: string;
@@ -50,6 +50,7 @@ interface Schedule {
 
 export default function SchedulesContainer() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { fetchWithAuth } = useApiClient();
   const { status } = useSession();
   const queryClient = useQueryClient();
@@ -57,11 +58,9 @@ export default function SchedulesContainer() {
   const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
   const [isClientFilterOpen, setIsClientFilterOpen] = useState(false);
   const [isSiteFilterOpen, setIsSiteFilterOpen] = useState(false);
-  // const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [selectedSite, setSelectedSite] = useState<string>("");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
@@ -70,6 +69,37 @@ export default function SchedulesContainer() {
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [timeStatusFilter, setTimeStatusFilter] = useState<string>("All");
   const [isTimeStatusFilterOpen, setIsTimeStatusFilterOpen] = useState(false);
+
+  // Initialize date from URL parameters
+  useEffect(() => {
+    const dateParam = searchParams.get("date");
+    if (dateParam) {
+      // Convert MM/DD/YYYY format to YYYY-MM-DD format for internal use
+      const dateParts = dateParam.split("/");
+      if (dateParts.length === 3) {
+        const month = dateParts[0].padStart(2, "0");
+        const day = dateParts[1].padStart(2, "0");
+        const year = dateParts[2];
+        setSelectedDate(`${year}-${month}-${day}`);
+      }
+    }
+  }, [searchParams]);
+
+  // Update URL when date filter changes
+  const updateUrlWithDate = (date: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (date) {
+      // Convert YYYY-MM-DD to MM/DD/YYYY for URL
+      const dateParts = date.split("-");
+      if (dateParts.length === 3) {
+        const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`;
+        params.set("date", formattedDate);
+      }
+    } else {
+      params.delete("date");
+    }
+    router.push(`/pumping-schedules?${params.toString()}`);
+  };
 
   // Fetch schedules
   const { data: schedulesData, isLoading: isLoadingSchedules } = useQuery({
@@ -341,39 +371,26 @@ export default function SchedulesContainer() {
               </Dropdown>
             </div>
 
-            {/* <div className="relative text-sm">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsDateFilterOpen(!isDateFilterOpen)}
-                className="dropdown-toggle"
+            {/* Date Filter */}
+            <div className="relative text-sm flex flex-row gap-4">
+              <DatePickerInput
+                value={selectedDate}
+                onChange={(date: string) => {
+                  setSelectedDate(date);
+                  updateUrlWithDate(date);
+                }}
+                placeholder="Select date"
+              />
+              <button
+                className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-800 dark:text-white/90"
+                onClick={() => {
+                  setSelectedDate("");
+                  updateUrlWithDate("");
+                }}
               >
-                Date: {selectedDate ? new Date(selectedDate).toLocaleDateString() : "All"}
-              </Button>
-              <Dropdown isOpen={isDateFilterOpen} onClose={() => setIsDateFilterOpen(false)} className="w-72 text-xs">
-                <div className="p-2">
-                  <div className="mb-2">
-                    <DatePickerInput
-                      value={selectedDate}
-                      onChange={(date: string) => {
-                        setSelectedDate(date);
-                        setIsDateFilterOpen(false);
-                      }}
-                      placeholder="Select date"
-                    />
-                  </div>
-                  <button
-                    className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-800 dark:text-white/90"
-                    onClick={() => {
-                      setSelectedDate("");
-                      setIsDateFilterOpen(false);
-                    }}
-                  >
-                    Clear Date
-                  </button>
-                </div>
-              </Dropdown>
-            </div> */}
+                Clear Date
+              </button>
+            </div>
 
             {/* Time Status Filter */}
             <div className="relative text-sm">

@@ -540,7 +540,7 @@ export default function TeamContainer() {
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Team</h4>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name <span className="text-red-500">*</span></label>
             <Input
               type="text"
               name="name"
@@ -552,7 +552,7 @@ export default function TeamContainer() {
             {nameError && <span className="text-xs text-red-600 mt-1 block">{nameError}</span>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Designation</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Designation <span className="text-red-500">*</span></label>
             <select
               name="designation"
               value={newTeam.designation}
@@ -566,7 +566,7 @@ export default function TeamContainer() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Mobile Number</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Mobile Number <span className="text-red-500">*</span></label>
             <Input
               type="text"
               name="contact"
@@ -605,7 +605,7 @@ export default function TeamContainer() {
         {selectedTeam && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name <span className="text-red-500">*</span></label>
               <Input 
                 type="text" 
                 name="name" 
@@ -616,7 +616,7 @@ export default function TeamContainer() {
               {editNameError && <span className="text-xs text-red-600 mt-1 block">{editNameError}</span>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Designation</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Designation <span className="text-red-500">*</span></label>
               <select
                 name="designation"
                 value={editedTeam.designation}
@@ -630,7 +630,7 @@ export default function TeamContainer() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Mobile Number</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Mobile Number <span className="text-red-500">*</span></label>
               <Input
                 type="text"
                 name="contact"

@@ -89,6 +89,7 @@ export const useToast = () => {
 
 // Helper function for API action toasts
 export const createApiActionToast = () => {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { showLoading, updateToast } = useToast();
 
   const startAction = (message: string) => {

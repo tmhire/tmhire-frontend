@@ -17,7 +17,12 @@ interface DashboardData {
   counts: DashboardCountsData;
   plants_table: PlantsTable;
   series: { name: string; data: number[] }[];
-  recent_orders: { client: string; quantity: string; order_date: string; status: string }[];
+  recent_orders: { 
+    client: string; 
+    quantity: string; 
+    order_date: string; 
+    status: string; 
+  }[];
 }
 
 export default function DashboardContainer() {
@@ -119,7 +124,7 @@ sticky top-24 z-5">        <div className="flex items-center space-x-3">
           </div>
 
           <div className="col-span-12 xl:col-span-6">
-            <RecentSchedules orders={dashboardData?.recent_orders} />
+            <RecentSchedules orders={dashboardData?.recent_orders} selectedDate={selectedDate} />
           </div>
         </>
       )}

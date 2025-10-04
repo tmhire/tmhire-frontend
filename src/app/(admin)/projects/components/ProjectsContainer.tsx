@@ -638,7 +638,7 @@ export default function ProjectsContainer() {
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Project</h4>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Client</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Client <span className="text-red-500">*</span></label>
             <div className="relative">
               <button
                 type="button"
@@ -676,7 +676,7 @@ export default function ProjectsContainer() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name <span className="text-red-500">*</span></label>
             <Input
               type="text"
               name="name"
@@ -686,7 +686,7 @@ export default function ProjectsContainer() {
             />
           </div>
                       <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address <span className="text-red-500">*</span></label>
               <Input
                 type="text"
                 name="address"
@@ -697,7 +697,7 @@ export default function ProjectsContainer() {
               />
             </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Name <span className="text-red-500">*</span></label>
             <Input
               type="text"
               name="contact_name"
@@ -709,7 +709,7 @@ export default function ProjectsContainer() {
             {contactNameError && <p className="text-red-500 text-xs mt-1">{contactNameError}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Mobile Number</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Mobile Number <span className="text-red-500">*</span></label>
             <Input
               type="tel"
               name="contact_number"
@@ -721,7 +721,7 @@ export default function ProjectsContainer() {
             {contactNumberError && <p className="text-red-500 text-xs mt-1">{contactNumberError}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Mother Plant</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Mother Plant <span className="text-red-500">*</span></label>
             <div className="relative">
               <button
                 type="button"
@@ -845,7 +845,7 @@ export default function ProjectsContainer() {
         {selectedProject && (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Client</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Client <span className="text-red-500">*</span></label>
               <div className="relative">
                 <button
                   type="button"
@@ -883,15 +883,15 @@ export default function ProjectsContainer() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name <span className="text-red-500">*</span></label>
               <Input type="text" name="name" value={editedProject.name} onChange={handleEditInputChange} />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address <span className="text-red-500">*</span></label>
               <Input type="text" name="address" value={editedProject.address} onChange={handleEditInputChange} maxLength={60} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Name <span className="text-red-500">*</span></label>
               <Input
                 type="text"
                 name="contact_name"
@@ -903,7 +903,7 @@ export default function ProjectsContainer() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Contact Mobile Number
+                Contact Mobile Number <span className="text-red-500">*</span>
               </label>
               <Input
                 type="tel"
@@ -915,7 +915,7 @@ export default function ProjectsContainer() {
               {editContactNumberError && <p className="text-red-500 text-xs mt-1">{editContactNumberError}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Mother Plant</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Mother Plant <span className="text-red-500">*</span></label>
               <div className="relative">
                 <button
                   type="button"

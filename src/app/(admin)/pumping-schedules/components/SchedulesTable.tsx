@@ -1,5 +1,5 @@
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import React from "react";
+import React, { useMemo } from "react";
 import Button from "@/components/ui/button/Button";
 import { CopyX, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -51,6 +51,13 @@ interface SchedulesTableProps {
 export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTableProps) {
   const router = useRouter();
   const { profile } = useProfile();
+
+  // Calculate summary totals
+  const summaryTotals = useMemo(() => {
+    const totalQuantity = data.reduce((sum, schedule) => sum + schedule.input_params.quantity, 0);
+    const totalTmCount = data.reduce((sum, schedule) => sum + schedule.tm_count, 0);
+    return { totalQuantity, totalTmCount };
+  }, [data]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -267,6 +274,48 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
                   </TableRow>
                 </React.Fragment>
               ))}
+              
+              {/* Summary Row */}
+              {data.length > 0 && (
+                <TableRow className="bg-gray-50 dark:bg-gray-800/50 border-t-2 border-gray-200 dark:border-gray-700">
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                    Total
+                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                    -
+                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                    -
+                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                    {summaryTotals.totalQuantity}
+                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                    -
+                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                    -
+                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                    {summaryTotals.totalTmCount}
+                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                    -
+                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                    -
+                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                    -
+                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                    -
+                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                    -
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
