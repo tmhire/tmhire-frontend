@@ -3,9 +3,8 @@
 import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
-import { Trash2, Eye, CopyX, Pencil } from "lucide-react";
+import { Trash2, CopyX, Pencil } from "lucide-react";
 import Button from "@/components/ui/button/Button";
-import Tooltip from "@/components/ui/tooltip";
 import { formatTimeByPreference } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
 
@@ -220,25 +219,6 @@ export default function SupplySchedulesTable({ data, onDelete, onCancel }: Suppl
                   </TableCell>
                   <TableCell className="px-2 py-3 text-sm">
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Tooltip
-                        key={schedule._id}
-                        content={
-                          schedule.status === "generated"
-                            ? "View Schedule"
-                            : "Generate the schedule before trying to view"
-                        }
-                        opacity={0.5}
-                      >
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleView(schedule)}
-                          className="flex items-center gap-1"
-                          disabled={schedule.status !== "generated"}
-                        >
-                          <Eye size={14} />
-                        </Button>
-                      </Tooltip>
                       <Button
                         size="sm"
                         variant="outline"

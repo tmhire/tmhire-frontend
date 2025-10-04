@@ -866,7 +866,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
               {steps.map((s, index) => (
                 <motion.div
                   key={s.id}
-                  className={`flex flex-col ${index == 0 ? "items-start" : index == 1 ? "items-end" : "items-center"}`}
+                  className={`flex flex-col ${index == 0 ? "items-start" : index == steps.length - 1 ? "items-end" : "items-center"}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.5 }}
@@ -1517,7 +1517,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                   {/* Input Form Section */}
                   <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
                     <h3 className="text-base font-semibold text-gray-800 dark:text-white/90 mb-4">
-                      Cycle Time Parameters
+                    Cycle Time Parameters <span className="text-red-500">*</span>
                     </h3>
 
                     <div className="space-y-2.5">
