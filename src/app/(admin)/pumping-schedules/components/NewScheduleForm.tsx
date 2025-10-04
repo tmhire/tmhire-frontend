@@ -613,6 +613,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           remarks: formData.remarks ? formData.remarks : undefined,
           mother_plant_km: formData.oneWayKm ? parseFloat(formData.oneWayKm) : undefined,
           site_supervisor_id: formData.siteSupervisorId || undefined,
+          tm_count: tmReq,
         }),
       });
 
@@ -744,6 +745,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             remarks: formData.remarks ? formData.remarks : undefined,
             mother_plant_km: formData.oneWayKm ? parseFloat(formData.oneWayKm) : undefined,
             site_supervisor_id: formData.siteSupervisorId || undefined,
+            tm_count: tmReq,
           }),
         });
 
