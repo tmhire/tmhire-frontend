@@ -136,7 +136,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   const searchParams = useSearchParams();
   const template = searchParams.get("template");
   const { fetchWithAuth } = useApiClient();
-  const { } = useToast();
+  const {} = useToast();
   const { startAction, completeAction } = createApiActionToast();
   const [step, setStep] = useState(schedule_id ? 3 : (1 as number));
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -631,7 +631,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
 
     const toastId = startAction("Generating supply schedule...");
     setIsGenerating(true);
-    
+
     try {
       const response = await fetchWithAuth(`/schedules/${calculatedTMs.schedule_id}/generate-schedule`, {
         method: "POST",
@@ -800,12 +800,11 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     [schedule_id]
   );
 
-
   const isStep2FormValid = () => {
     if (step === 2) {
       // Manual Job Pour Details validation
       const requiredFields = ["bufferTime", "loadTime", "onwardTime", "unloadingTime", "returnTime"];
-      
+
       return (
         !!selectedClient &&
         !!selectedProject &&
@@ -866,7 +865,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
               {steps.map((s, index) => (
                 <motion.div
                   key={s.id}
-                  className={`flex flex-col ${index == 0 ? "items-start" : index == steps.length - 1 ? "items-end" : "items-center"}`}
+                  className={`flex flex-col ${
+                    index == 0 ? "items-start" : index == steps.length - 1 ? "items-end" : "items-center"
+                  }`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.5 }}
@@ -1046,7 +1047,11 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-1">
                                     <FileText className="w-4 h-4" />
-                                    <span className="font-medium">{schedule.schedule_no}</span>
+                                    <span className="font-medium truncate">
+                                      {schedule.schedule_no?.length > 12
+                                        ? schedule.schedule_no.substring(0, 12) + "…"
+                                        : schedule.schedule_no}
+                                    </span>
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <Building className="w-4 h-4" />
@@ -1138,7 +1143,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
           <div className="space-y-4">
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30 mb-4">
               <div className="flex justify-between items-center mb-4 w-full">
-                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Manual Job Pour Details</h3>
+                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">
+                  Manual Job Pour Details
+                </h3>
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900/40 py-1 px-3 rounded-full">
                   Company Timings -
                   {profile?.preferred_format === "12h"
@@ -1435,19 +1442,19 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
                     One Way Distance to Site from Plant (km)
                   </label>
-                      <Input
-                        type="number"
-                        name="oneWayKm"
-                        value={formData.oneWayKm || ""}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setFormData((prev) => ({ ...prev, oneWayKm: value }));
-                          setHasChanged(true);
-                        }}
-                        placeholder="Enter distance"
-                        min="0"
-                        step={0.1}
-                      />
+                  <Input
+                    type="number"
+                    name="oneWayKm"
+                    value={formData.oneWayKm || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData((prev) => ({ ...prev, oneWayKm: value }));
+                      setHasChanged(true);
+                    }}
+                    placeholder="Enter distance"
+                    min="0"
+                    step={0.1}
+                  />
                 </div>
 
                 {/* Slump at Site */}
@@ -1455,26 +1462,24 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Slump at Site (mm)
                   </label>
-                      <Input
-                        type="number"
-                        name="slumpAtSite"
-                        value={formData.slumpAtSite || ""}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setFormData((prev) => ({ ...prev, slumpAtSite: value }));
-                          setHasChanged(true);
-                        }}
-                        placeholder="Enter slump"
-                        min="0"
-                        step={5}
-                      />
+                  <Input
+                    type="number"
+                    name="slumpAtSite"
+                    value={formData.slumpAtSite || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData((prev) => ({ ...prev, slumpAtSite: value }));
+                      setHasChanged(true);
+                    }}
+                    placeholder="Enter slump"
+                    min="0"
+                    step={5}
+                  />
                 </div>
 
                 {/* Mix Code */}
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Mix Code
-                  </label>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Mix Code</label>
                   <Input
                     type="string"
                     name="mixCode"
@@ -1508,7 +1513,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
             {/* TM Cycle Time Parameters Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30 mt-2 mb-20">
               <div className="flex justify-between items-center mb-4 w-full">
-                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">TM Cycle Time Parameters</h3>
+                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">
+                  TM Cycle Time Parameters
+                </h3>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -1517,7 +1524,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                   {/* Input Form Section */}
                   <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
                     <h3 className="text-base font-semibold text-gray-800 dark:text-white/90 mb-4">
-                    Cycle Time Parameters <span className="text-red-500">*</span>
+                      Cycle Time Parameters <span className="text-red-500">*</span>
                     </h3>
 
                     <div className="space-y-2.5">
@@ -1894,7 +1901,11 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                               type="radio"
                               checked={!fleetOptions.useRoundTrip}
                               onChange={() => {
-                                setFleetOptions((prev) => ({ ...prev, useRoundTrip: false, vehicleCount: Math.max(2, prev.vehicleCount) }));
+                                setFleetOptions((prev) => ({
+                                  ...prev,
+                                  useRoundTrip: false,
+                                  vehicleCount: Math.max(2, prev.vehicleCount),
+                                }));
                                 setHasChanged(true);
                               }}
                               className="text-blue-600"
@@ -2110,7 +2121,6 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                               {fleetOptions.useRoundTrip ? 1 : fleetOptions.vehicleCount || "N/A"} TMs
                             </span>
                           </div>
-
                         </div>
                       </div>
 
@@ -2530,13 +2540,16 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
             <span>
               <span className="text-red-500">*</span> Compulsory, all other fields are optional
             </span>
-            <Button onClick={handleNext} className="flex items-center gap-2" disabled={isCalculating || !isStep2FormValid()}>
+            <Button
+              onClick={handleNext}
+              className="flex items-center gap-2"
+              disabled={isCalculating || !isStep2FormValid()}
+            >
               {isCalculating ? "Calculating..." : "Next: TM Selection"}
               {!isCalculating && <ArrowRight size={16} />}
             </Button>
           </div>
         )}
-
 
         {step === 3 && (
           <div className="flex justify-between items-center mt-2 gap-0">
