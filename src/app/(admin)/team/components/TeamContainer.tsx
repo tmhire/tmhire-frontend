@@ -12,6 +12,7 @@ import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { validateMobile, validateName } from "@/lib/utils";
+import { useToast } from "@/hooks/useToast";
 
 type Designation = "sales-engineer" | "pump-operator" | "pipeline-gang" | "site-supervisor";
 
@@ -34,6 +35,7 @@ export default function TeamContainer() {
   const { fetchWithAuth } = useApiClient();
   const { status } = useSession();
   const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDesignationFilterOpen, setIsDesignationFilterOpen] = useState(false);
   const [isContactFilterOpen, setIsContactFilterOpen] = useState(false);
@@ -122,6 +124,10 @@ export default function TeamContainer() {
         designation: "sales-engineer",
         contact: "",
       });
+      showSuccess("Team member created successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to create team member");
     },
   });
 
@@ -141,6 +147,10 @@ export default function TeamContainer() {
       queryClient.invalidateQueries({ queryKey: ["team"] });
       setIsEditModalOpen(false);
       setSelectedTeam(null);
+      showSuccess("Team member updated successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to update team member");
     },
   });
 
@@ -159,6 +169,10 @@ export default function TeamContainer() {
       queryClient.invalidateQueries({ queryKey: ["team"] });
       setIsDeleteModalOpen(false);
       setSelectedTeam(null);
+      showSuccess("Team member deleted successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to delete team member");
     },
   });
 

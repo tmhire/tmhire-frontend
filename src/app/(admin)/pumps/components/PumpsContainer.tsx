@@ -13,6 +13,7 @@ import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { validateMobile, validateName } from "@/lib/utils";
+import { useToast } from "@/hooks/useToast";
 
 interface Plant {
   _id: string;
@@ -56,6 +57,7 @@ export default function PumpsContainer() {
   const { fetchWithAuth } = useApiClient();
   const { status } = useSession();
   const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [isPlantFilterOpen, setIsPlantFilterOpen] = useState(false);
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
@@ -258,6 +260,10 @@ export default function PumpsContainer() {
         pipeline_gang_id: "",
       });
       setDriverContactError("");
+      showSuccess("Pump created successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to create pump");
     },
   });
 
@@ -278,6 +284,10 @@ export default function PumpsContainer() {
       setIsEditModalOpen(false);
       setSelectedPump(null);
       setEditDriverContactError("");
+      showSuccess("Pump updated successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to update pump");
     },
   });
 
@@ -296,6 +306,10 @@ export default function PumpsContainer() {
       queryClient.invalidateQueries({ queryKey: ["pumps"] });
       setIsDeleteModalOpen(false);
       setSelectedPump(null);
+      showSuccess("Pump deleted successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to delete pump");
     },
   });
 

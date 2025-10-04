@@ -36,6 +36,7 @@ import Tooltip from "@/components/ui/tooltip";
 import { cn, formatDate } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
 import SearchableDropdown from "@/components/form/SearchableDropdown";
+import { useToast, createApiActionToast } from "@/hooks/useToast";
 
 interface Client {
   contact_phone: number;
@@ -135,6 +136,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   const searchParams = useSearchParams();
   const template = searchParams.get("template");
   const { fetchWithAuth } = useApiClient();
+  const { } = useToast();
+  const { startAction, completeAction } = createApiActionToast();
   const [step, setStep] = useState(schedule_id ? 3 : (1 as number));
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [tmSequence, setTMSequence] = useState<string[]>([]);
@@ -626,7 +629,9 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       return false;
     }
 
+    const toastId = startAction("Generating supply schedule...");
     setIsGenerating(true);
+    
     try {
       const response = await fetchWithAuth(`/schedules/${calculatedTMs.schedule_id}/generate-schedule`, {
         method: "POST",
@@ -635,11 +640,15 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
 
       const data = await response.json();
       if (data.success) {
+        completeAction(toastId, "Supply schedule generated successfully!", true);
         return true;
+      } else {
+        completeAction(toastId, data.message || "Failed to generate schedule", false);
+        return false;
       }
-      return false;
     } catch (error) {
       console.error("Error generating schedule:", error);
+      completeAction(toastId, "Failed to generate schedule. Please try again.", false);
       return false;
     } finally {
       setIsGenerating(false);

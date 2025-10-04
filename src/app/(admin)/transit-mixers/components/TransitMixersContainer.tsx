@@ -12,6 +12,7 @@ import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { validateMobile, validateName } from "@/lib/utils";
+import { useToast } from "@/hooks/useToast";
 
 interface TransitMixer {
   _id: string;
@@ -41,6 +42,7 @@ export default function TransitMixersContainer() {
   const { fetchWithAuth } = useApiClient();
   const { status } = useSession();
   const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [isPlantFilterOpen, setIsPlantFilterOpen] = useState(false);
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
@@ -142,6 +144,10 @@ export default function TransitMixersContainer() {
         remarks: "", // <-- Added
       });
       setDriverContactError("");
+      showSuccess("Transit mixer created successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to create transit mixer");
     },
   });
 
@@ -162,6 +168,10 @@ export default function TransitMixersContainer() {
       setIsEditModalOpen(false);
       setSelectedMixer(null);
       setEditDriverContactError("");
+      showSuccess("Transit mixer updated successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to update transit mixer");
     },
   });
 
@@ -180,6 +190,10 @@ export default function TransitMixersContainer() {
       queryClient.invalidateQueries({ queryKey: ["transit-mixers"] });
       setIsDeleteModalOpen(false);
       setSelectedMixer(null);
+      showSuccess("Transit mixer deleted successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to delete transit mixer");
     },
   });
 

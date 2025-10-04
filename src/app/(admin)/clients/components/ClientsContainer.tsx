@@ -13,6 +13,7 @@ import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { ChevronDownIcon } from "lucide-react";
+import { useToast } from "@/hooks/useToast";
 
 interface Client {
   _id: string;
@@ -32,6 +33,7 @@ export default function ClientsContainer() {
   const { fetchWithAuth } = useApiClient();
   const { status } = useSession();
   const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [isLocationFilterOpen, setIsLocationFilterOpen] = useState(false);
   // const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
@@ -97,6 +99,10 @@ export default function ClientsContainer() {
         name: "",
         legal_entity: "",
       });
+      showSuccess("Client created successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to create client");
     },
   });
 
@@ -116,6 +122,10 @@ export default function ClientsContainer() {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       setIsEditModalOpen(false);
       setSelectedClient(null);
+      showSuccess("Client updated successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to update client");
     },
   });
 
@@ -134,6 +144,10 @@ export default function ClientsContainer() {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       setIsDeleteModalOpen(false);
       setSelectedClient(null);
+      showSuccess("Client deleted successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to delete client");
     },
   });
 

@@ -40,6 +40,7 @@ import { Spinner } from "@/components/ui/spinner";
 import Tooltip from "@/components/ui/tooltip";
 import { cn, formatDate } from "@/lib/utils";
 import { useSession } from "next-auth/react";
+import { useToast, createApiActionToast } from "@/hooks/useToast";
 
 interface Client {
   contact_phone: number;
@@ -181,6 +182,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const template = searchParams.get("template");
   const { data: session, status } = useSession();
   const { fetchWithAuth } = useApiClient();
+  const { } = useToast();
+  const { startAction, completeAction } = createApiActionToast();
   const [step, setStep] = useState(schedule_id ? 2 : 1);
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [pumpType, setPumpType] = useState<"line" | "boom">("line");
@@ -836,7 +839,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       return false;
     }
 
+    const toastId = startAction("Generating pumping schedule...");
     setIsGenerating(true);
+    
     try {
       const { partially_available_tm, partially_available_pump } = generatePartiallyAvailableTime(
         calculatedTMs,
@@ -856,11 +861,15 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
       const data = await response.json();
       if (data.success) {
+        completeAction(toastId, "Pumping schedule generated successfully!", true);
         return true;
+      } else {
+        completeAction(toastId, data.message || "Failed to generate schedule", false);
+        return false;
       }
-      return false;
     } catch (error) {
       console.error("Error generating schedule:", error);
+      completeAction(toastId, "Failed to generate schedule. Please try again.", false);
       return false;
     } finally {
       setIsGenerating(false);

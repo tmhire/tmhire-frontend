@@ -12,6 +12,7 @@ import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { validateMobile, validateName, validateAddress, validateCoordinates } from "@/lib/utils";
+import { useToast } from "@/hooks/useToast";
 
 interface Plant {
   _id: string;
@@ -48,6 +49,7 @@ export default function PlantsContainer() {
   const { fetchWithAuth } = useApiClient();
   const { status } = useSession();
   const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [isLocationFilterOpen, setIsLocationFilterOpen] = useState(false);
   const [isContactFilterOpen, setIsContactFilterOpen] = useState(false);
@@ -212,6 +214,10 @@ export default function PlantsContainer() {
         contact_number1: "",
         status: "active",
       });
+      showSuccess("Plant created successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to create plant");
     },
   });
 
@@ -231,6 +237,10 @@ export default function PlantsContainer() {
       queryClient.invalidateQueries({ queryKey: ["plants"] });
       setIsEditModalOpen(false);
       setSelectedPlant(null);
+      showSuccess("Plant updated successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to update plant");
     },
   });
 
@@ -249,6 +259,10 @@ export default function PlantsContainer() {
       queryClient.invalidateQueries({ queryKey: ["plants"] });
       setIsDeleteModalOpen(false);
       setSelectedPlant(null);
+      showSuccess("Plant deleted successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to delete plant");
     },
   });
 

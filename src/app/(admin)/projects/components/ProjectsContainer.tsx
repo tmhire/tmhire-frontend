@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { ChevronDownIcon } from "lucide-react";
 import { validateMobile, validateName, validateAddress, validateCoordinates } from "@/lib/utils";
+import { useToast } from "@/hooks/useToast";
 
 interface Project {
   _id: string;
@@ -71,6 +72,7 @@ export default function ProjectsContainer() {
   const { fetchWithAuth } = useApiClient();
   const { status } = useSession();
   const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [isClientFilterOpen, setIsClientFilterOpen] = useState(false);
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
@@ -233,6 +235,10 @@ export default function ProjectsContainer() {
         remarks: "",
       });
       setContactNumberError("");
+      showSuccess("Project created successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to create project");
     },
   });
 
@@ -253,6 +259,10 @@ export default function ProjectsContainer() {
       setIsEditModalOpen(false);
       setSelectedProject(null);
       setEditContactNumberError("");
+      showSuccess("Project updated successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to update project");
     },
   });
 
@@ -271,6 +281,10 @@ export default function ProjectsContainer() {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       setIsDeleteModalOpen(false);
       setSelectedProject(null);
+      showSuccess("Project deleted successfully!");
+    },
+    onError: (error: Error) => {
+      showError(error.message || "Failed to delete project");
     },
   });
 
