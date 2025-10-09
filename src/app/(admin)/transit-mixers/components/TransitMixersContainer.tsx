@@ -48,7 +48,7 @@ export default function TransitMixersContainer() {
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
   const [selectedPlant, setSelectedPlant] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("active");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -644,7 +644,9 @@ export default function TransitMixersContainer() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity (m³) <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Capacity (m³) <span className="text-red-500">*</span>
+            </label>
             <Input
               type="number"
               name="capacity"
@@ -658,7 +660,9 @@ export default function TransitMixersContainer() {
             {capacityError && <p className="text-red-500 text-xs mt-1">{capacityError}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plant <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Plant <span className="text-red-500">*</span>
+            </label>
             <select
               name="plant_id"
               value={newMixer.plant_id || ""}
@@ -674,7 +678,9 @@ export default function TransitMixersContainer() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Status <span className="text-red-500">*</span>
+            </label>
             <select
               name="status"
               value={newMixer.status || "active"}
@@ -686,7 +692,9 @@ export default function TransitMixersContainer() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Name <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Driver Name <span className="text-red-500">*</span>
+            </label>
             <Input
               type="text"
               name="driver_name"
@@ -752,7 +760,9 @@ export default function TransitMixersContainer() {
               <Input type="text" name="identifier" value={selectedMixer.identifier} onChange={handleEditInputChange} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity (m³) <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Capacity (m³) <span className="text-red-500">*</span>
+              </label>
               <Input
                 type="number"
                 name="capacity"
@@ -765,7 +775,9 @@ export default function TransitMixersContainer() {
               {editCapacityError && <p className="text-red-500 text-xs mt-1">{editCapacityError}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plant <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Plant <span className="text-red-500">*</span>
+              </label>
               <select
                 name="plant_id"
                 value={selectedMixer.plant_id || ""}
@@ -781,7 +793,9 @@ export default function TransitMixersContainer() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Status <span className="text-red-500">*</span>
+              </label>
               <select
                 name="status"
                 value={selectedMixer.status || "active"}
@@ -793,7 +807,9 @@ export default function TransitMixersContainer() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Name <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Driver Name <span className="text-red-500">*</span>
+              </label>
               <Input
                 type="text"
                 name="driver_name"

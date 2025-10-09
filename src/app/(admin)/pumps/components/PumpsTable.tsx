@@ -9,7 +9,7 @@ interface Pump {
   type: "line" | "boom";
   capacity: number;
   plant_id: string;
-  status: string;
+  status: "active" | "inactive";
   make: string;
   driver_name: string | null;
   driver_contact: string | null;
@@ -179,7 +179,15 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembe
                     {getMemberName(pump.pipeline_gang_id)}
                   </TableCell>
                   <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {pump.status}
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        pump.status === "active"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                      }`}
+                    >
+                      {pump.status.charAt(0).toUpperCase() + pump.status.slice(1)}
+                    </span>
                   </TableCell>
                   <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {pump.remarks || "-"}

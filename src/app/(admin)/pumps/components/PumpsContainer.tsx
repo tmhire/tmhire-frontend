@@ -30,7 +30,7 @@ interface Pump {
   type: "line" | "boom";
   capacity: number;
   plant_id: string;
-  status: string;
+  status: "active" | "inactive";
   make: string;
   driver_name: string | null;
   driver_contact: string | null;
@@ -46,6 +46,7 @@ interface CreatePumpData {
   capacity: number;
   plant_id: string;
   make: string;
+  status: "active" | "inactive";
   driver_name?: string;
   driver_contact?: string;
   remarks?: string | null; // <-- Added
@@ -80,6 +81,7 @@ export default function PumpsContainer() {
     remarks: "", // <-- Added
     pump_operator_id: "",
     pipeline_gang_id: "",
+    status: "active",
   });
   const [newPump, setNewPump] = useState<CreatePumpData>({
     identifier: "",
@@ -92,6 +94,7 @@ export default function PumpsContainer() {
     remarks: "", // <-- Added
     pump_operator_id: "",
     pipeline_gang_id: "",
+    status: "active",
   });
   const [error, setError] = useState("");
   const [driverContactError, setDriverContactError] = useState("");
@@ -258,6 +261,7 @@ export default function PumpsContainer() {
         remarks: "", // <-- Added
         pump_operator_id: "",
         pipeline_gang_id: "",
+        status: "active",
       });
       setDriverContactError("");
       showSuccess("Pump created successfully!");
@@ -349,6 +353,7 @@ export default function PumpsContainer() {
       remarks: pump.remarks || "", // <-- Added
       pump_operator_id: pump.pump_operator_id || "",
       pipeline_gang_id: pump.pipeline_gang_id || "",
+      status: pump.status || "active",
     });
     setIsEditModalOpen(true);
   };
@@ -795,7 +800,9 @@ export default function PumpsContainer() {
         </div>{" "}
         <div className="grid grid-cols-4 gap-4">
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pump No. <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Pump No. <span className="text-red-500">*</span>
+            </label>
             <Input
               type="text"
               name="identifier"
@@ -806,7 +813,9 @@ export default function PumpsContainer() {
             {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Capacity <span className="text-red-500">*</span>
+            </label>
             <Input
               type="number"
               name="capacity"
@@ -820,7 +829,9 @@ export default function PumpsContainer() {
             {capacityError && <p className="text-red-500 text-xs mt-1">{capacityError}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plant <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Plant <span className="text-red-500">*</span>
+            </label>
             <select
               name="plant_id"
               value={newPump.plant_id}
@@ -836,7 +847,9 @@ export default function PumpsContainer() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pump Type <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Pump Type <span className="text-red-500">*</span>
+            </label>
             <select
               name="type"
               value={newPump.type}
@@ -851,11 +864,15 @@ export default function PumpsContainer() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Make <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Make <span className="text-red-500">*</span>
+            </label>
             <Input type="text" name="make" placeholder="Enter make" value={newPump.make} onChange={handleInputChange} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Name <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Driver Name <span className="text-red-500">*</span>
+            </label>
             <Input
               type="text"
               name="driver_name"
@@ -881,7 +898,9 @@ export default function PumpsContainer() {
             {driverContactError && <p className="text-red-500 text-xs mt-1">{driverContactError}</p>}
           </div>
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pump Operator <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Pump Operator <span className="text-red-500">*</span>
+            </label>
             <div className="relative">
               <button
                 type="button"
@@ -918,7 +937,9 @@ export default function PumpsContainer() {
             </div>
           </div>
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pipeline Gang <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Pipeline Gang <span className="text-red-500">*</span>
+            </label>
             <div className="relative">
               <button
                 type="button"
@@ -989,11 +1010,15 @@ export default function PumpsContainer() {
         {selectedPump && (
           <div className="grid grid-cols-4 gap-4">
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pump No. <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Pump No. <span className="text-red-500">*</span>
+              </label>
               <Input type="text" name="identifier" value={editedPump.identifier} onChange={handleEditInputChange} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Capacity <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Capacity <span className="text-red-500">*</span>
+              </label>
               <Input
                 type="number"
                 name="capacity"
@@ -1006,12 +1031,14 @@ export default function PumpsContainer() {
               {editCapacityError && <p className="text-red-500 text-xs mt-1">{editCapacityError}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Plant <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Plant <span className="text-red-500">*</span>
+              </label>
               <select
                 name="plant_id"
                 value={editedPump.plant_id}
                 onChange={handleEditInputChange}
-                className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
               >
                 <option value="">Select Plant</option>
                 {plantsData?.map((plant) => (
@@ -1022,7 +1049,9 @@ export default function PumpsContainer() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pump Type <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Pump Type <span className="text-red-500">*</span>
+              </label>
               <select
                 name="type"
                 value={editedPump.type}
@@ -1037,11 +1066,15 @@ export default function PumpsContainer() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Make <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Make <span className="text-red-500">*</span>
+              </label>
               <Input type="text" name="make" value={editedPump.make} onChange={handleEditInputChange} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Driver Name <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Driver Name <span className="text-red-500">*</span>
+              </label>
               <Input
                 type="text"
                 name="driver_name"
@@ -1065,7 +1098,9 @@ export default function PumpsContainer() {
               {editDriverContactError && <p className="text-red-500 text-xs mt-1">{editDriverContactError}</p>}
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pump Operator <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Pump Operator <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <button
                   type="button"
@@ -1104,7 +1139,9 @@ export default function PumpsContainer() {
               </div>
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Pipeline Gang <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Pipeline Gang <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <button
                   type="button"
@@ -1142,7 +1179,21 @@ export default function PumpsContainer() {
                 </Dropdown>
               </div>
             </div>
-            <div className="col-span-4">
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Status <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="status"
+                value={editedPump.status || "active"}
+                onChange={handleEditInputChange}
+                className="w-full h-11 rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div className="col-span-3">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
               <Input
                 type="text"
