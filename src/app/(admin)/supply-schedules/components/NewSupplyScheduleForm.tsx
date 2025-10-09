@@ -1345,19 +1345,22 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 {/* Grade of Concrete */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">RMC Grade</label>
-                  <div className="flex items-center w-full">
-                    <span className="w-6 text-gray-700 dark:text-gray-300 font-medium">M</span>
+                  {/* <div className="flex items-center w-full">
+                    <span className="w-6 text-gray-700 dark:text-gray-300 font-medium">M</span> */}
                     <Input
-                      type="number"
+                      type="text"
                       name="concreteGrade"
                       value={formData.concreteGrade || ""}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value.length <= 10 && /^[a-zA-Z0-9+\-/.]*$/.test(value)) {
+                          handleInputChange(e);
+                        }
+                      }}
                       placeholder="Enter RMC grade"
                       className="flex-1 w-full"
-                      min="0"
-                      max="999"
                     />
-                  </div>
+                  {/* </div> */}
                 </div>
 
                 {/* SITE SUPERVISOR */}
