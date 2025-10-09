@@ -1890,19 +1890,23 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 {/* Grade of Concrete */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">RMC Grade</label>
-                  <div className="flex items-center w-full">
-                    <span className="w-6 text-gray-700 dark:text-gray-300 font-medium">M</span>
-                    <Input
-                      type="number"
-                      name="concreteGrade"
-                      value={formData.concreteGrade || ""}
-                      onChange={handleInputChange}
-                      placeholder="Enter RMC grade"
-                      className="flex-1 w-full"
-                      min="0"
-                      max="999"
-                    />
-                  </div>
+                  {/* <div className="flex items-center w-full"> */}
+                  {/* <span className="w-6 text-gray-700 dark:text-gray-300 font-medium">M</span> */}
+                  <Input
+                    type="text"
+                    name="concreteGrade"
+                    value={formData.concreteGrade || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value.length <= 10 && /^[a-zA-Z0-9+\-/.]*$/.test(value)) {
+                        handleInputChange(e);
+                      }
+                    }}
+                    placeholder="Enter RMC grade"
+                    className="flex-1 w-full"
+                  />
+
+                  {/* </div> */}
                 </div>
 
                 {/* Pump Type Selection */}
@@ -2081,7 +2085,17 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 {/* Placement Zone */}
                 <div className="col-span-2">
                   <SearchableDropdown
-                    options={["SLAB", "Raft", "PCC / Footing", "Road", "Piling", "Screed", "Colomn / Beam", "Wall"]}
+                    options={[
+                      "SLAB",
+                      "Raft",
+                      "PCC / Footing",
+                      "Road",
+                      "Piling",
+                      "Screed",
+                      "Colomn / Beam",
+                      "Wall",
+                      "Flooring",
+                    ]}
                     value={formData.pumpingJob}
                     onChange={(value: string | string[]) => {
                       setFormData((prev) => ({ ...prev, pumpingJob: value as string }));
@@ -3587,8 +3601,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             ) : (
               <span></span>
             )}
-            <span>
-              <span className="text-red-500">*</span> Compulsory, all other fields are optional
+            <span className="dark:text-white text-black">
+              <span className="text-red-500 ">*</span> Compulsory, all other fields are optional
             </span>
             <Button onClick={handleNext} className="flex items-center gap-2" disabled={!isStep1FormValid()}>
               Next: Pumping Details
