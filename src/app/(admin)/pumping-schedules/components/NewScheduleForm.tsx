@@ -58,6 +58,7 @@ interface Pump {
   identifier: string;
   availability: boolean;
   type: "line" | "boom";
+  status: "active" | "inactive"
   capacity: number;
 }
 
@@ -954,7 +955,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     }
   };
 
-  const filteredPumps = pumpsData?.filter((p: Pump) => p.type === pumpType) || [];
+  const filteredPumps = pumpsData?.filter((p: Pump) => p.type === pumpType && p.status === "active") || [];
   const progressPercentage = (() => {
     if (step === 1) return 0;
     if (step === 1.1) return (100 / (steps.length - 1)) * 1;
