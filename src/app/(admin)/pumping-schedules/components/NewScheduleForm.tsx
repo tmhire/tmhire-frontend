@@ -41,6 +41,10 @@ import Tooltip from "@/components/ui/tooltip";
 import { cn, formatDate } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { useToast, createApiActionToast } from "@/hooks/useToast";
+import { TimePicker } from "@mui/x-date-pickers/TimePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs from "dayjs";
 
 interface Client {
   contact_phone: number;
@@ -221,7 +225,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     bufferTime: string;
     loadTime: string;
     concreteGrade: string;
-    pump_start_time_from_plant: string;
+    pump_start: string;
     pumpFixingTime: string;
     pumpRemovalTime: string;
     unloadingTime: string;
@@ -246,7 +250,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     bufferTime: "",
     loadTime: "",
     concreteGrade: "",
-    pump_start_time_from_plant: "",
+    pump_start: "",
     pumpFixingTime: "",
     pumpRemovalTime: "",
     unloadingTime: "",
@@ -514,8 +518,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           bufferTime: data?.data?.input_params?.buffer_time?.toString(),
           loadTime: data?.data?.input_params?.load_time?.toString(),
           concreteGrade: data.data.concreteGrade,
-          pump_start_time_from_plant: data.data.input_params.pump_start_time_from_plant
-            ? data.data.input_params.pump_start_time_from_plant
+          pump_start: data.data.input_params.pump_start
+            ? data.data.input_params.pump_start
             : "",
           pumpFixingTime: data.data.input_params.pump_fixing_time
             ? data.data.input_params.pump_fixing_time.toString()
@@ -602,7 +606,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             load_time: parseFloat(formData.loadTime),
             pump_start: `${formData.scheduleDate}T${formData.startTime}`,
             schedule_date: formData.scheduleDate,
-            pump_start_time_from_plant: formData.pump_start_time_from_plant,
+            // pump_start: formData.pump_start,
             pump_fixing_time: parseFloat(formData.pumpFixingTime),
             pump_removal_time: parseFloat(formData.pumpRemovalTime),
             is_burst_model: !!isBurstModel,
@@ -685,13 +689,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     setHasChanged(true);
   };
 
-  const handleTimeChange = (name: string, value: string | null) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value || "",
-    }));
-    setHasChanged(true);
-  };
+  // const handleTimeChange = (name: string, value: string | null) => {
+  //   setFormData((prev) => ({
+  //     ...prev,
+  //     [name]: value || "",
+  //   }));
+  //   setHasChanged(true);
+  // };
 
   const calculateRequiredTMs = async () => {
     if (!hasChanged) return true;
@@ -733,7 +737,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               load_time: parseFloat(formData.loadTime),
               pump_start: `${formData.scheduleDate}T${formData.startTime}`,
               schedule_date: formData.scheduleDate,
-              pump_start_time_from_plant: formData.pump_start_time_from_plant,
               pump_fixing_time: parseFloat(formData.pumpFixingTime),
               pump_removal_time: parseFloat(formData.pumpRemovalTime),
               unloading_time: parseFloat(formData.unloadingTime),
@@ -1980,25 +1983,31 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   />
                 </div>
 
-                {/* Pump Start Time */}
+                {/* Pump Start Time */} 
+                
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Pump Start Time (24h) <span className="text-red-500">*</span>
                   </label>
-                  <div className="relative">
-                    <TimeInput
-                      type="time"
-                      name="startTime"
-                      format={profile?.preferred_format === "12h" ? "h:mm a" : "hh:mm"}
-                      isOpen
-                      value={formData.startTime}
-                      onChange={(val) => handleTimeChange("startTime", val)}
-                      className="w-full"
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <TimePicker
+                      value={formData.startTime ? dayjs(formData.startTime, 'HH:mm') : null}
+                      onChange={(newValue) => {
+                        const timeString = newValue ? newValue.format('HH:mm') : '';
+                        setFormData((prev) => ({ ...prev, startTime: timeString }));
+                        setHasChanged(true);
+                      }}
+                      slotProps={{
+                        textField: {
+                          size: 'small',
+                          fullWidth: true,
+                          placeholder: 'Select time',
+                        },
+                      }}
+                      format={profile?.preferred_format === "12h" ? "h:mm a" : "HH:mm"}
+                      views={['hours', 'minutes']}
                     />
-                    <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-                      <Clock className="size-5" />
-                    </span>
-                  </div>
+                  </LocalizationProvider>
                 </div>
               </div>
 

@@ -30,13 +30,17 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useQuery } from "@tanstack/react-query";
 // removed unused table and badge imports
 import { useRouter, useSearchParams } from "next/navigation";
-import TimeInput from "@/components/form/input/TimeInput";
+// import TimeInput from "@/components/form/input/TimeInput";
 import { useProfile } from "@/hooks/useProfile";
 import Tooltip from "@/components/ui/tooltip";
 import { cn, formatDate } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
 import SearchableDropdown from "@/components/form/SearchableDropdown";
 import { useToast, createApiActionToast } from "@/hooks/useToast";
+import { TimePicker } from "@mui/x-date-pickers/TimePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs from "dayjs";
 
 interface Client {
   contact_phone: number;
@@ -540,13 +544,13 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     setHasChanged(true);
   };
 
-  const handleTimeChange = (name: string, value: string | null) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value || "",
-    }));
-    setHasChanged(true);
-  };
+  // const handleTimeChange = (name: string, value: string | null) => {
+  //   setFormData((prev) => ({
+  //     ...prev,
+  //     [name]: value || "",
+  //   }));
+  //   setHasChanged(true);
+  // };
 
   const calculateRequiredTMs = async () => {
     if (!hasChanged) return true;
@@ -1347,19 +1351,19 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">RMC Grade</label>
                   {/* <div className="flex items-center w-full">
                     <span className="w-6 text-gray-700 dark:text-gray-300 font-medium">M</span> */}
-                    <Input
-                      type="text"
-                      name="concreteGrade"
-                      value={formData.concreteGrade || ""}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value.length <= 10 && /^[a-zA-Z0-9+\-/.]*$/.test(value)) {
-                          handleInputChange(e);
-                        }
-                      }}
-                      placeholder="Enter RMC grade"
-                      className="flex-1 w-full"
-                    />
+                  <Input
+                    type="text"
+                    name="concreteGrade"
+                    value={formData.concreteGrade || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value.length <= 10 && /^[a-zA-Z0-9+\-/.]*$/.test(value)) {
+                        handleInputChange(e);
+                      }
+                    }}
+                    placeholder="Enter RMC grade"
+                    className="flex-1 w-full"
+                  />
                   {/* </div> */}
                 </div>
 
@@ -1423,18 +1427,25 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                     Supply Start Time at Site (24h) <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <TimeInput
-                      type="time"
-                      name="startTime"
-                      format={profile?.preferred_format === "12h" ? "h:mm a" : "hh:mm"}
-                      isOpen
-                      value={formData.startTime}
-                      onChange={(val) => handleTimeChange("startTime", val)}
-                      className="w-full"
-                    />
-                    <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-                      <Clock className="size-5" />
-                    </span>
+                    <LocalizationProvider dateAdapter={AdapterDayjs}>
+                      <TimePicker
+                        value={formData.startTime ? dayjs(formData.startTime, "HH:mm") : null}
+                        onChange={(newValue) => {
+                          const timeString = newValue ? newValue.format("HH:mm") : "";
+                          setFormData((prev) => ({ ...prev, startTime: timeString }));
+                          setHasChanged(true);
+                        }}
+                        slotProps={{
+                          textField: {
+                            size: "small",
+                            fullWidth: true,
+                            placeholder: "Select time",
+                          },
+                        }}
+                        format={profile?.preferred_format === "12h" ? "h:mm a" : "HH:mm"}
+                        views={["hours", "minutes"]}
+                      />
+                    </LocalizationProvider>
                   </div>
                 </div>
               </div>
