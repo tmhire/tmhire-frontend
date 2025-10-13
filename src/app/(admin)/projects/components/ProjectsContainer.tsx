@@ -799,7 +799,7 @@ export default function ProjectsContainer() {
               </Dropdown>
             </div>
           </div>
-          <div className="col-span-2">
+          {/* <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Coordinates</label>
             <Input
               type="text"
@@ -809,7 +809,7 @@ export default function ProjectsContainer() {
               onChange={handleInputChange}
               maxLength={60}
             />
-          </div>
+          </div> */}
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
             <Input
@@ -997,7 +997,7 @@ export default function ProjectsContainer() {
                 </Dropdown>
               </div>
             </div>
-            <div className="col-span-2">
+            {/* <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Coordinates</label>
               <Input
                 type="text"
@@ -1006,7 +1006,7 @@ export default function ProjectsContainer() {
                 onChange={handleEditInputChange}
                 maxLength={60}
               />
-            </div>
+            </div> */}
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
               <Input 

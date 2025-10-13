@@ -810,7 +810,7 @@ export default function PlantsContainer() {
                 maxLength={30}
               />
             </div>
-            <div className="w-full">
+            {/* <div className="w-full">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Coordinates</label>
               <Input
                 type="text"
@@ -820,7 +820,7 @@ export default function PlantsContainer() {
                 onChange={handleInputChange}
                 maxLength={60}
               />
-            </div>
+            </div> */}
             <div className="w-full">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status <span className="text-red-500">*</span></label>
               <select
@@ -1010,7 +1010,7 @@ export default function PlantsContainer() {
                   maxLength={30}
                 />
               </div>
-              <div className="w-full">
+              {/* <div className="w-full">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Coordinates</label>
                 <Input
                   type="text"
@@ -1020,7 +1020,7 @@ export default function PlantsContainer() {
                   onChange={handleEditInputChange}
                   maxLength={60}
                 />
-              </div>
+              </div> */}
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status <span className="text-red-500">*</span></label>
                 <select

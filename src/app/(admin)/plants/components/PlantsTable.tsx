@@ -59,12 +59,12 @@ export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps
                 >
                   Address
                 </TableCell>
-                <TableCell
+                {/* <TableCell
                   isHeader
                   className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Coordinates
-                </TableCell>
+                </TableCell> */}
                 <TableCell
                   isHeader
                   className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
@@ -129,9 +129,9 @@ export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps
                   <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {plant.address}
                   </TableCell>
-                  <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  {/* <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {plant.coordinates || "-"}
-                  </TableCell>
+                  </TableCell> */}
                   <TableCell className="px-3 py-4 text-gray-500 text-theme-sm dark:text-gray-400">
                     <div className="flex flex-col">
                       <span className="font-medium">{plant.contact_name1 || "-"}</span>

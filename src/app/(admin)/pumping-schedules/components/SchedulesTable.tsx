@@ -31,6 +31,7 @@ interface Schedule {
     tm_no: string;
     tm_id: string;
     plant_start: string;
+    plant_buffer: string;
     pump_start: string;
     unloading_time: string;
     return: string;
@@ -208,9 +209,9 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
                     </TableCell>
                     <TableCell className="px-2 py-3 text-sm text-start">
                       <span className="text-gray-800 dark:text-white/90">
-                        {schedule.output_table[0]?.plant_start
+                        {schedule.output_table[0]?.plant_buffer
                           ? `${formatTimeByPreference(
-                              schedule.output_table[0].plant_start,
+                              schedule.output_table[0].plant_buffer,
                               profile?.preferred_format
                             )} - ${formatTimeByPreference(
                               schedule.output_table[schedule.output_table.length - 1].return,

@@ -289,7 +289,7 @@ export default function ScheduleViewPage() {
     if (!schedule) return;
 
     const wb = XLSX.utils.book_new();
-    
+
     // Determine which table to use based on current model
     const currentTable = useBurstModel && schedule.burst_table ? schedule.burst_table : schedule.output_table;
 
@@ -332,6 +332,19 @@ export default function ScheduleViewPage() {
       ["Status", schedule.status],
       ["Schedule Name", schedule.schedule_no || "-"],
     ];
+    // Add Fleet Summary fields
+    summaryData.push(
+      ["Optimum Fleet: Non-Stop Pour", `${schedule.tm_count ?? "-"}`],
+      [
+        "TMs Additional",
+        `${
+          typeof schedule.tm_overrule === "number" && typeof schedule.tm_count === "number"
+            ? schedule.tm_overrule - schedule.tm_count
+            : 0
+        }`,
+      ],
+      ["Total TM Required", `${schedule.tm_overrule ? schedule.tm_overrule : schedule.tm_count}`]
+    );
     // Add Pump Details under Summary
     if (schedule.output_table && schedule.output_table.length > 0) {
       const preferred = profile?.preferred_format;
@@ -421,7 +434,10 @@ export default function ScheduleViewPage() {
     }
 
     // Helper functions for time calculations
-    function formatOverallRange(trips: (Schedule["output_table"] | Schedule["burst_table"]) | undefined, preferredFormat?: string) {
+    function formatOverallRange(
+      trips: (Schedule["output_table"] | Schedule["burst_table"]) | undefined,
+      preferredFormat?: string
+    ) {
       if (!trips || !trips.length) return "-";
       const starts = trips
         .map((t) => t.plant_start)
@@ -488,7 +504,7 @@ export default function ScheduleViewPage() {
       tmIds.forEach((tmId, index) => {
         const trips = tmTrips[tmId];
         if (!trips) return;
-        
+
         const tripTimes = Array.from({ length: maxTrips }).map((_, i) => {
           const trip = trips?.[i];
           return trip
@@ -526,38 +542,40 @@ export default function ScheduleViewPage() {
     // Schedule Table Sheet
     if (currentTable && currentTable.length > 0) {
       const preferred = profile?.preferred_format;
-      
+
       // Schedule table data - different headers based on model
-      const scheduleHeader = useBurstModel ? [
-        "Trip No",
-        "TM No",
-        "Plant - Name",
-        "Plant - Prepare Time",
-        "Plant - Load Time",
-        "Plant - Start Time",
-        "Site Reach",
-        "Waiting (min)",
-        "Pump - Start Time",
-        "Pump - End Time",
-        "Return Time",
-        "Queue",
-        "Cum. Volume",
-        "Cycle Time (min)",
-        "Cushion Time (min)",
-      ] : [
-        "Trip No",
-        "TM No",
-        "Plant - Name",
-        "Plant - Prepare Time",
-        "Plant - Load Time",
-        "Plant - Start Time",
-        "Pump - Start Time",
-        "Pump - End Time",
-        "Return Time",
-        "Cum. Volume",
-        "Cycle Time (min)",
-        "Cushion Time (min)",
-      ];
+      const scheduleHeader = useBurstModel
+        ? [
+            "Trip No",
+            "TM No",
+            "Plant - Name",
+            "Plant - Prepare Time",
+            "Plant - Load Time",
+            "Plant - Start Time",
+            "Site Reach",
+            "Waiting (min)",
+            "Pump - Start Time",
+            "Pump - End Time",
+            "Return Time",
+            "Queue",
+            "Cum. Volume",
+            "Cycle Time (min)",
+            "Cushion Time (min)",
+          ]
+        : [
+            "Trip No",
+            "TM No",
+            "Plant - Name",
+            "Plant - Prepare Time",
+            "Plant - Load Time",
+            "Plant - Start Time",
+            "Pump - Start Time",
+            "Pump - End Time",
+            "Return Time",
+            "Cum. Volume",
+            "Cycle Time (min)",
+            "Cushion Time (min)",
+          ];
 
       const scheduleRows = currentTable.map((trip) => {
         const baseRow = [
@@ -603,9 +621,44 @@ export default function ScheduleViewPage() {
         return baseRow;
       });
 
+      // If Burst model and showGapRows enabled, interleave gap rows like the frontend table
+      let finalScheduleRows = scheduleRows;
+      if (useBurstModel && showGapRows) {
+        // Prepare sorted rows and compute gaps using same logic as frontend
+        const rowsData = ((schedule.burst_table || []) as unknown as TripRow[])
+          .slice()
+          .sort((a, b) => a.trip_no - b.trip_no);
+        const getGapMinutes = (prev: TripRow | undefined, next: TripRow | undefined) => {
+          if (!prev || !next) return null;
+          const prevTime = prev.plant_buffer || prev.plant_load || prev.plant_start;
+          const nextTime = next.plant_buffer || next.plant_load || next.plant_start;
+          if (!prevTime || !nextTime) return null;
+          const a = new Date(prevTime).getTime();
+          const b = new Date(nextTime).getTime();
+          if (isNaN(a) || isNaN(b)) return null;
+          const diff = Math.round((b - a) / (1000 * 60));
+          return diff >= 0 ? diff : null;
+        };
+
+        const interleaved: (string | number)[][] = [];
+        for (let i = 0; i < rowsData.length; i++) {
+          interleaved.push(scheduleRows[i]);
+          if (i < rowsData.length - 1) {
+            const gap = getGapMinutes(rowsData[i], rowsData[i + 1]);
+            if (gap !== null) {
+              const gapRow = new Array(scheduleHeader.length).fill("") as (string | number)[];
+              // Place gap value under "Plant - Prepare Time" column (index 3)
+              gapRow[3] = `${gap} min`;
+              interleaved.push(gapRow);
+            }
+          }
+        }
+        finalScheduleRows = interleaved;
+      }
+
       // Build schedule sheet with model-specific title
       const sheetTitle = useBurstModel ? "Schedule (Burst Model)" : "Schedule (0 Wait Model)";
-      const wsSchedule = XLSX.utils.aoa_to_sheet([[sheetTitle], scheduleHeader, ...scheduleRows]);
+      const wsSchedule = XLSX.utils.aoa_to_sheet([[sheetTitle], scheduleHeader, ...finalScheduleRows]);
       XLSX.utils.book_append_sheet(wb, wsSchedule, "Schedule");
     }
 
@@ -805,9 +858,7 @@ export default function ScheduleViewPage() {
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.tm_count || "N/A"}</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                TMs Additional
-              </h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">TMs Additional</h4>
               <p className="text-base text-gray-800 dark:text-white/90">
                 {schedule.tm_overrule - schedule.tm_count || 0}
               </p>
@@ -815,7 +866,7 @@ export default function ScheduleViewPage() {
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total TM Required</h4>
               <p className="text-base font-semibold text-blue-600 dark:text-blue-400">
-                {(schedule.tm_count || 0) + (schedule.tm_overrule || 0)}
+                {schedule.tm_overrule ? schedule.tm_overrule : schedule.tm_count}
               </p>
             </div>
             {/* <div>
@@ -1146,6 +1197,144 @@ export default function ScheduleViewPage() {
             </div>
           </div>
         </div>
+      </div>
+      {/* TM WISE TRIP DETAILS TABLE */}
+      <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mt-3">
+        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">TM Wise Trip Details</h4>
+        {(() => {
+          if (!schedule.output_table || schedule.output_table.length === 0) {
+            return <div className="text-gray-500 dark:text-gray-400">No trip data available.</div>;
+          }
+          // Group trips by TM
+          const tmTrips: Record<string, typeof schedule.output_table> = {};
+          schedule.output_table.forEach((trip) => {
+            if (!tmTrips[trip.tm_id]) tmTrips[trip.tm_id] = [];
+            tmTrips[trip.tm_id].push(trip);
+          });
+          // Sort trips for each TM by trip_no
+          Object.values(tmTrips).forEach((trips) => trips.sort((a, b) => a.trip_no - b.trip_no));
+          // Get all TM IDs and max number of trips
+          const tmIds = Object.keys(tmTrips);
+          const maxTrips = Math.max(...Object.values(tmTrips).map((trips) => trips.length));
+          // Helper to format overall time range
+          function formatOverallRange(trips: Schedule["output_table"], preferredFormat?: string) {
+            if (!trips.length) return "-";
+            const starts = trips
+              .map((t) => t.plant_buffer)
+              .filter(Boolean)
+              .map((t) => new Date(t));
+            const ends = trips
+              .map((t) => t.return)
+              .filter(Boolean)
+              .map((t) => new Date(t));
+
+            if (!starts.length || !ends.length) return "-";
+
+            const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
+            const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
+
+            const sTime = formatTimeByPreference(minStart, preferredFormat);
+            const eTime = formatTimeByPreference(maxEnd, preferredFormat);
+
+            return `${sTime} - ${eTime}`;
+          }
+
+          // Helper to get total hours for a TM
+          function getTotalHours(trips: Schedule["output_table"]) {
+            if (!trips.length) return 0;
+            const starts = trips
+              .map((t) => t.plant_buffer)
+              .filter(Boolean)
+              .map((t) => new Date(t));
+            const ends = trips
+              .map((t) => t.return)
+              .filter(Boolean)
+              .map((t) => new Date(t));
+            if (!starts.length || !ends.length) return 0;
+            const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
+            const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
+            return (maxEnd.getTime() - minStart.getTime()) / (1000 * 60 * 60); // hours
+          }
+          // For last row: average total hours
+          const totalHoursArr = tmIds.map((tmId) => getTotalHours(tmTrips[tmId]));
+          const avgTotalHours = totalHoursArr.length
+            ? totalHoursArr.reduce((a, b) => a + b, 0) / totalHoursArr.length
+            : 0;
+          // For TM label, use identifier if available
+          const tmIdToIdentifier: Record<string, string> = {};
+          schedule.output_table.forEach((trip) => {
+            if (trip.tm_id && trip.tm_no) tmIdToIdentifier[trip.tm_id] = trip.tm_no;
+          });
+          return (
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800/30">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-800">
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">S.No.</th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">TM</th>
+                    {Array.from({ length: maxTrips }).map((_, i) => (
+                      <th key={i} className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">
+                        Trip {i + 1}
+                      </th>
+                    ))}
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
+                      Start-End Time
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
+                      Total Hours
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tmIds.map((tmId, index) => {
+                    const trips = tmTrips[tmId];
+                    const overallRange = formatOverallRange(trips, profile?.preferred_format);
+                    const totalHours = getTotalHours(trips);
+                    return (
+                      <tr key={tmId} className="border-b border-gray-100 dark:border-gray-700">
+                        <td className="px-2 py-2 text-gray-600 dark:text-gray-400 text-left">{index + 1}</td>
+                        <td className="px-2 py-2 text-gray-800 dark:text-white/90 font-medium text-left">
+                          {tmIdToIdentifier[tmId] || tmId}
+                        </td>
+                        {Array.from({ length: maxTrips }).map((_, i) => {
+                          const trip = trips[i];
+                          return (
+                            <td key={i} className="px-2 py-2 text-left text-gray-800 dark:text-white/90">
+                              {trip
+                                ? `${formatTimeByPreference(
+                                    trip.plant_buffer,
+                                    profile?.preferred_format
+                                  )} - ${formatTimeByPreference(trip.return, profile?.preferred_format)}`
+                                : "-"}
+                            </td>
+                          );
+                        })}
+                        <td className="px-4 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
+                          {overallRange}
+                        </td>
+                        <td className="px-4 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
+                          {totalHours ? formatHoursAndMinutes(totalHours) : "-"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {/* Last row: average total hours */}
+                  <tr className="font-semibold bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white/90">
+                    <td className="px-2 py-2 text-left">Avg</td>
+                    <td className="px-2 py-2 text-center "></td>
+                    {Array.from({ length: maxTrips }).map((_, i) => (
+                      <td key={i} className="px-2 py-2"></td>
+                    ))}
+                    <td className="px-2 py-2 text-center bg-gray-100 dark:bg-gray-800"></td>
+                    <td className="px-4 py-2 text-left bg-gray-100 dark:bg-gray-800">
+                      {avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-"}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </div>
 
       <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mt-3">
@@ -1530,144 +1719,6 @@ export default function ScheduleViewPage() {
             </div>
           </div>
         </div>
-      </div>
-      {/* TM WISE TRIP DETAILS TABLE */}
-      <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mt-3">
-        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">TM Wise Trip Details</h4>
-        {(() => {
-          if (!schedule.output_table || schedule.output_table.length === 0) {
-            return <div className="text-gray-500 dark:text-gray-400">No trip data available.</div>;
-          }
-          // Group trips by TM
-          const tmTrips: Record<string, typeof schedule.output_table> = {};
-          schedule.output_table.forEach((trip) => {
-            if (!tmTrips[trip.tm_id]) tmTrips[trip.tm_id] = [];
-            tmTrips[trip.tm_id].push(trip);
-          });
-          // Sort trips for each TM by trip_no
-          Object.values(tmTrips).forEach((trips) => trips.sort((a, b) => a.trip_no - b.trip_no));
-          // Get all TM IDs and max number of trips
-          const tmIds = Object.keys(tmTrips);
-          const maxTrips = Math.max(...Object.values(tmTrips).map((trips) => trips.length));
-          // Helper to format overall time range
-          function formatOverallRange(trips: Schedule["output_table"], preferredFormat?: string) {
-            if (!trips.length) return "-";
-            const starts = trips
-              .map((t) => t.plant_buffer)
-              .filter(Boolean)
-              .map((t) => new Date(t));
-            const ends = trips
-              .map((t) => t.return)
-              .filter(Boolean)
-              .map((t) => new Date(t));
-
-            if (!starts.length || !ends.length) return "-";
-
-            const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
-            const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
-
-            const sTime = formatTimeByPreference(minStart, preferredFormat);
-            const eTime = formatTimeByPreference(maxEnd, preferredFormat);
-
-            return `${sTime} - ${eTime}`;
-          }
-
-          // Helper to get total hours for a TM
-          function getTotalHours(trips: Schedule["output_table"]) {
-            if (!trips.length) return 0;
-            const starts = trips
-              .map((t) => t.plant_buffer)
-              .filter(Boolean)
-              .map((t) => new Date(t));
-            const ends = trips
-              .map((t) => t.return)
-              .filter(Boolean)
-              .map((t) => new Date(t));
-            if (!starts.length || !ends.length) return 0;
-            const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
-            const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
-            return (maxEnd.getTime() - minStart.getTime()) / (1000 * 60 * 60); // hours
-          }
-          // For last row: average total hours
-          const totalHoursArr = tmIds.map((tmId) => getTotalHours(tmTrips[tmId]));
-          const avgTotalHours = totalHoursArr.length
-            ? totalHoursArr.reduce((a, b) => a + b, 0) / totalHoursArr.length
-            : 0;
-          // For TM label, use identifier if available
-          const tmIdToIdentifier: Record<string, string> = {};
-          schedule.output_table.forEach((trip) => {
-            if (trip.tm_id && trip.tm_no) tmIdToIdentifier[trip.tm_id] = trip.tm_no;
-          });
-          return (
-            <div className="overflow-x-auto w-full">
-              <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800/30">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-gray-800">
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">S.No.</th>
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">TM</th>
-                    {Array.from({ length: maxTrips }).map((_, i) => (
-                      <th key={i} className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">
-                        Trip {i + 1}
-                      </th>
-                    ))}
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
-                      Start-End Time
-                    </th>
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
-                      Total Hours
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tmIds.map((tmId, index) => {
-                    const trips = tmTrips[tmId];
-                    const overallRange = formatOverallRange(trips, profile?.preferred_format);
-                    const totalHours = getTotalHours(trips);
-                    return (
-                      <tr key={tmId} className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="px-2 py-2 text-gray-600 dark:text-gray-400 text-left">{index + 1}</td>
-                        <td className="px-2 py-2 text-gray-800 dark:text-white/90 font-medium text-left">
-                          {tmIdToIdentifier[tmId] || tmId}
-                        </td>
-                        {Array.from({ length: maxTrips }).map((_, i) => {
-                          const trip = trips[i];
-                          return (
-                            <td key={i} className="px-2 py-2 text-left text-gray-800 dark:text-white/90">
-                              {trip
-                                ? `${formatTimeByPreference(
-                                    trip.plant_buffer,
-                                    profile?.preferred_format
-                                  )} - ${formatTimeByPreference(trip.return, profile?.preferred_format)}`
-                                : "-"}
-                            </td>
-                          );
-                        })}
-                        <td className="px-4 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
-                          {overallRange}
-                        </td>
-                        <td className="px-4 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
-                          {totalHours ? formatHoursAndMinutes(totalHours) : "-"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {/* Last row: average total hours */}
-                  <tr className="font-semibold bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white/90">
-                    <td className="px-2 py-2 text-left">Avg</td>
-                    <td className="px-2 py-2 text-center "></td>
-                    {Array.from({ length: maxTrips }).map((_, i) => (
-                      <td key={i} className="px-2 py-2"></td>
-                    ))}
-                    <td className="px-2 py-2 text-center bg-gray-100 dark:bg-gray-800"></td>
-                    <td className="px-4 py-2 text-left bg-gray-100 dark:bg-gray-800">
-                      {avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-"}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          );
-        })()}
       </div>
 
       {/* PLANT WISE TRIP DETAILS TABLE */}

@@ -3,16 +3,17 @@
 import SupplySchedulesTable from "./SupplySchedulesTable";
 import { PlusIcon, Search } from "lucide-react";
 import Button from "@/components/ui/button/Button";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { Modal } from "@/components/ui/modal";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { CanceledBy, CancelReason, DeleteType } from "@/types/common.types";
 import Radio from "@/components/form/input/Radio";
+import DatePickerInput from "@/components/form/input/DatePickerInput";
 
 interface SupplySchedule {
   _id: string;
@@ -34,6 +35,7 @@ interface SupplySchedule {
     trip_no: number;
     tm_no: string;
     tm_id: string;
+    plant_buffer: string;
     plant_start: string;
     pump_start: string;
     unloading_time: string;
@@ -46,6 +48,8 @@ interface SupplySchedule {
 
 export default function SupplySchedulesContainer() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { fetchWithAuth } = useApiClient();
   const { status } = useSession();
   const queryClient = useQueryClient();
@@ -56,7 +60,7 @@ export default function SupplySchedulesContainer() {
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [selectedSite, setSelectedSite] = useState<string>("");
-  const [selectedDate] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<string>("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [canceledBy, setCanceledBy] = useState<CanceledBy>(CanceledBy.client);
@@ -64,6 +68,34 @@ export default function SupplySchedulesContainer() {
   const [selectedSchedule, setSelectedSchedule] = useState<SupplySchedule | null>(null);
   const [timeStatusFilter, setTimeStatusFilter] = useState<string>("All");
   const [isTimeStatusFilterOpen, setIsTimeStatusFilterOpen] = useState(false);
+
+  // Initialize date from URL parameters (expects MM/DD/YYYY in URL)
+  useEffect(() => {
+    const dateParam = searchParams.get("date");
+    if (dateParam) {
+      const dateParts = dateParam.split("/");
+      if (dateParts.length === 3) {
+        const month = dateParts[0].padStart(2, "0");
+        const day = dateParts[1].padStart(2, "0");
+        const year = dateParts[2];
+        setSelectedDate(`${year}-${month}-${day}`);
+      }
+    }
+  }, [searchParams]);
+
+  // Update URL when date filter changes (store as MM/DD/YYYY)
+  const updateUrlWithDate = (date: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (date) {
+      const [year, month, day] = date.split("-");
+      const mmddyyyy = `${Number(month)}/${Number(day)}/${year}`;
+      params.set("date", mmddyyyy);
+    } else {
+      params.delete("date");
+    }
+    const newQuery = params.toString();
+    router.replace(newQuery ? `${pathname}?${newQuery}` : `${pathname}`);
+  };
 
   // Fetch supply schedules
   const { data: schedulesData, isLoading: isLoadingSchedules } = useQuery({
@@ -378,6 +410,37 @@ export default function SupplySchedulesContainer() {
                   ))}
                 </div>
               </Dropdown>
+            </div>
+
+            {/* Date Filter */}
+            <div className="relative text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-600 dark:text-gray-300">Date:</span>
+                <div className="min-w-[170px]">
+                  <DatePickerInput
+                    value={selectedDate}
+                    onChange={(date) => {
+                      setSelectedDate(date);
+                      updateUrlWithDate(date);
+                    }}
+                    placeholder="Select date"
+                    className="h-11"
+                  />
+                </div>
+                {selectedDate && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedDate("");
+                      updateUrlWithDate("");
+                    }}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+              
             </div>
           </div>
         </div>

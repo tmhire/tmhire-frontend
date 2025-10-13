@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useApiClient } from "@/hooks/useApiClient";
 import { Spinner } from "@/components/ui/spinner";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
 import { formatTimeByPreference, formatHoursAndMinutes } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
@@ -97,7 +97,7 @@ export default function SupplyScheduleViewPage() {
 
     const wb = XLSX.utils.book_new();
 
-    // Summary Sheet
+    // Summary Sheet with TM Trip Distribution and TM Wise Trip Details
     const summaryData: (string | number)[][] = [
       [
         "Scheduled Date",
@@ -110,23 +110,18 @@ export default function SupplyScheduleViewPage() {
           : "-",
       ],
       [
-        "Pump Start Time at Site",
+        "Supply Start Time at Site",
         schedule.input_params.pump_start
           ? new Date(schedule.input_params.pump_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
           : "-",
       ],
-      // ["Type of Pump", schedule.pump_type || "-"],
       ["Pumping Speed m³/hour", `${schedule.input_params.pumping_speed}`],
       ["Client Name", schedule.client_name || "-"],
       ["Project Name & Site Location", `${schedule.project_name || "-"}, ${schedule.site_address || "-"}`],
-      // ["Placement Zone", schedule.pumping_job || "-"],
       ["Mother Plant", schedule.mother_plant_name || "-"],
       ["Site Supervisor", schedule.site_supervisor_name || "-"],
-      // ["Slump at Site", `${schedule.slump_at_site ?? "-"}`],
-      // ["One way Km from Mother Plant", `${schedule.mother_plant_km ?? "-"}`],
-      // ["Floor Height", `${schedule.floor_height ?? "-"}`],
       ["RMC Grade", schedule.concreteGrade ? `M ${schedule.concreteGrade}` : "-"],
-      ["Total Qty Pumped in m³", `${schedule.input_params.quantity}`],
+      ["Total Qty Supplied in m³", `${schedule.input_params.quantity}`],
       ["Pre-Start Time (mins) (A)", `${schedule.input_params.buffer_time}`],
       ["Load Time (mins) (B)", `${schedule.input_params.load_time}`],
       ["Onward Time (mins) (C)", `${schedule.input_params.onward_time}`],
@@ -136,10 +131,14 @@ export default function SupplyScheduleViewPage() {
       ["Status", schedule.status],
       ["Schedule Name", schedule.schedule_no || "-"],
     ];
-    const wsSummary = XLSX.utils.aoa_to_sheet([["Field", "Value"], ...summaryData]);
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
 
-    // TM Trip Distribution Sheet
+    // Add Fleet Summary fields
+    summaryData.push(
+      ["Optimum Fleet: Non-Stop Pour", `${schedule.tm_count ?? "-"}`],
+      ["Total TM Required", `${schedule.tm_count}`]
+    );
+
+    // Add TM Trip Distribution data
     if (schedule.output_table && schedule.output_table.length > 0) {
       const tmTripCounts: Record<string, number> = {};
       schedule.output_table.forEach((trip) => {
@@ -156,75 +155,35 @@ export default function SupplyScheduleViewPage() {
         .map(([trips, tmCount], idx) => [idx + 1, Number(tmCount), Number(trips), Number(tmCount) * Number(trips)]);
       const totalTMs = Object.keys(tmTripCounts).length;
       const totalTrips = schedule.output_table.length;
-      const wsTMDist = XLSX.utils.aoa_to_sheet([
-        ["Sl. No", "NO OF TMs (A)", "NO OF TRIPS/TM (B)", "TOTAL TRIPS (A) x (B)"],
-        ...rows,
-        ["TOTAL", totalTMs, "", totalTrips],
-      ]);
-      XLSX.utils.book_append_sheet(wb, wsTMDist, "TM Trip Dist");
+
+      // Add spacing after summary data
+      summaryData.push(["", ""], ["TM Trip Distribution", ""]);
+      summaryData.push(["Sl. No", "NO OF TMs (A)", "NO OF TRIPS/TM (B)", "TOTAL TRIPS (A) x (B)"]);
+      rows.forEach((row) => summaryData.push(row));
+      summaryData.push(["TOTAL", totalTMs, "", totalTrips]);
     }
 
-    // Schedule Table Sheet
+    // Add TM Wise Trip Details
     if (schedule.output_table && schedule.output_table.length > 0) {
       const preferred = profile?.preferred_format;
-      const header1 = [
-        "Trip No",
-        "TM No",
-        "Plant - Name",
-        "Plant - Prepare Time",
-        "Plant - Load Time",
-        "Plant - Start Time",
-        "Pump - Start Time",
-        "Pump - End Time",
-        "Return Time",
-        "Cum. Volume",
-        "Cycle Time (min)",
-        "Cushion Time (min)",
-      ];
-      const rows = schedule.output_table.map((trip) => [
-        trip.trip_no,
-        trip.tm_no,
-        trip.plant_name ? trip.plant_name : "N / A",
-        trip.plant_buffer ? formatTimeByPreference(trip.plant_buffer, preferred) : "-",
-        trip.plant_load ? formatTimeByPreference(trip.plant_load, preferred) : "-",
-        formatTimeByPreference(trip.plant_start, preferred),
-        trip.pump_start ? formatTimeByPreference(trip.pump_start, preferred) : "-",
-        trip.unloading_time ? formatTimeByPreference(trip.unloading_time, preferred) : "-",
-        trip.return ? formatTimeByPreference(trip.return, preferred) : "-",
-        `${trip.completed_capacity} m³`,
-        typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-",
-        typeof trip.cushion_time !== "undefined" ? (trip.cushion_time / 60).toFixed(0) : "-",
-      ]);
-      const wsSchedule = XLSX.utils.aoa_to_sheet([header1, ...rows]);
-      XLSX.utils.book_append_sheet(wb, wsSchedule, "Schedule Table");
-    }
-
-    // TM Wise Trip Details Sheet
-    if (schedule.output_table && schedule.output_table.length > 0) {
-      const preferred = profile?.preferred_format;
-      const tmTrips: Record<string, SupplySchedule["output_table"]> = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tmTrips: Record<string, any[]> = {};
       schedule.output_table.forEach((trip) => {
         if (!tmTrips[trip.tm_id]) tmTrips[trip.tm_id] = [];
         tmTrips[trip.tm_id].push(trip);
       });
-      Object.values(tmTrips).forEach((trips) => trips.sort((a, b) => a.trip_no - b.trip_no));
+      Object.values(tmTrips).forEach((trips) => {
+        if (trips) trips.sort((a, b) => a.trip_no - b.trip_no);
+      });
       const tmIds = Object.keys(tmTrips);
-      const maxTrips = Math.max(...Object.values(tmTrips).map((trips) => trips.length));
-
+      const maxTrips = Math.max(...Object.values(tmTrips).map((trips) => trips?.length || 0));
       const tmIdToIdentifier: Record<string, string> = {};
       schedule.output_table.forEach((trip) => {
         if (trip.tm_id && trip.tm_no) tmIdToIdentifier[trip.tm_id] = trip.tm_no;
       });
 
-      const header = [
-        "S.No.",
-        "TM",
-        ...Array.from({ length: maxTrips }, (_, i) => `Trip ${i + 1}`),
-        "Start-End Time",
-        "Total Hours",
-      ] as string[];
-
-      function formatOverallRange(trips: SupplySchedule["output_table"]) {
+      // Helper functions for time calculations
+      function formatOverallRange(trips: SupplySchedule["output_table"], preferredFormat?: string) {
         if (!trips.length) return "-";
         const starts = trips
           .map((t) => t.plant_start)
@@ -237,8 +196,8 @@ export default function SupplyScheduleViewPage() {
         if (!starts.length || !ends.length) return "-";
         const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
         const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
-        const sTime = formatTimeByPreference(minStart, preferred);
-        const eTime = formatTimeByPreference(maxEnd, preferred);
+        const sTime = formatTimeByPreference(minStart, preferredFormat);
+        const eTime = formatTimeByPreference(maxEnd, preferredFormat);
         return `${sTime} - ${eTime}`;
       }
 
@@ -258,12 +217,23 @@ export default function SupplyScheduleViewPage() {
         return (maxEnd.getTime() - minStart.getTime()) / (1000 * 60 * 60);
       }
 
-      const body: (string | number)[][] = tmIds.map((tmId, index) => {
+      // Add spacing before TM Wise Trip Details
+      summaryData.push(["", ""], ["TM Wise Trip Details", ""]);
+      const header = [
+        "S.No.",
+        "TM",
+        ...Array.from({ length: maxTrips }, (_, i) => `Trip ${i + 1}`),
+        "Start-End Time",
+        "Total Hours",
+      ];
+      summaryData.push(header);
+
+      tmIds.forEach((tmId, index) => {
         const trips = tmTrips[tmId];
-        const overallRange = formatOverallRange(trips);
-        const totalHours = getTotalHours(trips);
-        const tripCells = Array.from({ length: maxTrips }).map((_, i) => {
-          const trip = trips[i];
+        if (!trips) return;
+
+        const tripTimes = Array.from({ length: maxTrips }).map((_, i) => {
+          const trip = trips?.[i];
           return trip
             ? `${formatTimeByPreference(trip.plant_start, preferred)} - ${formatTimeByPreference(
                 trip.return,
@@ -271,28 +241,69 @@ export default function SupplyScheduleViewPage() {
               )}`
             : "-";
         });
-        return [
+        const overallRange = formatOverallRange(trips);
+        const totalHours = getTotalHours(trips);
+        summaryData.push([
           index + 1,
           tmIdToIdentifier[tmId] || tmId,
-          ...tripCells,
+          ...tripTimes,
           overallRange,
           totalHours ? formatHoursAndMinutes(totalHours) : "-",
-        ];
+        ]);
       });
 
       const totalHoursArr = tmIds.map((tmId) => getTotalHours(tmTrips[tmId]));
       const avgTotalHours = totalHoursArr.length ? totalHoursArr.reduce((a, b) => a + b, 0) / totalHoursArr.length : 0;
-
-      const footer = [
+      summaryData.push([
         "Avg",
         "",
         ...Array.from({ length: maxTrips }).map(() => ""),
         "",
         avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-",
+      ]);
+    }
+
+    const wsSummary = XLSX.utils.aoa_to_sheet([["Field", "Value"], ...summaryData]);
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+    // Schedule Table Sheet
+    if (schedule.output_table && schedule.output_table.length > 0) {
+      const preferred = profile?.preferred_format;
+
+      const scheduleHeader = [
+        "Trip No",
+        "TM No",
+        "Plant - Name",
+        "Plant - Prepare Time",
+        "Plant - Load Time",
+        "Plant - Start Time",
+        "Supply - Start Time",
+        "Supply - End Time",
+        "Return Time",
+        "Cum. Volume",
+        "Cycle Time (min)",
+        "Cushion Time (min)",
       ];
 
-      const wsTmWise = XLSX.utils.aoa_to_sheet([header, ...body, footer]);
-      XLSX.utils.book_append_sheet(wb, wsTmWise, "TM Wise Trips");
+      const scheduleRows = schedule.output_table.map((trip) => [
+        trip.trip_no,
+        trip.tm_no,
+        trip.plant_name ? trip.plant_name : "N / A",
+        trip.plant_buffer ? formatTimeByPreference(trip.plant_buffer, preferred) : "-",
+        trip.plant_load ? formatTimeByPreference(trip.plant_load, preferred) : "-",
+        formatTimeByPreference(trip.plant_start, preferred),
+        trip.pump_start ? formatTimeByPreference(trip.pump_start, preferred) : "-",
+        trip.unloading_time ? formatTimeByPreference(trip.unloading_time, preferred) : "-",
+        trip.return ? formatTimeByPreference(trip.return, preferred) : "-",
+        `${trip.completed_capacity} m³`,
+        typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-",
+        typeof trip.cushion_time !== "undefined" && trip.cushion_time !== null
+          ? Math.max(0, trip.cushion_time / 60).toFixed(0)
+          : "-"
+      ]);
+
+      const wsSchedule = XLSX.utils.aoa_to_sheet([["Schedule Table"], scheduleHeader, ...scheduleRows]);
+      XLSX.utils.book_append_sheet(wb, wsSchedule, "Schedule");
     }
 
     XLSX.writeFile(wb, `${schedule.schedule_no || "supply-schedule"}-${schedule._id}.xlsx`);
@@ -441,45 +452,70 @@ export default function SupplyScheduleViewPage() {
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.client_name}</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Site Location</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.site_address}</p>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Project Name & Site Location
+              </h4>
+              <p
+                className="text-base text-gray-800 dark:text-white/90 truncate"
+                title={`${schedule.project_name}, ${schedule.site_address}`}
+              >
+                {schedule.project_name}, {schedule.site_address}
+              </p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Mother Plant</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.mother_plant_name}</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Site Supervisor</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.site_supervisor_name}</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">RMC Grade</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">
+                {schedule.concreteGrade && `M ${schedule.concreteGrade}`}
+              </p>
             </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total Qty Supplied in m³</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.quantity} m³</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Load/Pre-Start Time (mins)</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Pre-Start Time (mins) (A)</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.buffer_time} min</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Onward Time (mins)</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Load Time (mins) (B)</h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.load_time} min</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Onward Time (mins) (C)</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.onward_time} min</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Unloading Time (mins)</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Unloading Time (mins) (D)</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.unloading_time} min</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Return Time (mins)</h4>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Return Time (mins) (E)</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.return_time} min</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total TM Count</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.tm_count}</p>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Total TM Cycle Time (A+B+C+D+E)
+              </h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{formatHoursAndMinutes(schedule.cycle_time)}</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total Trips</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.output_table.length}</p>
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Optimum Fleet: Non-Stop Pour
+              </h4>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.tm_count || "N/A"}</p>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Created</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">
-                {new Date(schedule.created_at).toLocaleDateString(["en-GB"], {
-                  month: "2-digit",
-                  day: "2-digit",
-                  year: "2-digit",
-                })}
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total TM Required</h4>
+              <p className="text-base font-semibold text-blue-600 dark:text-blue-400">
+                {schedule.tm_count}
               </p>
             </div>
           </div>
@@ -557,161 +593,8 @@ export default function SupplyScheduleViewPage() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
-        <div className="">
-          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Schedule Table</h4>
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-100/20 dark:border-white/[0.05] dark:bg-white/[0.03]">
-            <div className="max-w-full overflow-x-auto">
-              <Table>
-                <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-                  <TableRow>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Trip No
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      TM No
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Plant Name
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Plant Start
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Supply Start
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Unloading Time
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Return Time
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Completed Capacity
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Cycle Time (min)
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Cushion Time (min)
-                    </TableCell>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                  {schedule.output_table.map((trip) => (
-                    <TableRow key={trip.trip_no}>
-                      <TableCell className="px-3 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">{trip.trip_no}</span>
-                      </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">
-                          {(() => {
-                            // Calculate total trips for this TM
-                            const tmTotalTrips = schedule.output_table.filter((t) => t.tm_id === trip.tm_id).length;
-                            // Find the current trip number for this TM (1-based index)
-                            const tmTrips = schedule.output_table
-                              .filter((t) => t.tm_id === trip.tm_id)
-                              .sort((a, b) => a.trip_no - b.trip_no);
-                            const currentTripIndex = tmTrips.findIndex((t) => t.trip_no === trip.trip_no) + 1;
-
-                            return (
-                              <>
-                                <div className="flex w-fit rounded-lg border-2 border-black bg-yellow-500 shadow items-center gap-2 pr-2">
-                                  <label className="flex flex-col justify-between bg-blue-700 rounded-l-md p-2 text-[8px]  text-white">
-                                    <span className="text-xs text-white-400">
-                                      ({currentTripIndex}/{tmTotalTrips})
-                                    </span>
-                                  </label>
-                                  <label className="p-1 px-1 font-mono text-sm font-medium items-center ">
-                                    {trip.tm_no}
-                                  </label>
-                                </div>
-                              </>
-                            );
-                          })()}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">
-                          {trip.plant_name ? trip.plant_name : "N / A"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
-                        <span className="text-gray-500 dark:text-gray-400">
-                          {formatTimeByPreference(trip.plant_start, profile?.preferred_format)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
-                        <span className="text-gray-500 dark:text-gray-400">
-                          {trip.pump_start ? formatTimeByPreference(trip.pump_start, profile?.preferred_format) : "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
-                        <span className="text-gray-500 dark:text-gray-400">
-                          {trip.unloading_time
-                            ? formatTimeByPreference(trip.unloading_time, profile?.preferred_format)
-                            : "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
-                        <span className="text-gray-500 dark:text-gray-400">
-                          {trip.return ? formatTimeByPreference(trip.return, profile?.preferred_format) : "-"}
-                        </span>
-                      </TableCell>
-
-                      <TableCell className="px-3 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">{trip.completed_capacity} m³</span>
-                      </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">
-                          {typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-3 py-4 text-start">
-                        <span className="text-gray-800 dark:text-white/90">
-                          {typeof trip.cushion_time !== "undefined" ? (trip.cushion_time / 60).toFixed(0) : "-"}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </div>
-      </div>
       {/* TM WISE TRIP DETAILS TABLE */}
-      <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mt-3">
+      <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mt-3 mb-3">
         <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">TM Wise Trip Details</h4>
         {(() => {
           if (!schedule.output_table || schedule.output_table.length === 0) {
@@ -841,6 +724,187 @@ export default function SupplyScheduleViewPage() {
             </div>
           );
         })()}
+      </div>
+
+      <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+        <div className="">
+          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Schedule Table</h4>
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-100/20 dark:border-white/[0.05] dark:bg-white/[0.03]">
+            <div className="max-w-full overflow-x-auto">
+              <Table>
+                <thead className="border-b border-gray-100 dark:border-white/[0.05]">
+                  {/* Main header row with merged columns */}
+                  <tr>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Trip No
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      TM No
+                    </th>
+                    <th
+                      colSpan={4}
+                      className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 truncate border-x border-gray-200 dark:border-gray-700"
+                    >
+                      Plant
+                    </th>
+                    <th
+                      colSpan={2}
+                      className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 truncate border-x border-gray-200 dark:border-gray-700"
+                    >
+                      Supply - Unloading
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Return Time
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Cum. Volume
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Cycle Time (min)
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Cushion Time (min)
+                    </th>
+                  </tr>
+                  {/* Sub-header row with individual column names */}
+                  <tr>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      #
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      #
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-l border-gray-200 dark:border-gray-700">
+                      Name
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-r border-l border-gray-200 dark:border-gray-700">
+                      Prepare Time
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-r border-l border-gray-200 dark:border-gray-700">
+                      Load Time
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-r border-gray-200 dark:border-gray-700">
+                      Start Time
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-l border-gray-200 dark:border-gray-700">
+                      Start Time
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 truncate border-r border-gray-200 dark:border-gray-700">
+                      End Time
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      #
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      #
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      #
+                    </th>
+                    <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      #
+                    </th>
+                  </tr>
+                </thead>
+                <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+                  {schedule.output_table.map((trip) => (
+                    <TableRow key={trip.trip_no}>
+                      <TableCell className="px-2 py-4 text-start">
+                        <span className="text-gray-800 dark:text-white/90">{trip.trip_no}</span>
+                      </TableCell>
+                      <TableCell className="px-2 py-4 text-start">
+                        <span className="text-gray-800 dark:text-white/90">
+                          {(() => {
+                            // Calculate total trips for this TM
+                            const tmTotalTrips = schedule.output_table.filter((t) => t.tm_id === trip.tm_id).length;
+                            // Find the current trip number for this TM (1-based index)
+                            const tmTrips = schedule.output_table
+                              .filter((t) => t.tm_id === trip.tm_id)
+                              .sort((a, b) => a.trip_no - b.trip_no);
+                            const currentTripIndex = tmTrips.findIndex((t) => t.trip_no === trip.trip_no) + 1;
+
+                            return (
+                              <>
+                                <div className="flex w-fit rounded-md border-2 border-black bg-yellow-500 shadow items-center gap-2 pr-2">
+                                  <label className="flex flex-col justify-between bg-blue-700 rounded-l-sm p-2 text-[8px] text-white">
+                                    <span className="text-xs text-white-400">
+                                      ({currentTripIndex}/{tmTotalTrips})
+                                    </span>
+                                  </label>
+                                  <label className="p-1 px-1 font-mono text-sm font-medium items-center text-black">
+                                    {trip.tm_no}
+                                  </label>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-2 py-2 text-start">
+                        <span className="text-gray-800 dark:text-white/90 truncate text-sm">
+                          {trip.plant_name ? trip.plant_name : "N / A"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-2 py-4 text-start">
+                        <span className="text-gray-800 dark:text-white/90">
+                          {trip.plant_buffer
+                            ? formatTimeByPreference(trip.plant_buffer, profile?.preferred_format)
+                            : "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-2 py-4 text-start">
+                        <span className="text-gray-800 dark:text-white/90">
+                          {trip.plant_load
+                            ? formatTimeByPreference(trip.plant_load, profile?.preferred_format)
+                            : "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-2 py-4 text-start">
+                        <span className="text-gray-500 dark:text-gray-400">
+                          {formatTimeByPreference(trip.plant_start, profile?.preferred_format)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-2 py-4 text-start">
+                        <span className="text-gray-500 dark:text-gray-400">
+                          {trip.pump_start
+                            ? formatTimeByPreference(trip.pump_start, profile?.preferred_format)
+                            : "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-2 py-4 text-start">
+                        <span className="text-gray-500 dark:text-gray-400">
+                          {trip.unloading_time
+                            ? formatTimeByPreference(trip.unloading_time, profile?.preferred_format)
+                            : "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-2 py-4 text-start">
+                        <span className="text-gray-500 dark:text-gray-400">
+                          {trip.return ? formatTimeByPreference(trip.return, profile?.preferred_format) : "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-2 py-4 text-start">
+                        <span className="text-gray-800 dark:text-white/90">{trip.completed_capacity} m³</span>
+                      </TableCell>
+                      <TableCell className="px-2 py-4 text-start">
+                        <span className="text-gray-800 dark:text-white/90">
+                          {typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-2 py-4 text-start">
+                        <span className="text-gray-800 dark:text-white/90">
+                          {typeof trip.cushion_time !== "undefined" && trip.cushion_time !== null
+                            ? Math.max(0, trip.cushion_time / 60).toFixed(0)
+                            : "-"}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Cancel Modal */}

@@ -39,6 +39,7 @@ interface Schedule {
     tm_no: string;
     tm_id: string;
     plant_start: string;
+    plant_buffer: string;
     pump_start: string;
     unloading_time: string;
     return: string;

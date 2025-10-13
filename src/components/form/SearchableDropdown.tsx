@@ -38,6 +38,7 @@ export default function SearchableDropdown<T>({
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [openUpwards, setOpenUpwards] = useState(false);
 
   const selectedOptions = multiple 
     ? options.filter((option) => Array.isArray(value) && value.includes(getOptionValue(option)))
@@ -72,6 +73,29 @@ export default function SearchableDropdown<T>({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Decide whether to open the menu upwards or downwards based on viewport space
+  useEffect(() => {
+    if (!isOpen) return;
+    const decidePlacement = () => {
+      if (!dropdownRef.current) return;
+      const rect = dropdownRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      // Approximate dropdown height: search box + list (max-h-60 ~ 240px) + paddings
+      const approximateMenuHeight = 320; // px
+      const shouldOpenUp = spaceBelow < approximateMenuHeight && spaceAbove > spaceBelow;
+      setOpenUpwards(shouldOpenUp);
+    };
+    decidePlacement();
+    // Recalculate on resize/scroll while open
+    window.addEventListener("resize", decidePlacement);
+    window.addEventListener("scroll", decidePlacement, true);
+    return () => {
+      window.removeEventListener("resize", decidePlacement);
+      window.removeEventListener("scroll", decidePlacement, true);
+    };
+  }, [isOpen, filteredOptions.length]);
 
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
@@ -174,11 +198,11 @@ export default function SearchableDropdown<T>({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            initial={{ opacity: 0, y: openUpwards ? 10 : -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            exit={{ opacity: 0, y: openUpwards ? 10 : -10, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+            className={`absolute z-50 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 ${openUpwards ? "bottom-full mb-1" : "mt-1"}`}
           >
             <div className="p-2">
               <div className="relative">

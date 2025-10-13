@@ -7,6 +7,7 @@ import { Trash2, CopyX, Pencil } from "lucide-react";
 import Button from "@/components/ui/button/Button";
 import { formatTimeByPreference } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
+import { useMemo } from "react";
 
 interface SupplySchedule {
   _id: string;
@@ -31,6 +32,7 @@ interface SupplySchedule {
     tm_no: string;
     tm_id: string;
     plant_start: string;
+    plant_buffer: string;
     pump_start: string;
     unloading_time: string;
     return: string;
@@ -51,6 +53,13 @@ interface SupplySchedulesTableProps {
 export default function SupplySchedulesTable({ data, onDelete, onCancel }: SupplySchedulesTableProps) {
   const router = useRouter();
   const { profile } = useProfile();
+
+  // Calculate summary totals similar to pumping schedules
+  const summaryTotals = useMemo(() => {
+    const totalQuantity = data.reduce((sum, schedule) => sum + (Number(schedule.input_params.quantity) || 0), 0);
+    const totalTmCount = data.reduce((sum, schedule) => sum + (Number(schedule.tm_count) || 0), 0);
+    return { totalQuantity, totalTmCount };
+  }, [data]);
 
   const handleView = (schedule: SupplySchedule) => {
     router.push(`/supply-schedules/${schedule._id}/view`);
@@ -201,9 +210,9 @@ export default function SupplySchedulesTable({ data, onDelete, onCancel }: Suppl
                   </TableCell>
                   <TableCell className="px-2 py-3 text-sm text-start">
                     <span className="text-gray-800 dark:text-white/90">
-                      {schedule.output_table[0]?.plant_start
+                      {schedule.output_table[0]?.plant_buffer
                         ? `${formatTimeByPreference(
-                            schedule.output_table[0].plant_start,
+                            schedule.output_table[0].plant_buffer,
                             profile?.preferred_format
                           )} - ${formatTimeByPreference(
                             schedule.output_table[schedule.output_table.length - 1].return,
@@ -253,6 +262,28 @@ export default function SupplySchedulesTable({ data, onDelete, onCancel }: Suppl
                   </TableCell>
                 </TableRow>
               ))}
+
+            {/* Summary Row */}
+            {data.length > 0 && (
+              <TableRow className="bg-gray-50 dark:bg-gray-800/50 border-t-2 border-gray-200 dark:border-gray-700">
+                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                  Total
+                </TableCell>
+                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                  {summaryTotals.totalQuantity}
+                </TableCell>
+                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                  {summaryTotals.totalTmCount}
+                </TableCell>
+                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+              </TableRow>
+            )}
             </TableBody>
           </Table>
         </div>

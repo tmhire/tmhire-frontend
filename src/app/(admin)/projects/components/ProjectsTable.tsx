@@ -140,12 +140,12 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients, plants,
                 >
                   Sales Engineer
                 </TableCell>
-                <TableCell
+                {/* <TableCell
                   isHeader
                   className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-20"
                 >
                   Coordinates
-                </TableCell>
+                </TableCell> */}
                 <TableCell
                   isHeader
                   className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-20"
@@ -197,7 +197,7 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients, plants,
                       {project.sales_engineer_id ? getEngineerName(project.sales_engineer_id) : "-"}
                     </span>
                   </TableCell>
-                  <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-20">
+                  {/* <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-20">
                     {project.coordinates ? (
                       <div className="flex items-center gap-1">
                         <div className="group relative cursor-pointer" title={project.coordinates}>
@@ -221,7 +221,7 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients, plants,
                     ) : (
                       <span className="text-gray-400 text-xs">Not provided</span>
                     )}
-                  </TableCell>
+                  </TableCell> */}
                   <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-20">
                     {project.remarks ? (
                       <div className="group relative cursor-pointer" title={project.remarks}>
