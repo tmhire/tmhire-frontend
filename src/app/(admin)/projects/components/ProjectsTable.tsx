@@ -1,7 +1,7 @@
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import React, { useState } from "react";
+import React from "react";
 import Button from "@/components/ui/button/Button";
-import { Edit, Trash, Copy, Check } from "lucide-react";
+import { Edit, Trash } from "lucide-react";
 
 interface Project {
   _id: string;
@@ -58,7 +58,6 @@ interface ProjectsTableProps {
 }
 
 export default function ProjectsTable({ data, onEdit, onDelete, clients, plants, teamMembers }: ProjectsTableProps) {
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const getClientName = (clientId: string) => {
     const client = clients.find((c) => c._id === clientId);
@@ -73,16 +72,6 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients, plants,
   const getEngineerName = (engineerId: string) => {
     const eng = teamMembers.find((e) => e._id === engineerId);
     return eng ? eng.name : "Unknown";
-  };
-
-  const handleCopyCoordinates = async (coordinates: string, projectId: string) => {
-    try {
-      await navigator.clipboard.writeText(coordinates);
-      setCopiedId(projectId);
-      setTimeout(() => setCopiedId(null), 2000);
-    } catch (err) {
-      console.error("Failed to copy coordinates:", err);
-    }
   };
 
   const truncateText = (text: string, maxLength: number = 6) => {
