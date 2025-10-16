@@ -46,6 +46,7 @@ interface Schedule {
     completed_capacity: number;
   }>;
   tm_count: number;
+  tm_overrule: number;
   created_at: string;
 }
 
