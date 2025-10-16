@@ -62,7 +62,7 @@ interface Pump {
   identifier: string;
   availability: boolean;
   type: "line" | "boom";
-  status: "active" | "inactive"
+  status: "active" | "inactive";
   capacity: number;
 }
 
@@ -195,6 +195,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [selectedPump, setSelectedPump] = useState<string>("");
   const [selectedPastSchedule, setSelectedPastSchedule] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [showPastList, setShowPastList] = useState(false);
 
   // Query for past schedules
   const { data: pastSchedules, isLoading: pastSchedulesLoading } = useQuery<PastSchedule[]>({
@@ -518,9 +519,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           bufferTime: data?.data?.input_params?.buffer_time?.toString(),
           loadTime: data?.data?.input_params?.load_time?.toString(),
           concreteGrade: data.data.concreteGrade,
-          pump_start: data.data.input_params.pump_start
-            ? data.data.input_params.pump_start
-            : "",
+          pump_start: data.data.input_params.pump_start ? data.data.input_params.pump_start : "",
           pumpFixingTime: data.data.input_params.pump_fixing_time
             ? data.data.input_params.pump_fixing_time.toString()
             : "",
@@ -1157,7 +1156,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   if (pastSchedulesLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-[50vh] flex items-center justify-center">
         <Spinner size="lg" text="Loading schedules..." />
       </div>
     );
@@ -1478,223 +1477,228 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       <div>
         {step === 1 ? (
           <div className="max-w-6xl mx-auto p-6 space-y-6">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Choose Schedule Starting Point</h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Start from scratch or use a previous schedule as a template
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Start from Scratch Option */}
-              <div className="lg:col-span-1">
-                <div
-                  className={`h-full p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                    !selectedPastSchedule
-                      ? "border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg"
-                      : "border-gray-200 hover:border-brand-300 hover:shadow-md dark:border-gray-700 dark:hover:border-brand-600"
-                  }`}
-                  onClick={() => setSelectedPastSchedule("")}
-                >
-                  <div className="text-center">
-                    <div
-                      className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
-                        !selectedPastSchedule
-                          ? "bg-brand-500 text-white"
-                          : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                      }`}
-                    >
-                      <FileText className="w-8 h-8" />
+            {!showPastList ? (
+              <div className="flex flex-col items-center gap-4 mt-10">
+                <div className="text-center">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Schedule Details</h3>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">Choose how you want to begin</p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    className="px-6 py-6 rounded-lg bg-gray-100 text-gray-800 hover:bg-brand-200 dark:bg-gray-800 dark:text-gray-200 border border-brand-400 dark:hover:bg-brand-800 transition-colors font-medium flex items-start gap-3 text-left flex-col"
+                    onClick={() => {
+                      setSelectedPastSchedule("");
+                      handleNext();
+                    }}
+                  >
+                    <span className="inline-flex items-center justify-center w-6 h-6 mt-0.5">
+                      <FileText className="w-5 h-5" />
+                    </span>
+                    <span>
+                      <span className="block font-semibold">Start Fresh</span>
+                      <span className="block text-xs opacity-90">
+                        Begin with a blank form. Enter every detail from scratch for full control.
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    className="px-6 py-6 rounded-lg bg-gray-100 text-gray-800 hover:bg-brand-200 dark:bg-gray-800 dark:text-gray-200 border border-brand-400 dark:hover:bg-brand-800 transition-colors font-medium flex items-start gap-3 text-left flex-col"
+                    onClick={() => {
+                      setShowPastList(true);
+                    }}
+                  >
+                    <span className="inline-flex items-center justify-center w-6 h-6 mt-0.5">
+                      <Clock className="w-5 h-5" />
+                    </span>
+                    <span>
+                      <span className="block font-semibold">Use Past Schedule</span>
+                      <span className="block text-xs opacity-90">
+                        Auto-fill form using your most recent schedule. Great for Repeat Jobs.
+                      </span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-brand-500 text-white">
+                      <Clock className="w-5 h-5" />
                     </div>
-                    <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">Start from Scratch</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed">
-                      Create a completely new schedule without default values. You&apos;ll input all details manually.
-                    </p>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Select a Past Schedule</h3>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm">
+                        Start with values from a previous schedule
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <button
-                      className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
-                        !selectedPastSchedule
-                          ? "bg-brand-500 text-white hover:bg-brand-600"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                      }`}
+                      className="px-3 py-2 rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 text-sm"
+                      onClick={() => {
+                        setShowPastList(false);
+                        setSelectedPastSchedule("");
+                        setSearchTerm("");
+                      }}
                     >
-                      {!selectedPastSchedule ? "Selected" : "Choose this option"}
+                      Back
+                    </button>
+                    <button
+                      className={cn(
+                        "px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors font-medium"
+                      )}
+                      onClick={() => {
+                        handleNext();
+                      }}
+                    >
+                      Continue
                     </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Use Past Schedule Option */}
-              <div className="lg:col-span-2">
-                <div
-                  className={`p-6 rounded-xl border-2 transition-all duration-200 ${
-                    selectedPastSchedule
-                      ? "border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg"
-                      : "border-gray-200 dark:border-gray-700"
-                  }`}
-                >
-                  <div className="flex items-center mb-4">
-                    <div
-                      className={`inline-flex items-center justify-center w-12 h-12 rounded-full mr-4 ${
-                        selectedPastSchedule
-                          ? "bg-brand-500 text-white"
-                          : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                      }`}
-                    >
-                      <Clock className="w-6 h-6" />
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder="Search by schedule name, number, client, or project..."
+                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    disabled={pastSchedulesLoading}
+                  />
+                </div>
+
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {pastSchedulesLoading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500 mx-auto"></div>
+                      <p className="mt-2 text-gray-500">Loading schedules...</p>
                     </div>
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Use Past Schedule</h3>
-                      <p className="text-gray-600 dark:text-gray-400 text-sm">
-                        Start with values from a previous schedule as a template
-                      </p>
+                  ) : filteredSchedules?.length === 0 ? (
+                    <div className="text-center py-8">
+                      <FileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-500">No schedules found</p>
                     </div>
-                  </div>
+                  ) : (
+                    filteredSchedules?.map((schedule) => (
+                      <div
+                        key={schedule._id}
+                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
+                          selectedPastSchedule === schedule._id
+                            ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
+                            : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
+                        }`}
+                        onClick={() => setSelectedPastSchedule(schedule._id)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="font-semibold text-gray-900 dark:text-white ">{schedule.schedule_no}</h4>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  pumpColors[schedule.pump_type]
+                                }`}
+                              >
+                                {schedule?.pump_type?.toUpperCase()}
+                              </span>
+                            </div>
 
-                  {/* Search Bar */}
-                  <div className="relative mb-4">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      placeholder="Search by schedule name, number, client, or project..."
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      disabled={pastSchedulesLoading}
-                    />
-                  </div>
-
-                  {/* Schedule List */}
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {pastSchedulesLoading ? (
-                      <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500 mx-auto"></div>
-                        <p className="mt-2 text-gray-500">Loading schedules...</p>
-                      </div>
-                    ) : filteredSchedules?.length === 0 ? (
-                      <div className="text-center py-8">
-                        <FileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                        <p className="text-gray-500">No schedules found</p>
-                      </div>
-                    ) : (
-                      filteredSchedules?.map((schedule) => (
-                        <div
-                          key={schedule._id}
-                          className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
-                            selectedPastSchedule === schedule._id
-                              ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
-                              : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
-                          }`}
-                          onClick={() => setSelectedPastSchedule(schedule._id)}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h4 className="font-semibold text-gray-900 dark:text-white truncate">
-                                  {schedule.schedule_no}
-                                </h4>
-                                <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    pumpColors[schedule.pump_type]
-                                  }`}
-                                >
-                                  {schedule?.pump_type?.toUpperCase()}
+                            <div className="grid grid-cols-6 gap-4 text-sm text-gray-600 dark:text-gray-400">
+                              <div className="flex items-center gap-1">
+                                <FileText className="w-4 h-4" />
+                                <span className="font-medium truncate">
+                                  {schedule.schedule_no?.length > 12
+                                    ? schedule.schedule_no.substring(0, 12) + "…"
+                                    : schedule.schedule_no}
                                 </span>
                               </div>
+                              <div className="flex items-center gap-1">
+                                <Building className="w-4 h-4" />
+                                <span className="truncate">{schedule.client_name}</span>
+                              </div>
 
-                              <div className="grid grid-cols-3 gap-4 text-sm text-gray-600 dark:text-gray-400">
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-1">
-                                    <FileText className="w-4 h-4" />
-                                    <span className="font-medium truncate">
-                                      {schedule.schedule_no?.length > 12
-                                        ? schedule.schedule_no.substring(0, 12) + "…"
-                                        : schedule.schedule_no}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Building className="w-4 h-4" />
-                                    <span className="truncate">{schedule.client_name}</span>
-                                  </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="w-4 h-4" />
-                                    <span>{formatDate(schedule.input_params.schedule_date)}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Truck className="w-4 h-4" />
-                                    <span>{schedule.input_params.quantity} m³</span>
-                                  </div>
-                                </div>
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-1">
-                                    <MapPin className="w-4 h-4" />
-                                    <span className="truncate">{schedule.project_name}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Truck className="w-4 h-4" />
-                                    <span>
-                                      {new Date(schedule.input_params.pump_start).toLocaleTimeString("en-US", {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })}
-                                    </span>
-                                  </div>
-                                </div>
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                <span>{formatDate(schedule.input_params.schedule_date)}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Truck className="w-4 h-4" />
+                                <span>{schedule.input_params.quantity} m³</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-4 h-4" />
+                                <span className="truncate">{schedule.project_name}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Truck className="w-4 h-4" />
+                                <span>
+                                  {new Date(schedule.input_params.pump_start).toLocaleTimeString("en-US", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
                               </div>
                             </div>
+                          </div>
 
-                            <div
-                              className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                selectedPastSchedule === schedule._id
-                                  ? "border-brand-500 bg-brand-500"
-                                  : "border-gray-300 dark:border-gray-600"
-                              }`}
-                            >
-                              {selectedPastSchedule === schedule._id && (
-                                <div className="w-2 h-2 rounded-full bg-white"></div>
-                              )}
-                            </div>
+                          <div
+                            className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                              selectedPastSchedule === schedule._id
+                                ? "border-brand-500 bg-brand-500"
+                                : "border-gray-300 dark:border-gray-600"
+                            }`}
+                          >
+                            {selectedPastSchedule === schedule._id && (
+                              <div className="w-2 h-2 rounded-full bg-white"></div>
+                            )}
                           </div>
                         </div>
-                      ))
-                    )}
-                  </div>
-
-                  {selectedPastSchedule && (
-                    <div className="mt-4 p-3 bg-brand-50 dark:bg-brand-900/20 rounded-lg border border-brand-200 dark:border-brand-700">
-                      <p className="text-sm text-brand-700 dark:text-brand-300">
-                        <strong>Note:</strong> Date, time, quantity, and some other fields will still need to be updated
-                        for the new schedule.
-                      </p>
-                    </div>
+                      </div>
+                    ))
                   )}
                 </div>
-              </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-center gap-4 pt-6">
-              <button
-                className={cn(
-                  "px-8 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors font-medium"
+                {selectedPastSchedule && (
+                  <div className="mt-2 p-3 bg-brand-50 dark:bg-brand-900/20 rounded-lg border border-brand-200 dark:border-brand-700">
+                    <p className="text-sm text-brand-700 dark:text-brand-300">
+                      <strong>Note:</strong> Date, time, quantity, and some other fields will still need to be updated
+                      for the new schedule.
+                    </p>
+                  </div>
                 )}
-                // disabled={!selectedPastSchedule || selectedPastSchedule === ""}
-                onClick={() => {
-                  handleNext();
-                }}
-              >
-                Continue
-              </button>
-            </div>
+              </div>
+            )}
           </div>
         ) : step === 1.1 ? (
           <div className="space-y-4">
             {/* Pour Details Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30 mb-24">
-              <div className="flex justify-between items-center mb-4 w-full">
-                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Pour Details</h3>
+              <div className="flex flex-row justify-between items-center mb-8 w-full">
+                <div className="flex flex-row justify-center items-center gap-6 ">
+                  <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200">Pour Details</h3>
+
+                  <div className="flex flex-row gap-1 justify-center items-center text-gray-800 dark:text-gray-300 bg-red-100 dark:bg-red-900/40 py-1 px-3 rounded-full">
+                    <Calendar className="w-3 h-3 " />
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide">
+                        Current Date & Time -{" "}
+                        {new Date().toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })}{" "}
+                        -{" "}
+                        {new Date().toLocaleTimeString("en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white"></p>
+                    </div>
+                  </div>
+                </div>
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900/40 py-1 px-3 rounded-full">
                   Company Timings -
                   {profile?.preferred_format === "12h"
@@ -1707,68 +1711,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         ((profile?.custom_start_hour ?? 0) + 24) % 24
                       ).padStart(2, "0")}:00 TOMORROW`}
                 </span>
-              </div>
-
-              {/* Summary Row: Schedule No., Current Date, Current Time */}
-              <div className="flex items-center justify-between gap-8 py-4 px-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
-                {/* Schedule Number */}
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="flex items-center justify-center w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg">
-                    <FileText className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                      Schedule No.
-                    </p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                      {computedScheduleName || "Select Project and Schedule Date first"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Separator */}
-                <div className="h-8 w-px bg-gray-300 dark:bg-gray-600"></div>
-
-                {/* Current Date */}
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="flex items-center justify-center w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg">
-                    <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                      Current Date
-                    </p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {new Date().toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                      })}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Separator */}
-                <div className="h-8 w-px bg-gray-300 dark:bg-gray-600"></div>
-
-                {/* Current Time */}
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="flex items-center justify-center w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg">
-                    <Clock className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                      Current Time
-                    </p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {new Date().toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                      })}
-                    </p>
-                  </div>
-                </div>
               </div>
 
               <div className="grid grid-cols-5 gap-6">
@@ -1840,29 +1782,144 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   )}
                 </div>
 
-                {/* Project Details */}
-                <div className="col-span-2">
+                {/* Project Address */}
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Project Details
+                    Project Address
                   </label>
                   <div className="min-h-fit p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
                     {selectedProject ? (
-                      <div className="space-y-1">
-                        <p className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                          <span className="font-medium">Contact:</span>{" "}
-                          {projects.find((p) => p._id === selectedProject)?.contact_number || "N/A"}
-                        </p>
-                        <p className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                          <span className="font-medium">Coordinates:</span>{" "}
-                          {projects.find((p) => p._id === selectedProject)?.coordinates || "N/A"}
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-                        Select a project to view details
+                      <p className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                        {projects.find((p) => p._id === selectedProject)?.address || "N/A"}
                       </p>
+                    ) : (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 italic">Select a project</p>
                     )}
                   </div>
+                </div>
+
+                {/* Project Contact */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Project Contact
+                  </label>
+                  <div className="min-h-fit p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                    {selectedProject ? (
+                      <p className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                        {projects.find((p) => p._id === selectedProject)?.contact_number || "N/A"}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 italic">Select a project</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Placement Zone */}
+                <div className="col-span-1">
+                  <SearchableDropdown
+                    options={[
+                      "SLAB",
+                      "Raft",
+                      "PCC / Footing",
+                      "Road",
+                      "Piling",
+                      "Screed",
+                      "Colomn / Beam",
+                      "Wall",
+                      "Flooring",
+                    ]}
+                    value={formData.pumpingJob}
+                    onChange={(value: string | string[]) => {
+                      setFormData((prev) => ({ ...prev, pumpingJob: value as string }));
+                      setHasChanged(true);
+                    }}
+                    getOptionLabel={(option: string) => option}
+                    getOptionValue={(option: string) => option}
+                    placeholder="Select Zone"
+                    label="Placement Zone"
+                    multiple={false}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-5 gap-6 mt-6">
+                {/* Floor Height (Pumping) */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Floor (Pumping)
+                  </label>
+                  <Input
+                    type="number"
+                    name="floorHeight"
+                    value={
+                      formData.floorHeight !== undefined && formData.floorHeight !== null ? formData.floorHeight : ""
+                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numValue = parseFloat(value);
+                      if (value === "" || (numValue >= 0 && numValue <= 99 && Number.isInteger(numValue))) {
+                        handleInputChange(e);
+                      }
+                    }}
+                    placeholder="Enter floor between 0 to 99"
+                    min="0"
+                    max="99"
+                  />
+                </div>
+
+                {/* Pump Type Selection */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pump Type <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex flex-row pt-3 items-center w-full gap-4">
+                    <div className="w-1/2">
+                      <Radio
+                        id="line-pump"
+                        name="pump-type"
+                        value="line"
+                        checked={pumpType === "line"}
+                        onChange={(value) => {
+                          setPumpType(value as "line" | "boom");
+                          setSelectedPump("");
+                          setHasChanged(true);
+                        }}
+                        label="Line"
+                      />
+                    </div>
+                    <div className="w-1/2">
+                      <Radio
+                        id="boom-pump"
+                        name="pump-type"
+                        value="boom"
+                        checked={pumpType === "boom"}
+                        onChange={(value) => {
+                          setPumpType(value as "line" | "boom");
+                          setSelectedPump("");
+                          setHasChanged(true);
+                        }}
+                        label="Boom"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* RMC Grade */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">RMC Grade</label>
+                  <Input
+                    type="text"
+                    name="concreteGrade"
+                    value={formData.concreteGrade || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value.length <= 10 && /^[a-zA-Z0-9+\-/.]*$/.test(value)) {
+                        handleInputChange(e);
+                      }
+                    }}
+                    placeholder="Enter RMC grade"
+                    className="flex-1 w-full"
+                  />
                 </div>
 
                 {/* Pumping Quantity */}
@@ -1888,69 +1945,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     hint="Enter a whole number between 1 and 9999"
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-5 gap-6 mt-6">
-                {/* Grade of Concrete */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">RMC Grade</label>
-                  {/* <div className="flex items-center w-full"> */}
-                  {/* <span className="w-6 text-gray-700 dark:text-gray-300 font-medium">M</span> */}
-                  <Input
-                    type="text"
-                    name="concreteGrade"
-                    value={formData.concreteGrade || ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value.length <= 10 && /^[a-zA-Z0-9+\-/.]*$/.test(value)) {
-                        handleInputChange(e);
-                      }
-                    }}
-                    placeholder="Enter RMC grade"
-                    className="flex-1 w-full"
-                  />
-
-                  {/* </div> */}
-                </div>
-
-                {/* Pump Type Selection */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pump Type <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex flex-wrap items-center gap-4">
-                    <Radio
-                      id="line-pump"
-                      name="pump-type"
-                      value="line"
-                      checked={pumpType === "line"}
-                      onChange={(value) => {
-                        setPumpType(value as "line" | "boom");
-                        setSelectedPump("");
-                        setHasChanged(true);
-                      }}
-                      label="Line"
-                    />
-                    <Radio
-                      id="boom-pump"
-                      name="pump-type"
-                      value="boom"
-                      checked={pumpType === "boom"}
-                      onChange={(value) => {
-                        setPumpType(value as "line" | "boom");
-                        setSelectedPump("");
-                        setHasChanged(true);
-                      }}
-                      label="Boom"
-                    />
-                  </div>
-                </div>
 
                 {/* Supply from Which Plant (Mother Plant) */}
                 <div className="col-span-1">
-                  {/* <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Supply from Which Plant <span className="text-red-500">*</span>
-                  </label> */}
                   <SearchableDropdown
                     options={plantsData || []}
                     value={selectedPlant}
@@ -1966,11 +1963,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     multiple={false}
                   />
                 </div>
+              </div>
 
-                {/* Schedule Date of Pumping */}
+              <div className="grid grid-cols-5 gap-6 mt-6">
+                {/* Scheduled Date of Pumping */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Schedule Date of Pumping <span className="text-red-500">*</span>
+                    Scheduled Date of Pumping <span className="text-red-500">*</span>
                   </label>
                   <DatePickerInput
                     value={formData.scheduleDate}
@@ -1983,37 +1982,34 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   />
                 </div>
 
-                {/* Pump Start Time */} 
-                
+                {/* Pump Start Time */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Pump Start Time (24h) <span className="text-red-500">*</span>
                   </label>
                   <LocalizationProvider dateAdapter={AdapterDayjs}>
                     <TimePicker
-                      value={formData.startTime ? dayjs(formData.startTime, 'HH:mm') : null}
+                      value={formData.startTime ? dayjs(formData.startTime, "HH:mm") : null}
                       onChange={(newValue) => {
-                        const timeString = newValue ? newValue.format('HH:mm') : '';
+                        const timeString = newValue ? newValue.format("HH:mm") : "";
                         setFormData((prev) => ({ ...prev, startTime: timeString }));
                         setHasChanged(true);
                       }}
                       slotProps={{
                         textField: {
-                          size: 'small',
+                          size: "small",
                           fullWidth: true,
-                          placeholder: 'Select time',
+                          placeholder: "Select time",
                         },
                       }}
                       format={profile?.preferred_format === "12h" ? "h:mm a" : "HH:mm"}
-                      views={['hours', 'minutes']}
+                      views={["hours", "minutes"]}
                     />
                   </LocalizationProvider>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-10 gap-6 mt-6">
                 {/* Pumping Speed */}
-                <div className="col-span-2">
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Pumping Speed (m³/hr) <span className="text-red-500">*</span>
                   </label>
@@ -2031,7 +2027,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   </div>
                 </div>
                 {/* Unloading Time */}
-                <div className="col-span-2">
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Unloading Time (min) <span className="text-red-500">*</span>
                   </label>
@@ -2059,88 +2055,37 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 </div>
 
                 {/* Total Pumping Hours (Auto Fill) */}
-                <div className="col-span-1">
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Total Pumping Hours
-                  </label>
-                  <Input
-                    type="text"
-                    name="pumpingHours"
-                    value={totalPumpingHours > 0 ? `${totalPumpingHours.toFixed(2)} hr` : "-"}
-                    disabled
-                    className="cursor-not-allowed bg-gray-100 dark:bg-gray-800"
-                  />
-                </div>
-
-                {/* Pump End Time (Auto Calculated) */}
-                <div className="col-span-1">
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 truncate -mr-2">
-                    Pump End Time <span className="text-gray-500 text-[10px] pl-1">(24h)</span>
-                  </label>
-                  <div className="relative">
-                    <TimeInput
-                      type="time"
-                      name="endTime"
-                      format="hh:mm"
-                      value={pumpEndTime}
+                <div className="col-span-1 flex flex-row gap-2">
+                  <div className="w-1/2">
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Total Pumping Hrs
+                    </label>
+                    <Input
+                      type="text"
+                      name="pumpingHours"
+                      value={totalPumpingHours > 0 ? `${totalPumpingHours.toFixed(2)} hr` : "-"}
                       disabled
                       className="cursor-not-allowed bg-gray-100 dark:bg-gray-800"
                     />
-                    <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-                      <Clock className="size-5" />
-                    </span>
                   </div>
-                </div>
-
-                {/* Placement Zone */}
-                <div className="col-span-2">
-                  <SearchableDropdown
-                    options={[
-                      "SLAB",
-                      "Raft",
-                      "PCC / Footing",
-                      "Road",
-                      "Piling",
-                      "Screed",
-                      "Colomn / Beam",
-                      "Wall",
-                      "Flooring",
-                    ]}
-                    value={formData.pumpingJob}
-                    onChange={(value: string | string[]) => {
-                      setFormData((prev) => ({ ...prev, pumpingJob: value as string }));
-                      setHasChanged(true);
-                    }}
-                    getOptionLabel={(option: string) => option}
-                    getOptionValue={(option: string) => option}
-                    placeholder="Select Zone"
-                    label="Placement Zone"
-                    multiple={false}
-                  />
-                </div>
-
-                {/* Floor Height (Pumping) */}
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Floor (Pumping)
-                  </label>
-                  <Input
-                    type="number"
-                    name="floorHeight"
-                    value={
-                      formData.floorHeight !== undefined && formData.floorHeight !== null ? formData.floorHeight : ""
-                    }
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      const numValue = parseFloat(value);
-                      if (value === "" || (numValue >= 0 && numValue <= 99 && Number.isInteger(numValue))) {
-                        handleInputChange(e);
-                      }
-                    }}
-                    placeholder="Enter floor between 0 to 99"
-                    min="0"
-                    max="99"
-                  />
+                  <div className="w-1/2">
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 truncate -mr-2">
+                      Pump End Time <span className="text-gray-500 text-[10px] pl-1">(24h)</span>
+                    </label>
+                    <div className="relative">
+                      <TimeInput
+                        type="time"
+                        name="endTime"
+                        format="hh:mm"
+                        value={pumpEndTime}
+                        disabled
+                        className="cursor-not-allowed bg-gray-100 dark:bg-gray-800"
+                      />
+                      <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
+                        <Clock className="size-5" />
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2195,7 +2140,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 </div>
 
                 {/* Pipeline Fixing Time at site */}
-                <div className="col-span-1">
+                <div className={`col-span-1 ${pumpType === "boom" && "opacity-50"}`}>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Pipeline Fixing Time at site (min){" "}
                     <span className="text-red-500">{pumpType === "line" && "*"}</span>
@@ -2219,7 +2164,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 </div>
 
                 {/* Pipeline Removal Time */}
-                <div className="col-span-1">
+                <div className={`col-span-1 ${pumpType === "boom" && "opacity-50"}`}>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Pipeline Removal Time (min) <span className="text-red-500">{pumpType === "line" && "*"}</span>
                   </label>
@@ -2254,7 +2199,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     value={parseFloat(formData.slumpAtSite)}
                     onChange={(e) => {
                       const v = e.target.value;
-                      setFormData((prev) => ({ ...prev, slumpAtSite: v }));
+                      if (v === "") {
+                        setFormData((prev) => ({ ...prev, slumpAtSite: "" }));
+                        return;
+                      }
+                      const num = Math.max(0, Math.min(300, Number(v)));
+                      setFormData((prev) => ({ ...prev, slumpAtSite: num.toString() }));
                       setHasChanged(true);
                     }}
                     placeholder="Enter value between 0-300"
@@ -2540,11 +2490,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 const nextTotal = Math.max(1, tmReq + nextAdditional);
                                 setOverruleTMCount(nextAdditional > 0);
                                 setCustomTMCount(nextTotal);
+                                setIsBurstModel(nextAdditional > 0);
                                 setHasChanged(true);
                               }}
                             >
                               -
                             </button>
+
                             <input
                               type="number"
                               min={0}
@@ -2557,9 +2509,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 const nextTotal = Math.max(1, tmReq + add);
                                 setOverruleTMCount(add > 0);
                                 setCustomTMCount(nextTotal);
-                                if (add > 0) {
-                                  setIsBurstModel(true); // Set default pour model to Burst when adding additional TMs
-                                }
+                                setIsBurstModel(add > 0);
                                 setHasChanged(true);
                               }}
                             />
@@ -2573,7 +2523,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 const nextTotal = Math.max(1, tmReq + nextAdditional);
                                 setOverruleTMCount(true);
                                 setCustomTMCount(nextTotal);
-                                setIsBurstModel(true); // Set default pour model to Burst when adding additional TMs
+                                setIsBurstModel(nextAdditional > 0);
                                 setHasChanged(true);
                               }}
                             >
@@ -2589,57 +2539,46 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           </span>
                         </div>
 
-                        {additionalTMValue > 0 && (
-                          <div className="mt-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-900/40">
-                            <div className="px-3 py-2 border-b border-blue-200 dark:border-blue-800 flex items-center justify-between">
-                              <span className="text-xs font-semibold text-gray-900 dark:text-white">Pour Model</span>
-                              <div className="flex gap-1">
-                                <button
-                                  type="button"
-                                  className={`px-2.5 py-1 text-xs rounded border ${
-                                    !isBurstModel
-                                      ? "bg-blue-600 text-white border-blue-600"
-                                      : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-blue-300 dark:border-blue-700"
-                                  }`}
-                                  onClick={() => setIsBurstModel(false)}
-                                >
-                                  0 Wait
-                                </button>
-                                <button
-                                  type="button"
-                                  className={`px-2.5 py-1 text-xs rounded border ${
-                                    isBurstModel
-                                      ? "bg-blue-600 text-white border-blue-600"
-                                      : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-blue-300 dark:border-blue-700"
-                                  }`}
-                                  onClick={() => setIsBurstModel(true)}
+                        <div className="mt-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-900/40">
+                          <div className="px-3 py-2 border-b border-blue-200 dark:border-blue-800 flex items-center justify-between">
+                            <span className="text-xs font-semibold text-gray-900 dark:text-white">Pour Model</span>
+                            <div className="flex gap-1">
+                              {isBurstModel ? (
+                                <div
+                                  className={`px-2.5 py-1 text-xs rounded border ${"bg-blue-600 text-white border-blue-600"}`}
                                 >
                                   Burst
-                                </button>
-                              </div>
-                            </div>
-                            <div className="p-3 space-y-2">
-                              {!isBurstModel ? (
-                                <div className="text-[11px] leading-5 text-gray-700 dark:text-gray-300">
-                                  <p className="font-semibold">0 Wait model</p>
-                                  <p>
-                                    Assumes each TM unloads back-to-back. Unloading time is counted and the sequence is
-                                    planned so consecutive pours have effectively no waiting gap.
-                                  </p>
                                 </div>
                               ) : (
-                                <div className="text-[11px] leading-5 text-gray-700 dark:text-gray-300">
-                                  <p className="font-semibold">Burst model</p>
-                                  <p>
-                                    Uses the extra TMs as a standby buffer to absorb delays. A maximum acceptable wait
-                                    between pours is calculated from your inputs to allow short bursts followed by brief
-                                    waits.
-                                  </p>
+                                <div
+                                  className={`px-2.5 py-1 text-xs rounded border ${"bg-blue-600 text-white border-blue-600"}`}
+                                >
+                                  0 Wait
                                 </div>
                               )}
                             </div>
                           </div>
-                        )}
+                          <div className="p-3 space-y-2">
+                            {!isBurstModel ? (
+                              <div className="text-[11px] leading-5 text-gray-700 dark:text-gray-300">
+                                <p className="font-semibold">0 Wait model</p>
+                                <p>
+                                  Assumes each TM unloads back-to-back. Unloading time is counted and the sequence is
+                                  planned so consecutive pours have effectively no waiting gap.
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="text-[11px] leading-5 text-gray-700 dark:text-gray-300">
+                                <p className="font-semibold">Burst model</p>
+                                <p>
+                                  Uses the extra TMs as a standby buffer to absorb delays. A maximum acceptable wait
+                                  between pours is calculated from your inputs to allow short bursts followed by brief
+                                  waits.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

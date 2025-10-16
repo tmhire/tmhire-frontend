@@ -40,6 +40,7 @@ interface Schedule {
     trip_no_for_tm?: number;
   }>;
   tm_count: number;
+  tm_overrule: number;
   created_at: string;
 }
 
@@ -202,7 +203,9 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
                       </span>
                     </TableCell>
                     <TableCell className="px-2 py-3 text-sm text-gray-500 text-start dark:text-gray-400">
-                      {schedule.tm_count}
+                      {(schedule.tm_overrule || schedule.tm_overrule === 0)
+                        ? `${schedule.tm_count} + ${schedule.tm_overrule - schedule.tm_count}`
+                        : schedule.tm_count}
                     </TableCell>
                     <TableCell className="px-2 py-3 text-sm text-start">
                       <span className="text-gray-800 dark:text-white/90">{schedule.pump_type}</span>
@@ -275,46 +278,28 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
                   </TableRow>
                 </React.Fragment>
               ))}
-              
+
               {/* Summary Row */}
               {data.length > 0 && (
                 <TableRow className="bg-gray-50 dark:bg-gray-800/50 border-t-2 border-gray-200 dark:border-gray-700">
                   <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
                     Total
                   </TableCell>
-                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
-                    -
-                  </TableCell>
-                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
-                    -
-                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
                   <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
                     {summaryTotals.totalQuantity}
                   </TableCell>
-                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
-                    -
-                  </TableCell>
-                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
-                    -
-                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
                   <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
                     {summaryTotals.totalTmCount}
                   </TableCell>
-                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
-                    -
-                  </TableCell>
-                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
-                    -
-                  </TableCell>
-                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
-                    -
-                  </TableCell>
-                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
-                    -
-                  </TableCell>
-                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
-                    -
-                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
                 </TableRow>
               )}
             </TableBody>

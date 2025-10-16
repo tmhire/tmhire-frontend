@@ -181,6 +181,120 @@ const calculatePumpingHoursFromSchedule = (schedule: Schedule): number => {
   return pumpingHours;
 };
 
+// Compact DonutChart for Summary Card
+const DonutChart = ({
+  data,
+  size = 200,
+}: {
+  data: { shortLabel: string; label: string; value: number; color: string }[];
+  size?: number;
+}) => {
+  const center = size / 2;
+  const radius = size * 0.5;
+  const innerRadius = radius * 0.6;
+  const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
+  if (total === 0)
+    return (
+      <div className="flex items-center justify-center" style={{ height: size }}>
+        <span className="text-xs text-gray-500 dark:text-gray-400">No data</span>
+      </div>
+    );
+  let currentAngle = -Math.PI / 2;
+  return (
+    <div className="relative w-fit">
+      <svg width={size} height={size} className="transform rotate-0">
+        {data.map((item, index) => {
+          const safeVal = item.value || 0;
+          if (safeVal === 0) return null;
+          const percentage = (safeVal / total) * 100;
+          const angle = (safeVal / total) * 2 * Math.PI;
+          const startAngle = currentAngle;
+          const endAngle = currentAngle + angle;
+          const x1 = center + radius * Math.cos(startAngle);
+          const y1 = center + radius * Math.sin(startAngle);
+          const x2 = center + radius * Math.cos(endAngle);
+          const y2 = center + radius * Math.sin(endAngle);
+          const x3 = center + innerRadius * Math.cos(endAngle);
+          const y3 = center + innerRadius * Math.sin(endAngle);
+          const x4 = center + innerRadius * Math.cos(startAngle);
+          const y4 = center + innerRadius * Math.sin(startAngle);
+          const largeArcFlag = angle > Math.PI ? 1 : 0;
+          const pathData = [
+            `M ${x1} ${y1}`,
+            `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+            `L ${x3} ${y3}`,
+            `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x4} ${y4}`,
+            "Z",
+          ].join(" ");
+          const labelAngle = startAngle + angle / 2;
+          const labelRadius = (radius + innerRadius) / 2;
+          const labelX = center + labelRadius * Math.cos(labelAngle);
+          const labelY = center + labelRadius * Math.sin(labelAngle);
+          currentAngle = endAngle;
+          return (
+            <g key={index}>
+              <path
+                d={pathData}
+                fill={item.color}
+                stroke="#ffffff"
+                strokeWidth="2"
+                className="hover:opacity-80 transition-opacity cursor-pointer"
+              />
+              {percentage > 8 && (
+                <>
+                  <text
+                    x={labelX}
+                    y={labelY - 6}
+                    textAnchor="middle"
+                    fill="white"
+                    fontSize="10"
+                    className="pointer-events-none"
+                  >
+                    {safeVal}min
+                  </text>
+                  <text
+                    x={labelX}
+                    y={labelY + 8}
+                    textAnchor="middle"
+                    fill="white"
+                    fontSize="10"
+                    fontWeight="bold"
+                    className="pointer-events-none"
+                  >
+                    {item.shortLabel}
+                  </text>
+                </>
+              )}
+            </g>
+          );
+        })}
+        <text
+          x={center}
+          y={center - 4}
+          textAnchor="middle"
+          fill="#374151"
+          fontSize="12"
+          fontWeight="bold"
+          className="pointer-events-none"
+        >
+          Total
+        </text>
+        <text
+          x={center}
+          y={center + 12}
+          textAnchor="middle"
+          fill="#374151"
+          fontSize="13"
+          fontWeight="bold"
+          className="pointer-events-none"
+        >
+          {total} min
+        </text>
+      </svg>
+    </div>
+  );
+};
+
 export default function ScheduleViewPage() {
   const params = useParams();
   const router = useRouter();
@@ -192,7 +306,6 @@ export default function ScheduleViewPage() {
   const [canceledBy, setCanceledBy] = useState<CanceledBy>(CanceledBy.client);
   const [reasonForCancel, setReasonForCancel] = useState<CancelReason>(CancelReason.ecl);
   const [useBurstModel, setUseBurstModel] = useState(false);
-  const [isModelChangeModalOpen, setIsModelChangeModalOpen] = useState(false);
   const [showGapRows, setShowGapRows] = useState(true);
 
   // Delete schedule mutation
@@ -216,26 +329,6 @@ export default function ScheduleViewPage() {
     },
   });
 
-  // Toggle burst model mutation (use new dedicated endpoint)
-  const updateBurstModelMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetchWithAuth(`/schedules/${params.id}/toggle-burst-model`, {
-        method: "PUT",
-      });
-      if (!response) throw new Error("No response from server");
-      const data = await response.json();
-      if (!data.success) throw new Error(data.message || "Failed to toggle burst model");
-      return data.data as Schedule;
-    },
-    onSuccess: (updated) => {
-      if (updated?.input_params?.is_burst_model !== undefined) {
-        setUseBurstModel(updated.input_params.is_burst_model);
-      }
-      queryClient.invalidateQueries({ queryKey: ["schedule", params.id] });
-      setIsModelChangeModalOpen(false);
-    },
-  });
-
   const handleEdit = () => {
     router.push(`/pumping-schedules/${params.id}`);
   };
@@ -246,18 +339,6 @@ export default function ScheduleViewPage() {
 
   const handleDelete = () => {
     setIsDeleteModalOpen(true);
-  };
-
-  const handleModelChange = () => {
-    setIsModelChangeModalOpen(true);
-  };
-
-  const handleConfirmModelChange = async () => {
-    try {
-      await updateBurstModelMutation.mutateAsync();
-    } catch (error) {
-      console.error("Error toggling burst model:", error);
-    }
   };
 
   const handleConfirmDelete = async (deleteType: DeleteType = DeleteType.cancel) => {
@@ -742,8 +823,8 @@ export default function ScheduleViewPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
         {/* Summary Card */}
-        <div className="md:col-span-2 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl p-6 flex flex-col justify-start h-full">
-          <div className="grid grid-cols-4 gap-x-8 gap-y-4">
+        <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl p-6 flex flex-col justify-start h-full">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-4">
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Scheduled Date</h4>
               <p className="text-base text-gray-800 dark:text-white/90">
@@ -825,50 +906,8 @@ export default function ScheduleViewPage() {
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total Qty Pumped in m³</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.quantity} m³</p>
             </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Pre-Start Time (mins) (A)</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.buffer_time} min</p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Load Time (mins) (B)</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.load_time} min</p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Onward Time (mins) (C)</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.onward_time} min</p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Unloading Time (mins) (D)</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.unloading_time} min</p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Return Time (mins) (E)</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.return_time} min</p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Total TM Cycle Time (A+B+C+D+E)
-              </h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{formatHoursAndMinutes(schedule.cycle_time)}</p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Optimum Fleet: Non-Stop Pour
-              </h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.tm_count || "N/A"}</p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">TMs Additional</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">
-                {schedule.tm_overrule - schedule.tm_count || 0}
-              </p>
-            </div>
-            <div>
-              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total TM Required</h4>
-              <p className="text-base font-semibold text-blue-600 dark:text-blue-400">
-                {schedule.tm_overrule ? schedule.tm_overrule : schedule.tm_count}
-              </p>
-            </div>
+            {/* Compact cycle-time pie chart and fleet sizing */}
+
             {/* <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</h4>
               <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
@@ -876,6 +915,74 @@ export default function ScheduleViewPage() {
               </Badge>
             </div> */}
           </div>
+        </div>
+        <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl p-6 flex flex-col justify-start h-full">
+          {(() => {
+            const buffer = schedule.input_params.buffer_time || 0;
+            const load = schedule.input_params.load_time || 0;
+            const onward = schedule.input_params.onward_time || 0;
+            const unload = schedule.input_params.unloading_time || 0;
+            const ret = schedule.input_params.return_time || 0;
+            const cycleTimeData = [
+              { label: "Pre-Start", shortLabel: "Pre-Start", value: buffer, color: "#3b82f6" },
+              { label: "Loading", shortLabel: "Load", value: load, color: "#8b5cf6" },
+              { label: "Onward Journey", shortLabel: "Onward", value: onward, color: "#f59e0b" },
+              { label: "TM Unloading", shortLabel: "Unload", value: unload, color: "#10b981" },
+              { label: "Return Journey", shortLabel: "Return", value: ret, color: "#ef4444" },
+            ];
+            const tmCountBase = typeof schedule.tm_count === "number" ? schedule.tm_count : 0;
+            const tmOverrule = typeof schedule.tm_overrule === "number" ? schedule.tm_overrule : undefined;
+            const additional = typeof tmOverrule === "number" ? Math.max(0, tmOverrule - tmCountBase) : 0;
+            const totalRequired = typeof tmOverrule === "number" && tmOverrule > 0 ? tmOverrule : tmCountBase;
+            return (
+              <div className="grid grid-cols-1 gap-6 items-end justify-between h-full">
+                <div className="flex flex-row gap-4 items-start justify-between">
+                  {/* Legend */}
+                  <div className="flex flex-col gap-2 mt-2">
+                    {cycleTimeData.map((item) => (
+                      <div key={item.label} className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></span>
+                        <span className="text-xs text-gray-700 dark:text-gray-300">{item.label}</span>
+                      </div>
+                    ))}
+                    <div className="mt-4">
+                      {" "}
+                      <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        Total TM Cycle Time
+                      </h4>{" "}
+                      <p className="text-base text-gray-800 dark:text-white/90">
+                        {" "}
+                        {formatHoursAndMinutes(schedule.cycle_time)}{" "}
+                      </p>{" "}
+                    </div>
+                  </div>
+
+                  {/* Donut Chart */}
+                  <DonutChart data={cycleTimeData} size={220} />
+                </div>
+
+                {/* Fleet sizing */}
+                <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-3 py-2">
+                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Fleet Sizing</h4>
+
+                  <div className="flex items-center justify-between py-1 border-b border-blue-200/60 dark:border-blue-800/60">
+                    <span className="text-xs font-medium text-gray-900 dark:text-white">Optimum Fleet</span>
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">{tmCountBase || "-"}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1 border-b border-blue-200/60 dark:border-blue-800/60">
+                    <span className="text-xs font-medium text-gray-900 dark:text-white">TMs Additional</span>
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">{additional}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-xs font-semibold text-gray-900 dark:text-white">Total TM Required</span>
+                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{totalRequired || "-"}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
         {/* TM Trip Distribution Card */}
         <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-md p-6 flex flex-col justify-start h-full">
@@ -955,44 +1062,30 @@ export default function ScheduleViewPage() {
                 <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Schedule Model</h4>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <span
-                      className={`text-xs font-medium ${
-                        !useBurstModel ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"
-                      }`}
-                    >
-                      0 Wait
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleModelChange}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                        useBurstModel ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          useBurstModel ? "translate-x-6" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                    <span
-                      className={`text-xs font-medium ${
-                        useBurstModel ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"
-                      }`}
-                    >
-                      Burst
-                    </span>
+                    {useBurstModel ? (
+                      <div className={`px-2.5 py-1 text-xs rounded border ${"bg-blue-600 text-white border-blue-600"}`}>
+                        Burst
+                      </div>
+                    ) : (
+                      <div className={`px-2.5 py-1 text-xs rounded border ${"bg-blue-600 text-white border-blue-600"}`}>
+                        0 Wait
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                <p>
-                  <strong>0 Wait model:</strong> Considers unloading time and assumes no wait between consecutive pours.
-                </p>
-                <p>
-                  <strong>Burst model:</strong> Uses extra TMs as backup waiting system with calculated max wait limit
-                  from user input.
-                </p>
+                {useBurstModel ? (
+                  <p>
+                    <strong>Burst model:</strong> Uses extra TMs as backup waiting system with calculated max wait limit
+                    from user input.
+                  </p>
+                ) : (
+                  <p>
+                    <strong>0 Wait model:</strong> Considers unloading time and assumes no wait between consecutive
+                    pours.
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -1889,56 +1982,6 @@ export default function ScheduleViewPage() {
                 </div>
               ) : (
                 "Delete"
-              )}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Model Change Modal */}
-      <Modal
-        className="max-w-[650px] p-5"
-        isOpen={isModelChangeModalOpen}
-        onClose={() => setIsModelChangeModalOpen(false)}
-      >
-        <div className="p-6">
-          <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Change Schedule Model</h4>
-          <p className="mb-6 dark:text-white/90">
-            Are you sure you want to change the schedule model from{" "}
-            <strong>{useBurstModel ? "Burst" : "0 Wait"}</strong> to{" "}
-            <strong>{!useBurstModel ? "Burst" : "0 Wait"}</strong>?
-          </p>
-          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <h5 className="font-medium text-gray-800 dark:text-white/90 mb-2">Model Descriptions:</h5>
-            <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
-              <p>
-                <strong>0 Wait model:</strong> Assumes each TM unloads back-to-back. Unloading time is counted and the
-                sequence is planned so consecutive pours have effectively no waiting gap.
-              </p>
-              <p>
-                <strong>Burst model:</strong> Uses the extra TMs as a standby buffer to absorb delays. A maximum
-                acceptable wait between pours is calculated from your inputs to allow short bursts followed by brief
-                waits.
-              </p>
-            </div>
-          </div>
-          <div className="mb-4 p-3 rounded border border-yellow-200 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 text-sm">
-            Changing the model will reset the generated schedule. You will need to select the Pump and TMs again and
-            re-generate the schedule.
-          </div>
-
-          <div className="flex justify-end gap-4">
-            <Button onClick={() => setIsModelChangeModalOpen(false)} variant="outline">
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmModelChange} variant="primary" disabled={updateBurstModelMutation.isPending}>
-              {updateBurstModelMutation.isPending ? (
-                <div className="flex items-center gap-2">
-                  <Spinner size="sm" />
-                  <span>Updating...</span>
-                </div>
-              ) : (
-                "Confirm Change"
               )}
             </Button>
           </div>

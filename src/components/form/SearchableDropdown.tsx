@@ -40,41 +40,40 @@ export default function SearchableDropdown<T>({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [openUpwards, setOpenUpwards] = useState(false);
 
-  const selectedOptions = multiple 
-    ? options.filter((option) => Array.isArray(value) && value.includes(getOptionValue(option)))
+  const selectedOptions = multiple
+    ? options.filter(
+        (option) => Array.isArray(value) && value.includes(getOptionValue(option))
+      )
     : options.filter((option) => getOptionValue(option) === value);
 
-  // Ensure we have valid selected options
-  const displayText = selectedOptions.length > 0 
-    ? multiple 
-      ? `${selectedOptions.length} selected`
-      : getOptionLabel(selectedOptions[0])
-    : placeholder;
+  const displayText =
+    selectedOptions.length > 0
+      ? multiple
+        ? `${selectedOptions.length} selected`
+        : getOptionLabel(selectedOptions[0])
+      : placeholder;
 
   const filteredOptions = options.filter((option) =>
     getOptionLabel(option).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Reset search term when value changes externally
   useEffect(() => {
     if (value && !isOpen) {
       setSearchTerm("");
     }
   }, [value, isOpen]);
 
+  // ARCHITECTURAL CHANGE:
+  // Remove document/global outside-click listeners.
+  // Replace with an explicit backdrop that the consumer can click to close.
+  // This prevents scrollbar-release closing issues across browsers.
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setSearchTerm("");
-      }
-    };
+    if (isOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isOpen]);
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Decide whether to open the menu upwards or downwards based on viewport space
+  // placement calculation unchanged
   useEffect(() => {
     if (!isOpen) return;
     const decidePlacement = () => {
@@ -82,13 +81,11 @@ export default function SearchableDropdown<T>({
       const rect = dropdownRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
-      // Approximate dropdown height: search box + list (max-h-60 ~ 240px) + paddings
       const approximateMenuHeight = 320; // px
       const shouldOpenUp = spaceBelow < approximateMenuHeight && spaceAbove > spaceBelow;
       setOpenUpwards(shouldOpenUp);
     };
     decidePlacement();
-    // Recalculate on resize/scroll while open
     window.addEventListener("resize", decidePlacement);
     window.addEventListener("scroll", decidePlacement, true);
     return () => {
@@ -97,18 +94,13 @@ export default function SearchableDropdown<T>({
     };
   }, [isOpen, filteredOptions.length]);
 
-  useEffect(() => {
-    if (isOpen && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [isOpen]);
-
   const handleToggle = () => {
     if (!disabled) {
-      setIsOpen(!isOpen);
-      if (!isOpen) {
-        setSearchTerm("");
-      }
+      setIsOpen((s) => {
+        const next = !s;
+        if (next === false) setSearchTerm("");
+        return next;
+      });
     }
   };
 
@@ -116,11 +108,11 @@ export default function SearchableDropdown<T>({
     if (multiple) {
       const currentValue = Array.isArray(value) ? value : [];
       const newValue = currentValue.includes(optionValue)
-        ? currentValue.filter(v => v !== optionValue)
+        ? currentValue.filter((v) => v !== optionValue)
         : [...currentValue, optionValue];
       onChange(newValue);
       setSearchTerm("");
-      // Keep dropdown open for multiple selection
+      // keep open for multiple selection
     } else {
       onChange(optionValue);
       setIsOpen(false);
@@ -186,85 +178,96 @@ export default function SearchableDropdown<T>({
 
         <ChevronDown
           size={16}
-          className={`absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-transform ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className={`absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
           onClick={handleToggle}
         />
       </div>
 
       {error && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
+      {/* Backdrop: explicit, controlled, sits under dropdown.
+          Clicking the backdrop closes intentionally. This avoids document-level listeners
+          that mis-handle scrollbar interactions. */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: openUpwards ? 10 : -10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: openUpwards ? 10 : -10, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className={`absolute z-50 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 ${openUpwards ? "bottom-full mb-1" : "mt-1"}`}
-          >
-            <div className="p-2">
-              <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  onKeyDown={handleSearchKeyDown}
-                  onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setIsSearchFocused(false)}
-                  className={`h-9 w-full rounded-md border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400 dark:focus:border-brand-600 dark:focus:bg-gray-600 ${
-                    isSearchFocused ? "ring-2 ring-brand-500/20" : ""
-                  }`}
-                />
-              </div>
-            </div>
+          <>
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0 }}
+              exit={{ opacity: 0 }}
+              // invisible but present to capture clicks outside dropdown
+              className="fixed inset-0 z-40"
+              onMouseDown={() => {
+                // intentional close only when backdrop is clicked
+                setIsOpen(false);
+                setSearchTerm("");
+              }}
+            />
 
-            <div className="max-h-60 overflow-y-auto">
-              {filteredOptions.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
-                  {searchTerm ? "No results found" : "No options available"}
+            <motion.div
+              key="menu"
+              initial={{ opacity: 0, y: openUpwards ? 10 : -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: openUpwards ? 10 : -10, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className={`absolute z-50 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 ${openUpwards ? "bottom-full mb-1" : "mt-1"}`}
+            >
+              <div className="p-2">
+                <div className="relative">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Search..."
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    onKeyDown={handleSearchKeyDown}
+                    onFocus={() => setIsSearchFocused(true)}
+                    onBlur={() => setIsSearchFocused(false)}
+                    className={`h-9 w-full rounded-md border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400 dark:focus:border-brand-600 dark:focus:bg-gray-600 ${isSearchFocused ? "ring-2 ring-brand-500/20" : ""}`}
+                  />
                 </div>
-              ) : (
-                filteredOptions.map((option) => {
-                  const optionValue = getOptionValue(option);
-                  const optionLabel = getOptionLabel(option);
-                  const isSelected = multiple 
-                    ? Array.isArray(value) && value.includes(optionValue)
-                    : optionValue === value;
+              </div>
 
-                  return (
-                    <button
-                      key={optionValue}
-                      type="button"
-                      onMouseDown={() => handleSelect(optionValue)}
-                      className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                        isSelected
-                          ? "bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300"
-                          : "text-gray-800 dark:text-white/90"
-                      } flex items-center`}
-                    >
-                      {multiple && (
-                        <div className={`w-4 h-4 mr-2 border rounded flex items-center justify-center ${
-                          isSelected ? "border-brand-500 bg-brand-500" : "border-gray-300 dark:border-gray-600"
-                        }`}>
-                          {isSelected && (
-                            <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
-                        </div>
-                      )}
-                      {optionLabel}
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </motion.div>
+              <div className="max-h-60 overflow-y-auto">
+                {filteredOptions.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                    {searchTerm ? "No results found" : "No options available"}
+                  </div>
+                ) : (
+                  filteredOptions.map((option) => {
+                    const optionValue = getOptionValue(option);
+                    const optionLabel = getOptionLabel(option);
+                    const isSelected = multiple
+                      ? Array.isArray(value) && value.includes(optionValue)
+                      : optionValue === value;
+
+                    return (
+                      <button
+                        key={optionValue}
+                        type="button"
+                        // use onMouseDown so selection occurs before blur if any
+                        onMouseDown={() => handleSelect(optionValue)}
+                        className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 ${isSelected ? "bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300" : "text-gray-800 dark:text-white/90"} flex items-center`}
+                      >
+                        {multiple && (
+                          <div className={`w-4 h-4 mr-2 border rounded flex items-center justify-center ${isSelected ? "border-brand-500 bg-brand-500" : "border-gray-300 dark:border-gray-600"}`}>
+                            {isSelected && (
+                              <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            )}
+                          </div>
+                        )}
+                        {optionLabel}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
