@@ -154,7 +154,7 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembe
                           : "inline-block px-2 py-1 rounded bg-green-100 text-green-700 text-xs font-semibold"
                       }
                     >
-                      {pump.type}
+                      {pump.type === "line" ? "LINE" : "BOOM"}
                     </span>
                   </TableCell>
                   <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">

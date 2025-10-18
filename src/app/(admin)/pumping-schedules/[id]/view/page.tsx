@@ -634,11 +634,11 @@ export default function ScheduleViewPage() {
             "Plant - Load Time",
             "Plant - Start Time",
             "Site Reach",
-            "Waiting (min)",
+            "TM Waiting at site (min)",
             "Pump - Start Time",
             "Pump - End Time",
             "Return Time",
-            "Queue",
+            "TM Queue at Site",
             "Cum. Volume",
             "Cycle Time (min)",
             "Cushion Time (min)",
@@ -1511,7 +1511,7 @@ export default function ScheduleViewPage() {
                         Site reach
                       </th>
                       <th className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400 truncate border-x border-gray-200 dark:border-gray-700">
-                        Waiting (min)
+                        TM Waiting <br></br>at Site (min)
                       </th>
                       <th
                         colSpan={2}
@@ -1523,7 +1523,7 @@ export default function ScheduleViewPage() {
                         Return Time
                       </th>
                       <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                        Queue
+                        TM Queue at Site
                       </th>
                       <th className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
                         Cum. Volume

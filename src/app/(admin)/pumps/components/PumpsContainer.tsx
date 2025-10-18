@@ -642,7 +642,7 @@ export default function PumpsContainer() {
                 <Dropdown isOpen={isPumpTypeFilterOpen} onClose={() => setIsPumpTypeFilterOpen(false)} className="w-48">
                   <div className="p-2 text-gray-800 dark:text-white/90">
                     <button
-                      className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                      className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg capitalize"
                       onClick={() => {
                         setSelectedPumpType("");
                         setIsPumpTypeFilterOpen(false);
@@ -653,7 +653,7 @@ export default function PumpsContainer() {
                     {pumpTypes.map((type) => (
                       <button
                         key={type}
-                        className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                        className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg capitalize"
                         onClick={() => {
                           setSelectedPumpType(type);
                           setIsPumpTypeFilterOpen(false);
@@ -854,7 +854,7 @@ export default function PumpsContainer() {
               name="type"
               value={newPump.type}
               onChange={handleInputChange}
-              className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+              className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 capitalize"
             >
               {pumpTypes.map((type) => (
                 <option key={type} value={type}>
@@ -1056,7 +1056,7 @@ export default function PumpsContainer() {
                 name="type"
                 value={editedPump.type}
                 onChange={handleEditInputChange}
-                className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                className="w-full rounded-lg border border-gray-200 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 capitalize"
               >
                 {pumpTypes.map((type) => (
                   <option key={type} value={type}>
