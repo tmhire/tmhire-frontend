@@ -2140,7 +2140,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 </div>
 
                 {/* Pipeline Fixing Time at site */}
-                <div className={`col-span-1 ${pumpType === "boom" && "opacity-50"}`}>
+                <div className={`col-span-1 ${pumpType === "boom" && "opacity-40 bg-gray-200 dark:bg-gray-700"}`}>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Pipeline Fixing Time at site (min){" "}
                     <span className="text-red-500">{pumpType === "line" && "*"}</span>
@@ -2164,7 +2164,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 </div>
 
                 {/* Pipeline Removal Time */}
-                <div className={`col-span-1 ${pumpType === "boom" && "opacity-50"}`}>
+                <div className={`col-span-1 ${pumpType === "boom" && "opacity-40 bg-gray-200 dark:bg-gray-700"}`}>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Pipeline Removal Time (min) <span className="text-red-500">{pumpType === "line" && "*"}</span>
                   </label>
