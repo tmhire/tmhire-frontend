@@ -20,11 +20,13 @@ type Schedule = {
   client_name: string;
   schedule_no: string;
   site_address: string;
-  project_name?: string;
+  project_name: string;
   tm_count: number;
   created_at: string;
   plant_id?: string;
   mother_plant_name?: string;
+  pump: string;
+  pump_type: string;
   input_params: {
     quantity: number;
     pumping_speed: number;
@@ -39,8 +41,25 @@ type Schedule = {
     pump_removal_time: number;
     unloading_time: number;
     pump_onward_time?: number;
+    is_burst_model?: boolean;
   };
   output_table: Array<{
+    trip_no: number;
+    tm_no: string;
+    tm_id: string;
+    plant_load: string;
+    plant_buffer: string;
+    plant_start: string;
+    pump_start: string;
+    unloading_time: string;
+    return: string;
+    completed_capacity: number;
+    cycle_time?: number;
+    trip_no_for_tm?: number;
+    cushion_time?: number;
+    plant_name?: string;
+  }>;
+  burst_table: Array<{
     trip_no: number;
     tm_no: string;
     tm_id: string;
