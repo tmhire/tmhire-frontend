@@ -101,13 +101,13 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
         rows.push([
           "SL. NO",
           "DATE",
-          "SCH. NO",
+          "SCH. NO (Motherplant-Date-Number)",
           "CUSTOMER NAME",
           "PROJECT NAME",
           "PUMP/SUPPLY",
           "QTY IN m³",
-          "PUMP ALLOCATED",
-          "TM ALLOCATED",
+          "PUMP SCHD",
+          "TM SCHD",
           "TM QUEUE",
           "TOTAL TM DEPLOYED",
           "PUMP START-END TIME",
@@ -300,9 +300,10 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 flex flex-col "
                     >
                       SCH. NO
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500">(Motherplant-Date-Number)</span>
                     </TableCell>
                     <TableCell
                       isHeader
@@ -332,13 +333,13 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
                       isHeader
                       className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
                     >
-                      PUMP ALLOCATED
+                      PUMP SCHD
                     </TableCell>
                     <TableCell
                       isHeader
                       className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
                     >
-                      TM ALLOCATED
+                      TM SCHD
                     </TableCell>
                     <TableCell
                       isHeader

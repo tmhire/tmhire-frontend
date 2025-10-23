@@ -242,6 +242,15 @@ export default function ReportsContainer() {
               {formatHour(startHour)} TO {formatHour(endHour)} NEXT DAY
             </span>
           </div>
+
+          {/* Time Format Info Row */}
+          {reportType === "truck-wise" && (
+            <div className="flex items-center space-x-2">
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                Note: Time format (HH:MM) follows X hrs Y mins naming convention
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Filters Group */}
