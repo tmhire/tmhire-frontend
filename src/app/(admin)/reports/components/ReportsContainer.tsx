@@ -93,6 +93,8 @@ export default function ReportsContainer() {
   const [city, setCity] = useState<string>(session?.city || "");
   const [selectedPlantId, setSelectedPlantId] = useState<string>("");
   const [selectedPlantName, setSelectedPlantName] = useState<string>("");
+  const [selectedClientName, setSelectedClientName] = useState<string>("");
+  const [selectedProjectName, setSelectedProjectName] = useState<string>("");
   const scheduleRef = useRef<ScheduleWiseTableExportHandle | null>(null);
   const truckRef = useRef<TruckWiseTableExportHandle | null>(null);
 
@@ -107,6 +109,8 @@ export default function ReportsContainer() {
     const urlDate = searchParams.get("date");
     const urlType = searchParams.get("report-type");
     const urlPlant = searchParams.get("plant");
+    const urlClient = searchParams.get("client");
+    const urlProject = searchParams.get("project");
 
     if (urlDate) setSelectedDate(urlDate);
     if (urlType) {
@@ -114,6 +118,8 @@ export default function ReportsContainer() {
       if (normalized === "schedule-wise" || normalized === "truck-wise") setReportType(normalized as typeof reportType);
     }
     if (urlPlant) setSelectedPlantName(urlPlant);
+    if (urlClient) setSelectedClientName(urlClient);
+    if (urlProject) setSelectedProjectName(urlProject);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -146,6 +152,29 @@ export default function ReportsContainer() {
     }, {} as Record<string, string>);
   }, [plants]);
 
+  // Get unique client names and project names from schedules
+  const uniqueClientNames = useMemo(() => {
+    if (!schedules) return [];
+    const clients = new Set<string>();
+    schedules.forEach((schedule) => {
+      if (schedule.client_name) {
+        clients.add(schedule.client_name);
+      }
+    });
+    return Array.from(clients).sort();
+  }, [schedules]);
+
+  const uniqueProjectNames = useMemo(() => {
+    if (!schedules) return [];
+    const projects = new Set<string>();
+    schedules.forEach((schedule) => {
+      if (schedule.project_name) {
+        projects.add(schedule.project_name);
+      }
+    });
+    return Array.from(projects).sort();
+  }, [schedules]);
+
   // Resolve plant id from name provided in URL
   useEffect(() => {
     if (!selectedPlantName || !plants || plants.length === 0) return;
@@ -160,9 +189,20 @@ export default function ReportsContainer() {
     if (reportType) params.set("report-type", reportType === "schedule-wise" ? "schedule" : "truck");
     const plantName = selectedPlantId ? plantIdToName[selectedPlantId] : selectedPlantName;
     if (plantName) params.set("plant", plantName);
+    if (selectedClientName) params.set("client", selectedClientName);
+    if (selectedProjectName) params.set("project", selectedProjectName);
     const qs = params.toString();
     router.replace(qs ? `?${qs}` : "?", { scroll: false });
-  }, [selectedDate, reportType, selectedPlantId, selectedPlantName, plantIdToName, router]);
+  }, [
+    selectedDate,
+    reportType,
+    selectedPlantId,
+    selectedPlantName,
+    selectedClientName,
+    selectedProjectName,
+    plantIdToName,
+    router,
+  ]);
 
   const filtered = useMemo(() => {
     if (!schedules) return [] as Schedule[];
@@ -181,9 +221,24 @@ export default function ReportsContainer() {
           : (s.mother_plant_name || "") ===
             (selectedPlantId ? plantIdToName[selectedPlantId] || "" : selectedPlantName);
 
-      return matchesStatus && matchesDate && matchesPlant;
+      // Filter by client name
+      const matchesClient = !selectedClientName || s.client_name === selectedClientName;
+
+      // Filter by project name
+      const matchesProject = !selectedProjectName || s.project_name === selectedProjectName;
+
+      return matchesStatus && matchesDate && matchesPlant && matchesClient && matchesProject;
     });
-  }, [reportType, schedules, selectedDate, selectedPlantId, selectedPlantName, plantIdToName]);
+  }, [
+    reportType,
+    schedules,
+    selectedDate,
+    selectedPlantId,
+    selectedPlantName,
+    selectedClientName,
+    selectedProjectName,
+    plantIdToName,
+  ]);
 
   if (isLoading) {
     return (
@@ -301,6 +356,46 @@ export default function ReportsContainer() {
           </div>
         </div>
 
+        <div className="flex flex-col space-y-2 bg-gray-50 dark:bg-gray-700/50 px-4 py-3 rounded-lg">
+          {/* Client Name Filter Row */}
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-500 dark:text-gray-400">Client:</span>
+            <div className="w-36">
+              <select
+                className="h-8 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm px-2 text-gray-700 dark:text-gray-200"
+                value={selectedClientName}
+                onChange={(e) => setSelectedClientName(e.target.value)}
+              >
+                <option value="">All Clients</option>
+                {uniqueClientNames.map((client) => (
+                  <option key={client} value={client}>
+                    {client}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Project Name Filter Row */}
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-500 dark:text-gray-400">Project:</span>
+            <div className="w-36">
+              <select
+                className="h-8 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm px-2 text-gray-700 dark:text-gray-200"
+                value={selectedProjectName}
+                onChange={(e) => setSelectedProjectName(e.target.value)}
+              >
+                <option value="">All Projects</option>
+                {uniqueProjectNames.map((project) => (
+                  <option key={project} value={project}>
+                    {project}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
         {/* Report Type and Export */}
         <div className="flex flex-col space-y-2">
           {/* Report Type Row */}
@@ -360,6 +455,8 @@ export default function ReportsContainer() {
               data={filtered}
               selectedDate={selectedDate}
               selectedPlantId={selectedPlantId}
+              selectedClientName={selectedClientName}
+              selectedProjectName={selectedProjectName}
             />
           )}
         </div>

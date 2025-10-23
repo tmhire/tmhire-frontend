@@ -106,6 +106,8 @@ type TruckWiseTableProps = {
   data: Schedule[];
   selectedDate: string;
   selectedPlantId?: string;
+  selectedClientName?: string;
+  selectedProjectName?: string;
 };
 
 type TimeSlot = {
@@ -145,7 +147,7 @@ type TMSchedule = {
 };
 
 const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProps>(
-  ({ data, selectedDate, selectedPlantId }: TruckWiseTableProps, exportRef) => {
+  ({ data, selectedDate, selectedPlantId, selectedClientName, selectedProjectName }: TruckWiseTableProps, exportRef) => {
     const { status } = useSession();
     const { fetchWithAuth } = useApiClient();
 
@@ -299,6 +301,9 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
       const truckMap = new Map<string, TMSchedule>();
       const timeSlots = buildSlots();
 
+      // Check if any filters are applied
+      const hasFilters = selectedPlantId !="" || selectedClientName !="" || selectedProjectName !="";
+
       // Process all TMs
       if (tms) {
         tms.forEach((tm) => {
@@ -367,8 +372,8 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
 
             // If TM not present from master list, create from schedule data
             if (!truck) {
-              // When a plant filter is active, do not create trucks from schedule data
-              if (selectedPlantId) {
+              // When any filter is active, do not create trucks from schedule data
+              if (hasFilters) {
                 return;
               }
               const created: TMSchedule = {
@@ -507,6 +512,11 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
         truck.totalFreeHours = truck.timeSlots.reduce((sum, slot) => sum + slot.freeHours, 0);
         truck.idlePercentage = Math.round((truck.totalFreeHours / 24) * 100);
       });
+
+      // If filters are applied, only return trucks that have engagement (schedules)
+      if (hasFilters) {
+        return Array.from(truckMap.values()).filter(truck => truck.schedules.length > 0);
+      }
 
       return Array.from(truckMap.values());
     };
