@@ -338,14 +338,14 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
         if (schedule.pump) {
           if (!schedulePumps.has(schedule.pump)) {
             // Try to get pump details from master list, or use schedule data as fallback
-            const masterPump = pumps?.find(p => p._id === schedule.pump);
-            const pumpNo = masterPump ? 
-              (masterPump as unknown as { pump_no?: string; identifier?: string }).pump_no || 
-              (masterPump as unknown as { pump_no?: string; identifier?: string }).identifier || 
-              `P-${schedule.pump}` :
-              `P-${schedule.pump}`;
+            const masterPump = pumps?.find((p) => p._id === schedule.pump);
+            const pumpNo = masterPump
+              ? (masterPump as unknown as { pump_no?: string; identifier?: string }).pump_no ||
+                (masterPump as unknown as { pump_no?: string; identifier?: string }).identifier ||
+                `P-${schedule.pump}`
+              : `P-${schedule.pump}`;
             const mappedType = (schedule.pump_type || "line").toLowerCase() === "boom" ? "BP" : "LP";
-            
+
             schedulePumps.set(schedule.pump, {
               pumpNo,
               pumpId: schedule.pump,
@@ -501,14 +501,14 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
         if (schedule.pump && schedule.input_params) {
           const pumpId = schedule.pump;
           const pump = truckMap.get(pumpId);
-          
+
           if (pump) {
             // Calculate pump engagement period
             const pumpStartTime = new Date(schedule.input_params.pump_start);
             const pumpOnwardTime = schedule.input_params.pump_onward_time || 0;
             const pumpFixingTime = schedule.input_params.pump_fixing_time || 0;
             const pumpRemovalTime = schedule.input_params.pump_removal_time || 0;
-            
+
             // Calculate actual pumping duration from schedule data (same as schedule view page)
             let pumpingHours = 0;
             if (schedule.output_table && schedule.output_table.length > 0) {
@@ -533,24 +533,25 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                 pumpingHours = pumpingDurationMs / (1000 * 60 * 60); // Convert to hours
               }
             }
-            
+
             // Fallback to theoretical calculation if no schedule data
             if (pumpingHours === 0) {
-              pumpingHours = schedule.input_params.pumping_speed > 0 
-                ? schedule.input_params.quantity / schedule.input_params.pumping_speed 
-                : 0;
+              pumpingHours =
+                schedule.input_params.pumping_speed > 0
+                  ? schedule.input_params.quantity / schedule.input_params.pumping_speed
+                  : 0;
             }
-            
+
             const pumpingMinutes = pumpingHours * 60;
-            
+
             // Calculate pump start from plant (pump_start - onward_time - fixing_time)
             const pumpStartFromPlant = new Date(pumpStartTime);
             pumpStartFromPlant.setMinutes(pumpStartFromPlant.getMinutes() - pumpOnwardTime - pumpFixingTime);
-            
+
             // Calculate pump end time (pump_start + pumping_time + removal_time)
             const pumpEndTime = new Date(pumpStartTime);
             pumpEndTime.setMinutes(pumpEndTime.getMinutes() + pumpingMinutes + pumpRemovalTime);
-            
+
             const pumpStartHour = pumpStartFromPlant.getHours() + pumpStartFromPlant.getMinutes() / 60;
             const pumpEndHour = pumpEndTime.getHours() + pumpEndTime.getMinutes() / 60;
 
@@ -568,7 +569,10 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                 slot.freeHours = Math.max(0, slot.freeHours - overlap);
                 if (schedule.schedule_no && pump.scheduleSpecificTimeSlots[schedule.schedule_no]) {
                   pump.scheduleSpecificTimeSlots[schedule.schedule_no][i].freeHours = slot.freeHours;
-                  pump.scheduleSpecificTimeSlots[schedule.schedule_no][i].tasks.push({ startHour: pumpStartHour, endHour: pumpEndHour });
+                  pump.scheduleSpecificTimeSlots[schedule.schedule_no][i].tasks.push({
+                    startHour: pumpStartHour,
+                    endHour: pumpEndHour,
+                  });
                 }
               }
             });
@@ -605,8 +609,6 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
     };
 
     const allTrucks = processAllTrucks();
-
-
 
     // Calculate totals by type
     const calculateTotals = () => {
@@ -835,7 +837,9 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                       <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                         #
                       </th>
-                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200">#</th>
+                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200">
+                        #
+                      </th>
                     </tr>
                     {isProjectWise ? (
                       <tr className="border-b border-gray-100 dark:border-white/[0.05]">
