@@ -336,56 +336,64 @@ export default function ReportsContainer() {
         </div>
 
         {/* Filters Group */}
-        <div className="flex flex-col space-y-2 bg-gray-50 dark:bg-gray-700/50 px-4 py-3 rounded-lg">
+        <div className="flex flex-col space-y-3 bg-gray-50 dark:bg-gray-700/50 px-4 py-3 rounded-lg w-fit">
           {/* Date Filter Row */}
-          <div className="flex items-center space-x-2">
-            <Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-            <Button
-              variant="outline"
-              className="h-8"
-              onClick={() => {
-                setSelectedDate(new Date().toISOString().slice(0, 10));
-                setSelectedToDate(new Date().toISOString().slice(0, 10));
-              }}
-            >
-              Today
-            </Button>
-            <div className="w-36 flex">
-              <span className="text-gray-700 dark:text-gray-400">From: </span>{" "}
+          <div className="grid grid-cols-3 gap-2 items-center">
+            {/* From Date */}
+            <div className="flex items-center space-x-2 w-48">
+              <Calendar className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+              <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">From:</span>
               <DatePickerInput
                 value={selectedDate}
                 onChange={handleDateChange}
-                placeholder="Select date"
-                className={`h-8 ${!validDateRange && "border-red-400 text-red-400"}`}
+                placeholder="Select"
+                className={`h-8 w-full text-sm ${!validDateRange && "border-red-400 text-red-400"}`}
               />
             </div>
-            <div className="w-34 flex">
-              <span className="text-gray-700 dark:text-gray-400">To: </span>{" "}
+
+            {/* To Date */}
+            <div className="flex items-center space-x-2 w-48">
+              <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">To:</span>
               <DatePickerInput
                 value={selectedToDate}
                 onChange={handleToDateChange}
-                placeholder="Select date"
-                className={`h-8 ${!validDateRange && "border-red-400 text-red-400"}`}
+                placeholder="Optional"
+                className={`h-8 w-full text-sm ${!validDateRange && "border-red-400 text-red-400"}`}
               />
+            </div>
+
+            {/* Today Button */}
+            <div className="flex justify-end w-28 items-end">
+              <Button
+                variant="outline"
+                className="h-8 w-full text-sm"
+                onClick={() => {
+                  const today = new Date().toISOString().slice(0, 10);
+                  setSelectedDate(today);
+                  setSelectedToDate(today);
+                }}
+              >
+                Today
+              </Button>
             </div>
           </div>
 
-          {/* Plant Filter Row */}
-          <div className="flex items-center space-x-2">
-            <Factory className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-            <span className="text-sm text-gray-500 dark:text-gray-400">Plant:</span>
-            <div className="w-36">
+          {/* Plant, Client, Project Row */}
+          <div className="grid grid-cols-3 gap-2 items-center">
+            {/* Plant */}
+            <div className="flex items-center space-x-2 w-48">
+              <Factory className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+              <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">Plant:</span>
               <select
                 className="h-8 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm px-2 text-gray-700 dark:text-gray-200"
                 value={selectedPlantId}
                 onChange={(e) => {
                   const next = e.target.value;
                   setSelectedPlantId(next);
-                  // Clear URL-derived plant name to prevent resolver from overriding manual selection
                   setSelectedPlantName("");
                 }}
               >
-                <option value="">All Plants</option>
+                <option value="">All</option>
                 {(plants || []).map((p) => (
                   <option key={p._id} value={p._id}>
                     {p.name}
@@ -393,20 +401,16 @@ export default function ReportsContainer() {
                 ))}
               </select>
             </div>
-          </div>
-        </div>
 
-        <div className="flex flex-col space-y-2 bg-gray-50 dark:bg-gray-700/50 px-4 py-3 rounded-lg">
-          {/* Client Name Filter Row */}
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">Client:</span>
-            <div className="w-36">
+            {/* Client */}
+            <div className="flex items-center space-x-2 w-48">
+              <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">Client:</span>
               <select
                 className="h-8 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm px-2 text-gray-700 dark:text-gray-200"
                 value={selectedClientName}
                 onChange={(e) => setSelectedClientName(e.target.value)}
               >
-                <option value="">All Clients</option>
+                <option value="">All</option>
                 {uniqueClientNames.map((client) => (
                   <option key={client} value={client}>
                     {client}
@@ -414,18 +418,16 @@ export default function ReportsContainer() {
                 ))}
               </select>
             </div>
-          </div>
 
-          {/* Project Name Filter Row */}
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">Project:</span>
-            <div className="w-36">
+            {/* Project */}
+            <div className="flex items-center space-x-2 w-48">
+              <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">Project:</span>
               <select
                 className="h-8 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm px-2 text-gray-700 dark:text-gray-200"
                 value={selectedProjectName}
                 onChange={(e) => setSelectedProjectName(e.target.value)}
               >
-                <option value="">All Projects</option>
+                <option value="">All</option>
                 {uniqueProjectNames.map((project) => (
                   <option key={project} value={project}>
                     {project}
