@@ -7,6 +7,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useSession } from "next-auth/react";
 import { forwardRef, useImperativeHandle, useState } from "react";
 import React from "react";
+import { useProfile } from "@/hooks/useProfile";
 
 type Schedule = {
   _id: string;
@@ -31,7 +32,7 @@ type Schedule = {
     load_time: number;
     pump_start: string;
     schedule_date: string;
-    pump_start_time_from_plant: string;
+    pump_start_time_from_plant?: string;
     pump_fixing_time: number;
     pump_removal_time: number;
     unloading_time: number;
@@ -147,9 +148,13 @@ type TMSchedule = {
 };
 
 const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProps>(
-  ({ data, selectedDate, selectedPlantId, selectedClientName, selectedProjectName }: TruckWiseTableProps, exportRef) => {
+  (
+    { data, selectedDate, selectedPlantId, selectedClientName, selectedProjectName }: TruckWiseTableProps,
+    exportRef
+  ) => {
     const { status } = useSession();
     const { fetchWithAuth } = useApiClient();
+    const { profile } = useProfile();
 
     const [isProjectWise, setIsProjectWise] = useState(false);
 
@@ -214,11 +219,11 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
     // Compute overlap in hours between [startHour,endHour) and a slot [slotStart,slotEnd) with wrap handling
     // Helper function to parse time strings like "09:12 AM" to decimal hours
     const parseTimeString = (timeStr: string): number => {
-      const [time, period] = timeStr.split(' ');
-      const [hours, minutes] = time.split(':').map(Number);
+      const [time, period] = timeStr.split(" ");
+      const [hours, minutes] = time.split(":").map(Number);
       let hour24 = hours;
-      if (period === 'PM' && hours !== 12) hour24 += 12;
-      if (period === 'AM' && hours === 12) hour24 = 0;
+      if (period === "PM" && hours !== 12) hour24 += 12;
+      if (period === "AM" && hours === 12) hour24 = 0;
       return hour24 + minutes / 60;
     };
 
@@ -227,30 +232,36 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
       const totalMinutes = Math.round(hours * 60);
       const h = Math.floor(totalMinutes / 60);
       const m = totalMinutes % 60;
-      return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+      return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
     };
 
     // Helper function to format time range for a slot
-    const formatSlotTimeRange = (slot: TimeSlot, schedule: { startTime: string; endTime: string } | undefined): string => {
+    const formatSlotTimeRange = (
+      slot: TimeSlot,
+      schedule: { startTime: string; endTime: string } | undefined
+    ): string => {
       if (!schedule) return "";
-      
+
       const scheduleStartHour = parseTimeString(schedule.startTime);
       const scheduleEndHour = parseTimeString(schedule.endTime);
-      
+
       // Calculate the overlap with the slot
       const overlapStart = Math.max(scheduleStartHour, slot.start);
       const overlapEnd = Math.min(scheduleEndHour, slot.end);
-      
+
       if (overlapStart >= overlapEnd) return "";
-      
+
       // Convert decimal hours to time strings
       const startTime = new Date(selectedDate);
       startTime.setHours(Math.floor(overlapStart), (overlapStart % 1) * 60, 0, 0);
-      
+
       const endTime = new Date(selectedDate);
       endTime.setHours(Math.floor(overlapEnd), (overlapEnd % 1) * 60, 0, 0);
-      
-      return `${formatTimeByPreference(startTime)} - ${formatTimeByPreference(endTime)}`;
+
+      return `${formatTimeByPreference(startTime, profile?.preferred_format)} - ${formatTimeByPreference(
+        endTime,
+        profile?.preferred_format
+      )}`;
     };
 
     const computeOverlapHours = (startHour: number, endHour: number, slotStart: number, slotEnd: number): number => {
@@ -302,60 +313,128 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
       const timeSlots = buildSlots();
 
       // Check if any filters are applied
-      const hasFilters = selectedPlantId !="" || selectedClientName !="" || selectedProjectName !="";
+      const hasFilters = selectedPlantId !== "" || selectedClientName !== "" || selectedProjectName !== "";
 
-      // Process all TMs
-      if (tms) {
+      // First, collect all unique TMs and Pumps from schedule data
+      const scheduleTMs = new Map<string, { tmNo: string; tmId: string }>();
+      const schedulePumps = new Map<string, { pumpNo: string; pumpId: string; pumpType: string }>();
+
+      data.forEach((schedule) => {
+        const trips = schedule.input_params?.is_burst_model
+          ? schedule.burst_table || schedule.output_table
+          : schedule.output_table;
+        if (trips && trips.length > 0) {
+          trips.forEach((trip) => {
+            if (!scheduleTMs.has(trip.tm_id)) {
+              scheduleTMs.set(trip.tm_id, {
+                tmNo: trip.tm_no,
+                tmId: trip.tm_id,
+              });
+            }
+          });
+        }
+
+        // Collect pumps from schedule data
+        if (schedule.pump) {
+          if (!schedulePumps.has(schedule.pump)) {
+            // Try to get pump details from master list, or use schedule data as fallback
+            const masterPump = pumps?.find(p => p._id === schedule.pump);
+            const pumpNo = masterPump ? 
+              (masterPump as unknown as { pump_no?: string; identifier?: string }).pump_no || 
+              (masterPump as unknown as { pump_no?: string; identifier?: string }).identifier || 
+              `P-${schedule.pump}` :
+              `P-${schedule.pump}`;
+            const mappedType = (schedule.pump_type || "line").toLowerCase() === "boom" ? "BP" : "LP";
+            
+            schedulePumps.set(schedule.pump, {
+              pumpNo,
+              pumpId: schedule.pump,
+              pumpType: mappedType,
+            });
+          }
+        }
+      });
+
+      // Process TMs from schedule data first (these are the actual TMs used)
+      scheduleTMs.forEach((tmData) => {
+        truckMap.set(tmData.tmId, {
+          tmNo: tmData.tmNo,
+          tmType: "TM",
+          timeSlots: timeSlots.map((slot) => ({ ...slot })),
+          scheduleSpecificTimeSlots: {},
+          totalFreeHours: 24,
+          idlePercentage: 100,
+          schedules: [],
+        });
+      });
+
+      // Process Pumps from schedule data first (these are the actual pumps used)
+      schedulePumps.forEach((pumpData) => {
+        truckMap.set(pumpData.pumpId, {
+          tmNo: pumpData.pumpNo,
+          tmType: pumpData.pumpType,
+          timeSlots: timeSlots.map((slot) => ({ ...slot })),
+          scheduleSpecificTimeSlots: {},
+          totalFreeHours: 24,
+          idlePercentage: 100,
+          schedules: [],
+        });
+      });
+
+      // Process all TMs from master list (for unused TMs when no filters)
+      if (tms && !hasFilters) {
         tms.forEach((tm) => {
           // If a plant is selected, include only TMs from that plant
           if (selectedPlantId && tm.plant_id && tm.plant_id !== selectedPlantId) return;
           const anyTm = tm as unknown as { tm_no?: string; identifier?: string; type?: string; _id: string };
           const tmNo = anyTm.tm_no || anyTm.identifier || `TM-${anyTm._id}`;
-          truckMap.set(anyTm._id, {
-            tmNo,
-            tmType: (anyTm.type as string) || "TM",
-            timeSlots: timeSlots,
-            scheduleSpecificTimeSlots: {},
-            totalFreeHours: 24,
-            idlePercentage: 100,
-            schedules: [],
-          });
+
+          // Only add if not already in map from schedule data
+          if (!truckMap.has(anyTm._id)) {
+            truckMap.set(anyTm._id, {
+              tmNo,
+              tmType: (anyTm.type as string) || "TM",
+              timeSlots: timeSlots.map((slot) => ({ ...slot })),
+              scheduleSpecificTimeSlots: {},
+              totalFreeHours: 24,
+              idlePercentage: 100,
+              schedules: [],
+            });
+          }
         });
       }
 
-      // Process all Pumps
-      if (pumps) {
+      // Process all Pumps from master list (for unused pumps when no filters)
+      if (pumps && !hasFilters) {
         pumps.forEach((pump) => {
           // If a plant is selected, include only Pumps from that plant
           if (selectedPlantId && pump.plant_id && pump.plant_id !== selectedPlantId) return;
           const anyPump = pump as unknown as { pump_no?: string; identifier?: string; type?: string; _id: string };
           const pumpNo = anyPump.pump_no || anyPump.identifier || `P-${anyPump._id}`;
           const mappedType = (anyPump.type || "line").toLowerCase() === "boom" ? "BP" : "LP";
-          truckMap.set(anyPump._id, {
-            tmNo: pumpNo,
-            tmType: mappedType,
-            timeSlots: timeSlots,
-            scheduleSpecificTimeSlots: {},
-            totalFreeHours: 24,
-            idlePercentage: 100,
-            schedules: [],
-          });
+
+          // Only add if not already in map from schedule data
+          if (!truckMap.has(anyPump._id)) {
+            truckMap.set(anyPump._id, {
+              tmNo: pumpNo,
+              tmType: mappedType,
+              timeSlots: timeSlots.map((slot) => ({ ...slot })),
+              scheduleSpecificTimeSlots: {},
+              totalFreeHours: 24,
+              idlePercentage: 100,
+              schedules: [],
+            });
+          }
         });
       }
 
       // Now process scheduled data to update time slots
       data.forEach((schedule) => {
-        const trips = schedule.input_params?.is_burst_model ? schedule.output_table : schedule.output_table;
+        const trips = schedule.input_params?.is_burst_model
+          ? schedule.burst_table || schedule.output_table
+          : schedule.output_table;
         if (trips && trips.length > 0) {
-          // Calculate the overall schedule time range from all trips
-          const allStartTimes = trips.map((trip) => new Date(trip.plant_start));
-          const allEndTimes = trips.map((trip) => new Date(trip.return));
-          const overallStartTime = new Date(Math.min(...allStartTimes.map((d) => d.getTime())));
-          const overallEndTime = new Date(Math.max(...allEndTimes.map((d) => d.getTime())));
-          const startHour = overallStartTime.getHours() + overallStartTime.getMinutes() / 60;
-          const endHour = overallEndTime.getHours() + overallEndTime.getMinutes() / 60;
-
-          // Group trips by tm_id to avoid duplicate processing
+          // Group trips by tm_id
           const tripsByTm = new Map<string, typeof trips>();
           trips.forEach((trip) => {
             if (!tripsByTm.has(trip.tm_id)) {
@@ -364,146 +443,150 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
             tripsByTm.get(trip.tm_id)!.push(trip);
           });
 
-          // First, process trucks that have trips
+          // Process each TM's trips
           tripsByTm.forEach((tmTrips, tmId) => {
-            const firstTrip = tmTrips[0];
-            const tmNo = firstTrip.tm_no || `TM-${firstTrip.tm_id}`;
-            let truck = truckMap.get(tmId);
+            const truck = truckMap.get(tmId);
+            if (!truck) return;
 
-            // If TM not present from master list, create from schedule data
-            if (!truck) {
-              // When any filter is active, do not create trucks from schedule data
-              if (hasFilters) {
-                return;
-              }
-              const created: TMSchedule = {
-                tmNo,
-                tmType: "TM",
-                timeSlots: timeSlots,
-                scheduleSpecificTimeSlots: {},
-                totalFreeHours: 24,
-                idlePercentage: 100,
-                schedules: [],
-              };
-              truckMap.set(tmId, created);
-              truck = created;
+            // Sort trips by trip_no to get proper sequence
+            tmTrips.sort((a, b) => a.trip_no - b.trip_no);
+
+            // Calculate actual working time for this TM
+            const firstTrip = tmTrips[0];
+            const lastTrip = tmTrips[tmTrips.length - 1];
+
+            // Use plant_buffer as start time and return as end time to match schedule view
+            const startTime = new Date(firstTrip.plant_buffer || firstTrip.plant_load || firstTrip.plant_start);
+            const endTime = new Date(lastTrip.return);
+
+            const startHour = startTime.getHours() + startTime.getMinutes() / 60;
+            const endHour = endTime.getHours() + endTime.getMinutes() / 60;
+
+            if (schedule.schedule_no !== undefined && !(schedule.schedule_no in truck.scheduleSpecificTimeSlots)) {
+              truck.scheduleSpecificTimeSlots[schedule.schedule_no] = timeSlots.map((slot) => ({
+                ...slot,
+                tasks: [],
+              }));
             }
 
-            if (truck) {
-              if (schedule.schedule_no !== undefined && !(schedule.schedule_no in truck.scheduleSpecificTimeSlots)) {
-                truck.scheduleSpecificTimeSlots[schedule.schedule_no] = timeSlots.map((slot) => ({
-                  ...slot,
-                  tasks: [],
-                }));
-              }
-
-              // Update time slots using accurate overlap vs company window
-              truck.timeSlots.forEach((slot, i) => {
-                const overlap = computeOverlapHours(startHour, endHour, slot.start, slot.end);
-                if (overlap > 0) {
-                  slot.freeHours = Math.max(0, slot.freeHours - overlap);
+            // Update time slots using actual trip times
+            truck.timeSlots.forEach((slot, i) => {
+              const overlap = computeOverlapHours(startHour, endHour, slot.start, slot.end);
+              if (overlap > 0) {
+                slot.freeHours = Math.max(0, slot.freeHours - overlap);
+                if (schedule.schedule_no && truck.scheduleSpecificTimeSlots[schedule.schedule_no]) {
                   truck.scheduleSpecificTimeSlots[schedule.schedule_no][i].freeHours = slot.freeHours;
                   truck.scheduleSpecificTimeSlots[schedule.schedule_no][i].tasks.push({ startHour, endHour });
                 }
-              });
-
-              // Add schedule only once per TM per schedule
-              truck.schedules.push({
-                customer: schedule.client_name,
-                project: schedule.project_name || "-",
-                plant: schedule.mother_plant_name || "-",
-                startTime: formatTimeByPreference(overallStartTime),
-                endTime: formatTimeByPreference(overallEndTime),
-                duration: Math.max(0, endHour - startHour),
-                scheduleId: schedule._id,
-                scheduleNo: schedule.schedule_no,
-              });
-              truckMap.set(tmId, truck);
-            }
-          });
-
-          // Now, assign the same schedule to ALL trucks that have engagement in the same time slots
-          // This ensures that trucks with the same engagement pattern get the same schedule details
-          truckMap.forEach((truck, truckId) => {
-            // Check if this truck has engagement in the same time slots as the schedule
-            const hasEngagement = truck.timeSlots.some((slot) => {
-              const overlap = computeOverlapHours(startHour, endHour, slot.start, slot.end);
-              return overlap > 0 && slot.freeHours < 4; // Has some engagement
+              }
             });
 
-            if (hasEngagement && !truck.schedules.some(s => s.scheduleId === schedule._id)) {
-              // Add the schedule to this truck as well
+            // Add schedule only once per TM per schedule
+            if (!truck.schedules.some((s) => s.scheduleId === schedule._id)) {
               truck.schedules.push({
                 customer: schedule.client_name,
                 project: schedule.project_name || "-",
                 plant: schedule.mother_plant_name || "-",
-                startTime: formatTimeByPreference(overallStartTime),
-                endTime: formatTimeByPreference(overallEndTime),
+                startTime: formatTimeByPreference(startTime),
+                endTime: formatTimeByPreference(endTime),
                 duration: Math.max(0, endHour - startHour),
                 scheduleId: schedule._id,
                 scheduleNo: schedule.schedule_no,
               });
-              truckMap.set(truckId, truck);
             }
           });
+        }
 
-          // let truck = truckMap.get(schedule.pump);
-          // const tmType = (schedule.pump_type || "line").toLowerCase() === "boom" ? "BP" : "LP";
-          // const tmNo = truckMap.get(schedule.pump)?.tmNo || `${tmType}-${schedule.pump}`;
+        // Process pump engagement for this schedule
+        if (schedule.pump && schedule.input_params) {
+          const pumpId = schedule.pump;
+          const pump = truckMap.get(pumpId);
+          
+          if (pump) {
+            // Calculate pump engagement period
+            const pumpStartTime = new Date(schedule.input_params.pump_start);
+            const pumpOnwardTime = schedule.input_params.pump_onward_time || 0;
+            const pumpFixingTime = schedule.input_params.pump_fixing_time || 0;
+            const pumpRemovalTime = schedule.input_params.pump_removal_time || 0;
+            
+            // Calculate actual pumping duration from schedule data (same as schedule view page)
+            let pumpingHours = 0;
+            if (schedule.output_table && schedule.output_table.length > 0) {
+              // Get all pump start and end times from the output table
+              const pumpStartTimes = schedule.output_table
+                .map((trip) => trip.pump_start)
+                .filter(Boolean)
+                .map((time) => new Date(time));
 
-          // // If TM not present from master list, create from schedule data
-          // if (!truck) {
-          //   // When a plant filter is active, do not create trucks from schedule data
-          //   if (selectedPlantId) {
-          //     return;
-          //   }
-          //   const created: TMSchedule = {
-          //     tmNo,
-          //     tmType: tmType,
-          //     timeSlots: timeSlots,
-          //     scheduleSpecificTimeSlots: {},
-          //     totalFreeHours: 24,
-          //     idlePercentage: 100,
-          //     schedules: [],
-          //   };
-          //   truckMap.set(schedule.pump, created);
-          //   truck = created;
-          // }
+              const pumpEndTimes = schedule.output_table
+                .map((trip) => trip.unloading_time)
+                .filter(Boolean)
+                .map((time) => new Date(time));
 
-          // if (truck) {
-          //   if (schedule.schedule_no !== undefined && !(schedule.schedule_no in truck.scheduleSpecificTimeSlots)) {
-          //     truck.scheduleSpecificTimeSlots[schedule.schedule_no] = timeSlots.map((slot) => ({
-          //       ...slot,
-          //       tasks: [],
-          //     }));
-          //   }
-          //   const startTime = new Date(trips[0]?.plant_start);
-          //   const endTime = new Date(trips[trips.length - 1]?.return);
-          //   const startHour = startTime.getHours() + startTime.getMinutes() / 60;
-          //   const endHour = endTime.getHours() + endTime.getMinutes() / 60;
+              if (pumpStartTimes.length > 0 && pumpEndTimes.length > 0) {
+                // Find the first pump start time and last pump end time
+                const firstPumpStart = new Date(Math.min(...pumpStartTimes.map((d) => d.getTime())));
+                const lastPumpEnd = new Date(Math.max(...pumpEndTimes.map((d) => d.getTime())));
 
-          //   // Update time slots using accurate overlap vs company window
-          //   truck.timeSlots.forEach((slot, i) => {
-          //     const overlap = computeOverlapHours(startHour, endHour, slot.start, slot.end);
-          //     if (overlap > 0) {
-          //       slot.freeHours = Math.max(0, slot.freeHours - overlap);
-          //       truck.scheduleSpecificTimeSlots[schedule.schedule_no][i].freeHours = slot.freeHours;
-          //       truck.scheduleSpecificTimeSlots[schedule.schedule_no][i].tasks.push({ startHour, endHour });
-          //     }
-          //   });
+                // Calculate total pumping duration in hours
+                const pumpingDurationMs = lastPumpEnd.getTime() - firstPumpStart.getTime();
+                pumpingHours = pumpingDurationMs / (1000 * 60 * 60); // Convert to hours
+              }
+            }
+            
+            // Fallback to theoretical calculation if no schedule data
+            if (pumpingHours === 0) {
+              pumpingHours = schedule.input_params.pumping_speed > 0 
+                ? schedule.input_params.quantity / schedule.input_params.pumping_speed 
+                : 0;
+            }
+            
+            const pumpingMinutes = pumpingHours * 60;
+            
+            // Calculate pump start from plant (pump_start - onward_time - fixing_time)
+            const pumpStartFromPlant = new Date(pumpStartTime);
+            pumpStartFromPlant.setMinutes(pumpStartFromPlant.getMinutes() - pumpOnwardTime - pumpFixingTime);
+            
+            // Calculate pump end time (pump_start + pumping_time + removal_time)
+            const pumpEndTime = new Date(pumpStartTime);
+            pumpEndTime.setMinutes(pumpEndTime.getMinutes() + pumpingMinutes + pumpRemovalTime);
+            
+            const pumpStartHour = pumpStartFromPlant.getHours() + pumpStartFromPlant.getMinutes() / 60;
+            const pumpEndHour = pumpEndTime.getHours() + pumpEndTime.getMinutes() / 60;
 
-          //   // Add schedule
-          //   truck.schedules.push({
-          //     customer: schedule.client_name,
-          //     project: schedule.project_name || "-",
-          //     plant: schedule.mother_plant_name || "-",
-          //     startTime: formatTimeByPreference(trips[0]?.plant_start),
-          //     endTime: formatTimeByPreference(trips[trips.length - 1]?.return),
-          //     duration: Math.max(0, endHour - startHour),
-          //     scheduleId: schedule._id,
-          //     scheduleNo: schedule.schedule_no,
-          //   });
-          // }
+            if (schedule.schedule_no !== undefined && !(schedule.schedule_no in pump.scheduleSpecificTimeSlots)) {
+              pump.scheduleSpecificTimeSlots[schedule.schedule_no] = timeSlots.map((slot) => ({
+                ...slot,
+                tasks: [],
+              }));
+            }
+
+            // Update pump time slots
+            pump.timeSlots.forEach((slot, i) => {
+              const overlap = computeOverlapHours(pumpStartHour, pumpEndHour, slot.start, slot.end);
+              if (overlap > 0) {
+                slot.freeHours = Math.max(0, slot.freeHours - overlap);
+                if (schedule.schedule_no && pump.scheduleSpecificTimeSlots[schedule.schedule_no]) {
+                  pump.scheduleSpecificTimeSlots[schedule.schedule_no][i].freeHours = slot.freeHours;
+                  pump.scheduleSpecificTimeSlots[schedule.schedule_no][i].tasks.push({ startHour: pumpStartHour, endHour: pumpEndHour });
+                }
+              }
+            });
+
+            // Add schedule only once per pump per schedule
+            if (!pump.schedules.some((s) => s.scheduleId === schedule._id)) {
+              pump.schedules.push({
+                customer: schedule.client_name,
+                project: schedule.project_name || "-",
+                plant: schedule.mother_plant_name || "-",
+                startTime: formatTimeByPreference(pumpStartFromPlant),
+                endTime: formatTimeByPreference(pumpEndTime),
+                duration: Math.max(0, pumpEndHour - pumpStartHour),
+                scheduleId: schedule._id,
+                scheduleNo: schedule.schedule_no,
+              });
+            }
+          }
         }
       });
 
@@ -515,7 +598,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
 
       // If filters are applied, only return trucks that have engagement (schedules)
       if (hasFilters) {
-        return Array.from(truckMap.values()).filter(truck => truck.schedules.length > 0);
+        return Array.from(truckMap.values()).filter((truck) => truck.schedules.length > 0);
       }
 
       return Array.from(truckMap.values());
@@ -670,12 +753,8 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
               // Get the first overlapping schedule for time range
               const firstSchedule = overlappingSchedules[0];
               const timeRange = firstSchedule ? formatSlotTimeRange(slot, firstSchedule) : "";
-              
-              row.push(
-                timeRange,
-                customerNames || "-",
-                projectNames || "-"
-              );
+
+              row.push(timeRange, customerNames || "-", projectNames || "-");
             });
             row.push(
               formatHoursMinutes(24 - tm.totalFreeHours) as unknown as number,
@@ -725,7 +804,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
       return (
         <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
           <div className="p-8 text-center">
-            <p className="text-gray-500 dark:text-gray-400">Loading truck data...</p>
+            <p className="text-gray-700 text-medium dark:text-gray-200">Loading truck data...</p>
           </div>
         </div>
       );
@@ -770,135 +849,133 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                   <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                     {/* Slot Numbers Row */}
                     <tr className="border-b border-gray-100 dark:border-white/[0.05]">
-                      <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                         #
                       </th>
-                      <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                         #
                       </th>
-                      <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                         #
                       </th>
                       {buildSlots().map((slot, i) => (
                         <th
                           colSpan={isProjectWise ? 3 : 1}
                           key={i + "-SlotNumber"}
-                          className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r"
+                          className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]"
                         >
                           {i + 1}
                         </th>
                       ))}
-                      <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                         #
                       </th>
-                      <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                         #
                       </th>
-                      <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400">
-                        #
-                      </th>
+                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200">#</th>
                     </tr>
                     {isProjectWise ? (
                       <tr className="border-b border-gray-100 dark:border-white/[0.05]">
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                           SL. NO
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] whitespace-nowrap">
                           TM No.
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                           TM/LP/BP
                         </th>
                         {buildSlots().map((slot, i) => (
                           <th
                             colSpan={3}
                             key={i + "-ProjectWise"}
-                            className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r"
+                            className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]"
                           >
                             {slot.label}
                           </th>
                         ))}
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                           TOTAL USED HOURS
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                           TOTAL UNUSED HOURS
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200">
                           USED %
                         </th>
                       </tr>
                     ) : (
                       <tr>
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                           SL. NO
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
-                          TM No.
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
+                          Truck No.
                         </th>
 
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                           TM/LP/BP
                         </th>
                         {buildSlots().map((slot, i) => (
                           <th
                             key={i + "-TruckWise"}
-                            className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r"
+                            className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]"
                           >
                             {slot.label}
                           </th>
                         ))}
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                           TOTAL USED HOURS
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                           TOTAL UNUSED HOURS
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200">
                           USED %
                         </th>
                       </tr>
                     )}
                     {isProjectWise && (
                       <tr>
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                           #
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                           #
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                           #
                         </th>
                         {buildSlots().map((slot, i) => (
                           <React.Fragment key={i + "-ProjectWiseSubHeaders"}>
                             <th
                               key={i + "-TMEngagedHours"}
-                              className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r"
+                              className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]"
                             >
-                              TM Engaged Hours
+                              Engaged Hours
                             </th>
                             <th
                               key={i + "-CustomerName"}
-                              className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r"
+                              className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]"
                             >
                               Customer Name
                             </th>
                             <th
                               key={i + "-ProjectName"}
-                              className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r"
+                              className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]"
                             >
                               Project Name
                             </th>
                           </React.Fragment>
                         ))}
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                           #
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400 border-r">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
                           #
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-500 text-center text-xs dark:text-gray-400">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200">
                           #
                         </th>
                       </tr>
@@ -937,13 +1014,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                               const currentRowIndex = globalRowIndex++;
                               return (
                                 <TableRow key={`${tm.tmNo}-ProjectWise-${rowIndex}`}>
-                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                     {rowIndex === 0 ? currentRowIndex : ""}
                                   </TableCell>
-                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05] whitespace-nowrap">
                                     {rowIndex === 0 ? tm.tmNo : ""}
                                   </TableCell>
-                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                     {rowIndex === 0 ? tm.tmType : ""}
                                   </TableCell>
                                   {tm.timeSlots.map((slot, slotIndex) => {
@@ -964,22 +1041,22 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
 
                                     return (
                                       <React.Fragment key={slotIndex + "-ProjectWiseSlot"}>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                           {isFirstRow ? formatSlotTimeRange(slot, schedule) : ""}
                                         </TableCell>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                           {schedule?.customer || "-"}
                                         </TableCell>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                           {schedule?.project || "-"}
                                         </TableCell>
                                       </React.Fragment>
                                     );
                                   })}
-                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                     {rowIndex === 0 ? formatHoursMinutes(24 - tm.totalFreeHours) : ""}
                                   </TableCell>
-                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                     {rowIndex === 0 ? formatHoursMinutes(tm.totalFreeHours) : ""}
                                   </TableCell>
                                   <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90">
@@ -993,27 +1070,27 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                             const currentRowIndex = globalRowIndex++;
                             return (
                               <TableRow key={tm.tmNo + "-TruckWise"}>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {currentRowIndex}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {tm.tmNo}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {tm.tmType}
                                 </TableCell>
                                 {tm.timeSlots.map((slot, slotIndex) => (
                                   <TableCell
                                     key={slotIndex}
-                                    className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r"
+                                    className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]"
                                   >
                                     {formatHoursMinutes(Math.max(0, 4 - slot.freeHours))}
                                   </TableCell>
                                 ))}
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {formatHoursMinutes(24 - tm.totalFreeHours)}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {formatHoursMinutes(tm.totalFreeHours)}
                                 </TableCell>
                                 <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90">
@@ -1027,26 +1104,26 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
 
                     {/* TMs Total Row */}
                     <TableRow className="bg-gray-50 dark:bg-gray-800 font-semibold">
-                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                         TOTAL
                       </TableCell>
-                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                         TMs
                       </TableCell>
-                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                         {null}
                       </TableCell>
                       {isProjectWise
                         ? // Project-wise totals: for each slot, show only the used hours (skip customer and project columns)
                           totals.tms.timeSlotTotals.map((total, index) => (
                             <React.Fragment key={index + "-ProjectWiseTotal"}>
-                              <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                              <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                 {formatHoursMinutes(total)}
                               </TableCell>
-                              <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                              <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                 {null}
                               </TableCell>
-                              <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                              <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                 {null}
                               </TableCell>
                             </React.Fragment>
@@ -1054,18 +1131,18 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                         : totals.tms.timeSlotTotals.map((total, index) => (
                             <TableCell
                               key={index}
-                              className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r"
+                              className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]"
                             >
                               {formatHoursMinutes(total)}
                             </TableCell>
                           ))}
-                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                         {null}
                       </TableCell>
-                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                         {null}
                       </TableCell>
-                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                         {null}
                       </TableCell>
                       <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90">
@@ -1105,13 +1182,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                               const currentRowIndex = globalRowIndex++;
                               return (
                                 <TableRow key={`${tm.tmNo}-ProjectWise-${rowIndex}`}>
-                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                     {rowIndex === 0 ? currentRowIndex : ""}
                                   </TableCell>
-                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05] whitespace-nowrap">
                                     {rowIndex === 0 ? tm.tmNo : ""}
                                   </TableCell>
-                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                     {rowIndex === 0 ? tm.tmType : ""}
                                   </TableCell>
                                   {tm.timeSlots.map((slot, slotIndex) => {
@@ -1132,22 +1209,22 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
 
                                     return (
                                       <React.Fragment key={slotIndex + "-ProjectWiseSlot"}>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                           {isFirstRow ? formatSlotTimeRange(slot, schedule) : ""}
                                         </TableCell>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                           {schedule?.customer || "-"}
                                         </TableCell>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                           {schedule?.project || "-"}
                                         </TableCell>
                                       </React.Fragment>
                                     );
                                   })}
-                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                     {rowIndex === 0 ? formatHoursMinutes(24 - tm.totalFreeHours) : ""}
                                   </TableCell>
-                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                     {rowIndex === 0 ? formatHoursMinutes(tm.totalFreeHours) : ""}
                                   </TableCell>
                                   <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90">
@@ -1161,27 +1238,27 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                             const currentRowIndex = globalRowIndex++;
                             return (
                               <TableRow key={tm.tmNo}>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {currentRowIndex}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {tm.tmNo}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {tm.tmType}
                                 </TableCell>
                                 {tm.timeSlots.map((slot, slotIndex) => (
                                   <TableCell
                                     key={slotIndex}
-                                    className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r"
+                                    className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]"
                                   >
                                     {formatHoursMinutes(Math.max(0, 4 - slot.freeHours))}
                                   </TableCell>
                                 ))}
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {formatHoursMinutes(24 - tm.totalFreeHours)}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {formatHoursMinutes(tm.totalFreeHours)}
                                 </TableCell>
                                 <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90">
@@ -1196,13 +1273,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                     {/* Line Pumps Total Row */}
                     {allTrucks.filter((truck) => truck.tmType === "LP").length > 0 && (
                       <TableRow className="bg-gray-50 dark:bg-gray-800 font-semibold">
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                           TOTAL
                         </TableCell>
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                           LPs
                         </TableCell>
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                           {null}
                         </TableCell>
 
@@ -1210,13 +1287,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           ? // Project-wise totals: for each slot, show only the used hours (skip customer and project columns)
                             totals.linePumps.timeSlotTotals.map((total, index) => (
                               <React.Fragment key={index + "-ProjectWiseTotal"}>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {formatHoursMinutes(total)}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {null}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {null}
                                 </TableCell>
                               </React.Fragment>
@@ -1224,15 +1301,15 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           : totals.linePumps.timeSlotTotals.map((total, index) => (
                               <TableCell
                                 key={index}
-                                className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r"
+                                className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]"
                               >
                                 {formatHoursMinutes(total)}
                               </TableCell>
                             ))}
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                           {null}
                         </TableCell>
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                           {null}
                         </TableCell>
                         <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90">
@@ -1273,13 +1350,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                               const currentRowIndex = globalRowIndex++;
                               return (
                                 <TableRow key={`${tm.tmNo}-ProjectWise-${rowIndex}`}>
-                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                     {rowIndex === 0 ? currentRowIndex : ""}
                                   </TableCell>
-                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05] whitespace-nowrap">
                                     {rowIndex === 0 ? tm.tmNo : ""}
                                   </TableCell>
-                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                     {rowIndex === 0 ? tm.tmType : ""}
                                   </TableCell>
                                   {tm.timeSlots.map((slot, slotIndex) => {
@@ -1300,22 +1377,22 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
 
                                     return (
                                       <React.Fragment key={slotIndex + "-ProjectWiseSlot"}>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                           {isFirstRow ? formatSlotTimeRange(slot, schedule) : ""}
                                         </TableCell>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                           {schedule?.customer || "-"}
                                         </TableCell>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                           {schedule?.project || "-"}
                                         </TableCell>
                                       </React.Fragment>
                                     );
                                   })}
-                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                     {rowIndex === 0 ? formatHoursMinutes(24 - tm.totalFreeHours) : ""}
                                   </TableCell>
-                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                  <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                     {rowIndex === 0 ? formatHoursMinutes(tm.totalFreeHours) : ""}
                                   </TableCell>
                                   <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90">
@@ -1329,27 +1406,27 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                             const currentRowIndex = globalRowIndex++;
                             return (
                               <TableRow key={tm.tmNo}>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {currentRowIndex}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {tm.tmNo}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {tm.tmType}
                                 </TableCell>
                                 {tm.timeSlots.map((slot, slotIndex) => (
                                   <TableCell
                                     key={slotIndex}
-                                    className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r"
+                                    className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]"
                                   >
                                     {formatHoursMinutes(Math.max(0, 4 - slot.freeHours))}
                                   </TableCell>
                                 ))}
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {formatHoursMinutes(24 - tm.totalFreeHours)}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {formatHoursMinutes(tm.totalFreeHours)}
                                 </TableCell>
                                 <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90">
@@ -1364,13 +1441,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                     {/* Boom Pumps Total Row */}
                     {allTrucks.filter((truck) => truck.tmType === "BP").length > 0 && (
                       <TableRow className="bg-gray-50 dark:bg-gray-800 font-semibold">
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                           TOTAL
                         </TableCell>
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                           BPs
                         </TableCell>
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                           {null}
                         </TableCell>
 
@@ -1378,13 +1455,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           ? // Project-wise totals: for each slot, show only the used hours (skip customer and project columns)
                             totals.boomPumps.timeSlotTotals.map((total, index) => (
                               <React.Fragment key={index + "-ProjectWiseTotal"}>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {formatHoursMinutes(total)}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {null}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                                   {null}
                                 </TableCell>
                               </React.Fragment>
@@ -1392,15 +1469,15 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           : totals.boomPumps.timeSlotTotals.map((total, index) => (
                               <TableCell
                                 key={index}
-                                className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r"
+                                className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]"
                               >
                                 {formatHoursMinutes(total)}
                               </TableCell>
                             ))}
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                           {null}
                         </TableCell>
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r">
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                           {null}
                         </TableCell>
                         <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90">
