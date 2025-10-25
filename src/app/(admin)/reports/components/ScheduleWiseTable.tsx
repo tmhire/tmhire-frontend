@@ -1,8 +1,10 @@
 "use client";
 
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import { forwardRef, useImperativeHandle } from "react";
+import { forwardRef, useImperativeHandle, useState } from "react";
 import { formatTimeByPreference } from "@/lib/utils";
+import { useProfile } from "@/hooks/useProfile";
+import Select from "@/components/form/Select";
 
 type Schedule = {
   _id: string;
@@ -76,6 +78,8 @@ type ScheduleWiseTableProps = {
 
 const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWiseTableProps>(
   ({ data, selectedDate }: ScheduleWiseTableProps, exportRef) => {
+    const [statusFilter, setStatusFilter] = useState<"all" | "generated" | "cancelled">("generated");
+    const { profile } = useProfile();
 
     const formatDate = (dateString: string) => {
       const date = new Date(dateString);
@@ -85,6 +89,30 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
     const getPumpSupplyType = (type: string) => {
       return type === "supply" ? "S" : "P";
     };
+
+    const isScheduleCancelled = (schedule: Schedule): boolean => {
+      return (
+        schedule.status === "cancelled" ||
+        !!schedule.cancelation?.canceled_by ||
+        !!schedule.cancelled_by ||
+        !!schedule.cancelation?.reason ||
+        !!schedule.cancellation_reason
+      );
+    };
+
+    const filteredData = data.filter((schedule) => {
+      switch (statusFilter) {
+        case "cancelled":
+          return isScheduleCancelled(schedule);
+        case "generated":
+          return !isScheduleCancelled(schedule);
+        case "all":
+        default:
+          return true;
+      }
+    });
+
+    const showCancellationColumns = statusFilter === "cancelled" || statusFilter === "all";
 
     const handleRowClick = (schedule: Schedule) => {
       const route =
@@ -98,7 +126,7 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
     useImperativeHandle(exportRef, () => ({
       getExportSheets: () => {
         const rows: (string | number)[][] = [];
-        rows.push([
+        const headers = [
           "SL. NO",
           "DATE",
           "SCH. NO (Motherplant-Date-Number)",
@@ -112,11 +140,15 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
           "TOTAL TM DEPLOYED",
           "PUMP START-END TIME",
           "TM START-END TIME",
-          "SCH CANCELLED BY",
-          "REASON FOR CANCELLATION",
-        ]);
+        ];
 
-        data.forEach((schedule, index) => {
+        if (showCancellationColumns) {
+          headers.push("SCH CANCELLED BY", "REASON FOR CANCELLATION");
+        }
+
+        rows.push(headers);
+
+        filteredData.forEach((schedule, index) => {
           const calculatePumpEnd = (s: Schedule): string | null => {
             const { input_params } = s;
             if (!input_params?.pump_start) return null;
@@ -152,7 +184,7 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
           const canceledBy = (schedule.cancelation?.canceled_by || schedule.cancelled_by || "-") as string;
           const reason = schedule.cancelation?.reason || schedule.cancellation_reason || "-";
 
-          rows.push([
+          const rowData: (string | number)[] = [
             index + 1,
             formatDate(schedule.input_params.schedule_date),
             schedule.schedule_no || "-",
@@ -166,13 +198,17 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
             totalTmDeployed,
             pumpStartEnd,
             tmStartEnd,
-            typeof canceledBy === "string" ? canceledBy.toUpperCase() : canceledBy,
-            reason,
-          ]);
+          ];
+
+          if (showCancellationColumns) {
+            rowData.push(typeof canceledBy === "string" ? canceledBy.toUpperCase() : canceledBy, reason);
+          }
+
+          rows.push(rowData);
         });
 
         // Add summary row to export
-        const exportSummary = data.reduce(
+        const exportSummary = filteredData.reduce(
           (acc, schedule) => {
             acc.totalQuantity += schedule.input_params.quantity;
             acc.totalPumpAllocated += schedule.input_params.pump_start ? 1 : 0;
@@ -190,7 +226,7 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
           }
         );
 
-        rows.push([
+        const summaryRow: (string | number)[] = [
           "TOTAL",
           "-",
           "-",
@@ -204,9 +240,13 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
           exportSummary.totalTmDeployed,
           "-",
           "-",
-          "-",
-          "-",
-        ]);
+        ];
+
+        if (showCancellationColumns) {
+          summaryRow.push("-", "-");
+        }
+
+        rows.push(summaryRow);
 
         return [
           {
@@ -222,6 +262,37 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
         <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
           <div className="p-8 text-center">
             <p className="text-gray-500 dark:text-gray-400">No schedules found for the selected date or plant</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (filteredData.length === 0) {
+      return (
+        <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Schedule Wise Report - {formatDate(selectedDate)}
+              </h3>
+              <div className="w-40">
+                <h4>Schedule Status</h4>
+                <Select
+                  options={[
+                    { value: "generated", label: "Generated" },
+                    { value: "cancelled", label: "Cancelled" },
+                    { value: "all", label: "All" },
+                  ]}
+                  defaultValue={statusFilter}
+                  onChange={(value: string) => setStatusFilter(value as "all" | "generated" | "cancelled")}
+                />
+              </div>
+            </div>
+            <div className="p-8 text-center">
+              <p className="text-gray-500 dark:text-gray-400">
+                No {statusFilter} schedules found for the selected date or plant
+              </p>
+            </div>
           </div>
         </div>
       );
@@ -252,7 +323,7 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
 
     // Calculate summary totals
     const calculateSummary = () => {
-      const totals = data.reduce(
+      const totals = filteredData.reduce(
         (acc, schedule) => {
           acc.totalQuantity += schedule.input_params.quantity;
           acc.totalPumpAllocated += schedule.input_params.pump_start ? 1 : 0;
@@ -277,9 +348,25 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
     return (
       <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Schedule Wise Report - {formatDate(selectedDate)}
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+              Schedule Wise Report - {formatDate(selectedDate)}
+            </h3>
+            <div className="flex flex-row items-center justify-center gap-4">
+              <h4 className="text-sm text-gray-600 dark:text-gray-200 whitespace-nowrap">Schedule Status</h4>
+
+              <Select
+                options={[
+                  { value: "generated", label: "Generated" },
+                  { value: "cancelled", label: "Cancelled" },
+                  { value: "all", label: "All" },
+                ]}
+                defaultValue={statusFilter}
+                onChange={(value: string) => setStatusFilter(value as "all" | "generated" | "cancelled")}
+                className="w-40"
+              />
+            </div>
+          </div>
 
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
             <div className="overflow-hidden">
@@ -365,22 +452,26 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
                     >
                       TM START-END TIME
                     </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
-                    >
-                      SCH CANCELLED BY
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
-                    >
-                      REASON FOR CANCELLATION
-                    </TableCell>
+                    {showCancellationColumns && (
+                      <>
+                        <TableCell
+                          isHeader
+                          className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                        >
+                          SCH CANCELLED BY
+                        </TableCell>
+                        <TableCell
+                          isHeader
+                          className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                        >
+                          REASON FOR CANCELLATION
+                        </TableCell>
+                      </>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                  {data.map((schedule, index) => (
+                  {filteredData.map((schedule, index) => (
                     <TableRow
                       key={schedule._id}
                       className="cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.05] transition-colors"
@@ -421,8 +512,13 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
                       </TableCell>
                       <TableCell className="px-3 py-4 text-start text-sm text-gray-800 dark:text-white/90">
                         {schedule.input_params.pump_start
-                          ? `${formatTimeByPreference(schedule.input_params.pump_start)} to ${
-                              calculatePumpEnd(schedule) ? formatTimeByPreference(calculatePumpEnd(schedule)!) : "-"
+                          ? `${formatTimeByPreference(
+                              schedule.input_params.pump_start,
+                              profile?.preferred_format
+                            )} to ${
+                              calculatePumpEnd(schedule)
+                                ? formatTimeByPreference(calculatePumpEnd(schedule)!, profile?.preferred_format)
+                                : "-"
                             }`
                           : "-"}
                       </TableCell>
@@ -430,17 +526,24 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
                         {(() => {
                           const { tmStart, tmEnd } = calculateTmTimes(schedule);
                           return tmStart && tmEnd
-                            ? `${formatTimeByPreference(tmStart)} to ${formatTimeByPreference(tmEnd)}`
+                            ? `${formatTimeByPreference(
+                                tmStart,
+                                profile?.preferred_format
+                              )} to ${formatTimeByPreference(tmEnd, profile?.preferred_format)}`
                             : "-";
                         })()}
                       </TableCell>
 
-                      <TableCell className="px-3 py-4 text-start text-sm text-gray-800 dark:text-white/90">
-                        {schedule.cancelation?.canceled_by || "-"}
-                      </TableCell>
-                      <TableCell className="px-3 py-4 text-start text-sm">
-                        {schedule.cancelation?.reason || "-"}
-                      </TableCell>
+                      {showCancellationColumns && (
+                        <>
+                          <TableCell className="px-3 py-4 text-start text-sm text-gray-800 dark:text-white/90">
+                            {schedule.cancelation?.canceled_by || schedule.cancelled_by || "-"}
+                          </TableCell>
+                          <TableCell className="px-3 py-4 text-start text-sm text-gray-800 dark:text-white/90">
+                            {schedule.cancelation?.reason || schedule.cancellation_reason || "-"}
+                          </TableCell>
+                        </>
+                      )}
                     </TableRow>
                   ))}
 
@@ -482,15 +585,16 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
                     <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
                       -
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
-                      -
-                    </TableCell>
-                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
-                      -
-                    </TableCell>
-                    <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
-                      -
-                    </TableCell>
+                    {showCancellationColumns && (
+                      <>
+                        <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                          -
+                        </TableCell>
+                        <TableCell className="px-3 py-4 text-start text-sm font-semibold text-gray-900 dark:text-white">
+                          -
+                        </TableCell>
+                      </>
+                    )}
                   </TableRow>
                 </TableBody>
               </Table>

@@ -606,43 +606,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
 
     const allTrucks = processAllTrucks();
 
-    // Get unique schedules from all trucks
-    const getUniqueSchedules = () => {
-      const scheduleMap = new Map<
-        string,
-        {
-          scheduleId: string;
-          scheduleNo: string;
-          customer: string;
-          project: string;
-          plant: string;
-          startTime: string;
-          endTime: string;
-          duration: number;
-        }
-      >();
 
-      allTrucks.forEach((truck) => {
-        truck.schedules.forEach((schedule) => {
-          if (!scheduleMap.has(schedule.scheduleId)) {
-            scheduleMap.set(schedule.scheduleId, {
-              scheduleId: schedule.scheduleId,
-              scheduleNo: schedule.scheduleNo,
-              customer: schedule.customer,
-              project: schedule.project,
-              plant: schedule.plant,
-              startTime: schedule.startTime,
-              endTime: schedule.endTime,
-              duration: schedule.duration,
-            });
-          }
-        });
-      });
-
-      return Array.from(scheduleMap.values()).sort((a, b) => a.scheduleNo.localeCompare(b.scheduleNo));
-    };
-
-    const uniqueSchedules = getUniqueSchedules();
 
     // Calculate totals by type
     const calculateTotals = () => {
@@ -675,60 +639,34 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
     // Build export sheets mirroring UI tables
     useImperativeHandle(exportRef, () => ({
       getExportSheets: () => {
-        // Build a single, side-by-side sheet with a shared TM No. column
-        const combinedRows: (string | number)[][] = [];
+        const rows: (string | number)[][] = [];
         const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [];
 
-        // Define column blocks
-        const mainCols = isProjectWise
+        // Define columns based on view type
+        const columns = isProjectWise
           ? [
+              "SL. NO",
+              "TM No.",
               "TM/LP/BP",
               ...buildSlots().flatMap(() => ["TM ENGAGED HOURS", "CUSTOMER NAME", "PROJECT"]),
               "TOTAL USED HOURS",
               "TOTAL UNUSED HOURS",
               "USED %",
             ]
-          : ["TM/LP/BP", ...buildSlots().map((s) => s.label), "TOTAL USED HOURS", "TOTAL UNUSED HOURS", "USED %"];
-        const scheduleBlockCols = ["CUSTOMER NAME", "PROJECT", "TM ENGAGED HOURS"];
+          : [
+              "SL. NO",
+              "Truck No.",
+              "TM/LP/BP",
+              ...buildSlots().map((s) => s.label),
+              "TOTAL USED HOURS",
+              "TOTAL UNUSED HOURS",
+              "USED %",
+            ];
 
-        // Header rows
-        const superHeaderRow: (string | number)[] = [];
-        const headerRow: (string | number)[] = [];
+        // Add header row
+        rows.push(columns);
 
-        // Shared first two columns (SL. NO and TM No.)
-        superHeaderRow.push("");
-        headerRow.push("SL. NO");
-        superHeaderRow.push("");
-        headerRow.push("TM No.");
-
-        // Main block super header and subheaders
-        superHeaderRow.push(`TRUCK WISE - ${formatDate(selectedDate)}`);
-        // Fill empties to match merged span
-        for (let i = 1; i < mainCols.length; i++) superHeaderRow.push("");
-        headerRow.push(...mainCols);
-
-        // Record merge for main block (row 0, columns 2..(1+mainCols.length)) after two fixed columns
-        merges.push({ s: { r: 0, c: 2 }, e: { r: 0, c: 1 + mainCols.length } });
-
-        // Detail blocks super headers and subheaders
-        let currentColStart = 2 + mainCols.length + 1; // after SL. NO (col0), TM No. (col1) and main block (col2..)
-        for (let scheduleIndex = 0; scheduleIndex < Math.min(6, uniqueSchedules.length); scheduleIndex++) {
-          const schedule = uniqueSchedules[scheduleIndex];
-          superHeaderRow.push(`SCHEDULE ${schedule.scheduleNo}`);
-          // Fill empties to match merged span
-          for (let i = 1; i < scheduleBlockCols.length; i++) superHeaderRow.push("");
-          headerRow.push(...scheduleBlockCols);
-          // Merge this super header across its 3 columns
-          const startC = currentColStart - 1; // zero-based index for first col in this block
-          const endC = startC + scheduleBlockCols.length - 1;
-          merges.push({ s: { r: 0, c: startC }, e: { r: 0, c: endC } });
-          currentColStart += scheduleBlockCols.length;
-        }
-
-        combinedRows.push(superHeaderRow);
-        combinedRows.push(headerRow);
-
-        // Data rows aligned by TM No
+        // Add data rows
         allTrucks.forEach((tm, idx) => {
           const row: (string | number)[] = [];
           row.push(idx + 1);
@@ -775,25 +713,49 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
             );
           }
 
-          // Detail blocks for schedules 1..6 (only for regular view)
-          if (!isProjectWise) {
-            for (let scheduleIndex = 0; scheduleIndex < Math.min(6, uniqueSchedules.length); scheduleIndex++) {
-              const uniqueSchedule = uniqueSchedules[scheduleIndex];
-              const tmSchedule = tm.schedules.find((s) => s.scheduleId === uniqueSchedule.scheduleId);
-              row.push(
-                tmSchedule?.customer || "-",
-                tmSchedule?.project || "-",
-                tmSchedule ? `${tmSchedule.startTime} - ${tmSchedule.endTime}` : "-"
-              );
-            }
-          }
-          combinedRows.push(row);
+          rows.push(row);
         });
+
+        // Add total rows for each type
+        const addTotalRow = (type: string, totals: { timeSlotTotals: number[] }) => {
+          const totalRow: (string | number)[] = [];
+          totalRow.push("TOTAL");
+          totalRow.push(type);
+          totalRow.push("");
+
+          if (isProjectWise) {
+            // Project-wise totals: for each slot, show only the used hours (skip customer and project columns)
+            totals.timeSlotTotals.forEach((total) => {
+              totalRow.push(formatHoursMinutes(total) as unknown as number);
+              totalRow.push(""); // Skip customer name
+              totalRow.push(""); // Skip project name
+            });
+            totalRow.push("", "", ""); // Skip total columns
+          } else {
+            totals.timeSlotTotals.forEach((total) => {
+              totalRow.push(formatHoursMinutes(total) as unknown as number);
+            });
+            totalRow.push("", "", ""); // Skip total columns
+          }
+
+          rows.push(totalRow);
+        };
+
+        // Add totals for each type if they exist
+        if (allTrucks.filter((truck) => truck.tmType === "TM").length > 0) {
+          addTotalRow("TMs", totals.tms);
+        }
+        if (allTrucks.filter((truck) => truck.tmType === "LP").length > 0) {
+          addTotalRow("LPs", totals.linePumps);
+        }
+        if (allTrucks.filter((truck) => truck.tmType === "BP").length > 0) {
+          addTotalRow("BPs", totals.boomPumps);
+        }
 
         return [
           {
-            name: `${isProjectWise ? "Project Wise" : "Truck Wise"} - ${formatDate(selectedDate)}`,
-            rows: combinedRows,
+            name: isProjectWise ? "Project Wise" : "Truck Wise",
+            rows,
             merges,
           },
         ];
