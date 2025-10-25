@@ -90,6 +90,8 @@ export default function ReportsContainer() {
 
   const [reportType, setReportType] = useState<"schedule-wise" | "truck-wise">("schedule-wise");
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [selectedToDate, setSelectedToDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [validDateRange, setValidDateRange] = useState<boolean>(true);
   const [city, setCity] = useState<string>(session?.city || "");
   const [selectedPlantId, setSelectedPlantId] = useState<string>("");
   const [selectedPlantName, setSelectedPlantName] = useState<string>("");
@@ -107,12 +109,18 @@ export default function ReportsContainer() {
   // Initialize from URL on first render
   useEffect(() => {
     const urlDate = searchParams.get("date");
+    let urlToDate = searchParams.get("to_date");
     const urlType = searchParams.get("report-type");
     const urlPlant = searchParams.get("plant");
     const urlClient = searchParams.get("client");
     const urlProject = searchParams.get("project");
 
-    if (urlDate) setSelectedDate(urlDate);
+    if (urlDate) {
+      if (!urlToDate) urlToDate = urlDate;
+      setSelectedDate(urlDate);
+      setSelectedToDate(urlToDate);
+      setValidDateRange(new Date(urlDate) <= new Date(urlToDate));
+    }
     if (urlType) {
       const normalized = urlType === "schedule" ? "schedule-wise" : urlType === "truck" ? "truck-wise" : urlType;
       if (normalized === "schedule-wise" || normalized === "truck-wise") setReportType(normalized as typeof reportType);
@@ -124,14 +132,19 @@ export default function ReportsContainer() {
   }, []);
 
   const { data: schedules, isLoading } = useQuery<Schedule[]>({
-    queryKey: ["reports-schedules", selectedDate],
+    queryKey: ["reports-schedules", selectedDate, selectedToDate],
     queryFn: async () => {
-      const response = await fetchWithAuth(`/schedules/reports?type=all&date=${selectedDate}`);
+      const response = await fetchWithAuth(
+        `/schedules/reports?type=all&from_date=${selectedDate}&to_date=${selectedToDate}`
+      );
       const data = await response.json();
       if (!data.success) throw new Error(data.message || "Failed to fetch schedules");
       return data.data as Schedule[];
     },
-    enabled: status === "authenticated",
+    enabled:
+      status === "authenticated" &&
+      validDateRange &&
+      new Date(selectedDate).getTime() <= new Date(selectedToDate).getTime(),
   });
 
   const { data: plants } = useQuery<{ _id: string; name: string }[]>({
@@ -185,7 +198,8 @@ export default function ReportsContainer() {
   // Keep URL in sync with current selections
   useEffect(() => {
     const params = new URLSearchParams();
-    if (selectedDate) params.set("date", selectedDate);
+    params.set("date", selectedDate);
+    params.set("to_date", selectedToDate);
     if (reportType) params.set("report-type", reportType === "schedule-wise" ? "schedule" : "truck");
     const plantName = selectedPlantId ? plantIdToName[selectedPlantId] : selectedPlantName;
     if (plantName) params.set("plant", plantName);
@@ -195,6 +209,7 @@ export default function ReportsContainer() {
     router.replace(qs ? `?${qs}` : "?", { scroll: false });
   }, [
     selectedDate,
+    selectedToDate,
     reportType,
     selectedPlantId,
     selectedPlantName,
@@ -212,7 +227,11 @@ export default function ReportsContainer() {
         reportType === "schedule-wise" ? s.status === "generated" || s.status === "canceled" : s.status === "generated";
 
       // Filter by selected date
-      const matchesDate = !selectedDate || s.input_params.schedule_date === selectedDate;
+      const matchesDate =
+        (!selectedDate && !selectedToDate) ||
+        (new Date(selectedDate).getTime() <= new Date(s.input_params.schedule_date).getTime() &&
+          new Date(s.input_params.schedule_date).getTime() <= new Date(selectedToDate).getTime()) ||
+        !validDateRange;
 
       // For schedule-wise: filter by mother plant matching selected plant
       const matchesPlant =
@@ -233,6 +252,8 @@ export default function ReportsContainer() {
     reportType,
     schedules,
     selectedDate,
+    selectedToDate,
+    validDateRange,
     selectedPlantId,
     selectedPlantName,
     selectedClientName,
@@ -250,6 +271,12 @@ export default function ReportsContainer() {
 
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
+    setValidDateRange(new Date(date).getTime() <= new Date(selectedToDate).getTime());
+  };
+
+  const handleToDateChange = (date: string) => {
+    setSelectedToDate(date);
+    setValidDateRange(new Date(selectedDate).getTime() <= new Date(date).getTime());
   };
 
   const handleExport = () => {
@@ -316,16 +343,29 @@ export default function ReportsContainer() {
             <Button
               variant="outline"
               className="h-8"
-              onClick={() => setSelectedDate(new Date().toISOString().slice(0, 10))}
+              onClick={() => {
+                setSelectedDate(new Date().toISOString().slice(0, 10));
+                setSelectedToDate(new Date().toISOString().slice(0, 10));
+              }}
             >
               Today
             </Button>
-            <div className="w-28">
+            <div className="w-36 flex">
+              <span className="text-gray-700 dark:text-gray-400">From: </span>{" "}
               <DatePickerInput
                 value={selectedDate}
                 onChange={handleDateChange}
                 placeholder="Select date"
-                className="h-8"
+                className={`h-8 ${!validDateRange && "border-red-400 text-red-400"}`}
+              />
+            </div>
+            <div className="w-34 flex">
+              <span className="text-gray-700 dark:text-gray-400">To: </span>{" "}
+              <DatePickerInput
+                value={selectedToDate}
+                onChange={handleToDateChange}
+                placeholder="Select date"
+                className={`h-8 ${!validDateRange && "border-red-400 text-red-400"}`}
               />
             </div>
           </div>
