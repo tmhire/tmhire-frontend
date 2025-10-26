@@ -374,7 +374,7 @@ export default function ScheduleViewPage() {
     // Define styles
     const headerStyle = {
       font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 },
-      fill: { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: 'FF3B82F6' } },
+      fill: { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: 'FF2563EB' } },
       border: {
         top: { style: 'thin' as const, color: { argb: 'FF000000' } },
         left: { style: 'thin' as const, color: { argb: 'FF000000' } },
@@ -386,7 +386,7 @@ export default function ScheduleViewPage() {
 
     const subHeaderStyle = {
       font: { bold: true, color: { argb: 'FF1F2937' }, size: 11 },
-      fill: { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: 'FFF3F4F6' } },
+      fill: { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: 'FFE5E7EB' } },
       border: {
         top: { style: 'thin' as const, color: { argb: 'FF000000' } },
         left: { style: 'thin' as const, color: { argb: 'FF000000' } },
@@ -396,6 +396,17 @@ export default function ScheduleViewPage() {
       alignment: { horizontal: 'center' as const, vertical: 'middle' as const }
     };
 
+    const dataHeaderStyle = {
+      font: { bold: true, color: { argb: 'FF1F2937' }, size: 11 },
+      fill: { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: 'FFE5E7EB' } },
+      border: {
+        top: { style: 'thin' as const, color: { argb: 'FF000000' } },
+        left: { style: 'thin' as const, color: { argb: 'FF000000' } },
+        bottom: { style: 'thin' as const, color: { argb: 'FF000000' } },
+        right: { style: 'thin' as const, color: { argb: 'FF000000' } }
+      },
+      alignment: { horizontal: 'left' as const, vertical: 'middle' as const }
+    };
     const dataStyle = {
       font: { size: 10, color: { argb: 'FF374151' } },
       border: {
@@ -408,7 +419,8 @@ export default function ScheduleViewPage() {
     };
 
     const titleStyle = {
-      font: { bold: true, size: 14, color: { argb: 'FF1F2937' } },
+      font: { bold: true, size: 16, color: { argb: 'FF1F2937' } },
+      fill: { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: 'FFF8FAFC' } },
       alignment: { horizontal: 'center' as const, vertical: 'middle' as const }
     };
 
@@ -424,8 +436,10 @@ export default function ScheduleViewPage() {
     summarySheet.getCell('A1').style = titleStyle;
     summarySheet.getRow(1).height = 25;
 
-    // Add basic summary data (A3-B25)
+    // Add basic summary data (A3-B15)
     const basicSummaryData = [
+      ["Mother Plant", schedule.mother_plant_name || "-"],
+      ["Schedule Name", schedule.schedule_no || "-"],
       ["Scheduled Date", schedule.input_params.schedule_date
           ? new Date(schedule.input_params.schedule_date).toLocaleDateString(["en-GB"], {
             day: "2-digit", month: "2-digit", year: "2-digit",
@@ -434,36 +448,37 @@ export default function ScheduleViewPage() {
       ["Pump Start Time at Site", schedule.input_params.pump_start
           ? new Date(schedule.input_params.pump_start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
         : "-"],
-      ["Type of Pump", schedule.pump_type || "-"],
-      ["Pumping Speed m³/hour", `${schedule.input_params.pumping_speed}`],
       ["Client Name", schedule.client_name || "-"],
       ["Project Name & Site Location", `${schedule.project_name || "-"}, ${schedule.site_address || "-"}`],
+      ["Total Qty Pumped in m³", `${schedule.input_params.quantity}`],
+      ["Type of Pump", schedule.pump_type || "-"],
+      ["Pumping Speed m³/hr (Unloading time)", `${schedule.input_params.pumping_speed} (${schedule.input_params.unloading_time} Minutes)`],
+      ["RMC Grade", schedule.concreteGrade ? `M ${schedule.concreteGrade}` : "-"],
       ["Placement Zone", schedule.pumping_job || "-"],
-      ["Mother Plant", schedule.mother_plant_name || "-"],
-      ["Site Supervisor", schedule.site_supervisor_name || "-"],
       ["Slump at Site", `${schedule.slump_at_site ?? "-"}`],
       ["One way Km from Mother Plant", `${schedule.mother_plant_km ?? "-"}`],
       ["Floor Height", `${schedule.floor_height ?? "-"}`],
-      ["RMC Grade", schedule.concreteGrade ? `M ${schedule.concreteGrade}` : "-"],
-      ["Total Qty Pumped in m³", `${schedule.input_params.quantity}`],
-      ["Pre-Start Time (mins) (A)", `${schedule.input_params.buffer_time}`],
-      ["Load Time (mins) (B)", `${schedule.input_params.load_time}`],
-      ["Onward Time (mins) (C)", `${schedule.input_params.onward_time}`],
-      ["Unloading Time (mins) (D)", `${schedule.input_params.unloading_time}`],
-      ["Return Time (mins) (E)", `${schedule.input_params.return_time}`],
-      ["Total TM Cycle Time (A+B+C+D+E)", `${formatHoursAndMinutes(schedule.cycle_time)}`],
-      ["Status", schedule.status],
-      ["Schedule Name", schedule.schedule_no || "-"],
-      ["Optimum Fleet: Non-Stop Pour", `${schedule.tm_count ?? "-"}`],
-      ["TMs Additional", `${
-          typeof schedule.tm_overrule === "number" && typeof schedule.tm_count === "number"
-          ? schedule.tm_overrule - schedule.tm_count : 0
-      }`],
-      ["Total TM Required", `${schedule.tm_overrule ? schedule.tm_overrule : schedule.tm_count}`]
+      ["Site Supervisor", schedule.site_supervisor_name || "-"]
     ];
 
-    // Add basic summary data to sheet
+    // Helper function to add borders to a range
+    const addBorders = (startRow: number, endRow: number, startCol: number, endCol: number) => {
+      for (let row = startRow; row <= endRow; row++) {
+        for (let col = startCol; col <= endCol; col++) {
+          const cell = summarySheet.getCell(row, col);
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        }
+      }
+    };
+
+    // Add basic summary data to sheet (A3-B17)
     let currentRow = 3;
+    const basicSummaryStartRow = currentRow;
     basicSummaryData.forEach((row) => {
       summarySheet.getRow(currentRow).values = row;
       summarySheet.getRow(currentRow).height = 20;
@@ -471,10 +486,141 @@ export default function ScheduleViewPage() {
       // Style the row
       row.forEach((_, colIndex) => {
         const cell = summarySheet.getCell(currentRow, colIndex + 1);
-        cell.style = dataStyle;
+        if (colIndex === 0) {
+          // First column (field names) - use subHeaderStyle
+          cell.style = dataHeaderStyle;
+        } else {
+          // Second column (values) - use dataStyle
+          cell.style = dataStyle;
+        }
       });
       currentRow++;
     });
+    const basicSummaryEndRow = currentRow - 1;
+    
+    // Add borders to basic summary section
+    addBorders(basicSummaryStartRow, basicSummaryEndRow, 1, 2);
+
+    // Add TM cycle time table (A19-B25)
+    currentRow += 1; // Add spacing
+    const tmCycleTimeStartRow = currentRow;
+    const tmCycleTimeData = [
+      ["TM cycle time", "Minutes"],
+      ["Pre-Start Time  (A)", `${schedule.input_params.buffer_time}`],
+      ["Loading Time  (B)", `${schedule.input_params.load_time}`],
+      ["Onward Time  (C)", `${schedule.input_params.onward_time}`],
+      ["Unloading Time  (D)", `${schedule.input_params.unloading_time}`],
+      ["Return Time  (E)", `${schedule.input_params.return_time}`],
+      ["Total TM Cycle Time (A+B+C+D+E)", `${formatHoursAndMinutes(schedule.cycle_time)}`]
+    ];
+
+    tmCycleTimeData.forEach((row) => {
+      summarySheet.getRow(currentRow).values = row;
+      summarySheet.getRow(currentRow).height = 20;
+      
+      // Style the row
+      row.forEach((_, colIndex) => {
+        const cell = summarySheet.getCell(currentRow, colIndex + 1);
+        if (colIndex === 0) {
+          // First column (field names) - use subHeaderStyle
+          cell.style = dataHeaderStyle;
+        } else {
+          // Second column (values) - use dataStyle
+          cell.style = dataStyle;
+        }
+      });
+      currentRow++;
+    });
+    const tmCycleTimeEndRow = currentRow - 1;
+    
+    // Add borders to TM cycle time table
+    addBorders(tmCycleTimeStartRow, tmCycleTimeEndRow, 1, 2);
+
+    // Add TM allocation section (D3:E6)
+    const tmAllocationStartRow = 3;
+    const tmAllocationData = [
+      ["TM allocation", "TM Count"],
+      ["Optimum Fleet: Non-Stop Pour", `${schedule.tm_count ?? "-"}`],
+      ["TMs Additional ( TM queue at Site)", `${typeof schedule.tm_overrule === "number" && typeof schedule.tm_count === "number" ? schedule.tm_overrule - schedule.tm_count : 0}`],
+      ["Total TM Required", `${schedule.tm_overrule ? schedule.tm_overrule : schedule.tm_count}`]
+    ];
+
+    tmAllocationData.forEach((row, rowIndex) => {
+      const actualRow = tmAllocationStartRow + rowIndex;
+      summarySheet.getRow(actualRow).height = 20;
+      
+      // Set values and style starting from column D (4)
+      row.forEach((value, colIndex) => {
+        const cell = summarySheet.getCell(actualRow, colIndex + 4); // Start from column D (4)
+        cell.value = value;
+        if (rowIndex === 0) {
+          // Header row - use blue header style
+          cell.style = headerStyle;
+        } else {
+          cell.style = dataStyle;
+        }
+      });
+    });
+
+    // Add borders to TM allocation section
+    addBorders(tmAllocationStartRow, tmAllocationStartRow + 3, 4, 5);
+
+    // Add TM Trip Distribution section (F3:I7)
+    const tmTripDistributionStartRow = 3;
+    
+    // Add main heading "TM Trip Distribution" with merged cells
+    summarySheet.mergeCells(`G${tmTripDistributionStartRow}:J${tmTripDistributionStartRow}`);
+    const tmTripDistributionHeaderCell = summarySheet.getCell(`G${tmTripDistributionStartRow}`);
+    tmTripDistributionHeaderCell.value = "TM Trip Distribution";
+    tmTripDistributionHeaderCell.style = headerStyle;
+    
+    // Add sub-headers in the next row
+    const tmTripDistributionSubHeaders = ["Sl. No", "NO OF TMs (A)", "NO OF TRIPS/TM (B)", "TOTAL TRIPS (A) x (B)"];
+    tmTripDistributionSubHeaders.forEach((header, colIndex) => {
+      const cell = summarySheet.getCell(tmTripDistributionStartRow + 1, colIndex + 7); // Start from column F (6)
+      cell.value = header;
+      cell.style = subHeaderStyle;
+    });
+
+    // Add TM Trip Distribution data
+    if (currentTable && currentTable.length > 0) {
+      const tmTripCounts: Record<string, number> = {};
+      currentTable.forEach((trip) => {
+        if (!tmTripCounts[trip.tm_id]) tmTripCounts[trip.tm_id] = 0;
+        tmTripCounts[trip.tm_id]++;
+      });
+      const tripsToTmCount: Record<number, number> = {};
+      Object.values(tmTripCounts).forEach((tripCount) => {
+        if (!tripsToTmCount[tripCount]) tripsToTmCount[tripCount] = 0;
+        tripsToTmCount[tripCount]++;
+      });
+      const rows = Object.entries(tripsToTmCount)
+        .sort((a, b) => Number(b[0]) - Number(a[0]))
+        .map(([trips, tmCount], idx) => [String(idx + 1), String(Number(tmCount)), String(Number(trips)), String(Number(tmCount) * Number(trips))]);
+      const totalTMs = Object.keys(tmTripCounts).length;
+      const totalTrips = currentTable.length;
+
+      // Add data rows
+      rows.forEach((row, rowIndex) => {
+        const actualRow = tmTripDistributionStartRow + 2 + rowIndex;
+        row.forEach((data, colIndex) => {
+          const cell = summarySheet.getCell(actualRow, colIndex + 7); // Start from column F (6)
+          cell.value = data;
+          cell.style = dataStyle;
+        });
+      });
+      
+      // Add total row
+      const totalRow = ["TOTAL", String(totalTMs), "", String(totalTrips)];
+      totalRow.forEach((data, colIndex) => {
+        const cell = summarySheet.getCell(tmTripDistributionStartRow + 2 + rows.length, colIndex + 7); // Start from column F (6)
+        cell.value = data;
+        cell.style = { ...dataStyle, font: { ...dataStyle.font, bold: true } };
+      });
+      
+      // Add borders to TM Trip Distribution section
+      addBorders(tmTripDistributionStartRow, tmTripDistributionStartRow + 2 + rows.length, 7, 9);
+    }
 
     // Helper functions for time calculations
     function formatOverallRange(trips: (Schedule["output_table"] | Schedule["burst_table"]) | undefined, preferredFormat?: string) {
@@ -499,7 +645,7 @@ export default function ScheduleViewPage() {
       return (maxEnd.getTime() - minStart.getTime()) / (1000 * 60 * 60);
     }
 
-    // Add Pump Details section (D3-K5)
+    // Add Pump Details section (D9:M11)
     if (schedule.output_table && schedule.output_table.length > 0) {
       const preferred = profile?.preferred_format;
       const pump = schedule.available_pumps.find((p) => p.id === schedule.pump);
@@ -534,26 +680,27 @@ export default function ScheduleViewPage() {
         return formatHoursAndMinutes(hours);
       })();
 
-      // Merge cells for Pump Details header (D3:K3)
-      summarySheet.mergeCells('D3:M3');
-      const pumpDetailsHeaderCell = summarySheet.getCell('D3');
-      pumpDetailsHeaderCell.value = "Pump Details";
+      // Merge cells for Pump Details header
+      const pumpDetailsStartRow = 9;
+      summarySheet.mergeCells(`D${pumpDetailsStartRow}:M${pumpDetailsStartRow}`);
+      const pumpDetailsHeaderCell = summarySheet.getCell(`D${pumpDetailsStartRow}`);
+      pumpDetailsHeaderCell.value = (`Pump Details (${preferred === "24h" ? "24H" : "12H"} format for Time)`);
       pumpDetailsHeaderCell.style = { ...headerStyle, font: { ...headerStyle.font, size: 11 } };
       
-      // Add pump details headers (row 4)
+      // Add pump details headers
       const pumpDetailsHeaders = [
-        "Pump", "Start Time from Plant", "Site Reach Time", "Fixing Time (min)",
-        "Pump Start Time", "Pumping Hours", "Pump End Time", "Removal Time (min)",
-        "Site Leave Time", "Total Hours Engaged"
+        "Pump", "Plant Start", "Site Reach", "Line Fixing (min)",
+        "Pump Start", "Pumping Hrs.", "Pump End", "Removal Time (min)",
+        "Site Leave Time", "Total Hrs Used"
       ];
       
       pumpDetailsHeaders.forEach((header, colIndex) => {
-        const cell = summarySheet.getCell(4, colIndex + 4); // Start from column D (4)
+        const cell = summarySheet.getCell(pumpDetailsStartRow + 1, colIndex + 4); // Start from column D (4)
         cell.value = header;
         cell.style = subHeaderStyle;
       });
       
-      // Add pump details data (row 5)
+      // Add pump details data
       const pumpDetailsData = [
         pumpIdentifier, pumpStartFromPlant, siteReachTime,
         schedule.input_params.pump_fixing_time || 0, pumpStartTime,
@@ -562,63 +709,16 @@ export default function ScheduleViewPage() {
       ];
       
       pumpDetailsData.forEach((data, colIndex) => {
-        const cell = summarySheet.getCell(5, colIndex + 4); // Start from column D (4)
+        const cell = summarySheet.getCell(pumpDetailsStartRow + 2, colIndex + 4); // Start from column D (4)
         cell.value = String(data);
         cell.style = dataStyle;
       });
+      
+      // Add borders to pump details section
+      addBorders(pumpDetailsStartRow + 1, pumpDetailsStartRow + 2, 4, 13);
     }
 
-    // Add TM Trip Distribution section (D7-G11)
-    if (currentTable && currentTable.length > 0) {
-      const tmTripCounts: Record<string, number> = {};
-      currentTable.forEach((trip) => {
-        if (!tmTripCounts[trip.tm_id]) tmTripCounts[trip.tm_id] = 0;
-        tmTripCounts[trip.tm_id]++;
-      });
-      const tripsToTmCount: Record<number, number> = {};
-      Object.values(tmTripCounts).forEach((tripCount) => {
-        if (!tripsToTmCount[tripCount]) tripsToTmCount[tripCount] = 0;
-        tripsToTmCount[tripCount]++;
-      });
-      const rows = Object.entries(tripsToTmCount)
-        .sort((a, b) => Number(b[0]) - Number(a[0]))
-        .map(([trips, tmCount], idx) => [String(idx + 1), String(Number(tmCount)), String(Number(trips)), String(Number(tmCount) * Number(trips))]);
-      const totalTMs = Object.keys(tmTripCounts).length;
-      const totalTrips = currentTable.length;
-
-      // Merge cells for TM Trip Distribution header (D7:G7)
-      summarySheet.mergeCells('D7:G7');
-      const tmTripHeaderCell = summarySheet.getCell('D7');
-      tmTripHeaderCell.value = "TM Trip Distribution";
-      tmTripHeaderCell.style = { ...headerStyle, font: { ...headerStyle.font, size: 11 } };
-      
-      // Add TM Trip Distribution headers (row 8)
-      const tmTripHeaders = ["Sl. No", "NO OF TMs (A)", "NO OF TRIPS/TM (B)", "TOTAL TRIPS (A) x (B)"];
-      tmTripHeaders.forEach((header, colIndex) => {
-        const cell = summarySheet.getCell(8, colIndex + 4); // Start from column D (4)
-        cell.value = header;
-        cell.style = subHeaderStyle;
-      });
-      
-      // Add TM Trip Distribution data (rows 9-10)
-      rows.forEach((row, rowIndex) => {
-        row.forEach((data, colIndex) => {
-          const cell = summarySheet.getCell(9 + rowIndex, colIndex + 4); // Start from column D (4)
-          cell.value = data;
-          cell.style = dataStyle;
-        });
-      });
-      
-      // Add total row (row 11)
-      const totalRow = ["TOTAL", String(totalTMs), "", String(totalTrips)];
-      totalRow.forEach((data, colIndex) => {
-        const cell = summarySheet.getCell(11, colIndex + 4); // Start from column D (4)
-        cell.value = data;
-        cell.style = { ...dataStyle, font: { ...dataStyle.font, bold: true } };
-      });
-    }
-
-    // Add TM Wise Trip Details section (D13-L19)
+    // Add TM Wise Trip Details section (D13:L)
     if (currentTable && currentTable.length > 0) {
       const preferred = profile?.preferred_format;
       const tmTrips: Record<string, TripRow[]> = {};
@@ -636,24 +736,25 @@ export default function ScheduleViewPage() {
         if (trip.tm_id && trip.tm_no) tmIdToIdentifier[trip.tm_id] = trip.tm_no;
       });
 
-      // Merge cells for TM Wise Trip Details header (D13:L13)
-      summarySheet.mergeCells('D13:L13');
-      const tmWiseHeaderCell = summarySheet.getCell('D13');
-      tmWiseHeaderCell.value = "TM Wise Trip Details";
+      // Add spacing and header for TM Wise Trip Details
+      const tmWiseStartRow = 13;
+      summarySheet.mergeCells(`D${tmWiseStartRow}:L${tmWiseStartRow}`);
+      const tmWiseHeaderCell = summarySheet.getCell(`D${tmWiseStartRow}`);
+      tmWiseHeaderCell.value = (`TM Wise Trip Details (${preferred === "24h" ? "24H" : "12H"} format for Time)`);
       tmWiseHeaderCell.style = { ...headerStyle, font: { ...headerStyle.font, size: 11 } };
       
-      // Add TM Wise Trip Details headers (row 14)
+      // Add TM Wise Trip Details headers
       const header = [
         "S.No.", "TM", ...Array.from({ length: maxTrips }, (_, i) => `Trip ${i + 1}`),
         "Start-End Time", "Total Hours"
       ];
       header.forEach((headerText, colIndex) => {
-        const cell = summarySheet.getCell(14, colIndex + 4); // Start from column D (4)
+        const cell = summarySheet.getCell(tmWiseStartRow + 1, colIndex + 4); // Start from column D (4)
         cell.value = headerText;
         cell.style = subHeaderStyle;
       });
 
-      // Add TM Wise Trip Details data (rows 15-18)
+      // Add TM Wise Trip Details data
       tmIds.forEach((tmId, index) => {
         const trips = tmTrips[tmId];
         if (!trips) return;
@@ -673,13 +774,13 @@ export default function ScheduleViewPage() {
         ];
         
         rowData.forEach((data, colIndex) => {
-          const cell = summarySheet.getCell(15 + index, colIndex + 4); // Start from column D (4)
+          const cell = summarySheet.getCell(tmWiseStartRow + 2 + index, colIndex + 4); // Start from column D (4)
           cell.value = data;
           cell.style = dataStyle;
         });
       });
 
-      // Add average row (row 19)
+      // Add average row
       const totalHoursArr = tmIds.map((tmId) => getTotalHours(tmTrips[tmId]));
       const avgTotalHours = totalHoursArr.length ? totalHoursArr.reduce((a, b) => a + b, 0) / totalHoursArr.length : 0;
       const avgRow = [
@@ -687,23 +788,27 @@ export default function ScheduleViewPage() {
         "", avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-"
       ];
       avgRow.forEach((data, colIndex) => {
-        const cell = summarySheet.getCell(19, colIndex + 4); // Start from column D (4)
+        const cell = summarySheet.getCell(tmWiseStartRow + 2 + tmIds.length, colIndex + 4); // Start from column D (4)
         cell.value = data;
         cell.style = { ...dataStyle, font: { ...dataStyle.font, bold: true } };
       });
+      
+      // Add borders to TM Wise Trip Details section
+      const tmWiseEndRow = tmWiseStartRow + 2 + tmIds.length;
+      addBorders(tmWiseStartRow + 1, tmWiseEndRow, 4, 4 + header.length - 1);
     }
 
     // Set column widths - all table columns to 17
-    summarySheet.getColumn(1).width = 30; // A - Field names
+    summarySheet.getColumn(1).width = 37; // A - Field names
     summarySheet.getColumn(2).width = 25; // B - Values
-    summarySheet.getColumn(3).width = 17; // C
-    summarySheet.getColumn(4).width = 17; // D
-    summarySheet.getColumn(5).width = 20; // E
-    summarySheet.getColumn(6).width = 19; // F
-    summarySheet.getColumn(7).width = 19; // G
+    summarySheet.getColumn(3).width = 5; // C
+    summarySheet.getColumn(4).width = 28; // D
+    summarySheet.getColumn(5).width = 16; // E
+    summarySheet.getColumn(6).width = 16; // F
+    summarySheet.getColumn(7).width = 16; // G
     summarySheet.getColumn(8).width = 17; // H
-    summarySheet.getColumn(9).width = 17; // I
-    summarySheet.getColumn(10).width = 17; // J
+    summarySheet.getColumn(9).width = 20; // I
+    summarySheet.getColumn(10).width = 20; // J
     summarySheet.getColumn(11).width = 19; // K
     summarySheet.getColumn(12).width = 17; // L
     summarySheet.getColumn(13).width = 19; // M
@@ -714,7 +819,18 @@ export default function ScheduleViewPage() {
       const preferred = profile?.preferred_format;
 
       // Add title
-      const sheetTitle = useBurstModel ? "Schedule (Burst Model)" : "Schedule (0 Wait Model)";
+      const scheduleDate = schedule.input_params.schedule_date
+        ? new Date(schedule.input_params.schedule_date).toLocaleDateString(["en-GB"], {
+            day: "2-digit", month: "2-digit", year: "2-digit",
+          })
+        : "-";
+      const customerName = schedule.client_name || "-";
+      const projectName = schedule.project_name || "-";
+      
+      const sheetTitle = useBurstModel 
+        ? `Schedule (Burst Model) - ${scheduleDate} - ${customerName} - ${projectName}`
+        : `Schedule (0 Wait Model) - ${scheduleDate} - ${customerName} - ${projectName}`;
+      
       scheduleSheet.mergeCells('A1:O1');
       scheduleSheet.getCell('A1').value = sheetTitle;
       scheduleSheet.getCell('A1').style = titleStyle;
@@ -723,15 +839,15 @@ export default function ScheduleViewPage() {
       // Schedule table headers
       const scheduleHeader = useBurstModel
         ? [
-            "Trip No", "TM No", "Plant - Name", "Plant - Prepare Time", "Plant - Load Time",
-            "Plant - Start Time", "Site Reach", "TM Waiting at site (min)", "Pump - Start Time",
-            "Pump - End Time", "Return Time", "TM Queue at Site", "Cum. Volume",
+            "Trip No", "TM No", "Plant - Name", "Prepare", "Load",
+            "Plant - Start", "Site Reach", "TM Waiting at site (min)", "Pump - Start",
+            "Pump - End", "Return Time", "TM Q at Site", "Cum. M3",
             "Cycle Time (min)", "Cushion Time (min)"
           ]
         : [
-            "Trip No", "TM No", "Plant - Name", "Plant - Prepare Time", "Plant - Load Time",
-            "Plant - Start Time", "Pump - Start Time", "Pump - End Time", "Return Time",
-            "Cum. Volume", "Cycle Time (min)", "Cushion Time (min)"
+            "Trip No", "TM No", "Plant - Name", "Prepare", "Load",
+            "Plant - Start", "Pump - Start", "Pump - End", "Return Time",
+            "Cum. M3", "Cycle Time (min)", "Cushion Time (min)"
           ];
 
       // Add headers
@@ -837,17 +953,28 @@ export default function ScheduleViewPage() {
       // Set column widths for schedule sheet
       scheduleHeader.forEach((_, colIndex) => {
         const column = scheduleSheet.getColumn(colIndex + 1);
-        if (colIndex === 0 || colIndex === 1) column.width = 10; // Trip No, TM No
+        if (colIndex === 0 || colIndex === 1) column.width = 13; // Trip No, TM No
         else if (colIndex === 2) column.width = 15; // Plant Name
-        else if (colIndex === 3) column.width = 20; // Plant Name
-        else if (colIndex === 4 || colIndex === 5) column.width = 18; // Time columns
-        else if (colIndex === 6 && useBurstModel) column.width = 15; // Site Reach
-        else if (colIndex === 7 && useBurstModel) column.width = 23; // Waiting time
-        else if (colIndex === 8 || colIndex === 9) column.width = 18; // Pump times
-        else if (colIndex === 10) column.width = 15; // Return time
-        else if (colIndex === 11 && useBurstModel) column.width = 19; // Queue
-        else if (colIndex === 12 || (colIndex === 11 && !useBurstModel)) column.width = 19; // Volume
-        else column.width = 18; // Other columns
+        else if (colIndex === 3) column.width = 12; // Prepare
+        else if (colIndex === 4) column.width = 12; // Load
+        else if (colIndex === 5) column.width = 15; // Plant - Start
+        else if (colIndex === 6 && useBurstModel) column.width = 12; // Site Reach
+        else if (colIndex === 7 && useBurstModel) column.width = 23; // TM Waiting at site (min)
+        else if (colIndex === 8 && useBurstModel) column.width = 15; // Pump - Start
+        else if (colIndex === 9 && useBurstModel) column.width = 15; // Pump - End
+        else if (colIndex === 10 && useBurstModel) column.width = 12; // Return Time
+        else if (colIndex === 11 && useBurstModel) column.width = 12; // TM Q at Site
+        else if (colIndex === 12 && useBurstModel) column.width = 12; // Cum. M3
+        else if (colIndex === 13 && useBurstModel) column.width = 17; // Cycle Time (min)
+        else if (colIndex === 14 && useBurstModel) column.width = 18; // Cushion Time (min)
+        // For non-burst model
+        else if (colIndex === 6 && !useBurstModel) column.width = 15; // Pump - Start
+        else if (colIndex === 7 && !useBurstModel) column.width = 15; // Pump - End
+        else if (colIndex === 8 && !useBurstModel) column.width = 12; // Return Time
+        else if (colIndex === 9 && !useBurstModel) column.width = 12; // Cum. M3
+        else if (colIndex === 10 && !useBurstModel) column.width = 17; // Cycle Time (min)
+        else if (colIndex === 11 && !useBurstModel) column.width = 18; // Cushion Time (min)
+        else column.width = 15;
       });
     }
 
