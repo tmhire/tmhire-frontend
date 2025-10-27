@@ -355,6 +355,9 @@ export default function ProjectsContainer() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
+    // Convert to uppercase for name field
+    const processedValue = name === "name" ? value.toUpperCase() : value;
+    
     // Handle contact name field with validation
     if (name === "contact_name") {
       if (value.length > 25) return; // Prevent typing more than 25 characters
@@ -377,12 +380,15 @@ export default function ProjectsContainer() {
     
     setNewProject((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: processedValue,
     }));
   };
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // Convert to uppercase for name field
+    const processedValue = name === "name" ? value.toUpperCase() : value;
     
     // Handle contact name field with validation
     if (name === "contact_name") {
@@ -406,7 +412,7 @@ export default function ProjectsContainer() {
     
     setEditedProject((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: processedValue,
     }));
   };
 

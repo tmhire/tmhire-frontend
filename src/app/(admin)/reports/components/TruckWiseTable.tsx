@@ -109,6 +109,7 @@ type TruckWiseTableProps = {
   selectedPlantId?: string;
   selectedClientName?: string;
   selectedProjectName?: string;
+  plantIdToName?: Record<string, string>;
 };
 
 type TimeSlot = {
@@ -149,7 +150,7 @@ type TMSchedule = {
 
 const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProps>(
   (
-    { data, selectedDate, selectedPlantId, selectedClientName, selectedProjectName }: TruckWiseTableProps,
+    { data, selectedDate, selectedPlantId, selectedClientName, selectedProjectName, plantIdToName }: TruckWiseTableProps,
     exportRef
   ) => {
     const { status } = useSession();
@@ -644,6 +645,29 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
         const rows: (string | number)[][] = [];
         const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [];
 
+        // Get plant names for the filter info row
+        const selectedPlantNames = selectedPlantId && plantIdToName
+          ? plantIdToName[selectedPlantId]
+          : "ALL PLANTS";
+        const selectedProjectNames = selectedProjectName || "ALL PROJECTS";
+        const selectedClientNames = selectedClientName || "ALL CLIENTS";
+
+        // Add filter info row
+        const filterInfoRow: (string | number)[] = [
+          "TRUCKWISE REPORT",
+          formatDate(selectedDate),
+          "",
+          `PLANTS: ${selectedPlantNames}`,
+          "",
+          `PROJECTS: ${selectedProjectNames}`,
+          "",
+          `CLIENTS: ${selectedClientNames}`,
+        ];
+        
+        // Add blank rows
+        rows.push(filterInfoRow);
+        rows.push([]);
+
         // Define columns based on view type
         const columns = isProjectWise
           ? [
@@ -814,13 +838,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                     {/* Slot Numbers Row */}
                     <tr className="border-b border-gray-100 dark:border-white/[0.05]">
                       <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                        #
+                        
                       </th>
                       <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                        #
+                        
                       </th>
                       <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                        #
+                        
                       </th>
                       {buildSlots().map((slot, i) => (
                         <th
@@ -828,17 +852,17 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           key={i + "-SlotNumber"}
                           className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]"
                         >
-                          {i + 1}
+                          SLOT {i + 1}
                         </th>
                       ))}
                       <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                        #
+                        
                       </th>
                       <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                        #
+                        
                       </th>
                       <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200">
-                        #
+                        
                       </th>
                     </tr>
                     {isProjectWise ? (
@@ -1103,7 +1127,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                             </TableCell>
                           ))}
                       <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                        {null}
+                        {formatHoursMinutes(totals.tms.timeSlotTotals.reduce((sum, val) => sum + val, 0))}
                       </TableCell>
                       <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                         {null}
@@ -1239,15 +1263,15 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                     {/* Line Pumps Total Row */}
                     {allTrucks.filter((truck) => truck.tmType === "LP").length > 0 && (
                       <TableRow className="bg-gray-50 dark:bg-gray-800 font-semibold">
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                          TOTAL
-                        </TableCell>
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                          LPs
-                        </TableCell>
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                          {null}
-                        </TableCell>
+                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                        TOTAL
+                      </TableCell>
+                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                        LPs
+                      </TableCell>
+                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                        {null}
+                      </TableCell>
 
                         {isProjectWise
                           ? // Project-wise totals: for each slot, show only the used hours (skip customer and project columns)
@@ -1273,7 +1297,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                               </TableCell>
                             ))}
                         <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                          {null}
+                          {formatHoursMinutes(totals.linePumps.timeSlotTotals.reduce((sum, val) => sum + val, 0))}
                         </TableCell>
                         <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                           {null}
@@ -1407,15 +1431,15 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                     {/* Boom Pumps Total Row */}
                     {allTrucks.filter((truck) => truck.tmType === "BP").length > 0 && (
                       <TableRow className="bg-gray-50 dark:bg-gray-800 font-semibold">
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                          TOTAL
-                        </TableCell>
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                          BPs
-                        </TableCell>
-                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                          {null}
-                        </TableCell>
+                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                        TOTAL
+                      </TableCell>
+                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                        BPs
+                      </TableCell>
+                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                        {null}
+                      </TableCell>
 
                         {isProjectWise
                           ? // Project-wise totals: for each slot, show only the used hours (skip customer and project columns)
@@ -1441,7 +1465,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                               </TableCell>
                             ))}
                         <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                          {null}
+                          {formatHoursMinutes(totals.boomPumps.timeSlotTotals.reduce((sum, val) => sum + val, 0))}
                         </TableCell>
                         <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                           {null}

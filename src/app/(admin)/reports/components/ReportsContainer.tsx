@@ -11,7 +11,7 @@ import ScheduleWiseTable, { type ScheduleWiseTableExportHandle } from "./Schedul
 import TruckWiseTable, { type TruckWiseTableExportHandle } from "./TruckWiseTable";
 import * as XLSX from "xlsx";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Calendar, Clock, Factory, FileDown } from "lucide-react";
+import { Calendar, Clock, FileDown, Filter } from "lucide-react";
 
 type Schedule = {
   _id: string;
@@ -97,6 +97,8 @@ export default function ReportsContainer() {
   const [selectedPlantName, setSelectedPlantName] = useState<string>("");
   const [selectedClientName, setSelectedClientName] = useState<string>("");
   const [selectedProjectName, setSelectedProjectName] = useState<string>("");
+  const [selectedSupplyPump, setSelectedSupplyPump] = useState<string>("");
+  const [showFilters, setShowFilters] = useState<boolean>(false);
   const scheduleRef = useRef<ScheduleWiseTableExportHandle | null>(null);
   const truckRef = useRef<TruckWiseTableExportHandle | null>(null);
 
@@ -114,6 +116,7 @@ export default function ReportsContainer() {
     const urlPlant = searchParams.get("plant");
     const urlClient = searchParams.get("client");
     const urlProject = searchParams.get("project");
+    const urlSupplyPump = searchParams.get("supply-pump");
 
     if (urlDate) {
       if (!urlToDate) urlToDate = urlDate;
@@ -128,6 +131,7 @@ export default function ReportsContainer() {
     if (urlPlant) setSelectedPlantName(urlPlant);
     if (urlClient) setSelectedClientName(urlClient);
     if (urlProject) setSelectedProjectName(urlProject);
+    if (urlSupplyPump) setSelectedSupplyPump(urlSupplyPump);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -164,6 +168,10 @@ export default function ReportsContainer() {
       return acc;
     }, {} as Record<string, string>);
   }, [plants]);
+
+  const getPumpSupplyType = (type: string) => {
+    return type === "supply" ? "S" : "P";
+  };
 
   // Get unique client names and project names from schedules
   const uniqueClientNames = useMemo(() => {
@@ -205,6 +213,7 @@ export default function ReportsContainer() {
     if (plantName) params.set("plant", plantName);
     if (selectedClientName) params.set("client", selectedClientName);
     if (selectedProjectName) params.set("project", selectedProjectName);
+    if (selectedSupplyPump) params.set("supply-pump", selectedSupplyPump);
     const qs = params.toString();
     router.replace(qs ? `?${qs}` : "?", { scroll: false });
   }, [
@@ -215,6 +224,7 @@ export default function ReportsContainer() {
     selectedPlantName,
     selectedClientName,
     selectedProjectName,
+    selectedSupplyPump,
     plantIdToName,
     router,
   ]);
@@ -246,7 +256,10 @@ export default function ReportsContainer() {
       // Filter by project name
       const matchesProject = !selectedProjectName || s.project_name === selectedProjectName;
 
-      return matchesStatus && matchesDate && matchesPlant && matchesClient && matchesProject;
+      // Filter by supply/pump
+      const matchesSupplyPump = !selectedSupplyPump || getPumpSupplyType(s.type) === selectedSupplyPump;
+
+      return matchesStatus && matchesDate && matchesPlant && matchesClient && matchesProject && matchesSupplyPump;
     });
   }, [
     reportType,
@@ -258,6 +271,7 @@ export default function ReportsContainer() {
     selectedPlantName,
     selectedClientName,
     selectedProjectName,
+    selectedSupplyPump,
     plantIdToName,
   ]);
 
@@ -305,8 +319,15 @@ export default function ReportsContainer() {
   }
   const endHour = (startHour + 24) % 24;
 
+  const hasActiveFilters =
+    selectedSupplyPump !== "" ||
+    selectedPlantId !== "" ||
+    selectedPlantName !== "" ||
+    selectedClientName !== "" ||
+    selectedProjectName !== "";
+
   return (
-    <div className="grid grid-cols-12 gap-4 md:gap-6">
+    <div className="grid grid-cols-12 gap-4 md:gap-2">
       {/* Date Picker and Report Type Row */}
       <div className="col-span-12 flex items-center justify-between py-4 pl-6 px-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 sticky top-24">
         {/* Page Name and Scheduled Timings */}
@@ -324,15 +345,6 @@ export default function ReportsContainer() {
               {formatHour(startHour)} TO {formatHour(endHour)} NEXT DAY
             </span>
           </div>
-
-          {/* Time Format Info Row */}
-          {reportType === "truck-wise" && (
-            <div className="flex items-center space-x-2">
-              <span className="text-xs text-gray-400 dark:text-gray-500">
-                Note: Time format (HH:MM) follows X hrs Y mins naming convention
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Filters Group */}
@@ -340,7 +352,7 @@ export default function ReportsContainer() {
           {/* Date Filter Row */}
           <div className="grid grid-cols-3 gap-2 items-center">
             {/* From Date */}
-            <div className="flex items-center space-x-2 w-48">
+            <div className="flex items-center space-x-2 w-40">
               <Calendar className="h-6 w-6 text-gray-500 dark:text-gray-400" />
               <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">From:</span>
               <DatePickerInput
@@ -352,7 +364,7 @@ export default function ReportsContainer() {
             </div>
 
             {/* To Date */}
-            <div className="flex items-center space-x-2 w-48">
+            <div className="flex items-center space-x-2 w-40">
               <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">To:</span>
               <DatePickerInput
                 value={selectedToDate}
@@ -363,10 +375,10 @@ export default function ReportsContainer() {
             </div>
 
             {/* Today Button */}
-            <div className="flex justify-end w-28 items-end">
+            <div className="flex items-center space-x-2 w-40">
               <Button
                 variant="outline"
-                className="h-8 w-full text-sm"
+                className="h-8 w-full text-sm px-2"
                 onClick={() => {
                   const today = new Date().toISOString().slice(0, 10);
                   setSelectedDate(today);
@@ -376,65 +388,31 @@ export default function ReportsContainer() {
                 Today
               </Button>
             </div>
-          </div>
 
-          {/* Plant, Client, Project Row */}
-          <div className="grid grid-cols-3 gap-2 items-center">
-            {/* Plant */}
-            <div className="flex items-center space-x-2 w-48">
-              <Factory className="h-6 w-6 text-gray-500 dark:text-gray-400" />
-              <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">Plant:</span>
-              <select
-                className="h-8 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm px-2 text-gray-700 dark:text-gray-200"
-                value={selectedPlantId}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setSelectedPlantId(next);
-                  setSelectedPlantName("");
-                }}
+            {/* Filters Button */}
+            <div className="flex items-center space-x-2 w-40">
+              <Button
+                variant="outline"
+                className={`h-8 w-full text-sm px-2 relative flex items-center justify-center space-x-2 ${
+                  hasActiveFilters ? "border-blue-500 bg-blue-50 dark:bg-blue-900" : ""
+                }`}
+                onClick={() => setShowFilters(!showFilters)}
               >
-                <option value="">All</option>
-                {(plants || []).map((p) => (
-                  <option key={p._id} value={p._id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+                <Filter className={`${hasActiveFilters && "text-blue-600 dark:text-blue-900"}h-4 w-4`} />
+                <span className={`${hasActiveFilters && "text-blue-600 dark:text-blue-900"}`}>Filters</span>
+                {hasActiveFilters && (
+                  <span className="absolute -top-1 -right-1 h-2 w-2 bg-blue-500 rounded-full"></span>
+                )}
+              </Button>
             </div>
-
-            {/* Client */}
-            <div className="flex items-center space-x-2 w-48">
-              <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">Client:</span>
-              <select
-                className="h-8 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm px-2 text-gray-700 dark:text-gray-200"
-                value={selectedClientName}
-                onChange={(e) => setSelectedClientName(e.target.value)}
-              >
-                <option value="">All</option>
-                {uniqueClientNames.map((client) => (
-                  <option key={client} value={client}>
-                    {client}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Project */}
-            <div className="flex items-center space-x-2 w-48">
-              <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">Project:</span>
-              <select
-                className="h-8 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm px-2 text-gray-700 dark:text-gray-200"
-                value={selectedProjectName}
-                onChange={(e) => setSelectedProjectName(e.target.value)}
-              >
-                <option value="">All</option>
-                {uniqueProjectNames.map((project) => (
-                  <option key={project} value={project}>
-                    {project}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Time Format Info Row */}
+            {reportType === "truck-wise" && (
+              <div className="flex items-center space-x-2 col-span-2">
+                <span className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">
+                  Note: Time format (HH:MM) follows X hrs Y mins naming convention
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -477,6 +455,86 @@ export default function ReportsContainer() {
         </div>
       </div>
 
+      {/* Filters Row */}
+      {showFilters && (
+        <div className="col-span-12 flex items-center justify-between py-4 pl-6 px-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col space-y-3 w-full">
+            <div className={`flex flex-row gap-6 items-center `}>
+              {/* Supply/Pump */}
+              {reportType === "schedule-wise" && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">Supply/Pump:</span>
+                  <select
+                    className="h-8 w-48 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm px-2 text-gray-700 dark:text-gray-200"
+                    value={selectedSupplyPump}
+                    onChange={(e) => setSelectedSupplyPump(e.target.value)}
+                  >
+                    <option value="">All</option>
+                    <option value="S">Supply</option>
+                    <option value="P">Pump</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Plant */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">Plant:</span>
+                <select
+                  className="h-8 w-48 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm px-2 text-gray-700 dark:text-gray-200"
+                  value={selectedPlantId}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setSelectedPlantId(next);
+                    setSelectedPlantName("");
+                  }}
+                >
+                  <option value="">All</option>
+                  {(plants || []).map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Client */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">Client:</span>
+                <select
+                  className="h-8 w-48 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm px-2 text-gray-700 dark:text-gray-200"
+                  value={selectedClientName}
+                  onChange={(e) => setSelectedClientName(e.target.value)}
+                >
+                  <option value="">All</option>
+                  {uniqueClientNames.map((client) => (
+                    <option key={client} value={client}>
+                      {client}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Project */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">Project:</span>
+                <select
+                  className="h-8 w-48 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm px-2 text-gray-700 dark:text-gray-200"
+                  value={selectedProjectName}
+                  onChange={(e) => setSelectedProjectName(e.target.value)}
+                >
+                  <option value="">All</option>
+                  {uniqueProjectNames.map((project) => (
+                    <option key={project} value={project}>
+                      {project}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       {isLoading || !schedules ? (
         <div className="flex items-center justify-center min-h-[500px] w-full col-span-12">
@@ -490,6 +548,11 @@ export default function ReportsContainer() {
               data={filtered}
               plantIdToName={plantIdToName}
               selectedDate={selectedDate}
+              selectedToDate={selectedToDate}
+              selectedPlantName={selectedPlantId ? plantIdToName[selectedPlantId] || "" : selectedPlantName}
+              selectedClientName={selectedClientName}
+              selectedProjectName={selectedProjectName}
+              selectedSupplyPump={selectedSupplyPump}
             />
           ) : (
             <TruckWiseTable
@@ -499,6 +562,7 @@ export default function ReportsContainer() {
               selectedPlantId={selectedPlantId}
               selectedClientName={selectedClientName}
               selectedProjectName={selectedProjectName}
+              plantIdToName={plantIdToName}
             />
           )}
         </div>

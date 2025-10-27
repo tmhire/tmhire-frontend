@@ -74,10 +74,26 @@ type ScheduleWiseTableProps = {
   data: Schedule[];
   plantIdToName: Record<string, string>;
   selectedDate: string;
+  selectedToDate?: string;
+  selectedPlantName?: string;
+  selectedClientName?: string;
+  selectedProjectName?: string;
+  selectedSupplyPump?: string;
 };
 
 const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWiseTableProps>(
-  ({ data, selectedDate }: ScheduleWiseTableProps, exportRef) => {
+  (
+    {
+      data,
+      selectedDate,
+      selectedToDate,
+      selectedPlantName,
+      selectedClientName,
+      selectedProjectName,
+      selectedSupplyPump,
+    }: ScheduleWiseTableProps,
+    exportRef
+  ) => {
     const [statusFilter, setStatusFilter] = useState<"all" | "generated" | "cancelled">("generated");
     const { profile } = useProfile();
 
@@ -126,6 +142,31 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
     useImperativeHandle(exportRef, () => ({
       getExportSheets: () => {
         const rows: (string | number)[][] = [];
+
+        // Add filter info row
+        const filterInfoRow: (string | number)[] = [
+          "SCHEDULEWISE REPORT",
+          `${formatDate(selectedDate)}${
+            selectedToDate && selectedToDate !== selectedDate ? ` TO ${formatDate(selectedToDate)}` : ""
+          }`,
+          "",
+          `PLANT - ${selectedPlantName || "ALL"}`,
+          "",
+          `CLIENT - ${selectedClientName || "ALL"}`,
+          "",
+          `PROJECT - ${selectedProjectName || "ALL"}`,
+          "",
+          `SUPPLY/PUMP - ${selectedSupplyPump || "ALL"}`,
+          "",
+          "",
+          "",
+        ];
+
+        // Add blank rows
+        rows.push(filterInfoRow);
+        rows.push([]);
+        rows.push([]);
+
         const headers = [
           "SL. NO",
           "DATE",
@@ -272,11 +313,12 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
         <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
                 Schedule Wise Report - {formatDate(selectedDate)}
               </h3>
-              <div className="w-40">
-                <h4>Schedule Status</h4>
+              <div className="flex flex-row items-center justify-center gap-4">
+                <h4 className="text-sm text-gray-600 dark:text-gray-200 whitespace-nowrap">Schedule Status</h4>
+
                 <Select
                   options={[
                     { value: "generated", label: "Generated" },
@@ -285,6 +327,7 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
                   ]}
                   defaultValue={statusFilter}
                   onChange={(value: string) => setStatusFilter(value as "all" | "generated" | "cancelled")}
+                  className="w-40"
                 />
               </div>
             </div>

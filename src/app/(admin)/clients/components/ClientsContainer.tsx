@@ -216,17 +216,21 @@ export default function ClientsContainer() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    // Convert to uppercase for name field
+    const processedValue = name === "name" ? value.toUpperCase() : value;
     setNewClient((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: processedValue,
     }));
   };
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    // Convert to uppercase for name field
+    const processedValue = name === "name" ? value.toUpperCase() : value;
     setEditedClient((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: processedValue,
     }));
   };
 

@@ -451,7 +451,7 @@ export default function ScheduleViewPage() {
       ["Client Name", schedule.client_name || "-"],
       ["Project Name & Site Location", `${schedule.project_name || "-"}, ${schedule.site_address || "-"}`],
       ["Total Qty Pumped in m³", `${schedule.input_params.quantity}`],
-      ["Type of Pump", schedule.pump_type || "-"],
+      ["Type of Pump", schedule.pump_type?.toUpperCase() || "-"],
       ["Pumping Speed m³/hr (Unloading time)", `${schedule.input_params.pumping_speed} (${schedule.input_params.unloading_time} Minutes)`],
       ["RMC Grade", schedule.concreteGrade ? `M ${schedule.concreteGrade}` : "-"],
       ["Placement Zone", schedule.pumping_job || "-"],
@@ -839,15 +839,15 @@ export default function ScheduleViewPage() {
       // Schedule table headers
       const scheduleHeader = useBurstModel
         ? [
-            "Trip No", "TM No", "Plant - Name", "Prepare", "Load",
-            "Plant - Start", "Site Reach", "TM Waiting at site (min)", "Pump - Start",
+            "Trip #", "TM #", "Plant - Name", "Prepare", "Load",
+            "Plant - Start", "Site Reach", "TM Wait (Min)", "Pump - Start",
             "Pump - End", "Return Time", "TM Q at Site", "Cum. M3",
-            "Cycle Time (min)", "Cushion Time (min)"
+            "Cycle Time (min)", "Cushion (min)"
           ]
         : [
-            "Trip No", "TM No", "Plant - Name", "Prepare", "Load",
+            "Trip #", "TM #", "Plant - Name", "Prepare", "Load",
             "Plant - Start", "Pump - Start", "Pump - End", "Return Time",
-            "Cum. M3", "Cycle Time (min)", "Cushion Time (min)"
+            "Cum. M3", "Cycle Time (min)", "Cushion (min)"
           ];
 
       // Add headers
@@ -953,27 +953,28 @@ export default function ScheduleViewPage() {
       // Set column widths for schedule sheet
       scheduleHeader.forEach((_, colIndex) => {
         const column = scheduleSheet.getColumn(colIndex + 1);
-        if (colIndex === 0 || colIndex === 1) column.width = 13; // Trip No, TM No
-        else if (colIndex === 2) column.width = 15; // Plant Name
-        else if (colIndex === 3) column.width = 12; // Prepare
-        else if (colIndex === 4) column.width = 12; // Load
-        else if (colIndex === 5) column.width = 15; // Plant - Start
+        if (colIndex === 0) column.width = 7; // Trip No, TM No
+        else if (colIndex === 1) column.width = 12; // TM No
+        else if (colIndex === 2) column.width = 13; // Plant Name
+        else if (colIndex === 3) column.width = 10; // Prepare
+        else if (colIndex === 4) column.width = 10; // Load
+        else if (colIndex === 5) column.width = 13; // Plant - Start
         else if (colIndex === 6 && useBurstModel) column.width = 12; // Site Reach
-        else if (colIndex === 7 && useBurstModel) column.width = 23; // TM Waiting at site (min)
-        else if (colIndex === 8 && useBurstModel) column.width = 15; // Pump - Start
-        else if (colIndex === 9 && useBurstModel) column.width = 15; // Pump - End
+        else if (colIndex === 7 && useBurstModel) column.width = 16; // TM Waiting at site (min)
+        else if (colIndex === 8 && useBurstModel) column.width = 13; // Pump - Start
+        else if (colIndex === 9 && useBurstModel) column.width = 13; // Pump - End
         else if (colIndex === 10 && useBurstModel) column.width = 12; // Return Time
         else if (colIndex === 11 && useBurstModel) column.width = 12; // TM Q at Site
-        else if (colIndex === 12 && useBurstModel) column.width = 12; // Cum. M3
+        else if (colIndex === 12 && useBurstModel) column.width = 10; // Cum. M3
         else if (colIndex === 13 && useBurstModel) column.width = 17; // Cycle Time (min)
-        else if (colIndex === 14 && useBurstModel) column.width = 18; // Cushion Time (min)
+        else if (colIndex === 11 && !useBurstModel) column.width = 14; // Cushion Time (min)
         // For non-burst model
-        else if (colIndex === 6 && !useBurstModel) column.width = 15; // Pump - Start
-        else if (colIndex === 7 && !useBurstModel) column.width = 15; // Pump - End
+        else if (colIndex === 8 && useBurstModel) column.width = 13; // Pump - Start
+        else if (colIndex === 9 && useBurstModel) column.width = 13; // Pump - End
         else if (colIndex === 8 && !useBurstModel) column.width = 12; // Return Time
-        else if (colIndex === 9 && !useBurstModel) column.width = 12; // Cum. M3
+        else if (colIndex === 12 && useBurstModel) column.width = 10; // Cum. M3
         else if (colIndex === 10 && !useBurstModel) column.width = 17; // Cycle Time (min)
-        else if (colIndex === 11 && !useBurstModel) column.width = 18; // Cushion Time (min)
+        else if (colIndex === 11 && !useBurstModel) column.width = 14; // Cushion Time (min)
         else column.width = 15;
       });
     }
@@ -1094,7 +1095,7 @@ export default function ScheduleViewPage() {
             </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Type of Pump</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.pump_type || "N/A"}</p>
+              <p className="text-base text-gray-800 dark:text-white/90">{schedule.pump_type?.toUpperCase() || "N/A"}</p>
             </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Pumping Speed m³/hour</h4>
