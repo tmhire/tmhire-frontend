@@ -11,7 +11,7 @@ import ScheduleWiseTable, { type ScheduleWiseTableExportHandle } from "./Schedul
 import TruckWiseTable, { type TruckWiseTableExportHandle } from "./TruckWiseTable";
 import * as XLSX from "xlsx";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Calendar, Clock, FileDown, Filter } from "lucide-react";
+import { Clock, FileDown, Filter } from "lucide-react";
 
 type Schedule = {
   _id: string;
@@ -353,7 +353,7 @@ export default function ReportsContainer() {
           <div className="grid grid-cols-3 gap-2 items-center">
             {/* From Date */}
             <div className="flex items-center space-x-2 w-40">
-              <Calendar className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+              {/* <Calendar className="h-6 w-6 text-gray-500 dark:text-gray-400" /> */}
               <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">From:</span>
               <DatePickerInput
                 value={selectedDate}
@@ -364,16 +364,18 @@ export default function ReportsContainer() {
             </div>
 
             {/* To Date */}
-            <div className="flex items-center space-x-2 w-40">
-              <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">To:</span>
-              <DatePickerInput
-                value={selectedToDate}
-                onChange={handleToDateChange}
-                placeholder="Optional"
-                className={`h-8 w-full text-sm ${!validDateRange && "border-red-400 text-red-400"}`}
-              />
-            </div>
-
+            
+              <div className={`flex items-center space-x-2 w-40 ${reportType === "truck-wise" ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-400 dark:text-gray-500 opacity-35" : ""}`}>
+                <span className={`${reportType === "truck-wise" ? "text-gray-400 dark:text-gray-500" : "text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap"}`}>To:</span>
+                <DatePickerInput
+                  value={selectedToDate}
+                  onChange={handleToDateChange}
+                  placeholder="Optional"
+                  disabled={reportType === "truck-wise"}
+                  className={`h-8 w-full text-sm ${!validDateRange && "border-red-400 text-red-400"} ${reportType === "truck-wise" ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-400 dark:text-gray-500" : "cursor-pointer"}`}
+                />
+              </div>
+            
             {/* Today Button */}
             <div className="flex items-center space-x-2 w-40">
               <Button
@@ -408,7 +410,7 @@ export default function ReportsContainer() {
             {/* Time Format Info Row */}
             {reportType === "truck-wise" && (
               <div className="flex items-center space-x-2 col-span-2">
-                <span className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">
+                <span className="text-xs text-gray-600 dark:text-gray-400 max-w-xs">
                   Note: Time format (HH:MM) follows X hrs Y mins naming convention
                 </span>
               </div>

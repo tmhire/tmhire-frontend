@@ -382,7 +382,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
         });
       });
 
-      // Process all TMs from master list (for unused TMs when no filters)
+      // Process all TMs from master list (for IDLE TMs when no filters)
       if (tms && !hasFilters) {
         tms.forEach((tm) => {
           // If a plant is selected, include only TMs from that plant
@@ -405,7 +405,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
         });
       }
 
-      // Process all Pumps from master list (for unused pumps when no filters)
+      // Process all Pumps from master list (for IDLE pumps when no filters)
       if (pumps && !hasFilters) {
         pumps.forEach((pump) => {
           // If a plant is selected, include only Pumps from that plant
@@ -675,8 +675,8 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
               "TM No.",
               "TM/LP/BP",
               ...buildSlots().flatMap(() => ["TM ENGAGED HOURS", "CUSTOMER NAME", "PROJECT"]),
-              "TOTAL USED HOURS",
-              "TOTAL UNUSED HOURS",
+              "TOT USED HOURS",
+              "TOT IDLE HOURS",
               "USED %",
             ]
           : [
@@ -684,8 +684,8 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
               "Truck No.",
               "TM/LP/BP",
               ...buildSlots().map((s) => s.label),
-              "TOTAL USED HOURS",
-              "TOTAL UNUSED HOURS",
+              "TOT USED HOURS",
+              "TOT IDLE HOURS",
               "USED %",
             ];
 
@@ -855,14 +855,8 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           SLOT {i + 1}
                         </th>
                       ))}
-                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                        
-                      </th>
-                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                        
-                      </th>
-                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200">
-                        
+                      <th colSpan={3} className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] col-span-3">
+                        UTILIZATION
                       </th>
                     </tr>
                     {isProjectWise ? (
@@ -889,7 +883,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           TOTAL USED HOURS
                         </th>
                         <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                          TOTAL UNUSED HOURS
+                          TOTAL IDLE HOURS
                         </th>
                         <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200">
                           USED %
@@ -919,7 +913,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           TOTAL USED HOURS
                         </th>
                         <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                          TOTAL UNUSED HOURS
+                          TOTAL IDLE HOURS
                         </th>
                         <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200">
                           USED %
@@ -1132,11 +1126,14 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                       <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
                         {null}
                       </TableCell>
-                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                        {null}
-                      </TableCell>
                       <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90">
-                        {null}
+                        {(() => {
+                          const tmTrucks = allTrucks.filter(t => t.tmType === "TM");
+                          const tmWeightedUtil = tmTrucks.length > 0 ?
+                            Math.round(100 * tmTrucks.reduce((sum, t) => sum + (24 - t.totalFreeHours), 0) / (tmTrucks.length * 24)) :
+                            null;
+                          return tmWeightedUtil !== null ? `${tmWeightedUtil}%` : null;
+                        })()}
                       </TableCell>
                     </TableRow>
 
@@ -1303,7 +1300,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           {null}
                         </TableCell>
                         <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90">
-                          {null}
+                          {(() => {
+                            const lpTrucks = allTrucks.filter(t => t.tmType === "LP");
+                            const lpWeightedUtil = lpTrucks.length > 0 ?
+                              Math.round(100 * lpTrucks.reduce((sum, t) => sum + (24 - t.totalFreeHours), 0) / (lpTrucks.length * 24)) :
+                              null;
+                            return lpWeightedUtil !== null ? `${lpWeightedUtil}%` : null;
+                          })()}
                         </TableCell>
                       </TableRow>
                     )}
@@ -1471,7 +1474,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           {null}
                         </TableCell>
                         <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90">
-                          {null}
+                          {(() => {
+                            const bpTrucks = allTrucks.filter(t => t.tmType === "BP");
+                            const bpWeightedUtil = bpTrucks.length > 0 ?
+                              Math.round(100 * bpTrucks.reduce((sum, t) => sum + (24 - t.totalFreeHours), 0) / (bpTrucks.length * 24)) :
+                              null;
+                            return bpWeightedUtil !== null ? `${bpWeightedUtil}%` : null;
+                          })()}
                         </TableCell>
                       </TableRow>
                     )}

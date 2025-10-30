@@ -147,7 +147,7 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
         const filterInfoRow: (string | number)[] = [
           "SCHEDULEWISE REPORT",
           `${formatDate(selectedDate)}${
-            selectedToDate && selectedToDate !== selectedDate ? ` TO ${formatDate(selectedToDate)}` : ""
+            selectedToDate && selectedToDate !== selectedDate ? ` - ${formatDate(selectedToDate)}` : ""
           }`,
           "",
           `PLANT - ${selectedPlantName || "ALL"}`,
@@ -314,7 +314,8 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                Schedule Wise Report - {formatDate(selectedDate)}
+                Schedule Wise Report - {formatDate(selectedDate)}{" "}
+                {selectedToDate && selectedToDate !== selectedDate ? ` to - ${formatDate(selectedToDate)}` : ""}
               </h3>
               <div className="flex flex-row items-center justify-center gap-4">
                 <h4 className="text-sm text-gray-600 dark:text-gray-200 whitespace-nowrap">Schedule Status</h4>
@@ -393,7 +394,8 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-              Schedule Wise Report - {formatDate(selectedDate)}
+              Schedule Wise Report - {formatDate(selectedDate)}{" "}
+              {selectedToDate && selectedToDate !== selectedDate ? `to ${formatDate(selectedToDate)}` : ""}
             </h3>
             <div className="flex flex-row items-center justify-center gap-4">
               <h4 className="text-sm text-gray-600 dark:text-gray-200 whitespace-nowrap">Schedule Status</h4>

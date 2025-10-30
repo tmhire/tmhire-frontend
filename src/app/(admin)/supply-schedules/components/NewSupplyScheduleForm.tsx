@@ -140,7 +140,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   const searchParams = useSearchParams();
   const template = searchParams.get("template");
   const { fetchWithAuth } = useApiClient();
-  const {} = useToast();
+  const { } = useToast();
   const { startAction, completeAction } = createApiActionToast();
   const [step, setStep] = useState(schedule_id ? 3 : (1 as number));
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -149,6 +149,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   const [isCalculating, setIsCalculating] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasChanged, setHasChanged] = useState(false);
+  const [showPastList, setShowPastList] = useState(false);
   const [formData, setFormData] = useState({
     scheduleDate: "",
     startTime: "",
@@ -391,9 +392,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
         });
         setComputedScheduleName(
           data?.data?.schedule_no ||
-            `${motherPlantName}-${formatDateAsDDMMYY(data?.data?.input_params?.schedule_date)}-${
-              (schedulesForDayCount ?? 0) + 1
-            }`
+          `${motherPlantName}-${formatDateAsDDMMYY(data?.data?.input_params?.schedule_date)}-${(schedulesForDayCount ?? 0) + 1
+          }`
         );
         setFleetOptions({
           tripsNeeded: data?.data?.trip_count || 0,
@@ -661,6 +661,44 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
 
   const handleNext = async () => {
     if (step === 1) {
+      const params = new URLSearchParams(searchParams.toString());
+      if (!selectedPastSchedule) {
+        setSelectedPastSchedule("");
+        params.delete("template");
+      } else {
+        params.set("template", selectedPastSchedule || "none");
+        // Prefill form with past schedule data
+        const pastSchedule = pastSchedules?.find((s) => s._id === selectedPastSchedule);
+        if (pastSchedule) {
+          setSelectedClient(pastSchedule.client_id);
+          setSelectedProject(pastSchedule.project_id);
+          setSelectedPlant(pastSchedule.plant_id || "");
+          setFormData((prev) => ({
+            ...prev,
+            concreteGrade: pastSchedule.concreteGrade,
+            onwardTime: pastSchedule.input_params.onward_time.toString(),
+            returnTime: pastSchedule.input_params.return_time.toString(),
+            bufferTime: pastSchedule.input_params.buffer_time.toString(),
+            loadTime: pastSchedule.input_params.load_time.toString(),
+            unloadingTime: pastSchedule.input_params.unloading_time?.toString() || "",
+            remarks: pastSchedule.remarks || "",
+            siteSupervisorId: pastSchedule.site_supervisor_id || "",
+            oneWayKm: "",
+            slumpAtSite: "",
+            mixCode: "",
+          }));
+          if (pastSchedule.tm_overrule) {
+            setOverruleTMCount(true);
+            setCustomTMCount(pastSchedule.tm_overrule);
+          }
+          setFleetOptions({
+            tripsNeeded: pastSchedule?.trip_count || 0,
+            useRoundTrip: pastSchedule?.is_round_trip || false,
+            vehicleCount: pastSchedule?.is_round_trip ? 1 : Math.max(2, pastSchedule?.tm_count || 2),
+          });
+        }
+      }
+      router.replace(`?${params.toString()}`, { scroll: false });
       setStep(2);
     } else if (step === 2) {
       const success = await calculateRequiredTMs();
@@ -869,20 +907,18 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
               {steps.map((s, index) => (
                 <motion.div
                   key={s.id}
-                  className={`flex flex-col ${
-                    index == 0 ? "items-start" : index == steps.length - 1 ? "items-end" : "items-center"
-                  }`}
+                  className={`flex flex-col ${index == 0 ? "items-start" : index == steps.length - 1 ? "items-end" : "items-center"
+                    }`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.5 }}
                 >
                   {/* Step Circle */}
                   <motion.div
-                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${
-                      step >= s.id
-                        ? "border-brand-500 bg-brand-500 text-white shadow-lg"
-                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                    }`}
+                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${step >= s.id
+                      ? "border-brand-500 bg-brand-500 text-white shadow-lg"
+                      : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                      }`}
                     animate={{
                       scale: step === s.id ? 1.1 : 1,
                       boxShadow: step === s.id ? "0 0 20px rgba(var(--brand-500-rgb, 59, 130, 246), 0.5)" : "none",
@@ -911,9 +947,8 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
 
                   {/* Step Name */}
                   <motion.span
-                    className={`mt-2 text-xs text-center ${
-                      step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
-                    }`}
+                    className={`mt-2 text-xs text-center ${step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
+                      }`}
                     animate={{
                       fontWeight: step >= s.id ? 500 : 400,
                     }}
@@ -931,217 +966,186 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
       <div>
         {step === 1 ? (
           <div className="max-w-6xl mx-auto p-6 space-y-6">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Choose Schedule Starting Point</h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Start from scratch or use a previous schedule as a template
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Start from Scratch Option */}
-              <div className="lg:col-span-1">
-                <div
-                  className={`h-full p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                    !selectedPastSchedule
-                      ? "border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg"
-                      : "border-gray-200 hover:border-brand-300 hover:shadow-md dark:border-gray-700 dark:hover:border-brand-600"
-                  }`}
-                  onClick={() => setSelectedPastSchedule("")}
-                >
-                  <div className="text-center">
-                    <div
-                      className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
-                        !selectedPastSchedule
-                          ? "bg-brand-500 text-white"
-                          : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                      }`}
-                    >
-                      <FileText className="w-8 h-8" />
+            {!showPastList ? (
+              <div className="flex flex-col items-center gap-4 mt-10">
+                <div className="text-center">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Schedule Details</h3>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">Choose how you want to begin</p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    className="px-6 py-6 rounded-lg bg-gray-100 text-gray-800 hover:bg-brand-200 dark:bg-gray-800 dark:text-gray-200 border border-brand-400 dark:hover:bg-brand-800 transition-colors font-medium flex items-start gap-3 text-left flex-col"
+                    onClick={() => {
+                      setSelectedPastSchedule("");
+                      handleNext();
+                    }}
+                  >
+                    {" "}
+                    <span className="inline-flex items-center justify-center w-6 h-6 mt-0.5">
+                      <FileText className="w-5 h-5" />
+                    </span>
+                    <span>
+                      <span className="block font-semibold">Start Fresh</span>
+                      <span className="block text-xs opacity-90">
+                        Begin with a blank form. Enter every detail from scratch for full control.
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    className="px-6 py-6 rounded-lg bg-gray-100 text-gray-800 hover:bg-brand-200 dark:bg-gray-800 dark:text-gray-200 border border-brand-400 dark:hover:bg-brand-800 transition-colors font-medium flex items-start gap-3 text-left flex-col"
+                    onClick={() => {
+                      setShowPastList(true);
+                    }}
+                  >
+                    <span className="inline-flex items-center justify-center w-6 h-6 mt-0.5">
+                      <Clock className="w-5 h-5" />
+                    </span>
+                    <span>
+                      <span className="block font-semibold">Use Past Schedule</span>
+                      <span className="block text-xs opacity-90">
+                        Auto-fill form using your most recent schedule. Great for Repeat Jobs.
+                      </span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-brand-500 text-white">
+                      <Clock className="w-5 h-5" />
                     </div>
-                    <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">Start from Scratch</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed">
-                      Create a completely new schedule without default values. You&apos;ll input all details manually.
-                    </p>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Select a Past Schedule</h3>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm">
+                        Start with values from a previous schedule
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <button
-                      className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
-                        !selectedPastSchedule
-                          ? "bg-brand-500 text-white hover:bg-brand-600"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                      }`}
+                      className="px-3 py-2 rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 text-sm"
+                      onClick={() => {
+                        setShowPastList(false);
+                        setSelectedPastSchedule("");
+                        setSearchTerm("");
+                      }}
                     >
-                      {!selectedPastSchedule ? "Selected" : "Choose this option"}
+                      Back
+                    </button>
+                    <button
+                      className={cn(
+                        "px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors font-medium"
+                      )}
+                      onClick={() => {
+                        handleNext();
+                      }}
+                    >
+                      Continue
                     </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Use Past Schedule Option */}
-              <div className="lg:col-span-2">
-                <div
-                  className={`p-6 rounded-xl border-2 transition-all duration-200 ${
-                    selectedPastSchedule
-                      ? "border-brand-500 bg-brand-50 dark:bg-brand-900/10 shadow-lg"
-                      : "border-gray-200 dark:border-gray-700"
-                  }`}
-                >
-                  <div className="flex items-center mb-4">
-                    <div
-                      className={`inline-flex items-center justify-center w-12 h-12 rounded-full mr-4 ${
-                        selectedPastSchedule
-                          ? "bg-brand-500 text-white"
-                          : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                      }`}
-                    >
-                      <Clock className="w-6 h-6" />
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder="Search by schedule name, number, client, or project..."
+                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    disabled={pastSchedulesLoading}
+                  />
+                </div>
+
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {pastSchedulesLoading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500 mx-auto"></div>
+                      <p className="mt-2 text-gray-500">Loading schedules...</p>
                     </div>
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Use Past Schedule</h3>
-                      <p className="text-gray-600 dark:text-gray-400 text-sm">
-                        Start with values from a previous schedule as a template
-                      </p>
+                  ) : filteredSchedules?.length === 0 ? (
+                    <div className="text-center py-8">
+                      <FileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-500">No schedules found</p>
                     </div>
-                  </div>
-
-                  {/* Search Bar */}
-                  <div className="relative mb-4">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      placeholder="Search by schedule name, number, client, or project..."
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      disabled={pastSchedulesLoading}
-                    />
-                  </div>
-
-                  {/* Schedule List */}
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {pastSchedulesLoading ? (
-                      <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500 mx-auto"></div>
-                        <p className="mt-2 text-gray-500">Loading schedules...</p>
-                      </div>
-                    ) : filteredSchedules?.length === 0 ? (
-                      <div className="text-center py-8">
-                        <FileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                        <p className="text-gray-500">No schedules found</p>
-                      </div>
-                    ) : (
-                      filteredSchedules?.map((schedule) => (
-                        <div
-                          key={schedule._id}
-                          className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
-                            selectedPastSchedule === schedule._id
-                              ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
-                              : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
+                  ) : (
+                    filteredSchedules?.map((schedule) => (
+                      <div
+                        key={schedule._id}
+                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${selectedPastSchedule === schedule._id
+                          ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
+                          : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
                           }`}
-                          onClick={() => setSelectedPastSchedule(schedule._id)}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h4 className="font-semibold text-gray-900 dark:text-white truncate">
-                                  {schedule.schedule_no}
-                                </h4>
+                        onClick={() => setSelectedPastSchedule(schedule._id)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="grid grid-cols-6 gap-4 text-sm text-gray-600 dark:text-gray-400">
+                              <div className="flex items-center gap-1">
+                                <FileText className="w-4 h-4" />
+                                <span className="font-medium truncate">
+                                  {schedule.schedule_no?.length > 12
+                                    ? schedule.schedule_no.substring(0, 12) + "…"
+                                    : schedule.schedule_no}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Building className="w-4 h-4" />
+                                <span className="truncate">{schedule.client_name}</span>
                               </div>
 
-                              <div className="grid grid-cols-3 gap-4 text-sm text-gray-600 dark:text-gray-400">
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-1">
-                                    <FileText className="w-4 h-4" />
-                                    <span className="font-medium truncate">
-                                      {schedule.schedule_no?.length > 12
-                                        ? schedule.schedule_no.substring(0, 12) + "…"
-                                        : schedule.schedule_no}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Building className="w-4 h-4" />
-                                    <span className="truncate">{schedule.client_name}</span>
-                                  </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="w-4 h-4" />
-                                    <span>{formatDate(schedule.input_params.schedule_date)}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Truck className="w-4 h-4" />
-                                    <span>{schedule.input_params.quantity} m³</span>
-                                  </div>
-                                </div>
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-1">
-                                    <MapPin className="w-4 h-4" />
-                                    <span className="truncate">{schedule.project_name}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Truck className="w-4 h-4" />
-                                    <span>
-                                      {new Date(schedule.input_params.pump_start).toLocaleTimeString("en-US", {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })}
-                                    </span>
-                                  </div>
-                                </div>
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                <span>{formatDate(schedule.input_params.schedule_date)}</span>
                               </div>
-                            </div>
-
-                            <div
-                              className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                selectedPastSchedule === schedule._id
-                                  ? "border-brand-500 bg-brand-500"
-                                  : "border-gray-300 dark:border-gray-600"
-                              }`}
-                            >
-                              {selectedPastSchedule === schedule._id && (
-                                <div className="w-2 h-2 rounded-full bg-white"></div>
-                              )}
+                              <div className="flex items-center gap-1">
+                                <Truck className="w-4 h-4" />
+                                <span>{schedule.input_params.quantity} m³</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-4 h-4" />
+                                <span className="truncate">{schedule.project_name}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Truck className="w-4 h-4" />
+                                <span>
+                                  {new Date(schedule.input_params.pump_start).toLocaleTimeString("en-US", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
 
-                  {selectedPastSchedule && (
-                    <div className="mt-4 p-3 bg-brand-50 dark:bg-brand-900/20 rounded-lg border border-brand-200 dark:border-brand-700">
-                      <p className="text-sm text-brand-700 dark:text-brand-300">
-                        <strong>Note:</strong> Date, time, quantity, and some other fields will still need to be updated
-                        for the new schedule.
-                      </p>
-                    </div>
+                          <div
+                            className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPastSchedule === schedule._id
+                              ? "border-brand-500 bg-brand-500"
+                              : "border-gray-300 dark:border-gray-600"
+                              }`}
+                          >
+                            {selectedPastSchedule === schedule._id && (
+                              <div className="w-2 h-2 rounded-full bg-white"></div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
-              </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-center gap-4 pt-6">
-              <button
-                className={cn(
-                  "px-8 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors font-medium"
+                {selectedPastSchedule && (
+                  <div className="mt-2 p-3 bg-brand-50 dark:bg-brand-900/20 rounded-lg border border-brand-200 dark:border-brand-700">
+                    <p className="text-sm text-brand-700 dark:text-brand-300">
+                      <strong>Note:</strong> Date, time, quantity, and some other fields will still need to be updated
+                      for the new schedule.
+                    </p>
+                  </div>
                 )}
-                // disabled={!selectedPastSchedule || selectedPastSchedule === ""}
-                onClick={() => {
-                  const params = new URLSearchParams(searchParams.toString());
-                  if (!selectedPastSchedule) {
-                    setSelectedPastSchedule("");
-                    params.delete("template");
-                  } else {
-                    params.set("template", selectedPastSchedule || "none");
-                  }
-                  router.replace(`?${params.toString()}`, { scroll: false });
-                  setStep(2);
-                }}
-              >
-                Continue
-              </button>
-            </div>
+              </div>
+            )}
           </div>
         ) : step === 2 ? (
           <div className="space-y-4">
@@ -1153,14 +1157,12 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900/40 py-1 px-3 rounded-full">
                   Company Timings -
                   {profile?.preferred_format === "12h"
-                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${
-                        (profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
-                      } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${
-                        (profile?.custom_start_hour ?? 0) + 24 < 24 ? "PM" : "AM"
-                      } NEXT DAY`
+                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
+                    } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) + 24 < 24 ? "PM" : "AM"
+                    } NEXT DAY`
                     : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 TODAY TO ${String(
-                        ((profile?.custom_start_hour ?? 0) + 24) % 24
-                      ).padStart(2, "0")}:00 TOMORROW`}
+                      ((profile?.custom_start_hour ?? 0) + 24) % 24
+                    ).padStart(2, "0")}:00 TOMORROW`}
                 </span>
               </div>
 
@@ -1817,40 +1819,40 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                             Number(formData.unloadingTime) +
                             Number(formData.returnTime) >
                             0 && (
-                            <>
-                              <text
-                                x={140}
-                                y={132}
-                                textAnchor="middle"
-                                fill="#374151"
-                                fontSize="16"
-                                fontWeight="bold"
-                                className="pointer-events-none"
-                              >
-                                Total
-                              </text>
-                              <text
-                                x={140}
-                                y={152}
-                                textAnchor="middle"
-                                fill="#374151"
-                                fontSize="18"
-                                fontWeight="bold"
-                                className="pointer-events-none"
-                              >
-                                {[
-                                  formData.bufferTime,
-                                  formData.loadTime,
-                                  formData.onwardTime,
-                                  formData.unloadingTime,
-                                  formData.returnTime,
-                                ]
-                                  .map((v) => Number(v) || 0)
-                                  .reduce((a, b) => a + b, 0)}{" "}
-                                min
-                              </text>
-                            </>
-                          )}
+                              <>
+                                <text
+                                  x={140}
+                                  y={132}
+                                  textAnchor="middle"
+                                  fill="#374151"
+                                  fontSize="16"
+                                  fontWeight="bold"
+                                  className="pointer-events-none"
+                                >
+                                  Total
+                                </text>
+                                <text
+                                  x={140}
+                                  y={152}
+                                  textAnchor="middle"
+                                  fill="#374151"
+                                  fontSize="18"
+                                  fontWeight="bold"
+                                  className="pointer-events-none"
+                                >
+                                  {[
+                                    formData.bufferTime,
+                                    formData.loadTime,
+                                    formData.onwardTime,
+                                    formData.unloadingTime,
+                                    formData.returnTime,
+                                  ]
+                                    .map((v) => Number(v) || 0)
+                                    .reduce((a, b) => a + b, 0)}{" "}
+                                  min
+                                </text>
+                              </>
+                            )}
                         </svg>
                       </div>
                     </div>
