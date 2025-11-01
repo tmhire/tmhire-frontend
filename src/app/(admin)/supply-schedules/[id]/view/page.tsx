@@ -611,7 +611,7 @@ export default function SupplyScheduleViewPage() {
           <h2 className="text-xl font-semibold text-black dark:text-white flex gap-3">
             <span>Concrete Supply - Schedule Summary</span>
             <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
-              {schedule.status}
+              {schedule.status === "generated" ? "Confirmed" : schedule.status}
             </Badge>
           </h2>
           <div className="flex items-center gap-2">

@@ -322,7 +322,7 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
 
                 <Select
                   options={[
-                    { value: "generated", label: "Generated" },
+                    { value: "generated", label: "Confirmed" },
                     { value: "cancelled", label: "Cancelled" },
                     { value: "all", label: "All" },
                   ]}
@@ -402,7 +402,7 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
 
               <Select
                 options={[
-                  { value: "generated", label: "Generated" },
+                  { value: "generated", label: "Confirmed" },
                   { value: "cancelled", label: "Cancelled" },
                   { value: "all", label: "All" },
                 ]}
@@ -420,80 +420,80 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
                   <TableRow>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 bg-gray-50 dark:bg-gray-900"
                     >
                       SL. NO
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 bg-gray-50 dark:bg-gray-900"
                     >
                       DATE
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 flex flex-col "
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 flex flex-col bg-gray-50 dark:bg-gray-900"
                     >
                       SCH. NO
                       <span className="text-[10px] text-gray-400 dark:text-gray-500">(Motherplant-Date-Number)</span>
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 bg-gray-50 dark:bg-gray-900"
                     >
                       CUSTOMER NAME
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 bg-gray-50 dark:bg-gray-900"
                     >
                       PROJECT NAME
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 bg-gray-50 dark:bg-gray-900"
                     >
                       PUMP/SUPPLY
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 bg-gray-50 dark:bg-gray-900"
                     >
                       QTY IN m³
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 bg-gray-50 dark:bg-gray-900"
                     >
                       PUMP SCHD
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 bg-gray-50 dark:bg-gray-900"
                     >
                       TM SCHD
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 bg-gray-50 dark:bg-gray-900"
                     >
                       TM QUEUE
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 bg-gray-50 dark:bg-gray-900"
                     >
                       TOTAL TM DEPLOYED
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 bg-gray-50 dark:bg-gray-900"
                     >
                       PUMP START-END TIME
                     </TableCell>
                     <TableCell
                       isHeader
-                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                      className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 bg-gray-50 dark:bg-gray-900"
                     >
                       TM START-END TIME
                     </TableCell>
@@ -501,13 +501,13 @@ const ScheduleWiseTable = forwardRef<ScheduleWiseTableExportHandle, ScheduleWise
                       <>
                         <TableCell
                           isHeader
-                          className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                          className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 bg-gray-50 dark:bg-gray-900"
                         >
                           SCH CANCELLED BY
                         </TableCell>
                         <TableCell
                           isHeader
-                          className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400"
+                          className="px-3 py-3 font-medium text-gray-500 text-start text-xs dark:text-gray-400 bg-gray-50 dark:bg-gray-900"
                         >
                           REASON FOR CANCELLATION
                         </TableCell>

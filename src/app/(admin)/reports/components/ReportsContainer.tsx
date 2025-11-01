@@ -328,132 +328,95 @@ export default function ReportsContainer() {
 
   return (
     <div className="grid grid-cols-12 gap-4 md:gap-2">
-      {/* Date Picker and Report Type Row */}
-      <div className="col-span-12 flex items-center justify-between py-4 pl-6 px-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 sticky top-24">
-        {/* Page Name and Scheduled Timings */}
-        <div className="flex flex-col space-y-2">
-          {/* Page Name Row */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-700 dark:text-white">Reports - {city}</h3>
-          </div>
-
-          {/* Scheduled Timings Row */}
-          <div className="flex items-center space-x-2">
-            <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-            <span className="text-sm text-gray-500 dark:text-gray-400">Scheduled Timings:</span>
-            <span className="px-3 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-sm font-medium text-gray-800 dark:text-gray-200">
+      {/* Main Header Row */}
+      <div className="col-span-12 flex items-center justify-between gap-4 py-3 pl-6 pr-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 sticky top-24">
+        {/* Left: Title and Timings */}
+        <div className="flex items-center gap-4 flex-shrink-0">
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-white whitespace-nowrap">Reports - {city}</h3>
+          <div className="flex items-center gap-2 px-2">
+            <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+            <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Timings:</span>
+            <span className="px-2 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-xs font-medium text-gray-800 dark:text-gray-200 whitespace-nowrap">
               {formatHour(startHour)} TO {formatHour(endHour)} NEXT DAY
             </span>
           </div>
         </div>
 
-        {/* Filters Group */}
-        <div className="flex flex-col space-y-3 bg-gray-50 dark:bg-gray-700/50 px-4 py-3 rounded-lg w-fit">
-          {/* Date Filter Row */}
-          <div className="grid grid-cols-3 gap-2 items-center">
-            {/* From Date */}
-            <div className="flex items-center space-x-2 w-40">
-              {/* <Calendar className="h-6 w-6 text-gray-500 dark:text-gray-400" /> */}
-              <span className="text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap">From:</span>
-              <DatePickerInput
-                value={selectedDate}
-                onChange={handleDateChange}
-                placeholder="Select"
-                className={`h-8 w-full text-sm ${!validDateRange && "border-red-400 text-red-400"}`}
-              />
-            </div>
-
-            {/* To Date */}
-            
-              <div className={`flex items-center space-x-2 w-40 ${reportType === "truck-wise" ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-400 dark:text-gray-500 opacity-35" : ""}`}>
-                <span className={`${reportType === "truck-wise" ? "text-gray-400 dark:text-gray-500" : "text-sm text-gray-700 dark:text-gray-400 whitespace-nowrap"}`}>To:</span>
-                <DatePickerInput
-                  value={selectedToDate}
-                  onChange={handleToDateChange}
-                  placeholder="Optional"
-                  disabled={reportType === "truck-wise"}
-                  className={`h-8 w-full text-sm ${!validDateRange && "border-red-400 text-red-400"} ${reportType === "truck-wise" ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-400 dark:text-gray-500" : "cursor-pointer"}`}
-                />
-              </div>
-            
-            {/* Today Button */}
-            <div className="flex items-center space-x-2 w-40">
-              <Button
-                variant="outline"
-                className="h-8 w-full text-sm px-2"
-                onClick={() => {
-                  const today = new Date().toISOString().slice(0, 10);
-                  setSelectedDate(today);
-                  setSelectedToDate(today);
-                }}
-              >
-                Today
-              </Button>
-            </div>
-
-            {/* Filters Button */}
-            <div className="flex items-center space-x-2 w-40">
-              <Button
-                variant="outline"
-                className={`h-8 w-full text-sm px-2 relative flex items-center justify-center space-x-2 ${
-                  hasActiveFilters ? "border-blue-500 bg-blue-50 dark:bg-blue-900" : ""
-                }`}
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <Filter className={`${hasActiveFilters && "text-blue-600 dark:text-blue-900"}h-4 w-4`} />
-                <span className={`${hasActiveFilters && "text-blue-600 dark:text-blue-900"}`}>Filters</span>
-                {hasActiveFilters && (
-                  <span className="absolute -top-1 -right-1 h-2 w-2 bg-blue-500 rounded-full"></span>
-                )}
-              </Button>
-            </div>
-            {/* Time Format Info Row */}
-            {reportType === "truck-wise" && (
-              <div className="flex items-center space-x-2 col-span-2">
-                <span className="text-xs text-gray-600 dark:text-gray-400 max-w-xs">
-                  Note: Time format (HH:MM) follows X hrs Y mins naming convention
-                </span>
-              </div>
-            )}
+        {/* Center: Date Filters */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {/* From Date */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-700 dark:text-gray-400 whitespace-nowrap">From:</span>
+            <DatePickerInput
+              value={selectedDate}
+              onChange={handleDateChange}
+              placeholder="Select"
+              className={`h-8 w-32 text-xs ${!validDateRange && "border-red-400 text-red-400"}`}
+            />
           </div>
+
+          {/* To Date */}
+          <div className={`flex items-center gap-2 ${reportType === "truck-wise" ? "opacity-50" : ""}`}>
+            <span className={`text-xs whitespace-nowrap ${reportType === "truck-wise" ? "text-gray-400 dark:text-gray-500" : "text-gray-700 dark:text-gray-400"}`}>To:</span>
+            <DatePickerInput
+              value={selectedToDate}
+              onChange={handleToDateChange}
+              placeholder="Optional"
+              disabled={reportType === "truck-wise"}
+              className={`h-8 w-32 text-xs ${!validDateRange && "border-red-400 text-red-400"} ${reportType === "truck-wise" ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : ""}`}
+            />
+          </div>
+
+          {/* Filters Button */}
+          <Button
+            variant="outline"
+            className={`h-8 px-3 text-xs relative flex items-center gap-1.5 ${
+              hasActiveFilters ? "border-blue-500 bg-blue-50 dark:bg-blue-900" : ""
+            }`}
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className={`h-3.5 w-3.5 ${hasActiveFilters ? "text-blue-600 dark:text-blue-400" : ""}`} />
+            <span className={hasActiveFilters ? "text-blue-600 dark:text-blue-400" : ""}>Filters</span>
+            {hasActiveFilters && (
+              <span className="absolute -top-1 -right-1 h-2 w-2 bg-blue-500 rounded-full"></span>
+            )}
+          </Button>
         </div>
 
-        {/* Report Type and Export */}
-        <div className="flex flex-col space-y-2">
-          {/* Report Type Row */}
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">Report Type:</span>
-            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+        {/* Right: Report Type and Export */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {/* Report Type */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Type:</span>
+            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
               <button
                 onClick={() => setReportType("schedule-wise")}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                   reportType === "schedule-wise"
                     ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
                     : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
-                Schedule Wise
+                Schedule
               </button>
               <button
                 onClick={() => setReportType("truck-wise")}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                   reportType === "truck-wise"
                     ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
                     : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
-                Truck Wise
+                Truck
               </button>
             </div>
           </div>
 
-          {/* Export Row */}
-          <div className="flex justify-end">
-            <Button variant="outline" className="h-8 flex items-center space-x-2" onClick={handleExport}>
-              <FileDown className="h-4 w-4" />
-              <span>Export</span>
-            </Button>
-          </div>
+          {/* Export Button */}
+          <Button variant="outline" className="h-8 px-3 text-xs flex items-center gap-1.5" onClick={handleExport}>
+            <FileDown className="h-3.5 w-3.5" />
+            <span>Export</span>
+          </Button>
         </div>
       </div>
 

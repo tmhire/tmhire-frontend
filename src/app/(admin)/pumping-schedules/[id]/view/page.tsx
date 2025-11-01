@@ -1011,7 +1011,7 @@ export default function ScheduleViewPage() {
           <h2 className="text-xl font-semibold text-black dark:text-white flex gap-3">
             <span>Concrete Pumping - Schedule Summary</span>
             <Badge size="sm" color={schedule.status === "generated" ? "success" : "warning"}>
-              {schedule.status}
+              {schedule.status === "generated" ? "Confirmed" : schedule.status}
             </Badge>
             {schedule.schedule_no && (
               <Badge size="sm" color={"info"}>

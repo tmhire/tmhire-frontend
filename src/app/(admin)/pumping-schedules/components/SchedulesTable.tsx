@@ -238,7 +238,7 @@ export default function SchedulesTable({ data, onDelete, onCancel }: SchedulesTa
                     </TableCell>
                     <TableCell className="px-2 py-3 text-sm text-start">
                       <Badge size="sm" color={getStatusColor(schedule.status)}>
-                        {schedule.status}
+                        {schedule.status === "generated" ? "Confirmed" : schedule.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="px-2 py-3 text-sm">

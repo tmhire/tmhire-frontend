@@ -150,7 +150,14 @@ type TMSchedule = {
 
 const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProps>(
   (
-    { data, selectedDate, selectedPlantId, selectedClientName, selectedProjectName, plantIdToName }: TruckWiseTableProps,
+    {
+      data,
+      selectedDate,
+      selectedPlantId,
+      selectedClientName,
+      selectedProjectName,
+      plantIdToName,
+    }: TruckWiseTableProps,
     exportRef
   ) => {
     const { status } = useSession();
@@ -646,9 +653,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
         const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [];
 
         // Get plant names for the filter info row
-        const selectedPlantNames = selectedPlantId && plantIdToName
-          ? plantIdToName[selectedPlantId]
-          : "ALL PLANTS";
+        const selectedPlantNames = selectedPlantId && plantIdToName ? plantIdToName[selectedPlantId] : "ALL PLANTS";
         const selectedProjectNames = selectedProjectName || "ALL PROJECTS";
         const selectedClientNames = selectedClientName || "ALL CLIENTS";
 
@@ -663,18 +668,51 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
           "",
           `CLIENTS: ${selectedClientNames}`,
         ];
-        
+
         // Add blank rows
         rows.push(filterInfoRow);
         rows.push([]);
 
-        // Define columns based on view type
+        // Add slot numbers row (first header row)
+        const slotNumbersRow: (string | number)[] = ["", "", ""]; // Empty cells for SL. NO, Truck/TM No., TM/LP/BP
+        buildSlots().forEach((slot, i) => {
+          if (isProjectWise) {
+            slotNumbersRow.push(`SLOT ${i + 1}`, "", ""); // For project-wise, each slot spans 3 columns
+          } else {
+            slotNumbersRow.push(`SLOT ${i + 1}`); // For truck-wise, each slot is 1 column
+          }
+        });
+        slotNumbersRow.push("UTILIZATION", "", ""); // Utilization spans 3 columns
+        rows.push(slotNumbersRow);
+
+        // Add merges for slot numbers row
+        let colIndex = 3; // Start after SL. NO, Truck/TM No., TM/LP/BP
+        buildSlots().forEach(() => {
+          if (isProjectWise) {
+            // Merge 3 columns for each slot in project-wise view
+            merges.push({
+              s: { r: rows.length - 1, c: colIndex },
+              e: { r: rows.length - 1, c: colIndex + 2 },
+            });
+            colIndex += 3;
+          } else {
+            // No merge needed for truck-wise (single column)
+            colIndex += 1;
+          }
+        });
+        // Merge utilization columns
+        merges.push({
+          s: { r: rows.length - 1, c: colIndex },
+          e: { r: rows.length - 1, c: colIndex + 2 },
+        });
+
+        // Define columns based on view type (second header row)
         const columns = isProjectWise
           ? [
               "SL. NO",
               "TM No.",
               "TM/LP/BP",
-              ...buildSlots().flatMap(() => ["TM ENGAGED HOURS", "CUSTOMER NAME", "PROJECT"]),
+              ...buildSlots().flatMap((slot) => [slot.label, "", ""]), // Slot label spans 3 columns (will be merged)
               "TOT USED HOURS",
               "TOT IDLE HOURS",
               "USED %",
@@ -691,6 +729,28 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
 
         // Add header row
         rows.push(columns);
+
+        // Add merges for slot labels in project-wise view
+        if (isProjectWise) {
+          colIndex = 3;
+          buildSlots().forEach(() => {
+            merges.push({
+              s: { r: rows.length - 1, c: colIndex },
+              e: { r: rows.length - 1, c: colIndex + 2 },
+            });
+            colIndex += 3;
+          });
+        }
+
+        // For project-wise, add sub-header row (third header row)
+        if (isProjectWise) {
+          const subHeaders: (string | number)[] = ["", "", ""]; // Empty for first 3 columns
+          buildSlots().forEach(() => {
+            subHeaders.push("Engaged Hours", "Customer Name", "Project Name");
+          });
+          subHeaders.push("", "", ""); // Empty for utilization columns
+          rows.push(subHeaders);
+        }
 
         // Add data rows
         allTrucks.forEach((tm, idx) => {
@@ -802,10 +862,16 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
       <div className="space-y-6">
         <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
           <div className="p-6">
-            <div className="flex justify-between mb-2">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {isProjectWise ? "Project Wise" : "Truck Wise"} Report - {formatDate(selectedDate)}
-              </h3>
+            <div className="flex justify-between items-center mb-2">
+              <div className="flex items-center gap-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {isProjectWise ? "Project Wise" : "Truck Wise"} Report - {formatDate(selectedDate)}
+                </h3>
+                <span className="px-2 py-0.5 text-xs font-medium text-gray-800 bg-amber-200 border border-amber-300 rounded-full">
+                  Time format: AA:BB = A hrs B mins  
+                </span>
+              </div>
+
               <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
                 <button
                   onClick={() => setIsProjectWise(false)}
@@ -833,133 +899,131 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
             {/* Main Table */}
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
               <div className="max-w-full overflow-x-auto">
-                <Table>
-                  <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-                    {/* Slot Numbers Row */}
-                    <tr className="border-b border-gray-100 dark:border-white/[0.05]">
-                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                        
-                      </th>
-                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                        
-                      </th>
-                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                        
-                      </th>
+                <div className="relative max-h-[calc(100vh-300px)] overflow-y-auto custom-scrollbar">
+                  <Table>
+                    <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
+                      {/* Slot Numbers Row */}
+                      <tr className="border-b border-gray-100 dark:border-white/[0.05] sticky top-0 z-10 bg-gray-50 dark:bg-gray-950">
+                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-950"></th>
+                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-950"></th>
+                      <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-950"></th>
                       {buildSlots().map((slot, i) => (
                         <th
                           colSpan={isProjectWise ? 3 : 1}
                           key={i + "-SlotNumber"}
-                          className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]"
+                          className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-950"
                         >
                           SLOT {i + 1}
                         </th>
                       ))}
-                      <th colSpan={3} className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] col-span-3">
+                      <th
+                        colSpan={3}
+                        className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] col-span-3 bg-gray-50 dark:bg-gray-950"
+                      >
                         UTILIZATION
                       </th>
                     </tr>
                     {isProjectWise ? (
-                      <tr className="border-b border-gray-100 dark:border-white/[0.05]">
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
+                      <tr className="border-b border-gray-100 dark:border-white/[0.05] sticky top-8 z-10 bg-gray-50 dark:bg-white/[0.03]">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-900">
                           SL. NO
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] whitespace-nowrap">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] whitespace-nowrap bg-gray-50 dark:bg-gray-900">
                           TM No.
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-900">
                           TM/LP/BP
                         </th>
                         {buildSlots().map((slot, i) => (
                           <th
                             colSpan={3}
                             key={i + "-ProjectWise"}
-                            className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]"
+                            className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-900"
                           >
                             {slot.label}
                           </th>
                         ))}
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                          TOTAL USED HOURS
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-900">
+                          TOT USED HOURS
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                          TOTAL IDLE HOURS
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-900">
+                          TOT IDLE HOURS
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 bg-gray-50 dark:bg-gray-900">
                           USED %
                         </th>
                       </tr>
                     ) : (
-                      <tr>
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
+                      <tr className="sticky top-9 z-10 bg-gray-50 dark:bg-gray-900">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-900">
                           SL. NO
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-900">
                           Truck No.
                         </th>
 
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-900">
                           TM/LP/BP
                         </th>
                         {buildSlots().map((slot, i) => (
                           <th
                             key={i + "-TruckWise"}
-                            className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]"
+                            className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-900"
                           >
                             {slot.label}
                           </th>
                         ))}
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                          TOTAL USED HOURS
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-900">
+                          TOT USED HOURS
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
-                          TOTAL IDLE HOURS
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-900">
+                          TOT IDLE HOURS
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 bg-gray-50 dark:bg-gray-900">
                           USED %
                         </th>
                       </tr>
                     )}
                     {isProjectWise && (
-                      <tr>
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
+                      <tr className="sticky top-25 z-10 bg-gray-50 dark:bg-white/[0.03]">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-800">
                           #
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-800">
                           #
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-800">
                           #
                         </th>
                         {buildSlots().map((slot, i) => (
                           <React.Fragment key={i + "-ProjectWiseSubHeaders"}>
                             <th
                               key={i + "-TMEngagedHours"}
-                              className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]"
+                              className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-800"
                             >
                               Engaged Hours
                             </th>
                             <th
                               key={i + "-CustomerName"}
-                              className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]"
+                              className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-800"
                             >
                               Customer Name
                             </th>
                             <th
                               key={i + "-ProjectName"}
-                              className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]"
+                              className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-800"
                             >
                               Project Name
                             </th>
                           </React.Fragment>
                         ))}
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-800">
                           #
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05]">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-800">
                           #
                         </th>
-                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200">
+                        <th className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 bg-gray-50 dark:bg-gray-800">
                           #
                         </th>
                       </tr>
@@ -1128,10 +1192,14 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                       </TableCell>
                       <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90">
                         {(() => {
-                          const tmTrucks = allTrucks.filter(t => t.tmType === "TM");
-                          const tmWeightedUtil = tmTrucks.length > 0 ?
-                            Math.round(100 * tmTrucks.reduce((sum, t) => sum + (24 - t.totalFreeHours), 0) / (tmTrucks.length * 24)) :
-                            null;
+                          const tmTrucks = allTrucks.filter((t) => t.tmType === "TM");
+                          const tmWeightedUtil =
+                            tmTrucks.length > 0
+                              ? Math.round(
+                                  (100 * tmTrucks.reduce((sum, t) => sum + (24 - t.totalFreeHours), 0)) /
+                                    (tmTrucks.length * 24)
+                                )
+                              : null;
                           return tmWeightedUtil !== null ? `${tmWeightedUtil}%` : null;
                         })()}
                       </TableCell>
@@ -1260,15 +1328,15 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                     {/* Line Pumps Total Row */}
                     {allTrucks.filter((truck) => truck.tmType === "LP").length > 0 && (
                       <TableRow className="bg-gray-50 dark:bg-gray-800 font-semibold">
-                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                        TOTAL
-                      </TableCell>
-                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                        LPs
-                      </TableCell>
-                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                        {null}
-                      </TableCell>
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                          TOTAL
+                        </TableCell>
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                          LPs
+                        </TableCell>
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                          {null}
+                        </TableCell>
 
                         {isProjectWise
                           ? // Project-wise totals: for each slot, show only the used hours (skip customer and project columns)
@@ -1301,10 +1369,14 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                         </TableCell>
                         <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90">
                           {(() => {
-                            const lpTrucks = allTrucks.filter(t => t.tmType === "LP");
-                            const lpWeightedUtil = lpTrucks.length > 0 ?
-                              Math.round(100 * lpTrucks.reduce((sum, t) => sum + (24 - t.totalFreeHours), 0) / (lpTrucks.length * 24)) :
-                              null;
+                            const lpTrucks = allTrucks.filter((t) => t.tmType === "LP");
+                            const lpWeightedUtil =
+                              lpTrucks.length > 0
+                                ? Math.round(
+                                    (100 * lpTrucks.reduce((sum, t) => sum + (24 - t.totalFreeHours), 0)) /
+                                      (lpTrucks.length * 24)
+                                  )
+                                : null;
                             return lpWeightedUtil !== null ? `${lpWeightedUtil}%` : null;
                           })()}
                         </TableCell>
@@ -1434,15 +1506,15 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                     {/* Boom Pumps Total Row */}
                     {allTrucks.filter((truck) => truck.tmType === "BP").length > 0 && (
                       <TableRow className="bg-gray-50 dark:bg-gray-800 font-semibold">
-                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                        TOTAL
-                      </TableCell>
-                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                        BPs
-                      </TableCell>
-                      <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
-                        {null}
-                      </TableCell>
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                          TOTAL
+                        </TableCell>
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                          BPs
+                        </TableCell>
+                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                          {null}
+                        </TableCell>
 
                         {isProjectWise
                           ? // Project-wise totals: for each slot, show only the used hours (skip customer and project columns)
@@ -1475,10 +1547,14 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                         </TableCell>
                         <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90">
                           {(() => {
-                            const bpTrucks = allTrucks.filter(t => t.tmType === "BP");
-                            const bpWeightedUtil = bpTrucks.length > 0 ?
-                              Math.round(100 * bpTrucks.reduce((sum, t) => sum + (24 - t.totalFreeHours), 0) / (bpTrucks.length * 24)) :
-                              null;
+                            const bpTrucks = allTrucks.filter((t) => t.tmType === "BP");
+                            const bpWeightedUtil =
+                              bpTrucks.length > 0
+                                ? Math.round(
+                                    (100 * bpTrucks.reduce((sum, t) => sum + (24 - t.totalFreeHours), 0)) /
+                                      (bpTrucks.length * 24)
+                                  )
+                                : null;
                             return bpWeightedUtil !== null ? `${bpWeightedUtil}%` : null;
                           })()}
                         </TableCell>
@@ -1486,6 +1562,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </div>
             </div>
           </div>
