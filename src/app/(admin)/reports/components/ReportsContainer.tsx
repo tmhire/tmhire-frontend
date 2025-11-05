@@ -108,6 +108,13 @@ export default function ReportsContainer() {
     }
   }, [session, setCity]);
 
+  // Update to_date when report type changes to truck-wise
+  useEffect(() => {
+    if (reportType === "truck-wise") {
+      setSelectedToDate(selectedDate);
+    }
+  }, [reportType, selectedDate]);
+
   // Initialize from URL on first render
   useEffect(() => {
     const urlDate = searchParams.get("date");

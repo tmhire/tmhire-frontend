@@ -911,7 +911,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                         <th
                           colSpan={isProjectWise ? 3 : 1}
                           key={i + "-SlotNumber"}
-                          className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-950"
+                          className={`px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r-2 ${i===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-950`}
                         >
                           SLOT {i + 1}
                         </th>
@@ -938,7 +938,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           <th
                             colSpan={3}
                             key={i + "-ProjectWise"}
-                            className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-900"
+                            className={`px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r-2 ${i===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-900`}
                           >
                             {slot.label}
                           </th>
@@ -968,7 +968,8 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                         {buildSlots().map((slot, i) => (
                           <th
                             key={i + "-TruckWise"}
-                            className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-900"
+                            className={`px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r-2 ${i===0&&"border-l-2"}
+                              border-gray-300 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-900`}
                           >
                             {slot.label}
                           </th>
@@ -999,19 +1000,19 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           <React.Fragment key={i + "-ProjectWiseSubHeaders"}>
                             <th
                               key={i + "-TMEngagedHours"}
-                              className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-800"
+                              className={`px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r-2 ${i===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-800`}
                             >
                               Engaged Hours
                             </th>
                             <th
                               key={i + "-CustomerName"}
-                              className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-800"
+                              className={`px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r-2 ${i===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-800`}
                             >
                               Customer Name
                             </th>
                             <th
                               key={i + "-ProjectName"}
-                              className="px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r border-gray-100 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-800"
+                              className={`px-2 py-3 font-medium text-gray-700 text-medium text-center text-xs dark:text-gray-200 border-r-2 ${i===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05] bg-gray-50 dark:bg-gray-800`}
                             >
                               Project Name
                             </th>
@@ -1089,13 +1090,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
 
                                     return (
                                       <React.Fragment key={slotIndex + "-ProjectWiseSlot"}>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                                        <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${slotIndex===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                           {isFirstRow ? formatSlotTimeRange(slot, schedule) : ""}
                                         </TableCell>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                                        <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${slotIndex===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                           {schedule?.customer || "-"}
                                         </TableCell>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                                        <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${slotIndex===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                           {schedule?.project || "-"}
                                         </TableCell>
                                       </React.Fragment>
@@ -1130,7 +1131,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                                 {tm.timeSlots.map((slot, slotIndex) => (
                                   <TableCell
                                     key={slotIndex}
-                                    className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]"
+                                    className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${slotIndex===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}
                                   >
                                     {formatHoursMinutes(Math.max(0, 4 - slot.freeHours))}
                                   </TableCell>
@@ -1165,13 +1166,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                         ? // Project-wise totals: for each slot, show only the used hours (skip customer and project columns)
                           totals.tms.timeSlotTotals.map((total, index) => (
                             <React.Fragment key={index + "-ProjectWiseTotal"}>
-                              <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                              <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${index===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                 {formatHoursMinutes(total)}
                               </TableCell>
-                              <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                              <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${index===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                 {null}
                               </TableCell>
-                              <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                              <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${index===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                 {null}
                               </TableCell>
                             </React.Fragment>
@@ -1179,7 +1180,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                         : totals.tms.timeSlotTotals.map((total, index) => (
                             <TableCell
                               key={index}
-                              className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]"
+                              className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${index===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}
                             >
                               {formatHoursMinutes(total)}
                             </TableCell>
@@ -1264,13 +1265,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
 
                                     return (
                                       <React.Fragment key={slotIndex + "-ProjectWiseSlot"}>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                                        <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${slotIndex===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                           {isFirstRow ? formatSlotTimeRange(slot, schedule) : ""}
                                         </TableCell>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                                        <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${slotIndex===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                           {schedule?.customer || "-"}
                                         </TableCell>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                                        <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${slotIndex===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                           {schedule?.project || "-"}
                                         </TableCell>
                                       </React.Fragment>
@@ -1305,7 +1306,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                                 {tm.timeSlots.map((slot, slotIndex) => (
                                   <TableCell
                                     key={slotIndex}
-                                    className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]"
+                                    className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${slotIndex===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}
                                   >
                                     {formatHoursMinutes(Math.max(0, 4 - slot.freeHours))}
                                   </TableCell>
@@ -1342,13 +1343,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           ? // Project-wise totals: for each slot, show only the used hours (skip customer and project columns)
                             totals.linePumps.timeSlotTotals.map((total, index) => (
                               <React.Fragment key={index + "-ProjectWiseTotal"}>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                                <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${index===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                   {formatHoursMinutes(total)}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                                <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${index===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                   {null}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                                <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${index===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                   {null}
                                 </TableCell>
                               </React.Fragment>
@@ -1356,7 +1357,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           : totals.linePumps.timeSlotTotals.map((total, index) => (
                               <TableCell
                                 key={index}
-                                className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]"
+                                className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${index===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}
                               >
                                 {formatHoursMinutes(total)}
                               </TableCell>
@@ -1442,13 +1443,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
 
                                     return (
                                       <React.Fragment key={slotIndex + "-ProjectWiseSlot"}>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                                        <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${slotIndex===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                           {isFirstRow ? formatSlotTimeRange(slot, schedule) : ""}
                                         </TableCell>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                                        <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${slotIndex===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                           {schedule?.customer || "-"}
                                         </TableCell>
-                                        <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                                        <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${slotIndex===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                           {schedule?.project || "-"}
                                         </TableCell>
                                       </React.Fragment>
@@ -1483,7 +1484,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                                 {tm.timeSlots.map((slot, slotIndex) => (
                                   <TableCell
                                     key={slotIndex}
-                                    className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]"
+                                    className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${slotIndex===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}
                                   >
                                     {formatHoursMinutes(Math.max(0, 4 - slot.freeHours))}
                                   </TableCell>
@@ -1520,13 +1521,13 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           ? // Project-wise totals: for each slot, show only the used hours (skip customer and project columns)
                             totals.boomPumps.timeSlotTotals.map((total, index) => (
                               <React.Fragment key={index + "-ProjectWiseTotal"}>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                                <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${index===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                   {formatHoursMinutes(total)}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                                <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${index===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                   {null}
                                 </TableCell>
-                                <TableCell className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]">
+                                <TableCell className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${index===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}>
                                   {null}
                                 </TableCell>
                               </React.Fragment>
@@ -1534,7 +1535,7 @@ const TruckWiseTable = forwardRef<TruckWiseTableExportHandle, TruckWiseTableProp
                           : totals.boomPumps.timeSlotTotals.map((total, index) => (
                               <TableCell
                                 key={index}
-                                className="px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r border-gray-100 dark:border-white/[0.05]"
+                                className={`px-2 py-3 text-center text-xs text-gray-800 dark:text-white/90 border-r-2 ${index===0&&"border-l-2"} border-gray-300 dark:border-white/[0.05]`}
                               >
                                 {formatHoursMinutes(total)}
                               </TableCell>
