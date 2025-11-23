@@ -5,6 +5,7 @@ import { SidebarProvider } from "@/context/SidebarContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import ProfileCheck from "@/components/onboarding/ProfileCheck";
+import PendingApprovalOverlay from "@/components/onboarding/PendingApprovalOverlay";
 import { Analytics } from "@vercel/analytics/next";
 import { Metadata } from "next";
 import { SearchProvider } from "@/context/SearchContext";
@@ -77,6 +78,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <SidebarProvider>
                   <Analytics />
                   <ProfileCheck />
+                  <PendingApprovalOverlay />
                   {children}
                 </SidebarProvider>
               </ThemeProvider>

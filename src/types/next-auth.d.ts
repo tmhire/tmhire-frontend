@@ -7,6 +7,10 @@ declare module "next-auth" {
     company?: string;
     city?: string;
     contact?: number;
+    role?: string;
+    sub_role?: string;
+    status?: string;
+    company_id?: string;
     backendAccessToken?: string;
     backendAccessTokenExpires?: number;
     backendRefreshToken?: string;
@@ -30,6 +34,10 @@ declare module "next-auth" {
     company?: string;
     city?: string;
     contact?: number;
+    role?: string;
+    sub_role?: string;
+    status?: string;
+    company_id?: string;
     image?: string | null;
     accessToken?: string;
     refreshToken?: string;

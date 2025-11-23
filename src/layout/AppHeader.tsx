@@ -16,6 +16,7 @@ const AppHeader: React.FC = () => {
 
   const { profile, loading } = useProfile();
   const { setIsSearchOpen } = useSearch();
+  console.log("profile", profile)
 
   const handleToggle = () => {
     if (window.innerWidth >= 1024) {
@@ -149,9 +150,8 @@ const AppHeader: React.FC = () => {
             </button>
           </div>
           <div
-            className={`${
-              isApplicationMenuOpen ? "flex" : "hidden"
-            } items-center justify-between w-full gap-4 px-5 py-4 lg:flex shadow-theme-md lg:justify-end lg:px-0 lg:shadow-none`}
+            className={`${isApplicationMenuOpen ? "flex" : "hidden"
+              } items-center justify-between w-full gap-4 px-5 py-4 lg:flex shadow-theme-md lg:justify-end lg:px-0 lg:shadow-none`}
           >
             <div className="hidden lg:block">
               <button onClick={() => setIsSearchOpen(true)} className="relative w-full">
