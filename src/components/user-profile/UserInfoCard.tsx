@@ -56,7 +56,7 @@ export default function UserInfoCard() {
 
   const handleSave = async () => {
     if (!hasChanged) return;
-    
+
     // Validate field formats
     if (!validateCompanyName(formData.company)) {
       console.error("Invalid company name format");
@@ -67,7 +67,7 @@ export default function UserInfoCard() {
       console.error("Invalid city format");
       return;
     }
-    
+
     try {
       setIsSubmitting(true);
       const response = await fetchWithAuth("/auth/update", {
@@ -112,7 +112,7 @@ export default function UserInfoCard() {
         <div>
           <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 lg:mb-6">Company Details</h4>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-7 2xl:gap-x-32">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-7 2xl:gap-x-32">
             <div>
               <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">Company Name</p>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{formData.company || "N/A"}</p>
@@ -126,6 +126,20 @@ export default function UserInfoCard() {
             <div>
               <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">Email address</p>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{formData.email || "N/A"}</p>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">Role</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
+                {session?.role ? session.role.replace("_", " ") : "N/A"}
+              </p>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">Sub Role</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
+                {session?.sub_role ? session.sub_role.replace("_", " ") : "N/A"}
+              </p>
             </div>
           </div>
         </div>

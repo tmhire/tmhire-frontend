@@ -26,7 +26,7 @@ export default function WelcomeModal() {
   const { data: companiesData } = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
-      const response = await fetchWithAuth("/companies");
+      const response = await fetchWithAuth("/company");
       return response.json();
     },
   });

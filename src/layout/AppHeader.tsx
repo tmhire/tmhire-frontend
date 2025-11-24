@@ -16,7 +16,6 @@ const AppHeader: React.FC = () => {
 
   const { profile, loading } = useProfile();
   const { setIsSearchOpen } = useSearch();
-  console.log("profile", profile)
 
   const handleToggle = () => {
     if (window.innerWidth >= 1024) {

@@ -18,8 +18,11 @@ interface AuthProps {
   email: string;
   new_user: boolean;
   company: string;
+  company_id?: string;
   city: string;
   contact: number;
+  role?: string;
+  sub_role?: string;
   accessToken: string;
   refreshToken: string;
   tokenType: string;
@@ -75,8 +78,11 @@ async function handleEmailPassword(
       email: json?.data?.email,
       new_user: json?.data?.new_user === true || false,
       company: json?.data?.company || "",
+      company_id: json?.data?.company_id,
       city: json?.data?.city || "",
       contact: json?.data?.contact || undefined,
+      role: json?.data?.role,
+      sub_role: json?.data?.sub_role,
       accessToken: json?.data?.access_token,
       refreshToken: json?.data?.refresh_token,
       tokenType: json?.data?.token_type,
@@ -130,8 +136,11 @@ async function exchangeGoogleToken(idToken: string): Promise<AuthProps | null> {
       email: "",
       new_user: data?.data?.new_user === true || false,
       company: data?.data?.company || "",
+      company_id: data?.data?.company_id,
       city: data?.data?.city || "",
       contact: data?.data?.contact || undefined,
+      role: data?.data?.role,
+      sub_role: data?.data?.sub_role,
       accessToken: data?.data?.access_token,
       refreshToken: data?.data?.refresh_token,
       tokenType: data?.data?.token_type,
@@ -240,8 +249,11 @@ export const authOptions: AuthOptions = {
         token.backendTokenType = session.backendTokenType;
         if (session?.new_user !== undefined && session.new_user !== null) token.new_user = session.new_user === true;
         if (session?.company) token.company = session.company;
+        if (session?.company_id) token.company_id = session.company_id;
         if (session?.city) token.city = session.city;
         if (session?.contact) token.contact = session.contact;
+        if (session?.role) token.role = session.role;
+        if (session?.sub_role) token.sub_role = session.sub_role;
         if (session?.preferred_format) token.preferred_format = session.preferred_format;
         if (session?.custom_start_hour !== undefined && session.custom_start_hour !== null)
           token.custom_start_hour = session.custom_start_hour;
@@ -270,8 +282,11 @@ export const authOptions: AuthOptions = {
             token.backendTokenType = backendAuth.tokenType;
             token.new_user = backendAuth.new_user === true;
             token.company = backendAuth.company;
+            token.company_id = backendAuth.company_id;
             token.city = backendAuth.city;
             token.contact = backendAuth.contact;
+            token.role = backendAuth.role;
+            token.sub_role = backendAuth.sub_role;
             token.preferred_format = backendAuth.preferred_format;
             token.custom_start_hour = backendAuth.custom_start_hour;
 
@@ -295,8 +310,11 @@ export const authOptions: AuthOptions = {
           token.backendTokenType = user.tokenType;
           token.new_user = user.new_user === true;
           token.company = user.company;
+          token.company_id = user.company_id;
           token.city = user.city;
           token.contact = user.contact;
+          token.role = user.role;
+          token.sub_role = user.sub_role;
           token.preferred_format = user.preferred_format;
           token.custom_start_hour = user.custom_start_hour;
 
@@ -364,8 +382,11 @@ export const authOptions: AuthOptions = {
         console.log("New User", token.new_user);
         session.new_user = token.new_user === true;
         session.company = token.company as string;
+        session.company_id = token.company_id as string;
         session.city = token.city as string;
         session.contact = token.contact as number;
+        session.role = token.role as string;
+        session.sub_role = token.sub_role as string;
         session.preferred_format = token.preferred_format as "12h" | "24h";
         session.custom_start_hour = token.custom_start_hour as number;
 

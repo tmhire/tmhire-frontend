@@ -9,6 +9,9 @@ export interface ProfileData {
   new_user: boolean;
   contact: number;
   company: string;
+  company_id?: string;
+  role?: string;
+  sub_role?: string;
   city: string;
   preferred_format: "12h" | "24h";
   custom_start_hour: number;

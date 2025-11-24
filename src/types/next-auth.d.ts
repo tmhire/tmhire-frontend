@@ -59,5 +59,10 @@ declare module "next-auth/jwt" {
     contact?: number;
     backendAccessTokenExpires?: number;
     backendRefreshTokenExpires?: number;
+    role?: string;
+    sub_role?: string;
+    company_id?: string;
+    preferred_format?: "12h" | "24h";
+    custom_start_hour?: number;
   }
 }
