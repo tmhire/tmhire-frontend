@@ -10,7 +10,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { validateCompanyName, validateCity } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 
-type RoleType = "company_admin" | "company_user" | null;
+type RoleType = "company_admin" | "user" | null;
 
 export default function WelcomeModal() {
   const { data: session, update } = useSession();
@@ -129,7 +129,7 @@ export default function WelcomeModal() {
           setIsSubmitting(false);
           return;
         }
-      } else if (selectedRole === "company_user") {
+      } else if (selectedRole === "user") {
         if (!formData.companyCode) {
           setError("Please enter a company code");
           setIsSubmitting(false);
@@ -151,7 +151,7 @@ export default function WelcomeModal() {
         };
       } else {
         payload = {
-          role: "company_user",
+          role: "user",
           company_code: formData.companyCode,
         };
       }
@@ -216,10 +216,10 @@ export default function WelcomeModal() {
     <Modal
       isOpen={isOpen}
       onClose={() => { }}
-      className="max-w-[900px] m-4"
+      className="max-w-[900px] m-4 overflow-y-visible"
     >
-      <div className="no-scrollbar relative w-full overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
-        <div className="px-2 mb-8">
+      <div className="no-scrollbar relative w-full overflow-y-visible rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-6">
+        <div className="px-2 mb-4">
           <h4 className="mb-2 text-xl font-semibold text-gray-800 dark:text-white/90">
             {selectedRole ? "Complete Your Profile" : "Welcome to TM Grid"}
           </h4>
@@ -255,7 +255,7 @@ export default function WelcomeModal() {
             </button>
 
             <button
-              onClick={() => handleRoleSelect("company_user")}
+              onClick={() => handleRoleSelect("user")}
               className="group relative overflow-hidden rounded-2xl border-2 border-gray-200 dark:border-gray-800 p-8 text-left transition-all hover:border-brand-500 hover:shadow-lg dark:hover:border-brand-500"
             >
               <div className="flex flex-col items-center gap-4">
@@ -282,7 +282,7 @@ export default function WelcomeModal() {
               handleSubmit();
             }}
           >
-            <div className="px-2 mb-6">
+            <div className="px-2 mb-4">
               <button
                 type="button"
                 onClick={handleBack}
@@ -297,108 +297,113 @@ export default function WelcomeModal() {
               <div className="grid grid-cols-1 gap-y-5">
                 {selectedRole === "company_admin" ? (
                   <>
-                    <div>
-                      <Label>Company Name</Label>
-                      <Input
-                        type="text"
-                        name="company"
-                        value={formData.company}
-                        onChange={handleChange}
-                        maxLength={50}
-                        placeholder="Enter company name"
-                      />
+                    <div className="flex flex-row gap-4">
+                      <div className="w-1/2">
+                        <Label>Company Name</Label>
+                        <Input
+                          type="text"
+                          name="company"
+                          value={formData.company}
+                          onChange={handleChange}
+                          maxLength={50}
+                          placeholder="Enter company name"
+                        />
+                      </div>
+                      <div className="w-1/2">
+                        <Label>Company Code</Label>
+                        <input
+                          type="text"
+                          name="companyCode"
+                          value={formData.companyCode}
+                          onChange={handleChange}
+                          onBlur={() => formData.companyCode && validateCompanyCode(formData.companyCode)}
+                          placeholder="Enter a unique company code"
+                          required
+                          className="h-11 w-full rounded-lg border appearance-none px-4 py-2.5 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 bg-transparent text-gray-800 border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+                        />
+                        {companyCodeError && (
+                          <p className="mt-1 text-sm text-red-500">{companyCodeError}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-row gap-4">
+
+                      <div className="w-1/2">
+                        <Label>Phone Number</Label>
+                        <Input
+                          type="tel"
+                          name="contact"
+                          value={formData.contact}
+                          onChange={handleChange}
+                          placeholder="Enter phone number"
+                        />
+                      </div>
+
+                      <div className="w-1/2">
+                        <Label>City</Label>
+                        <Input
+                          type="text"
+                          name="city"
+                          value={formData.city}
+                          onChange={handleChange}
+                          maxLength={20}
+                          placeholder="Enter city"
+                        />
+                      </div>
                     </div>
 
-                    <div>
-                      <Label>Phone Number</Label>
-                      <Input
-                        type="tel"
-                        name="contact"
-                        value={formData.contact}
-                        onChange={handleChange}
-                        placeholder="Enter phone number"
-                      />
-                    </div>
+                    <div className="flex flex-row gap-4">
+                      <div className="w-1/2">
+                        <Label>Preferred Time Format</Label>
+                        <button
+                          type="button"
+                          onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
+                          className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                        >
+                          {formData.globalFormat === "24h" ? "24-Hour Format" : "12-Hour Format"}
+                        </button>
+                        {isTimeFormatOpen && (
+                          <div className="absolute z-20 mt-1 w-sm bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
+                            {timeFormatOptions.map((option) => (
+                              <div className="p-2 text-gray-800 dark:text-white/90" key={option.value}>
+                                <button
+                                  type="button"
+                                  className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                                  onClick={() => {
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      globalFormat: option.value as "12h" | "24h",
+                                    }));
+                                    setIsTimeFormatOpen(false);
+                                  }}
+                                >
+                                  {option.label}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
 
-                    <div>
-                      <Label>City</Label>
-                      <Input
-                        type="text"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleChange}
-                        maxLength={20}
-                        placeholder="Enter city"
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Company Code</Label>
-                      <input
-                        type="text"
-                        name="companyCode"
-                        value={formData.companyCode}
-                        onChange={handleChange}
-                        onBlur={() => formData.companyCode && validateCompanyCode(formData.companyCode)}
-                        placeholder="Enter a unique company code"
-                        required
-                        className="h-11 w-full rounded-lg border appearance-none px-4 py-2.5 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 bg-transparent text-gray-800 border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
-                      />
-                      {companyCodeError && (
-                        <p className="mt-1 text-sm text-red-500">{companyCodeError}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label>Preferred Time Format</Label>
-                      <button
-                        type="button"
-                        onClick={() => setIsTimeFormatOpen(!isTimeFormatOpen)}
-                        className="w-full px-3 py-2 text-left border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                      >
-                        {formData.globalFormat === "24h" ? "24-Hour Format" : "12-Hour Format"}
-                      </button>
-                      {isTimeFormatOpen && (
-                        <div className="absolute z-20 mt-1 w-sm bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.05]">
-                          {timeFormatOptions.map((option) => (
-                            <div className="p-2 text-gray-800 dark:text-white/90" key={option.value}>
-                              <button
-                                type="button"
-                                className="w-full px-4 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                                onClick={() => {
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    globalFormat: option.value as "12h" | "24h",
-                                  }));
-                                  setIsTimeFormatOpen(false);
-                                }}
-                              >
-                                {option.label}
-                              </button>
-                            </div>
+                      <div className="w-1/2">
+                        <Label>Custom Start Time</Label>
+                        <select
+                          className="w-full px-2 py-2 border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white"
+                          value={formData.customStartHour}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              customStartHour: parseFloat(e.target.value),
+                            }))
+                          }
+                        >
+                          {Array.from({ length: 24 }, (_, i) => (
+                            <option key={i} value={i} className="dark:bg-gray-800 dark:text-white">
+                              {floatToTimeString(i)}
+                            </option>
                           ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label>Custom Start Time</Label>
-                      <select
-                        className="w-full px-2 py-1 border border-gray-200 dark:border-white/[0.05] rounded-lg bg-white dark:bg-white/[0.05] text-gray-900 dark:text-white"
-                        value={formData.customStartHour}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            customStartHour: parseFloat(e.target.value),
-                          }))
-                        }
-                      >
-                        {Array.from({ length: 24 }, (_, i) => (
-                          <option key={i} value={i} className="dark:bg-gray-800 dark:text-white">
-                            {floatToTimeString(i)}
-                          </option>
-                        ))}
-                      </select>
+                        </select>
+                      </div>
                     </div>
                   </>
                 ) : (
