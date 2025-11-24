@@ -130,8 +130,8 @@ export default function WelcomeModal() {
           return;
         }
       } else if (selectedRole === "user") {
-        if (!formData.companyCode) {
-          setError("Please enter a company code");
+        if (!formData.companyCode || !formData.contact) {
+          setError("Please fill in all required fields");
           setIsSubmitting(false);
           return;
         }
@@ -152,6 +152,7 @@ export default function WelcomeModal() {
       } else {
         payload = {
           role: "user",
+          contact: formData.contact,
           company_code: formData.companyCode,
         };
       }
@@ -217,6 +218,7 @@ export default function WelcomeModal() {
       isOpen={isOpen}
       onClose={() => { }}
       className="max-w-[900px] m-4 overflow-y-visible"
+      showCloseButton={false}
     >
       <div className="no-scrollbar relative w-full overflow-y-visible rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-6">
         <div className="px-2 mb-4">
@@ -407,18 +409,30 @@ export default function WelcomeModal() {
                     </div>
                   </>
                 ) : (
-                  <div>
-                    <Label>Company Code</Label>
-                    <Input
-                      type="text"
-                      name="companyCode"
-                      value={formData.companyCode}
-                      onChange={handleChange}
-                      placeholder="Enter your company code"
-                    />
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Ask your company admin for the company code
-                    </p>
+                  <div className="flex flex-row gap-4">
+                    <div className="w-1/2">
+                      <Label>Phone Number</Label>
+                      <Input
+                        type="tel"
+                        name="contact"
+                        value={formData.contact}
+                        onChange={handleChange}
+                        placeholder="Enter phone number"
+                      />
+                    </div>
+                    <div className="w-1/2">
+                      <Label>Company Code</Label>
+                      <Input
+                        type="text"
+                        name="companyCode"
+                        value={formData.companyCode}
+                        onChange={handleChange}
+                        placeholder="Enter your company code"
+                      />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Ask your company admin for the company code
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>

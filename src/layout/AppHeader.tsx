@@ -9,11 +9,13 @@ import React, { useState, useEffect } from "react";
 import { useSearch } from "@/context/SearchContext";
 import SearchModal from "@/components/search/SearchModal";
 import { useSidebar } from "../context/SidebarContext";
+import { useSession } from "next-auth/react";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
   const { isExpanded, isMobileOpen, isMobile, toggleSidebar, toggleMobileSidebar } = useSidebar();
 
+  const { data: session } = useSession();
   const { profile, loading } = useProfile();
   const { setIsSearchOpen } = useSearch();
 
@@ -86,9 +88,9 @@ const AppHeader: React.FC = () => {
                 <div className="bg-brand-500 rounded-lg p-2 w-9 h-9 flex items-center justify-center">
                   {loading ? (
                     <Truck className="text-white w-6 h-6" />
-                  ) : profile?.company ? (
+                  ) : session?.company_name ? (
                     <div className="text-white">
-                      {profile.company
+                      {session?.company_name
                         .split(" ")
                         .map((word) => word[0])
                         .join("")
@@ -100,7 +102,7 @@ const AppHeader: React.FC = () => {
                 </div>
                 <div className="flex flex-col justify-center">
                   <h1 className="text-gray-800 dark:text-white/90 text-xl font-semibold">
-                    {loading ? "Loading..." : profile?.company || "Company"}
+                    {loading ? "Loading..." : session?.company_name || "Company"}
                   </h1>
                   <p className="text-gray-500 dark:text-gray-400 text-xs">powered by TM Grid</p>
                 </div>
@@ -113,9 +115,9 @@ const AppHeader: React.FC = () => {
                 <div className="bg-brand-500 rounded-lg p-2 w-9 h-9 flex items-center justify-center">
                   {loading ? (
                     <Truck className="text-white w-6 h-6" />
-                  ) : profile?.company ? (
+                  ) : session?.company_name ? (
                     <div className="text-white">
-                      {profile.company
+                      {session?.company_name
                         .split(" ")
                         .map((word) => word[0])
                         .join("")
@@ -127,7 +129,7 @@ const AppHeader: React.FC = () => {
                 </div>
                 <div className="flex flex-col justify-center">
                   <h1 className="text-gray-800 dark:text-white/90 text-lg font-semibold">
-                    {loading ? "Loading..." : profile?.company || "Company"}
+                    {loading ? "Loading..." : session?.company_name || "Company"}
                   </h1>
                   <p className="text-gray-500 dark:text-gray-400 text-xs">powered by TM Grid</p>
                 </div>

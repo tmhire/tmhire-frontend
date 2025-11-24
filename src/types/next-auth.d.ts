@@ -4,12 +4,14 @@ import type { DefaultJWT } from "next-auth/jwt";
 declare module "next-auth" {
   interface Session extends DefaultSession {
     new_user: boolean;
-    company?: string;
+    company_name?: string;
     city?: string;
     contact?: number;
     role?: string;
-    sub_role?: string;
-    status?: string;
+    sub_role?: "viewer" | "editor";
+    company_status?: "pending" | "approved" | "revoked";
+    account_status?: "pending" | "approved" | "revoked";
+    company_code?: string;
     company_id?: string;
     backendAccessToken?: string;
     backendAccessTokenExpires?: number;
@@ -31,12 +33,14 @@ declare module "next-auth" {
     new_user: boolean;
     name: string;
     email: string;
-    company?: string;
+    company_status?: "pending" | "approved" | "revoked";
+    account_status?: "pending" | "approved" | "revoked";
+    company_name?: string;
     city?: string;
     contact?: number;
+    company_code?: string;
     role?: string;
     sub_role?: string;
-    status?: string;
     company_id?: string;
     image?: string | null;
     accessToken?: string;

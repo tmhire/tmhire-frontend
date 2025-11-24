@@ -54,13 +54,13 @@ export default function UserMetaCard() {
 
   const handleSave = async () => {
     if (!hasChanged) return;
-    
+
     // Validate field formats
     if (!validateProfileName(formData.name)) {
       console.error("Invalid name format");
       return;
     }
-    
+
     try {
       setIsSubmitting(true);
       const response = await fetchWithAuth("/auth/update", {
@@ -113,6 +113,8 @@ export default function UserMetaCard() {
               </h4>
               <div className="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left">
                 <p className="text-sm text-gray-700 dark:text-gray-300">{formData.contact || "No contact"}</p>
+                <span className="hidden xl:block text-gray-300 dark:text-gray-600">|</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{session?.user?.email || ""}</p>
               </div>
             </div>
             <div className="flex items-center order-2 gap-2 grow xl:order-3 xl:justify-end">

@@ -27,12 +27,12 @@ export default function UserInfoCard() {
   React.useEffect(() => {
     if (session && session?.user) {
       setFormData({
-        company: session.company || "",
+        company: session.company_name || "",
         city: session.city || "",
         email: session.user?.email || "",
       });
       setPrevFormData({
-        company: session.company || "",
+        company: session.company_name || "",
         city: session.city || "",
         email: session.user?.email || "",
       });
@@ -112,20 +112,32 @@ export default function UserInfoCard() {
         <div>
           <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 lg:mb-6">Company Details</h4>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-7 2xl:gap-x-32">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-6 lg:gap-7 2xl:gap-x-24">
             <div>
               <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">Company Name</p>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{formData.company || "N/A"}</p>
             </div>
 
             <div>
-              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">City</p>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{formData.city || "N/A"}</p>
+              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">Company Code</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                  {session?.company_code || "N/A"}
+                </p>
+              </div>
             </div>
 
             <div>
-              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">Email address</p>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{formData.email || "N/A"}</p>
+              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">Status</p>
+              <span
+                className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium capitalize
+                  ${session?.company_status === "approved"
+                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                  }`}
+              >
+                {session?.company_status || "N/A"}
+              </span>
             </div>
 
             <div>
@@ -140,6 +152,11 @@ export default function UserInfoCard() {
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
                 {session?.sub_role ? session.sub_role.replace("_", " ") : "N/A"}
               </p>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">City</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{formData.city || "N/A"}</p>
             </div>
           </div>
         </div>
@@ -169,7 +186,7 @@ export default function UserInfoCard() {
 
       <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] m-4">
         <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
-          <div className="px-2 pr-14">
+          <div className="px-1 pr-14">
             <h4 className="mb-2 text-2xl font-semibold text-gray-700 dark:text-gray-300">Edit Company Details</h4>
             <p className="mb-6 text-sm text-gray-700 dark:text-gray-300 lg:mb-7">
               Update your company details to keep your profile up-to-date.
@@ -182,7 +199,7 @@ export default function UserInfoCard() {
               handleSave();
             }}
           >
-            <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
+            <div className="custom-scrollbar h-[450px] overflow-y-auto px-1 pb-3">
               <div className="mt-7">
                 <h5 className="mb-5 text-lg font-medium text-gray-700 dark:text-gray-300 lg:mb-6">
                   Company Information
@@ -228,7 +245,7 @@ export default function UserInfoCard() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
+            <div className="flex items-center gap-3 px-1 mt-6 lg:justify-end">
               <Button size="sm" variant="outline" onClick={closeModal} disabled={isSubmitting}>
                 Close
               </Button>

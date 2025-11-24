@@ -3,11 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export interface Company {
   _id: string;
-  name: string;
+  company_name: string;
   company_code: string;
-  contact: string;
   city: string;
-  status: "active" | "inactive" | "pending";
+  company_status: "approved" | "pending" | "revoked";
   created_at: string;
   updated_at: string;
 }
@@ -57,7 +56,7 @@ export function useCompany(companyId?: string) {
     queryKey: ["company", companyId],
     queryFn: async () => {
       if (!companyId) throw new Error("Company ID is required");
-      const response = await fetchWithAuth(`/company/${companyId}`);
+      const response = await fetchWithAuth(`/company/view/${companyId}?type=company_id`);
       const data = await response.json();
       if (!data.success) {
         throw new Error(data.message || "Failed to fetch company details");

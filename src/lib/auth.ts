@@ -17,12 +17,15 @@ interface AuthProps {
   name: string;
   email: string;
   new_user: boolean;
-  company: string;
+  company_name: string;
   company_id?: string;
+  company_code?: string;
   city: string;
   contact: number;
   role?: string;
-  sub_role?: string;
+  sub_role?: "viewer" | "editor";
+  company_status?: "pending" | "approved" | "revoked";
+  account_status?: "pending" | "approved" | "revoked";
   accessToken: string;
   refreshToken: string;
   tokenType: string;
@@ -72,17 +75,20 @@ async function handleEmailPassword(
     }
 
     console.log("Successfully obtained backend token", json.data);
-    const res = {
+    const res: AuthProps = {
       id: json?.data?.id,
       name: json?.data?.name,
       email: json?.data?.email,
       new_user: json?.data?.new_user === true || false,
-      company: json?.data?.company || "",
+      company_name: json?.data?.company_name || "",
       company_id: json?.data?.company_id,
+      company_code: json?.data?.company_code,
       city: json?.data?.city || "",
       contact: json?.data?.contact || undefined,
       role: json?.data?.role,
       sub_role: json?.data?.sub_role,
+      company_status: json?.data?.company_status,
+      account_status: json?.data?.account_status,
       accessToken: json?.data?.access_token,
       refreshToken: json?.data?.refresh_token,
       tokenType: json?.data?.token_type,
@@ -135,12 +141,15 @@ async function exchangeGoogleToken(idToken: string): Promise<AuthProps | null> {
       name: "",
       email: "",
       new_user: data?.data?.new_user === true || false,
-      company: data?.data?.company || "",
+      company_name: data?.data?.company_name || "",
       company_id: data?.data?.company_id,
+      company_code: data?.data?.company_code,
       city: data?.data?.city || "",
       contact: data?.data?.contact || undefined,
       role: data?.data?.role,
       sub_role: data?.data?.sub_role,
+      company_status: data?.data?.company_status,
+      account_status: data?.data?.account_status,
       accessToken: data?.data?.access_token,
       refreshToken: data?.data?.refresh_token,
       tokenType: data?.data?.token_type,
@@ -248,12 +257,15 @@ export const authOptions: AuthOptions = {
         token.backendRefreshTokenExpires = session.backendRefreshTokenExpires;
         token.backendTokenType = session.backendTokenType;
         if (session?.new_user !== undefined && session.new_user !== null) token.new_user = session.new_user === true;
-        if (session?.company) token.company = session.company;
+        if (session?.company_name) token.company_name = session.company_name;
         if (session?.company_id) token.company_id = session.company_id;
+        if (session?.company_code) token.company_code = session.company_code;
         if (session?.city) token.city = session.city;
         if (session?.contact) token.contact = session.contact;
         if (session?.role) token.role = session.role;
         if (session?.sub_role) token.sub_role = session.sub_role;
+        if (session?.company_status) token.company_status = session.company_status;
+        if (session?.account_status) token.account_status = session.account_status;
         if (session?.preferred_format) token.preferred_format = session.preferred_format;
         if (session?.custom_start_hour !== undefined && session.custom_start_hour !== null)
           token.custom_start_hour = session.custom_start_hour;
@@ -281,12 +293,15 @@ export const authOptions: AuthOptions = {
             token.backendRefreshToken = backendAuth.refreshToken;
             token.backendTokenType = backendAuth.tokenType;
             token.new_user = backendAuth.new_user === true;
-            token.company = backendAuth.company;
+            token.company_name = backendAuth.company_name;
             token.company_id = backendAuth.company_id;
+            token.company_code = backendAuth.company_code;
             token.city = backendAuth.city;
             token.contact = backendAuth.contact;
             token.role = backendAuth.role;
             token.sub_role = backendAuth.sub_role;
+            token.company_status = backendAuth.company_status;
+            token.account_status = backendAuth.account_status;
             token.preferred_format = backendAuth.preferred_format;
             token.custom_start_hour = backendAuth.custom_start_hour;
 
@@ -309,12 +324,15 @@ export const authOptions: AuthOptions = {
           token.backendRefreshToken = user.refreshToken;
           token.backendTokenType = user.tokenType;
           token.new_user = user.new_user === true;
-          token.company = user.company;
+          token.company_name = user.company_name;
           token.company_id = user.company_id;
+          token.company_code = user.company_code;
           token.city = user.city;
           token.contact = user.contact;
           token.role = user.role;
           token.sub_role = user.sub_role;
+          token.company_status = user.company_status;
+          token.account_status = user.account_status;
           token.preferred_format = user.preferred_format;
           token.custom_start_hour = user.custom_start_hour;
 
@@ -381,12 +399,15 @@ export const authOptions: AuthOptions = {
         session.backendTokenType = token.backendTokenType as string;
         console.log("New User", token.new_user);
         session.new_user = token.new_user === true;
-        session.company = token.company as string;
+        session.company_name = token.company_name as string;
         session.company_id = token.company_id as string;
+        session.company_code = token.company_code as string;
         session.city = token.city as string;
         session.contact = token.contact as number;
         session.role = token.role as string;
-        session.sub_role = token.sub_role as string;
+        session.sub_role = token.sub_role as "viewer" | "editor";
+        session.company_status = token.company_status as "pending" | "approved" | "revoked";
+        session.account_status = token.account_status as "pending" | "approved" | "revoked";
         session.preferred_format = token.preferred_format as "12h" | "24h";
         session.custom_start_hour = token.custom_start_hour as number;
 
