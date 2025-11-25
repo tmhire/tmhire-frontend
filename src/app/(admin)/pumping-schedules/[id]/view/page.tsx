@@ -717,9 +717,9 @@ export default function ScheduleViewPage() {
       try {
         const tmsResponse = await fetchWithAuth("/tms/");
         if (tmsResponse) {
-          const tmsData = await tmsResponse.json();
+          const tmsData = await tmsResponse.json() as { success: boolean; data: Array<{ _id: string; capacity: number }> };
           if (tmsData.success && Array.isArray(tmsData.data)) {
-            tmCapacityMap = tmsData.data.reduce((acc: Record<string, number>, tm: any) => {
+            tmCapacityMap = tmsData.data.reduce((acc: Record<string, number>, tm: { _id: string; capacity: number }) => {
               acc[tm._id] = tm.capacity;
               return acc;
             }, {});

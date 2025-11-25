@@ -38,33 +38,33 @@ export default function UserManagementTable() {
     const [error, setError] = useState<string | null>(null);
     const [updating, setUpdating] = useState<string | null>(null);
 
-    const fetchUsers = async () => {
-        try {
-            setLoading(true);
-            const response = await fetchWithAuth("/company/all_users");
-            const data = await response.json() as { success: boolean; data: User[] };
-
-            if (data.success && Array.isArray(data.data)) {
-                // Filter out company_admin (which should be the current user mostly, or other admins)
-                // The requirement says: "in this there will company_admin also, dont show them"
-                const filteredUsers = data.data.filter((u: User) => u.role !== "company_admin");
-                setUsers(filteredUsers);
-            } else {
-                setError("Failed to fetch users");
-            }
-        } catch (err) {
-            setError("An error occurred while fetching users");
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                setLoading(true);
+                const response = await fetchWithAuth("/company/all_users");
+                const data = await response.json() as { success: boolean; data: User[] };
+
+                if (data.success && Array.isArray(data.data)) {
+                    // Filter out company_admin (which should be the current user mostly, or other admins)
+                    // The requirement says: "in this there will company_admin also, dont show them"
+                    const filteredUsers = data.data.filter((u: User) => u.role !== "company_admin");
+                    setUsers(filteredUsers);
+                } else {
+                    setError("Failed to fetch users");
+                }
+            } catch (err) {
+                setError("An error occurred while fetching users");
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         if (session?.role === "company_admin") {
             fetchUsers();
         }
-    }, [session, fetchUsers]);
+    }, [session, fetchWithAuth]);
 
     const handleUpdateUser = async (user: User, updates: Partial<User>) => {
         console.log("user", user)
@@ -135,7 +135,7 @@ export default function UserManagementTable() {
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                     <select
                                         value={user.account_status}
-                                        onChange={(e) => handleUpdateUser(user, { account_status: e.target.value as any })}
+                                        onChange={(e) => handleUpdateUser(user, { account_status: e.target.value as "pending" | "approved" | "revoked" })}
                                         disabled={updating === (user._id)}
                                         className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-4 pr-12 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
                                     >
@@ -147,7 +147,7 @@ export default function UserManagementTable() {
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                     <select
                                         value={user.sub_role}
-                                        onChange={(e) => handleUpdateUser(user, { sub_role: e.target.value as any })}
+                                        onChange={(e) => handleUpdateUser(user, { sub_role: e.target.value as "viewer" | "editor" })}
                                         disabled={updating === (user._id)}
                                         className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-4 pr-12 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
                                     >
