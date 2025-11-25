@@ -31,9 +31,10 @@ interface PumpsTableProps {
   onDelete: (pump: Pump) => void;
   plantMap: Map<string, string>;
   teamMembers: TeamMember[];
+  isViewer?: boolean;
 }
 
-export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembers }: PumpsTableProps) {
+export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembers, isViewer = false }: PumpsTableProps) {
   const getMemberName = (id?: string | null) => {
     if (!id) return "-";
     const m = teamMembers.find((tm) => tm._id === id);
@@ -113,12 +114,14 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembe
                 >
                   Remarks
                 </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
-                  Actions
-                </TableCell>
+                {!isViewer && (
+                  <TableCell
+                    isHeader
+                    className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  >
+                    Actions
+                  </TableCell>
+                )}
               </TableRow>
             </TableHeader>
 
@@ -131,14 +134,12 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembe
                   </TableCell>
                   <TableCell className="px-3 py-2 text-start">
                     <div
-                      className={`flex w-full rounded-lg border-2 border-black shadow items-center ${
-                        pump.type === "line" ? "bg-blue-500" : "bg-green-500"
-                      }`}
+                      className={`flex w-full rounded-lg border-2 border-black shadow items-center ${pump.type === "line" ? "bg-blue-500" : "bg-green-500"
+                        }`}
                     >
                       <label
-                        className={`flex flex-col justify-between gap-1 text-center rounded-l p-2 text-[6px] font-bold text-white ${
-                          pump.type === "line" ? "bg-blue-700" : "bg-green-700"
-                        }`}
+                        className={`flex flex-col justify-between gap-1 text-center rounded-l p-2 text-[6px] font-bold text-white ${pump.type === "line" ? "bg-blue-700" : "bg-green-700"
+                          }`}
                       >
                         <img className="h-3" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" />
                         {pump.type === "line" ? "LINE" : "BOOM"}
@@ -180,11 +181,10 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembe
                   </TableCell>
                   <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        pump.status === "active"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                      }`}
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${pump.status === "active"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                        : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                        }`}
                     >
                       {pump.status.charAt(0).toUpperCase() + pump.status.slice(1)}
                     </span>
@@ -192,16 +192,18 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembe
                   <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {pump.remarks || "-"}
                   </TableCell>
-                  <TableCell className="px-3 py-4">
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => onEdit(pump)}>
-                        <Edit size={"12px"} />
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => onDelete(pump)}>
-                        <Trash size={"12px"} />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {!isViewer && (
+                    <TableCell className="px-3 py-4">
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" onClick={() => onEdit(pump)}>
+                          <Edit size={"12px"} />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => onDelete(pump)}>
+                          <Trash size={"12px"} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

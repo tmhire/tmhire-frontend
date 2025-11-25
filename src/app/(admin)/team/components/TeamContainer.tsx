@@ -33,7 +33,7 @@ interface CreateTeamData {
 
 export default function TeamContainer() {
   const { fetchWithAuth } = useApiClient();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -66,7 +66,7 @@ export default function TeamContainer() {
   const isCreateFormValid = useMemo(() => {
     const name = newTeam.name || "";
     const contact = newTeam.contact || "";
-    
+
     return (
       // name.trim() !== "" &&
       // contact.trim() !== "" &&
@@ -81,7 +81,7 @@ export default function TeamContainer() {
   const isEditFormValid = useMemo(() => {
     // const name = editedTeam.name || "";
     // const contact = editedTeam.contact || "";
-    
+
     return (
       // name.trim() !== "" &&
       // contact.trim() !== "" &&
@@ -182,7 +182,7 @@ export default function TeamContainer() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     // Handle name field with validation
     if (name === "name") {
       if (value.length > 25) return; // Prevent typing more than 25 characters
@@ -192,7 +192,7 @@ export default function TeamContainer() {
         setNameError("");
       }
     }
-    
+
     // Handle contact field with validation
     if (name === "contact") {
       if (value.length > 10) return; // Prevent typing more than 10 digits
@@ -202,7 +202,7 @@ export default function TeamContainer() {
         setContactError("");
       }
     }
-    
+
     setNewTeam((prev) => ({
       ...prev,
       [name]: value,
@@ -211,7 +211,7 @@ export default function TeamContainer() {
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     // Handle name field with validation
     if (name === "name") {
       if (value.length > 25) return; // Prevent typing more than 25 characters
@@ -221,7 +221,7 @@ export default function TeamContainer() {
         setEditNameError("");
       }
     }
-    
+
     // Handle contact field with validation
     if (name === "contact") {
       if (value.length > 10) return; // Prevent typing more than 10 digits
@@ -231,7 +231,7 @@ export default function TeamContainer() {
         setEditContactError("");
       }
     }
-    
+
     setEditedTeam((prev) => ({
       ...prev,
       [name]: value,
@@ -369,12 +369,14 @@ export default function TeamContainer() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Teams</h2>
-        <nav>
-          <Button className="flex items-center gap-2" size="sm" onClick={handleAddTeam}>
-            <PlusIcon className="w-4 h-4" />
-            Add Member
-          </Button>
-        </nav>
+        {session?.sub_role !== "viewer" && (
+          <nav>
+            <Button className="flex items-center gap-2" size="sm" onClick={handleAddTeam}>
+              <PlusIcon className="w-4 h-4" />
+              Add Member
+            </Button>
+          </nav>
+        )}
       </div>
       <div className="space-y-6">
         <div className={`rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]`}>
@@ -518,13 +520,15 @@ export default function TeamContainer() {
               ) : teamsData && teamsData.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 gap-4">
                   <span className="text-gray-800 dark:text-white/90 text-lg">No team member exists.</span>
-                  <Button size="sm" onClick={handleAddTeam}>
-                    <PlusIcon className="w-4 h-4 mr-2" />
-                    Add Team Member
-                  </Button>
+                  {session?.sub_role !== "viewer" && (
+                    <Button size="sm" onClick={handleAddTeam}>
+                      <PlusIcon className="w-4 h-4 mr-2" />
+                      Add Team Member
+                    </Button>
+                  )}
                 </div>
               ) : (
-                <TeamTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} />
+                <TeamTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} isViewer={session?.sub_role === "viewer"} />
               )}
             </div>
           </div>
@@ -606,10 +610,10 @@ export default function TeamContainer() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name <span className="text-red-500">*</span></label>
-              <Input 
-                type="text" 
-                name="name" 
-                value={editedTeam.name} 
+              <Input
+                type="text"
+                name="name"
+                value={editedTeam.name}
                 onChange={handleEditInputChange}
                 maxLength={25}
               />

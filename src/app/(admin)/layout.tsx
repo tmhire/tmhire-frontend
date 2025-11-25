@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useContext } from "react";
+import { useSession } from "next-auth/react";
 import { useSidebar } from "@/context/SidebarContext";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
@@ -16,19 +17,41 @@ export default function AdminLayout({
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const themeContext = useContext(ThemeContext);
 
+  const { data: session, status } = useSession();
+
   // Dynamic class for main content margin based on sidebar state
   const mainContentMargin = isMobileOpen
     ? "ml-0"
     : isExpanded || isHovered
-    ? "lg:ml-[90px]"
-    : "lg:ml-[90px]";
+      ? "lg:ml-[90px]"
+      : "lg:ml-[90px]";
 
-  if (!themeContext || !themeContext.isInitialized) {
+  if (status === "loading" || !themeContext || !themeContext.isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Spinner size="lg" text="Loading..." />
       </div>
     );
+  }
+
+  // Super Admin Layout
+  if (session?.role === "super_admin") {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <AppHeader />
+        <main className="flex-1 p-4 md:p-6 bg-gray-50 dark:bg-gray-900">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
+  // Status Check for other users
+  const isCompanyApproved = session?.company_status === "approved";
+  const isAccountApproved = session?.account_status === "approved";
+
+  if (!isCompanyApproved || !isAccountApproved) {
+    return null; // Access Denied
   }
 
   return (

@@ -16,9 +16,10 @@ interface ClientsTableProps {
   data: Client[];
   onEdit: (client: Client) => void;
   onDelete: (client: Client) => void;
+  isViewer?: boolean;
 }
 
-export default function ClientsTable({ data, onEdit, onDelete }: ClientsTableProps) {
+export default function ClientsTable({ data, onEdit, onDelete, isViewer = false }: ClientsTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto">
@@ -39,12 +40,14 @@ export default function ClientsTable({ data, onEdit, onDelete }: ClientsTablePro
                 >
                   Legal Entity
                 </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
-                  Actions
-                </TableCell>
+                {!isViewer && (
+                  <TableCell
+                    isHeader
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  >
+                    Actions
+                  </TableCell>
+                )}
               </TableRow>
             </TableHeader>
 
@@ -64,16 +67,18 @@ export default function ClientsTable({ data, onEdit, onDelete }: ClientsTablePro
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {client.legal_entity || "N/A"}
                   </TableCell>
-                  <TableCell className="px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => onEdit(client)}>
-                        <Edit size={"12px"} />
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => onDelete(client)}>
-                        <Trash size={"12px"} />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {!isViewer && (
+                    <TableCell className="px-5 py-4">
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" onClick={() => onEdit(client)}>
+                          <Edit size={"12px"} />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => onDelete(client)}>
+                          <Trash size={"12px"} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

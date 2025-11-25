@@ -40,7 +40,7 @@ interface CreateTransitMixerData {
 
 export default function TransitMixersContainer() {
   const { fetchWithAuth } = useApiClient();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -468,10 +468,12 @@ export default function TransitMixersContainer() {
               </span>
             </div>
           </div>
-          <Button className="flex items-center gap-2" size="sm" onClick={handleAddMixer}>
-            <PlusIcon className="w-4 h-4" />
-            Add Transit Mixer
-          </Button>
+          {session?.sub_role !== "viewer" && (
+            <Button className="flex items-center gap-2" size="sm" onClick={handleAddMixer}>
+              <PlusIcon className="w-4 h-4" />
+              Add Transit Mixer
+            </Button>
+          )}
         </nav>
       </div>
 
@@ -604,7 +606,7 @@ export default function TransitMixersContainer() {
                   <Spinner text="Loading transit mixers..." />
                 </div>
               ) : (
-                <TransitMixersTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} plants={plants} />
+                <TransitMixersTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} plants={plants} isViewer={session?.sub_role === "viewer"} />
               )}
             </div>
           </div>

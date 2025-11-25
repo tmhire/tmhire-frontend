@@ -24,9 +24,10 @@ interface PlantsTableProps {
   data: Plant[];
   onEdit: (plant: Plant) => void;
   onDelete: (plant: Plant) => void;
+  isViewer?: boolean;
 }
 
-export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps) {
+export default function PlantsTable({ data, onEdit, onDelete, isViewer = false }: PlantsTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto">
@@ -89,12 +90,14 @@ export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps
                 >
                   Status
                 </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
-                  Actions
-                </TableCell>
+                {!isViewer && (
+                  <TableCell
+                    isHeader
+                    className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  >
+                    Actions
+                  </TableCell>
+                )}
               </TableRow>
             </TableHeader>
 
@@ -116,7 +119,7 @@ export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps
                   </TableCell>
                   <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     <div className="max-w-[120px] truncate group relative cursor-pointer" title={plant.location}>
-                      <a 
+                      <a
                         href={plant.location}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -148,22 +151,23 @@ export default function PlantsTable({ data, onEdit, onDelete }: PlantsTableProps
                     {plant.remarks || "-"}
                   </TableCell>
                   <TableCell className="px-3 py-4 text-gray-500 text-theme-sm dark:text-gray-400">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      plant.status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                    }`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${plant.status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                      }`}>
                       {plant.status}
                     </span>
                   </TableCell>
-                  <TableCell className="px-3 py-4">
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => onEdit(plant)}>
-                        <Edit size={"12px"} />
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => onDelete(plant)}>
-                        <Trash size={"12px"} />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {!isViewer && (
+                    <TableCell className="px-3 py-4">
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" onClick={() => onEdit(plant)}>
+                          <Edit size={"12px"} />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => onDelete(plant)}>
+                          <Trash size={"12px"} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

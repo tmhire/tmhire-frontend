@@ -26,7 +26,7 @@ interface TableRowProps {
 }
 
 // Props for TableCell
-interface TableCellProps {
+interface TableCellProps extends Omit<React.TdHTMLAttributes<HTMLTableCellElement>, 'children'> {
   children: ReactNode; // Cell content
   isHeader?: boolean; // If true, renders as <th>, otherwise <td>
   className?: string; // Optional className for styling
@@ -50,7 +50,7 @@ const TableBody: React.FC<TableBodyProps> = ({ children, className }) => {
 // TableRow Component
 const TableRow: React.FC<TableRowProps> = ({ children, className, onClick }) => {
   return (
-    <tr 
+    <tr
       className={className}
       onClick={onClick}
       style={onClick ? { cursor: 'pointer' } : undefined}
@@ -65,9 +65,10 @@ const TableCell: React.FC<TableCellProps> = ({
   children,
   isHeader = false,
   className,
+  ...props
 }) => {
   const CellTag = isHeader ? "th" : "td";
-  return <CellTag className={` ${className}`}>{children}</CellTag>;
+  return <CellTag className={` ${className}`} {...props}>{children}</CellTag>;
 };
 
 export { Table, TableHeader, TableBody, TableRow, TableCell };

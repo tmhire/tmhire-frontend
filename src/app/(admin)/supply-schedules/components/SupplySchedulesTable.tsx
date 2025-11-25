@@ -48,9 +48,10 @@ interface SupplySchedulesTableProps {
   data: SupplySchedule[];
   onDelete: (schedule: SupplySchedule) => void;
   onCancel: (schedule: SupplySchedule) => void;
+  isViewer?: boolean;
 }
 
-export default function SupplySchedulesTable({ data, onDelete, onCancel }: SupplySchedulesTableProps) {
+export default function SupplySchedulesTable({ data, onDelete, onCancel, isViewer = false }: SupplySchedulesTableProps) {
   const router = useRouter();
   const { profile } = useProfile();
 
@@ -170,12 +171,14 @@ export default function SupplySchedulesTable({ data, onDelete, onCancel }: Suppl
                 >
                   Status
                 </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
-                  Actions
-                </TableCell>
+                {!isViewer && (
+                  <TableCell
+                    isHeader
+                    className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  >
+                    Actions
+                  </TableCell>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
@@ -212,12 +215,12 @@ export default function SupplySchedulesTable({ data, onDelete, onCancel }: Suppl
                     <span className="text-gray-800 dark:text-white/90">
                       {schedule.output_table[0]?.plant_buffer
                         ? `${formatTimeByPreference(
-                            schedule.output_table[0].plant_buffer,
-                            profile?.preferred_format
-                          )} - ${formatTimeByPreference(
-                            schedule.output_table[schedule.output_table.length - 1].return,
-                            profile?.preferred_format
-                          )}`
+                          schedule.output_table[0].plant_buffer,
+                          profile?.preferred_format
+                        )} - ${formatTimeByPreference(
+                          schedule.output_table[schedule.output_table.length - 1].return,
+                          profile?.preferred_format
+                        )}`
                         : "-"}
                     </span>
                   </TableCell>
@@ -226,64 +229,68 @@ export default function SupplySchedulesTable({ data, onDelete, onCancel }: Suppl
                       {schedule.status === "generated" ? "Confirmed" : schedule.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="px-2 py-3 text-sm">
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEdit(schedule)}
-                        className="flex items-center gap-1"
-                        disabled={schedule.status !== "generated" && schedule.status !== "draft"}
-                      >
-                        <Pencil size={14} />
-                      </Button>
-                      {schedule.status === "draft" && (
+                  {!isViewer && (
+                    <TableCell className="px-2 py-3 text-sm">
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => onDelete(schedule)}
-                          className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                          onClick={() => handleEdit(schedule)}
+                          className="flex items-center gap-1"
+                          disabled={schedule.status !== "generated" && schedule.status !== "draft"}
                         >
-                          <Trash2 size={14} />
+                          <Pencil size={14} />
                         </Button>
-                      )}
+                        {schedule.status === "draft" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onDelete(schedule)}
+                            className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        )}
 
-                      {schedule.status === "generated" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onCancel(schedule)}
-                          className="flex items-center gap-1 text-red-600 hover:text-red-700"
-                        >
-                          <CopyX size={14} />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
+                        {schedule.status === "generated" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onCancel(schedule)}
+                            className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                          >
+                            <CopyX size={14} />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
 
-            {/* Summary Row */}
-            {data.length > 0 && (
-              <TableRow className="bg-gray-50 dark:bg-gray-800/50 border-t-2 border-gray-200 dark:border-gray-700">
-                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
-                  Total
-                </TableCell>
-                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
-                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
-                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
-                  {summaryTotals.totalQuantity}
-                </TableCell>
-                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
-                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
-                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
-                  {summaryTotals.totalTmCount}
-                </TableCell>
-                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
-                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
-                <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
-              </TableRow>
-            )}
+              {/* Summary Row */}
+              {data.length > 0 && (
+                <TableRow className="bg-gray-50 dark:bg-gray-800/50 border-t-2 border-gray-200 dark:border-gray-700">
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                    Total
+                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                    {summaryTotals.totalQuantity}
+                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
+                    {summaryTotals.totalTmCount}
+                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                  {!isViewer && (
+                    <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
+                  )}
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>

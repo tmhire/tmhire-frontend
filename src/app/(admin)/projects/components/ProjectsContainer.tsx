@@ -70,7 +70,7 @@ interface CreateProjectData {
 
 export default function ProjectsContainer() {
   const { fetchWithAuth } = useApiClient();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -354,10 +354,10 @@ export default function ProjectsContainer() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     // Convert to uppercase for name field
     const processedValue = name === "name" ? value.toUpperCase() : value;
-    
+
     // Handle contact name field with validation
     if (name === "contact_name") {
       if (value.length > 25) return; // Prevent typing more than 25 characters
@@ -367,7 +367,7 @@ export default function ProjectsContainer() {
         setContactNameError("");
       }
     }
-    
+
     // Handle contact number field with validation
     if (name === "contact_number") {
       if (value.length > 10) return; // Prevent typing more than 10 digits
@@ -377,7 +377,7 @@ export default function ProjectsContainer() {
         setContactNumberError("");
       }
     }
-    
+
     setNewProject((prev) => ({
       ...prev,
       [name]: processedValue,
@@ -386,10 +386,10 @@ export default function ProjectsContainer() {
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     // Convert to uppercase for name field
     const processedValue = name === "name" ? value.toUpperCase() : value;
-    
+
     // Handle contact name field with validation
     if (name === "contact_name") {
       if (value.length > 25) return; // Prevent typing more than 25 characters
@@ -399,7 +399,7 @@ export default function ProjectsContainer() {
         setEditContactNameError("");
       }
     }
-    
+
     // Handle contact number field with validation
     if (name === "contact_number") {
       if (value.length > 10) return; // Prevent typing more than 10 digits
@@ -409,7 +409,7 @@ export default function ProjectsContainer() {
         setEditContactNumberError("");
       }
     }
-    
+
     setEditedProject((prev) => ({
       ...prev,
       [name]: processedValue,
@@ -514,12 +514,14 @@ export default function ProjectsContainer() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Projects</h2>
-        <nav>
-          <Button className="flex items-center gap-2" size="sm" onClick={handleAddProject}>
-            <PlusIcon className="w-4 h-4" />
-            Add Project
-          </Button>
-        </nav>
+        {session?.sub_role !== "viewer" && (
+          <nav>
+            <Button className="flex items-center gap-2" size="sm" onClick={handleAddProject}>
+              <PlusIcon className="w-4 h-4" />
+              Add Project
+            </Button>
+          </nav>
+        )}
       </div>
       <div className="space-y-6">
         <div className={`rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]`}>
@@ -632,6 +634,7 @@ export default function ProjectsContainer() {
                   clients={clientsData || []}
                   plants={plantsData || []}
                   teamMembers={salesEngineersData || []}
+                  isViewer={session?.sub_role === "viewer"}
                 />
               )}
             </div>
@@ -658,7 +661,7 @@ export default function ProjectsContainer() {
                 >
                   {newProject.client_id
                     ? clientsData?.find((client: { _id: string }) => client._id === newProject.client_id)?.name ||
-                      "Select a client"
+                    "Select a client"
                     : "Select a client"}
                 </span>
                 <ChevronDownIcon className="w-4 h-4 text-gray-400" />
@@ -691,17 +694,17 @@ export default function ProjectsContainer() {
               onChange={handleInputChange}
             />
           </div>
-                      <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address <span className="text-red-500">*</span></label>
-              <Input
-                type="text"
-                name="address"
-                placeholder="Enter project address (max 60 characters)"
-                value={newProject.address}
-                onChange={handleInputChange}
-                maxLength={60}
-              />
-            </div>
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address <span className="text-red-500">*</span></label>
+            <Input
+              type="text"
+              name="address"
+              placeholder="Enter project address (max 60 characters)"
+              value={newProject.address}
+              onChange={handleInputChange}
+              maxLength={60}
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Name <span className="text-red-500">*</span></label>
             <Input
@@ -741,7 +744,7 @@ export default function ProjectsContainer() {
                 >
                   {newProject.mother_plant_id
                     ? plantsData?.find((plant: Plant) => plant._id === newProject.mother_plant_id)?.name ||
-                      "Select a mother plant"
+                    "Select a mother plant"
                     : "Select a mother plant"}
                 </span>
                 <ChevronDownIcon className="w-4 h-4 text-gray-400" />
@@ -781,8 +784,8 @@ export default function ProjectsContainer() {
                 >
                   {newProject.sales_engineer_id
                     ? salesEngineersData?.find(
-                        (eng: { _id: string; name: string }) => eng._id === newProject.sales_engineer_id
-                      )?.name || "Select a sales engineer"
+                      (eng: { _id: string; name: string }) => eng._id === newProject.sales_engineer_id
+                    )?.name || "Select a sales engineer"
                     : "Select a sales engineer"}
                 </span>
                 <ChevronDownIcon className="w-4 h-4 text-gray-400" />
@@ -865,7 +868,7 @@ export default function ProjectsContainer() {
                   >
                     {editedProject.client_id
                       ? clientsData?.find((client: Client) => client._id === editedProject.client_id)?.name ||
-                        "Select a client"
+                      "Select a client"
                       : "Select a client"}
                   </span>
                   <ChevronDownIcon className="w-4 h-4 text-gray-400" />
@@ -937,7 +940,7 @@ export default function ProjectsContainer() {
                   >
                     {editedProject.mother_plant_id
                       ? plantsData?.find((plant: Plant) => plant._id === editedProject.mother_plant_id)?.name ||
-                        "Select a mother plant"
+                      "Select a mother plant"
                       : "Select a mother plant"}
                   </span>
                   <ChevronDownIcon className="w-4 h-4 text-gray-400" />
@@ -979,8 +982,8 @@ export default function ProjectsContainer() {
                   >
                     {editedProject.sales_engineer_id
                       ? salesEngineersData?.find(
-                          (eng: { _id: string; name: string }) => eng._id === editedProject.sales_engineer_id
-                        )?.name || "Select a sales engineer"
+                        (eng: { _id: string; name: string }) => eng._id === editedProject.sales_engineer_id
+                      )?.name || "Select a sales engineer"
                       : "Select a sales engineer"}
                   </span>
                   <ChevronDownIcon className="w-4 h-4 text-gray-400" />
@@ -1015,10 +1018,10 @@ export default function ProjectsContainer() {
             </div> */}
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Remarks</label>
-              <Input 
-                type="text" 
-                name="remarks" 
-                value={editedProject.remarks} 
+              <Input
+                type="text"
+                name="remarks"
+                value={editedProject.remarks}
                 onChange={handleEditInputChange}
                 maxLength={50}
               />

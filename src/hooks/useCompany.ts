@@ -6,6 +6,7 @@ export interface Company {
   company_name: string;
   company_code: string;
   city: string;
+  contact : string;
   company_status: "approved" | "pending" | "revoked";
   created_at: string;
   updated_at: string;
@@ -107,7 +108,7 @@ export function useUpdateCompanyStatus() {
     mutationFn: async ({ companyId, status }: { companyId: string; status: string }) => {
       const response = await fetchWithAuth("/company/change_status", {
         method: "PUT", // or POST, assuming PUT for update
-        body: JSON.stringify({ company_id: companyId, status }),
+        body: JSON.stringify({ company_id: companyId, company_status: status }),
       });
       const data = await response.json();
       if (!data.success) {

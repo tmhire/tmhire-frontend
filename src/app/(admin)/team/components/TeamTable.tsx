@@ -18,6 +18,7 @@ interface TeamTableProps {
   data: Team[];
   onEdit: (team: Team) => void;
   onDelete: (team: Team) => void;
+  isViewer?: boolean;
 }
 
 const DesignationLabels: Record<Designation, string> = {
@@ -27,7 +28,7 @@ const DesignationLabels: Record<Designation, string> = {
   "site-supervisor": "Site Supervisor",
 };
 
-export default function TeamTable({ data, onEdit, onDelete }: TeamTableProps) {
+export default function TeamTable({ data, onEdit, onDelete, isViewer = false }: TeamTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto">
@@ -54,12 +55,14 @@ export default function TeamTable({ data, onEdit, onDelete }: TeamTableProps) {
                 >
                   Mobile number
                 </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
-                  Actions
-                </TableCell>
+                {!isViewer && (
+                  <TableCell
+                    isHeader
+                    className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  >
+                    Actions
+                  </TableCell>
+                )}
               </TableRow>
             </TableHeader>
 
@@ -82,16 +85,18 @@ export default function TeamTable({ data, onEdit, onDelete }: TeamTableProps) {
                   <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {member.contact}
                   </TableCell>
-                  <TableCell className="px-3 py-4">
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => onEdit(member)}>
-                        <Edit size={"12px"} />
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => onDelete(member)}>
-                        <Trash size={"12px"} />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {!isViewer && (
+                    <TableCell className="px-3 py-4">
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" onClick={() => onEdit(member)}>
+                          <Edit size={"12px"} />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => onDelete(member)}>
+                          <Trash size={"12px"} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

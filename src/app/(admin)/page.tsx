@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import DashboardContainer from "./components/DashboardContainer";
+import AdminDashboardSwitcher from "./components/AdminDashboardSwitcher";
 
 export const metadata: Metadata = {
   title: "Dashboard | TM Grid - Concrete Calculator",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function Ecommerce() {
-  return <DashboardContainer />;
+  return <AdminDashboardSwitcher />;
 }

@@ -55,9 +55,10 @@ interface ProjectsTableProps {
   clients: Client[];
   plants: Plant[];
   teamMembers: TeamMember[];
+  isViewer?: boolean;
 }
 
-export default function ProjectsTable({ data, onEdit, onDelete, clients, plants, teamMembers }: ProjectsTableProps) {
+export default function ProjectsTable({ data, onEdit, onDelete, clients, plants, teamMembers, isViewer = false }: ProjectsTableProps) {
 
   const getClientName = (clientId: string) => {
     const client = clients.find((c) => c._id === clientId);
@@ -141,12 +142,14 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients, plants,
                 >
                   Remarks
                 </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-20"
-                >
-                  Actions
-                </TableCell>
+                {!isViewer && (
+                  <TableCell
+                    isHeader
+                    className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-20"
+                  >
+                    Actions
+                  </TableCell>
+                )}
               </TableRow>
             </TableHeader>
 
@@ -173,12 +176,12 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients, plants,
                     <span className="truncate block">{getPlantName(project.mother_plant_id)}</span>
                   </TableCell>
                   <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-20">
-                    <span className="truncate block">{truncateText(project.address,15)}</span>
+                    <span className="truncate block">{truncateText(project.address, 15)}</span>
                   </TableCell>
                   <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-20">
                     <div className="flex flex-col">
-                      <span className="font-medium truncate"> {truncateText(project.contact_name,10)}</span>
-                      <span className="text-xs text-gray-400 truncate">{truncateText(project.contact_number,10)}</span>
+                      <span className="font-medium truncate"> {truncateText(project.contact_name, 10)}</span>
+                      <span className="text-xs text-gray-400 truncate">{truncateText(project.contact_number, 10)}</span>
                     </div>
                   </TableCell>
                   <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-24">
@@ -223,23 +226,25 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients, plants,
                       <span className="text-gray-400 text-xs">No remarks</span>
                     )}
                   </TableCell>
-                  <TableCell className="px-2 py-4 w-20">
-                    <div className="flex items-center gap-1">
-                      <Button size="sm" variant="outline" onClick={() => onEdit(project)} className="px-2 py-1 text-xs">
-                        <Edit size={10} />
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onDelete(project)}
-                        className="px-2 py-1 text-xs"
-                      >
-                        <Trash size={10} />
-                        Delete
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {!isViewer && (
+                    <TableCell className="px-2 py-4 w-20">
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="outline" onClick={() => onEdit(project)} className="px-2 py-1 text-xs">
+                          <Edit size={10} />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onDelete(project)}
+                          className="px-2 py-1 text-xs"
+                        >
+                          <Trash size={10} />
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

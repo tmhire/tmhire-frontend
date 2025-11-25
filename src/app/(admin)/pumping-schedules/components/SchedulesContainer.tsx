@@ -54,7 +54,7 @@ export default function SchedulesContainer() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { fetchWithAuth } = useApiClient();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
@@ -239,10 +239,12 @@ export default function SchedulesContainer() {
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-semibold text-black dark:text-white">Pumping Schedules Management</h2>
-        <Button onClick={handleAddSchedule} className="flex items-center gap-2" size="sm">
-          <PlusIcon className="w-4 h-4" />
-          Add Pumping Schedule
-        </Button>
+        {session?.sub_role !== "viewer" && (
+          <Button onClick={handleAddSchedule} className="flex items-center gap-2" size="sm">
+            <PlusIcon className="w-4 h-4" />
+            Add Pumping Schedule
+          </Button>
+        )}
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -442,7 +444,7 @@ export default function SchedulesContainer() {
                 <Spinner text="Loading schedules..." />
               </div>
             ) : (
-              <SchedulesTable data={filteredSchedules} onDelete={handleDelete} onCancel={handleCancel} />
+              <SchedulesTable data={filteredSchedules} onDelete={handleDelete} onCancel={handleCancel} isViewer={session?.sub_role === "viewer"} />
             )}
           </div>
         </div>

@@ -20,10 +20,11 @@ interface TransitMixersTableProps {
   data: TransitMixer[];
   onEdit: (mixer: TransitMixer) => void;
   onDelete: (mixer: TransitMixer) => void;
-  plants?: { _id: string; name: string }[]; // Add this prop
+  plants?: { _id: string; name: string }[];
+  isViewer?: boolean;
 }
 
-export default function TransitMixersTable({ data, onEdit, onDelete, plants = [] }: TransitMixersTableProps) {
+export default function TransitMixersTable({ data, onEdit, onDelete, plants = [], isViewer = false }: TransitMixersTableProps) {
   const getPlantName = (plant_id: string | null) => {
     if (!plant_id) return "Not Assigned";
     const plant = plants.find((p) => p._id === plant_id);
@@ -81,12 +82,14 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                   Remarks
                 </TableCell>
                 {/* <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Created At</TableCell> */}
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
-                  Actions
-                </TableCell>
+                {!isViewer && (
+                  <TableCell
+                    isHeader
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  >
+                    Actions
+                  </TableCell>
+                )}
               </TableRow>
             </TableHeader>
             {/* Table Body */}
@@ -121,11 +124,10 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                   </TableCell>
                   <TableCell className="px-5 py-4 text-start">
                     <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        mixer.status === "active"
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${mixer.status === "active"
                           ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                           : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                      }`}
+                        }`}
                     >
                       {mixer.status.charAt(0).toUpperCase() + mixer.status.slice(1)}
                     </span>
@@ -136,16 +138,18 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                   {/* <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {new Date(mixer.created_at).toLocaleDateString()}
                   </TableCell> */}
-                  <TableCell className="px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => onEdit(mixer)}>
-                        <Edit size={"12px"} />
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => onDelete(mixer)}>
-                        <Trash size={"12px"} />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {!isViewer && (
+                    <TableCell className="px-5 py-4">
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" onClick={() => onEdit(mixer)}>
+                          <Edit size={"12px"} />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => onDelete(mixer)}>
+                          <Trash size={"12px"} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

@@ -47,7 +47,7 @@ interface CreatePlantData {
 
 export default function PlantsContainer() {
   const { fetchWithAuth } = useApiClient();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -529,12 +529,14 @@ export default function PlantsContainer() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">RMC Plants</h2>
-        <nav>
-          <Button className="flex items-center gap-2" size="sm" onClick={handleAddPlant}>
-            <PlusIcon className="w-4 h-4" />
-            Add Plant
-          </Button>
-        </nav>
+        {session?.sub_role !== "viewer" && (
+          <nav>
+            <Button className="flex items-center gap-2" size="sm" onClick={handleAddPlant}>
+              <PlusIcon className="w-4 h-4" />
+              Add Plant
+            </Button>
+          </nav>
+        )}
       </div>
       <div className="space-y-6">
         <div className={`rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]`}>
@@ -719,7 +721,7 @@ export default function PlantsContainer() {
                   <Spinner text="Loading plants..." />
                 </div>
               ) : (
-                <PlantsTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} />
+                <PlantsTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} isViewer={session?.sub_role === "viewer"} />
               )}
             </div>
           </div>
@@ -836,15 +838,15 @@ export default function PlantsContainer() {
             </div>
           </div>
           <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address <span className="text-red-500">*</span></label>
-              <Input
-                type="text"
-                name="address"
-                placeholder="Enter plant address (max 120 characters)"
-                value={newPlant.address}
-                onChange={handleInputChange}
-                maxLength={120}
-              />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address <span className="text-red-500">*</span></label>
+            <Input
+              type="text"
+              name="address"
+              placeholder="Enter plant address (max 120 characters)"
+              value={newPlant.address}
+              onChange={handleInputChange}
+              maxLength={120}
+            />
           </div>
 
           <div className="flex flex-row w-full gap-2">

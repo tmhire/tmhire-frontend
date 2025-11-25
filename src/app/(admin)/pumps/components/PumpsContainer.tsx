@@ -56,7 +56,7 @@ interface CreatePumpData {
 
 export default function PumpsContainer() {
   const { fetchWithAuth } = useApiClient();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -536,11 +536,10 @@ export default function PumpsContainer() {
               >
                 <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                 <span
-                  className={`text-xs ${
-                    selectedPumpType === "Line"
-                      ? "text-blue-600 dark:text-blue-400 font-medium"
-                      : "text-gray-500 dark:text-gray-400"
-                  }`}
+                  className={`text-xs ${selectedPumpType === "Line"
+                    ? "text-blue-600 dark:text-blue-400 font-medium"
+                    : "text-gray-500 dark:text-gray-400"
+                    }`}
                 >
                   Line
                 </span>
@@ -551,11 +550,10 @@ export default function PumpsContainer() {
               >
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
                 <span
-                  className={`text-xs ${
-                    selectedPumpType === "Boom"
-                      ? "text-green-600 dark:text-green-400 font-medium"
-                      : "text-gray-500 dark:text-gray-400"
-                  }`}
+                  className={`text-xs ${selectedPumpType === "Boom"
+                    ? "text-green-600 dark:text-green-400 font-medium"
+                    : "text-gray-500 dark:text-gray-400"
+                    }`}
                 >
                   Boom
                 </span>
@@ -568,10 +566,12 @@ export default function PumpsContainer() {
               <span className="font-semibold text-gray-800 dark:text-white/90">{filteredData.length}</span>
             </div>
           </div>
-          <Button className="flex items-center gap-2" size="sm" onClick={handleAddPump}>
-            <PlusIcon className="w-4 h-4" />
-            Add Pump
-          </Button>
+          {status === "authenticated" && session?.sub_role !== "viewer" && (
+            <Button className="flex items-center gap-2" size="sm" onClick={handleAddPump}>
+              <PlusIcon className="w-4 h-4" />
+              Add Pump
+            </Button>
+          )}
         </nav>
       </div>
       <div className="space-y-6">
@@ -768,6 +768,7 @@ export default function PumpsContainer() {
                   onDelete={handleDelete}
                   plantMap={plantMap}
                   teamMembers={pumpTeamMembers || []}
+                  isViewer={session?.sub_role === "viewer"}
                 />
               )}
             </div>
@@ -781,14 +782,12 @@ export default function PumpsContainer() {
           <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Pump</h4>
 
           <div
-            className={`flex h-6 w-fit rounded border border-black ${
-              newPump.type ? (newPump.type === "line" ? "bg-blue-500" : "bg-green-500") : "bg-yellow-500"
-            } shadow items-center gap-1`}
+            className={`flex h-6 w-fit rounded border border-black ${newPump.type ? (newPump.type === "line" ? "bg-blue-500" : "bg-green-500") : "bg-yellow-500"
+              } shadow items-center gap-1`}
           >
             <label
-              className={`flex flex-col justify-between ${
-                newPump.type === "line" ? "bg-blue-700" : "bg-green-700"
-              } rounded-l px-1 py-1 text-[7px] text-white h-full`}
+              className={`flex flex-col justify-between ${newPump.type === "line" ? "bg-blue-700" : "bg-green-700"
+                } rounded-l px-1 py-1 text-[7px] text-white h-full`}
             >
               <img className="h-2 w-auto" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" />
               IND

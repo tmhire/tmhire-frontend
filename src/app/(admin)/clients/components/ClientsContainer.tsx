@@ -31,7 +31,7 @@ interface CreateClientData {
 
 export default function ClientsContainer() {
   const { fetchWithAuth } = useApiClient();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -304,12 +304,14 @@ export default function ClientsContainer() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Clients / Customer</h2>
-        <nav>
-          <Button className="flex items-center gap-2" size="sm" onClick={handleAddClient}>
-            <PlusIcon className="w-4 h-4" />
-            Add Client
-          </Button>
-        </nav>
+        {session?.sub_role !== "viewer" && (
+          <nav>
+            <Button className="flex items-center gap-2" size="sm" onClick={handleAddClient}>
+              <PlusIcon className="w-4 h-4" />
+              Add Client
+            </Button>
+          </nav>
+        )}
       </div>
       <div className="space-y-6">
         <div className={`rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]`}>
@@ -412,7 +414,7 @@ export default function ClientsContainer() {
                   <Spinner text="Loading clients..." />
                 </div>
               ) : (
-                <ClientsTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} />
+                <ClientsTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} isViewer={session?.sub_role === "viewer"} />
               )}
             </div>
           </div>

@@ -51,7 +51,7 @@ export default function SupplySchedulesContainer() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { fetchWithAuth } = useApiClient();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
@@ -203,32 +203,32 @@ export default function SupplySchedulesContainer() {
         timeStatusFilter === "All"
           ? true
           : (() => {
-              const scheduleDate = parseScheduleDate(schedule.input_params.schedule_date);
-              // Remove time for comparison (treat as local date)
-              const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-              const schedDate = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate());
+            const scheduleDate = parseScheduleDate(schedule.input_params.schedule_date);
+            // Remove time for comparison (treat as local date)
+            const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const schedDate = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate());
 
-              switch (timeStatusFilter) {
-                case "Today":
-                  return schedDate.getTime() === nowDate.getTime();
-                case "Tomorrow":
-                  const tomorrow = new Date(nowDate);
-                  tomorrow.setDate(tomorrow.getDate() + 1);
-                  return schedDate.getTime() === tomorrow.getTime();
-                case "This Week":
-                  const weekStart = new Date(nowDate);
-                  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-                  const weekEnd = new Date(weekStart);
-                  weekEnd.setDate(weekEnd.getDate() + 6);
-                  return schedDate >= weekStart && schedDate <= weekEnd;
-                case "Past":
-                  return schedDate < nowDate;
-                case "Upcoming":
-                  return schedDate > nowDate;
-                default:
-                  return true;
-              }
-            })();
+            switch (timeStatusFilter) {
+              case "Today":
+                return schedDate.getTime() === nowDate.getTime();
+              case "Tomorrow":
+                const tomorrow = new Date(nowDate);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                return schedDate.getTime() === tomorrow.getTime();
+              case "This Week":
+                const weekStart = new Date(nowDate);
+                weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                return schedDate >= weekStart && schedDate <= weekEnd;
+              case "Past":
+                return schedDate < nowDate;
+              case "Upcoming":
+                return schedDate > nowDate;
+              default:
+                return true;
+            }
+          })();
 
       return matchesSearch && matchesStatus && matchesClient && matchesSite && matchesDate && matchesTimeStatus;
     });
@@ -246,10 +246,12 @@ export default function SupplySchedulesContainer() {
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-semibold text-black dark:text-white">Supply Schedules Management</h2>
-        <Button onClick={handleAddSchedule} className="flex items-center gap-2" size="sm">
-          <PlusIcon className="w-4 h-4" />
-          Add Supply Schedule
-        </Button>
+        {session?.sub_role !== "viewer" && (
+          <Button onClick={handleAddSchedule} className="flex items-center gap-2" size="sm">
+            <PlusIcon className="w-4 h-4" />
+            Add Supply Schedule
+          </Button>
+        )}
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -440,7 +442,7 @@ export default function SupplySchedulesContainer() {
                   </Button>
                 )}
               </div>
-              
+
             </div>
           </div>
         </div>
@@ -459,7 +461,7 @@ export default function SupplySchedulesContainer() {
                 <Spinner text="Loading schedules..." />
               </div>
             ) : (
-              <SupplySchedulesTable data={filteredSchedules} onDelete={handleDelete} onCancel={handleCancel} />
+              <SupplySchedulesTable data={filteredSchedules} onDelete={handleDelete} onCancel={handleCancel} isViewer={session?.sub_role === "viewer"} />
             )}
           </div>
         </div>
