@@ -122,3 +122,43 @@ export function useUpdateCompanyStatus() {
     },
   });
 }
+
+// Hook to fetch all users (for Super Admin)
+export interface AllUser {
+  _id: string;
+  email: string;
+  name: string;
+  contact: number | null;
+  role: string | null;
+  sub_role: string | null;
+  account_status: string | null;
+  company_code: string;
+  company_name: string;
+  company_status: string;
+  city: string;
+  new_user: boolean;
+  created_at: string;
+}
+
+export function useAllUsers() {
+  const { fetchWithAuth } = useApiClient();
+
+  const {
+    data: users,
+    isLoading: loading,
+    error,
+  } = useQuery<AllUser[]>({
+    queryKey: ["all-users"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/company/all_users");
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || "Failed to fetch all users");
+      }
+      return data.data;
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  return { users, loading, error };
+}
