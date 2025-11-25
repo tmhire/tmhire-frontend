@@ -16,7 +16,7 @@ const AppHeader: React.FC = () => {
   const { isExpanded, isMobileOpen, isMobile, toggleSidebar, toggleMobileSidebar } = useSidebar();
 
   const { data: session } = useSession();
-  const { profile, loading } = useProfile();
+  const { loading } = useProfile();
   const { setIsSearchOpen } = useSearch();
 
   const handleToggle = () => {

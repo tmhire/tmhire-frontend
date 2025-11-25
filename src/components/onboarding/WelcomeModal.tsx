@@ -27,7 +27,7 @@ export default function WelcomeModal() {
     queryKey: ["companies"],
     queryFn: async () => {
       const response = await fetchWithAuth("/company");
-      return response.json();
+      return response.json() as Promise<{ data: Array<{ company_code?: string }> }>;
     },
   });
 
@@ -84,7 +84,7 @@ export default function WelcomeModal() {
     if (selectedRole === "company_admin") {
       // For admin, code must NOT exist
       const codeExists = companies.some(
-        (company: any) => company.company_code?.toLowerCase() === code.toLowerCase()
+        (company: { company_code?: string }) => company.company_code?.toLowerCase() === code.toLowerCase()
       );
 
       if (codeExists) {
@@ -138,7 +138,7 @@ export default function WelcomeModal() {
       }
 
       // Prepare payload based on role
-      let payload: any;
+      let payload: Record<string, string | number | boolean>;
       if (selectedRole === "company_admin") {
         payload = {
           role: "company_admin",

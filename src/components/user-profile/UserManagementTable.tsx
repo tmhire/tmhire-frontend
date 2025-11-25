@@ -42,7 +42,7 @@ export default function UserManagementTable() {
         try {
             setLoading(true);
             const response = await fetchWithAuth("/company/all_users");
-            const data = await response.json();
+            const data = await response.json() as { success: boolean; data: User[] };
 
             if (data.success && Array.isArray(data.data)) {
                 // Filter out company_admin (which should be the current user mostly, or other admins)
@@ -64,7 +64,7 @@ export default function UserManagementTable() {
         if (session?.role === "company_admin") {
             fetchUsers();
         }
-    }, [session]);
+    }, [session, fetchUsers]);
 
     const handleUpdateUser = async (user: User, updates: Partial<User>) => {
         console.log("user", user)
@@ -90,7 +90,7 @@ export default function UserManagementTable() {
                 }),
             });
 
-            const data = await response.json();
+            const data = await response.json() as { success: boolean };
             if (data.success) {
                 // Update local state
                 setUsers((prev) =>
