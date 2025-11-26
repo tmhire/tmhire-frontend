@@ -138,6 +138,7 @@ export interface AllUser {
   city: string;
   new_user: boolean;
   created_at: string;
+  company_id?: string; // Added as per requirement
 }
 
 export function useAllUsers() {
@@ -161,4 +162,29 @@ export function useAllUsers() {
   });
 
   return { users, loading, error };
+}
+
+// Hook to update user (for Company Admin/Super Admin)
+export function useUpdateUser() {
+  const { fetchWithAuth } = useApiClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<AllUser> }) => {
+      const response = await fetchWithAuth(`/auth/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify(updates),
+      });
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || "Failed to update user");
+      }
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-users"] });
+      // Also invalidate company users if needed, though all-users is the main one here
+      queryClient.invalidateQueries({ queryKey: ["company-users"] });
+    },
+  });
 }
