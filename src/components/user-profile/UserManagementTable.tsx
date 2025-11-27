@@ -1,14 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import React, { useState } from "react";
+// import { useSession } from "next-auth/react";
 import { useAllUsers, useUpdateUser, AllUser } from "@/hooks/useCompany";
 import { Spinner } from "../ui/spinner";
 
 
 
 export default function UserManagementTable() {
-    const { data: session } = useSession();
+    // const { data: session } = useSession();
     const { users, loading, error } = useAllUsers();
     const updateUserMutation = useUpdateUser();
     const [updating, setUpdating] = useState<string | null>(null);
