@@ -101,8 +101,13 @@ const AppHeader: React.FC = () => {
                   )}
                 </div>
                 <div className="flex flex-col justify-center">
-                  <h1 className="text-gray-800 dark:text-white/90 text-xl font-semibold">
+                  <h1 className="text-gray-800 dark:text-white/90 text-xl font-semibold flex items-center gap-2">
                     {loading ? "Loading..." : session?.company_name || "Company"}
+                    {session?.company_code && (
+                      <span className="text-xs font-normal font-mono bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-500 dark:text-gray-400">
+                        {session.company_code}
+                      </span>
+                    )}
                   </h1>
                   <p className="text-gray-500 dark:text-gray-400 text-xs">powered by TM Grid</p>
                 </div>
@@ -128,8 +133,13 @@ const AppHeader: React.FC = () => {
                   )}
                 </div>
                 <div className="flex flex-col justify-center">
-                  <h1 className="text-gray-800 dark:text-white/90 text-lg font-semibold">
+                  <h1 className="text-gray-800 dark:text-white/90 text-lg font-semibold flex items-center gap-2">
                     {loading ? "Loading..." : session?.company_name || "Company"}
+                    {session?.company_code && (
+                      <span className="text-xs font-normal font-mono bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-500 dark:text-gray-400">
+                        {session.company_code}
+                      </span>
+                    )}
                   </h1>
                   <p className="text-gray-500 dark:text-gray-400 text-xs">powered by TM Grid</p>
                 </div>

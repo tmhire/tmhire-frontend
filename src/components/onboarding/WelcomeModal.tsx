@@ -65,10 +65,32 @@ export default function WelcomeModal() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+
+    if (name === "companyCode") {
+      // Allow only alphanumeric and convert to uppercase, max 5 chars
+      const cleanedValue = value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 5);
+      setFormData((prev) => ({
+        ...prev,
+        [name]: cleanedValue,
+      }));
+      if (cleanedValue.length > 0 && cleanedValue.length < 3) {
+        setCompanyCodeError("Code must be at least 3 characters");
+      } else {
+        setCompanyCodeError("");
+      }
+    } else if (name === "contact") {
+      // Allow only numbers, max 10 digits
+      const cleanedValue = value.replace(/\D/g, "").slice(0, 10);
+      setFormData((prev) => ({
+        ...prev,
+        [name]: cleanedValue,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
     setError("");
   };
 
@@ -124,6 +146,12 @@ export default function WelcomeModal() {
           return;
         }
 
+        if (formData.contact.length !== 10) {
+          setError("Phone number must be exactly 10 digits");
+          setIsSubmitting(false);
+          return;
+        }
+
         const isCodeValid = validateCompanyCode(formData.companyCode);
         if (!isCodeValid) {
           setIsSubmitting(false);
@@ -132,6 +160,11 @@ export default function WelcomeModal() {
       } else if (selectedRole === "user") {
         if (!formData.companyCode || !formData.contact) {
           setError("Please fill in all required fields");
+          setIsSubmitting(false);
+          return;
+        }
+        if (formData.contact.length !== 10) {
+          setError("Phone number must be exactly 10 digits");
           setIsSubmitting(false);
           return;
         }
@@ -301,7 +334,7 @@ export default function WelcomeModal() {
                   <>
                     <div className="flex flex-row gap-4">
                       <div className="w-1/2">
-                        <Label>Company Name</Label>
+                        <Label>Company Name <span className="text-red-500">*</span></Label>
                         <Input
                           type="text"
                           name="company"
@@ -312,7 +345,7 @@ export default function WelcomeModal() {
                         />
                       </div>
                       <div className="w-1/2">
-                        <Label>Company Code</Label>
+                        <Label>Company Code <span className="text-red-500">*</span></Label>
                         <input
                           type="text"
                           name="companyCode"
@@ -331,7 +364,7 @@ export default function WelcomeModal() {
                     <div className="flex flex-row gap-4">
 
                       <div className="w-1/2">
-                        <Label>Phone Number</Label>
+                        <Label>Phone Number <span className="text-red-500">*</span></Label>
                         <Input
                           type="tel"
                           name="contact"
@@ -342,7 +375,7 @@ export default function WelcomeModal() {
                       </div>
 
                       <div className="w-1/2">
-                        <Label>City</Label>
+                        <Label>City <span className="text-red-500">*</span></Label>
                         <Input
                           type="text"
                           name="city"
@@ -411,7 +444,7 @@ export default function WelcomeModal() {
                 ) : (
                   <div className="flex flex-row gap-4">
                     <div className="w-1/2">
-                      <Label>Phone Number</Label>
+                      <Label>Phone Number <span className="text-red-500">*</span></Label>
                       <Input
                         type="tel"
                         name="contact"
@@ -421,7 +454,7 @@ export default function WelcomeModal() {
                       />
                     </div>
                     <div className="w-1/2">
-                      <Label>Company Code</Label>
+                      <Label>Company Code <span className="text-red-500">*</span></Label>
                       <Input
                         type="text"
                         name="companyCode"

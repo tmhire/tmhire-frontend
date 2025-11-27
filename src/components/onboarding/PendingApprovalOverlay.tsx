@@ -37,12 +37,14 @@ export default function PendingApprovalOverlay() {
             if (data.success && data.data) {
                 const newCompanyStatus = data.data.company_status;
                 const newAccountStatus = data.data.account_status;
+                const newSubRole = data.data.sub_role;
 
-                if (newCompanyStatus !== company_status || newAccountStatus !== account_status) {
+                if (newCompanyStatus !== company_status || newAccountStatus !== account_status || newSubRole !== session?.sub_role) {
                     await update({
                         ...session,
                         company_status: newCompanyStatus,
                         account_status: newAccountStatus,
+                        sub_role: newSubRole,
                     });
                     window.location.reload();
                 }
