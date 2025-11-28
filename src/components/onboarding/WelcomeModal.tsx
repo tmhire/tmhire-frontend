@@ -203,15 +203,18 @@ export default function WelcomeModal() {
         await update({
           ...(session as unknown as Record<string, unknown>),
           new_user: false,
-          company: data.data.company || formData.company,
+          company_name: data.data.company_name || formData.company,
           city: data.data.city || formData.city,
           contact: data.data.contact,
           role: data.data.role,
           sub_role: data.data.sub_role,
-          status: data.data.status,
+          company_status: data.data.company_status,
+          account_status: data.data.account_status,
           company_id: data.data.company_id,
-          preferred_format: formData.globalFormat,
-          custom_start_hour: formData.customStartHour,
+          company_code: data.data.company_code,
+          parent_admin: data.data.parent_admin,
+          preferred_format: data.data.preferred_format || formData.globalFormat,
+          custom_start_hour: data.data.custom_start_hour ?? formData.customStartHour,
         });
         setIsOpen(false);
       } else {
