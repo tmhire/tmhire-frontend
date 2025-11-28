@@ -215,6 +215,11 @@ const calculateRoundedEndTime = (date: Date): Date => {
   }
 };
 
+const formatVolume = (value: number): string => {
+  if (!value) return "0";
+  return Number.isInteger(value) ? value.toString() : value.toFixed(2);
+};
+
 // Compact DonutChart for Summary Card
 const DonutChart = ({
   data,
@@ -817,7 +822,7 @@ export default function ScheduleViewPage() {
         "", avgRoundedTotalHours ? formatHoursAndMinutes(avgRoundedTotalHours) : "-"
       ];
       footerRow0.forEach((data, colIndex) => {
-        const cell = summarySheet.getCell(currentDataRow, colIndex + 10);
+        const cell = summarySheet.getCell(currentDataRow, colIndex + 12);
         cell.value = data;
         cell.style = { ...dataStyle, font: { ...dataStyle.font, bold: true } };
       });
@@ -879,6 +884,8 @@ export default function ScheduleViewPage() {
     summarySheet.getColumn(13).width = 19; // M
     summarySheet.getColumn(14).width = 19; // M
     summarySheet.getColumn(15).width = 19; // M
+    summarySheet.getColumn(16).width = 19; // M
+    summarySheet.getColumn(17).width = 19; // M
 
     // Create Schedule Sheet
     if (currentTable && currentTable.length > 0) {
@@ -1634,6 +1641,9 @@ export default function ScheduleViewPage() {
           // Get all TM IDs and max number of trips
           const tmIds = Object.keys(tmTrips);
           const maxTrips = Math.max(...Object.values(tmTrips).map((trips) => trips.length));
+          const totalVolumeArr = tmIds.map((tmId) =>
+            tmTrips[tmId].reduce((sum, trip) => sum + (trip.completed_capacity || 0), 0)
+          );
           // Helper to format overall time range
           function formatOverallRange(trips: Schedule["output_table"], preferredFormat?: string) {
             if (!trips.length) return "-";
@@ -1678,6 +1688,9 @@ export default function ScheduleViewPage() {
           const avgTotalHours = totalHoursArr.length
             ? totalHoursArr.reduce((a, b) => a + b, 0) / totalHoursArr.length
             : 0;
+          const avgTotalVolume = totalVolumeArr.length
+            ? totalVolumeArr.reduce((a, b) => a + b, 0) / totalVolumeArr.length
+            : 0;
           // For TM label, use identifier if available
           const tmIdToIdentifier: Record<string, string> = {};
           schedule.output_table.forEach((trip) => {
@@ -1688,23 +1701,26 @@ export default function ScheduleViewPage() {
               <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800/30">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800">
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">S.No.</th>
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">TM</th>
+                    <th className="px-1 py-2 font-medium text-xs text-gray-700 dark:text-gray-200 text-left">S.No.</th>
+                    <th className="px-1 py-2 font-medium text-xs text-gray-700 dark:text-gray-200 text-left">TM</th>
                     {Array.from({ length: maxTrips }).map((_, i) => (
-                      <th key={i} className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">
+                      <th key={i} className="px-1 py-2 font-medium text-xs text-gray-700 dark:text-gray-200 text-left">
                         Trip {i + 1}
                       </th>
                     ))}
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
+                    <th className="px-1 py-2 font-medium text-xs text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
+                      Total Vol carried m3
+                    </th>
+                    <th className="px-1 py-2 font-medium text-xs text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
                       Start-End Time
                     </th>
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
+                    <th className="px-1 py-2 font-medium text-xs text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
                       Rounded off (Start - End)
                     </th>
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
+                    <th className="px-1 py-2 font-medium text-xs text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
                       Total Hours
                     </th>
-                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
+                    <th className="px-1 py-2 font-medium text-xs text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
                       Rounded Total
                     </th>
                   </tr>
@@ -1714,6 +1730,7 @@ export default function ScheduleViewPage() {
                     const trips = tmTrips[tmId];
                     const overallRange = formatOverallRange(trips, profile?.preferred_format);
                     const totalHours = getTotalHours(trips);
+                    const totalVolume = trips.reduce((sum, trip) => sum + (trip.completed_capacity || 0), 0);
 
                     // Calculate rounded times
                     const starts = trips.map((t) => t.plant_buffer).filter(Boolean).map((t) => new Date(t));
@@ -1738,14 +1755,14 @@ export default function ScheduleViewPage() {
 
                     return (
                       <tr key={tmId} className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="px-2 py-2 text-gray-600 dark:text-gray-400 text-left">{index + 1}</td>
-                        <td className="px-2 py-2 text-gray-800 dark:text-white/90 font-medium text-left">
+                        <td className="px-1 text-xs py-2 text-gray-600 dark:text-gray-400 text-left">{index + 1}</td>
+                        <td className="px-1 text-xs py-2 text-gray-800 dark:text-white/90 font-medium text-left">
                           {tmIdToIdentifier[tmId] || tmId}
                         </td>
                         {Array.from({ length: maxTrips }).map((_, i) => {
                           const trip = trips[i];
                           return (
-                            <td key={i} className="px-2 py-2 text-left text-gray-800 dark:text-white/90">
+                            <td key={i} className="px-1 text-xs py-2 text-left text-gray-800 dark:text-white/90">
                               {trip
                                 ? `${formatTimeByPreference(
                                   trip.plant_buffer,
@@ -1755,6 +1772,9 @@ export default function ScheduleViewPage() {
                             </td>
                           );
                         })}
+                        <td className="px-2 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
+                          {trips.length ? formatVolume(totalVolume) : "-"}
+                        </td>
                         <td className="px-2 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
                           {overallRange}
                         </td>
@@ -1792,17 +1812,20 @@ export default function ScheduleViewPage() {
 
                     return (
                       <tr className="font-semibold bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white/90">
-                        <td className="px-2 py-2 text-left">Avg</td>
-                        <td className="px-2 py-2 text-center "></td>
+                        <td className="px-1 text-xs py-2 text-left">Avg</td>
+                        <td className="px-1 text-xs py-2 text-center "></td>
                         {Array.from({ length: maxTrips }).map((_, i) => (
-                          <td key={i} className="px-2 py-2"></td>
+                          <td key={i} className="px-1 text-xs py-2"></td>
                         ))}
-                        <td className="px-2 py-2 text-center bg-gray-100 dark:bg-gray-800"></td>
-                        <td className="px-2 py-2 text-center bg-gray-100 dark:bg-gray-800"></td>
-                        <td className="px-2 py-2 text-left bg-gray-100 dark:bg-gray-800">
+                        <td className="px-1 text-xs py-2 text-left bg-gray-100 dark:bg-gray-800">
+                          {tmIds.length ? formatVolume(avgTotalVolume) : "-"}
+                        </td>
+                        <td className="px-1 text-xs py-2 text-center bg-gray-100 dark:bg-gray-800"></td>
+                        <td className="px-1 text-xs py-2 text-center bg-gray-100 dark:bg-gray-800"></td>
+                        <td className="px-1 text-xs py-2 text-left bg-gray-100 dark:bg-gray-800">
                           {avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-"}
                         </td>
-                        <td className="px-2 py-2 text-left bg-gray-100 dark:bg-gray-800">
+                        <td className="px-1 text-xs py-2 text-left bg-gray-100 dark:bg-gray-800">
                           {avgRoundedTotalHours ? formatHoursAndMinutes(avgRoundedTotalHours) : "-"}
                         </td>
                       </tr>

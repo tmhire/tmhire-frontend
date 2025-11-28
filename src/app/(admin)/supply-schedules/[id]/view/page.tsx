@@ -73,6 +73,11 @@ interface SupplySchedule {
   tm_count: number;
 }
 
+const formatVolume = (value: number): string => {
+  if (!value) return "0";
+  return Number.isInteger(value) ? value.toString() : value.toFixed(2);
+};
+
 export default function SupplyScheduleViewPage() {
   const router = useRouter();
   const params = useParams();
@@ -871,6 +876,9 @@ export default function SupplyScheduleViewPage() {
           // Get all TM IDs and max number of trips
           const tmIds = Object.keys(tmTrips);
           const maxTrips = Math.max(...Object.values(tmTrips).map((trips) => trips.length));
+          const totalVolumeArr = tmIds.map((tmId) =>
+            tmTrips[tmId].reduce((sum, trip) => sum + (trip.completed_capacity || 0), 0)
+          );
           // Helper to format overall time range
           function formatOverallRange(trips: SupplySchedule["output_table"], preferredFormat?: string) {
             if (!trips.length) return "-";
@@ -915,6 +923,9 @@ export default function SupplyScheduleViewPage() {
           const avgTotalHours = totalHoursArr.length
             ? totalHoursArr.reduce((a, b) => a + b, 0) / totalHoursArr.length
             : 0;
+          const avgTotalVolume = totalVolumeArr.length
+            ? totalVolumeArr.reduce((a, b) => a + b, 0) / totalVolumeArr.length
+            : 0;
           // For TM label, use identifier if available
           const tmIdToIdentifier: Record<string, string> = {};
           schedule.output_table.forEach((trip) => {
@@ -932,6 +943,9 @@ export default function SupplyScheduleViewPage() {
                         Trip {i + 1}
                       </th>
                     ))}
+                    <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">
+                      Total Vol carried m3
+                    </th>
                     <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-left">Start-End Time</th>
                     <th className="px-2 py-2 font-medium text-gray-700 dark:text-gray-200 text-right">Total Hours</th>
                   </tr>
@@ -941,6 +955,7 @@ export default function SupplyScheduleViewPage() {
                     const trips = tmTrips[tmId];
                     const overallRange = formatOverallRange(trips, profile?.preferred_format);
                     const totalHours = getTotalHours(trips);
+                    const totalVolume = trips.reduce((sum, trip) => sum + (trip.completed_capacity || 0), 0);
                     return (
                       <tr key={tmId} className="border-b border-gray-100 dark:border-gray-700">
                         <td className="px-2 py-2 text-gray-600 dark:text-gray-400 text-left">{index + 1}</td>
@@ -960,6 +975,9 @@ export default function SupplyScheduleViewPage() {
                             </td>
                           );
                         })}
+                        <td className="px-2 text-gray-800 dark:text-white/90 py-2 text-left">
+                          {trips.length ? formatVolume(totalVolume) : "-"}
+                        </td>
                         <td className="px-4 text-gray-800 dark:text-white/90 py-2 text-left">{overallRange}</td>
                         <td className="px-4 text-gray-800 dark:text-white/90 py-2 text-right">
                           {totalHours ? formatHoursAndMinutes(totalHours) : "-"}
@@ -974,6 +992,9 @@ export default function SupplyScheduleViewPage() {
                     {Array.from({ length: maxTrips }).map((_, i) => (
                       <td key={i} className="px-2 py-2"></td>
                     ))}
+                    <td className="px-2 py-2 text-left">
+                      {tmIds.length ? formatVolume(avgTotalVolume) : "-"}
+                    </td>
                     <td className="px-2 py-2 text-center"></td>
                     <td className="px-2 py-2 text-right">
                       {avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-"}
