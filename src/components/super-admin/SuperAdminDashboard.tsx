@@ -12,16 +12,19 @@ type TabType = "companies" | "users";
 
 export default function SuperAdminDashboard() {
     const [activeTab, setActiveTab] = useState<TabType>("companies");
-    const { companies, loading: companiesLoading, error: companiesError } = useCompanies();
+    const { companies: companiesData, loading: companiesLoading, error: companiesError } = useCompanies();
     const { users: allUsers, loading: usersLoading, error: usersError } = useAllUsers();
     const { mutate: updateStatus, isPending: isUpdating } = useUpdateCompanyStatus();
     const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
 
+    // Ensure companies is always an array
+    const companies = Array.isArray(companiesData) ? companiesData : [];
+
     // Company metrics
-    const total = companies?.length || 0;
-    const approved = companies?.filter(c => c.company_status === "approved").length || 0;
-    const pending = companies?.filter(c => c.company_status === "pending").length || 0;
-    const revoked = companies?.filter(c => c.company_status === "revoked").length || 0;
+    const total = companies.length;
+    const approved = companies.filter(c => c.company_status === "approved").length;
+    const pending = companies.filter(c => c.company_status === "pending").length;
+    const revoked = companies.filter(c => c.company_status === "revoked").length;
 
     // Group users by company_code
     const groupedUsers = useMemo(() => {
@@ -214,7 +217,7 @@ export default function SuperAdminDashboard() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {companies?.length === 0 ? (
+                                        {companies.length === 0 ? (
                                             <TableRow>
                                                 <TableCell colSpan={6} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                                                     <Building2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -224,7 +227,7 @@ export default function SuperAdminDashboard() {
                                             </TableRow>
                                         ) : (
                                             companies
-                                                ?.filter(company => company.company_code !== "TMGRID")
+                                                .filter(company => company.company_code !== "TMGRID")
                                                 .map((company) => (
                                                     <TableRow key={company._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                                                         <TableCell className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{company.company_name}</TableCell>

@@ -1,3 +1,5 @@
+"use client";
+
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import React, { useMemo } from "react";
 import Button from "@/components/ui/button/Button";
@@ -7,6 +9,7 @@ import Badge from "@/components/ui/badge/Badge";
 // import Tooltip from "@/components/ui/tooltip";
 import { formatTimeByPreference } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
+import { useCreatorLookup } from "@/hooks/useCompany";
 
 interface Schedule {
   _id: string;
@@ -42,6 +45,9 @@ interface Schedule {
   tm_count: number;
   tm_overrule: number;
   created_at: string;
+  created_by?: string;
+  created_by_name?: string;
+  company_id?: string;
 }
 
 interface SchedulesTableProps {
@@ -54,6 +60,34 @@ interface SchedulesTableProps {
 export default function SchedulesTable({ data, onDelete, onCancel, isViewer = false }: SchedulesTableProps) {
   const router = useRouter();
   const { profile } = useProfile();
+  const { creatorLookup } = useCreatorLookup();
+
+  const getCreator = useMemo(() => {
+    return (userId?: string) => {
+      if (!userId || !creatorLookup) return null;
+      return creatorLookup.get(userId) || null;
+    };
+  }, [creatorLookup]);
+
+  const renderCreatorCell = (userId?: string) => {
+    const creator = getCreator(userId);
+    if (!creator) {
+      return <span className="text-xs text-gray-400 dark:text-gray-500">-</span>;
+    }
+
+    const roleLabel = [creator.role, creator.sub_role].filter(Boolean).join(" • ");
+
+    return (
+      <div className="flex flex-col">
+        <span className="font-medium text-gray-800 dark:text-white/90">{creator.name || "Unknown"}</span>
+        {roleLabel && (
+          <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+            {roleLabel.replace(/_/g, " ")}
+          </span>
+        )}
+      </div>
+    );
+  };
 
   // Calculate summary totals
   const summaryTotals = useMemo(() => {
@@ -164,6 +198,12 @@ export default function SchedulesTable({ data, onDelete, onCancel, isViewer = fa
                   isHeader
                   className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
+                  Created By
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
                   Status
                 </TableCell>
                 {!isViewer && (
@@ -239,6 +279,9 @@ export default function SchedulesTable({ data, onDelete, onCancel, isViewer = fa
                           : "-"}
                       </span>
                     </TableCell>
+                    <TableCell className="px-2 py-3 text-sm text-start text-gray-500 dark:text-gray-400">
+                      {renderCreatorCell(schedule.created_by)}
+                    </TableCell>
                     <TableCell className="px-2 py-3 text-sm text-start">
                       <Badge size="sm" color={getStatusColor(schedule.status)}>
                         {schedule.status === "generated" ? "Confirmed" : schedule.status}
@@ -300,6 +343,7 @@ export default function SchedulesTable({ data, onDelete, onCancel, isViewer = fa
                   <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
                     {summaryTotals.totalTmCount}
                   </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
                   <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
                   <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
                   <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>

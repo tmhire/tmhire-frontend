@@ -1,5 +1,6 @@
 import { useApiClient } from "./useApiClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import React from "react";
 
 export interface Company {
   _id: string;
@@ -187,4 +188,30 @@ export function useUpdateUser() {
       queryClient.invalidateQueries({ queryKey: ["company-users"] });
     },
   });
+}
+
+// Hook to get user details by ID from all_users
+export function useUserById(userId?: string | null) {
+  const { users } = useAllUsers();
+
+  const user = React.useMemo(() => {
+    if (!userId || !users) return null;
+    return users.find((u) => u._id === userId) || null;
+  }, [userId, users]);
+
+  return { user };
+}
+
+export function useCreatorLookup() {
+  const { users } = useAllUsers();
+
+  const creatorLookup = React.useMemo(() => {
+    if (!users) return null;
+    return users.reduce((map, user) => {
+      map.set(user._id, user);
+      return map;
+    }, new Map<string, AllUser>());
+  }, [users]);
+
+  return { creatorLookup };
 }

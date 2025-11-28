@@ -34,10 +34,13 @@ interface Pump {
   make: string;
   driver_name: string | null;
   driver_contact: string | null;
-  remarks: string | null; // <-- Added
+  remarks: string | null;
   created_at: string;
   pump_operator_id?: string | null;
   pipeline_gang_id?: string | null;
+  created_by?: string;
+  created_by_name?: string;
+  company_id?: string;
 }
 
 interface CreatePumpData {
@@ -760,6 +763,22 @@ export default function PumpsContainer() {
                   <div className="text-center py-4 text-gray-800 dark:text-white/90">
                     There was an error while retriving pumps
                   </div>
+                </div>
+              ) : filteredData.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-4">
+                  <p className="text-gray-800 dark:text-white/90 text-lg font-medium">
+                    {session?.role === "company_admin" 
+                      ? "No pumps in your company yet. Create the first pump!"
+                      : session?.sub_role === "viewer"
+                      ? "No pumps in your company yet. Contact your company admin."
+                      : "No pumps in your company yet. Create the first pump!"}
+                  </p>
+                  {session?.sub_role !== "viewer" && (
+                    <Button size="sm" onClick={handleAddPump}>
+                      <PlusIcon className="w-4 h-4 mr-2" />
+                      Add Pump
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <PumpsTable

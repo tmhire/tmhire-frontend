@@ -15,6 +15,7 @@ import ExcelJS from "exceljs";
 import { Modal } from "@/components/ui/modal";
 import Radio from "@/components/form/input/Radio";
 import { CanceledBy, CancelReason, DeleteType } from "@/types/common.types";
+import { useUserById } from "@/hooks/useCompany";
 
 interface SupplySchedule {
   _id: string;
@@ -37,6 +38,7 @@ interface SupplySchedule {
   type: string;
   created_at: string;
   last_updated: string;
+  created_by?: string;
   input_params: {
     quantity: number;
     pumping_speed: number;
@@ -91,6 +93,9 @@ export default function SupplyScheduleViewPage() {
       return data.data;
     },
   });
+
+  // Get creator user details
+  const { user: creatorUser } = useUserById(schedule?.created_by);
 
   const handleExportExcel = async () => {
     if (!schedule) return;
@@ -760,6 +765,19 @@ export default function SupplyScheduleViewPage() {
                 {schedule.tm_count}
               </p>
             </div>
+            {schedule.created_by && (
+              <div>
+                <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Created By</h4>
+                <p className="text-base text-gray-800 dark:text-white/90">
+                  {creatorUser?.name || "Unknown"}
+                  {creatorUser?.role && (
+                    <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                      ({creatorUser.role}{creatorUser.sub_role ? ` - ${creatorUser.sub_role}` : ""})
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
           </div>
         </div>
         {/* TM Trip Distribution Card */}

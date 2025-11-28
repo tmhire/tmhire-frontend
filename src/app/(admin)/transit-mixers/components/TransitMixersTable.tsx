@@ -1,7 +1,10 @@
+"use client";
+
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import React from "react";
+import React, { useMemo } from "react";
 import Button from "@/components/ui/button/Button";
 import { Edit, Trash } from "lucide-react";
+import { useCreatorLookup } from "@/hooks/useCompany";
 
 interface TransitMixer {
   _id: string;
@@ -14,6 +17,7 @@ interface TransitMixer {
   status: "active" | "inactive";
   created_at: string;
   remarks: string | null; // Add remarks to the interface
+  created_by?: string;
 }
 
 interface TransitMixersTableProps {
@@ -25,6 +29,34 @@ interface TransitMixersTableProps {
 }
 
 export default function TransitMixersTable({ data, onEdit, onDelete, plants = [], isViewer = false }: TransitMixersTableProps) {
+  const { creatorLookup } = useCreatorLookup();
+
+  const getCreator = useMemo(() => {
+    return (userId?: string) => {
+      if (!userId || !creatorLookup) return null;
+      return creatorLookup.get(userId) || null;
+    };
+  }, [creatorLookup]);
+
+  const renderCreatorCell = (userId?: string) => {
+    const creator = getCreator(userId);
+    if (!creator) {
+      return <span className="text-xs text-gray-400 dark:text-gray-500">-</span>;
+    }
+
+    const roleLabel = [creator.role, creator.sub_role].filter(Boolean).join(" • ");
+
+    return (
+      <div className="flex flex-col">
+        <span className="font-medium text-gray-800 dark:text-white/90">{creator.name || "Unknown"}</span>
+        {roleLabel && (
+          <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+            {roleLabel.replace(/_/g, " ")}
+          </span>
+        )}
+      </div>
+    );
+  };
   const getPlantName = (plant_id: string | null) => {
     if (!plant_id) return "Not Assigned";
     const plant = plants.find((p) => p._id === plant_id);
@@ -81,6 +113,12 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                 >
                   Remarks
                 </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Created By
+                </TableCell>
                 {/* <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Created At</TableCell> */}
                 {!isViewer && (
                   <TableCell
@@ -134,6 +172,9 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {mixer.remarks || "-"}
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {renderCreatorCell(mixer.created_by)}
                   </TableCell>
                   {/* <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {new Date(mixer.created_at).toLocaleDateString()}

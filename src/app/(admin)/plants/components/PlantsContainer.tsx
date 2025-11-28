@@ -29,6 +29,9 @@ interface Plant {
   remarks: string | null;
   status: "active" | "inactive";
   created_at: string;
+  created_by?: string;
+  created_by_name?: string;
+  company_id?: string;
 }
 
 interface CreatePlantData {
@@ -719,6 +722,22 @@ export default function PlantsContainer() {
               ) : isLoadingPlants ? (
                 <div className="flex justify-center py-4">
                   <Spinner text="Loading plants..." />
+                </div>
+              ) : filteredData.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-4">
+                  <p className="text-gray-800 dark:text-white/90 text-lg font-medium">
+                    {session?.role === "company_admin" 
+                      ? "No plants in your company yet. Create the first plant!"
+                      : session?.sub_role === "viewer"
+                      ? "No plants in your company yet. Contact your company admin."
+                      : "No plants in your company yet. Create the first plant!"}
+                  </p>
+                  {session?.sub_role !== "viewer" && (
+                    <Button size="sm" onClick={handleAddPlant}>
+                      <PlusIcon className="w-4 h-4 mr-2" />
+                      Add Plant
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <PlantsTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} isViewer={session?.sub_role === "viewer"} />

@@ -16,6 +16,7 @@ import React from "react";
 import ExcelJS from "exceljs";
 import { CanceledBy, CancelReason, DeleteType } from "@/types/common.types";
 import Radio from "@/components/form/input/Radio";
+import { useUserById } from "@/hooks/useCompany";
 
 interface Schedule {
   pumping_job: string;
@@ -45,6 +46,7 @@ interface Schedule {
   mother_plant_km: number;
   created_at: string;
   last_updated: string;
+  created_by?: string;
   input_params: {
     quantity: number;
     pumping_speed: number;
@@ -390,6 +392,9 @@ export default function ScheduleViewPage() {
       return data.data;
     },
   });
+
+  // Get creator user details
+  const { user: creatorUser } = useUserById(schedule?.created_by);
 
   // Update useBurstModel when schedule data is loaded
   React.useEffect(() => {
@@ -1214,6 +1219,19 @@ export default function ScheduleViewPage() {
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total Qty Pumped in m³</h4>
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.quantity} m³</p>
             </div>
+            {schedule.created_by && (
+              <div>
+                <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Created By</h4>
+                <p className="text-base text-gray-800 dark:text-white/90">
+                  {creatorUser?.name || "Unknown"}
+                  {creatorUser?.role && (
+                    <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                      ({creatorUser.role}{creatorUser.sub_role ? ` - ${creatorUser.sub_role}` : ""})
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
             {/* Compact cycle-time pie chart and fleet sizing */}
 
             {/* <div>

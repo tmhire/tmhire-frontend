@@ -76,3 +76,16 @@ export const validateAddress = (value: string) => {
 export const validateCoordinates = (value: string) => {
   return value.trim().length <= 60;
 };
+
+// Permission utilities for company awareness
+export const canEdit = (role?: string, sub_role?: string) => {
+  return role === 'super_admin' || 
+         role === 'company_admin' ||
+         (role === 'user' && sub_role === 'editor');
+};
+
+export const canView = (role?: string) => {
+  return role === 'super_admin' || 
+         role === 'company_admin' ||
+         role === 'user';
+};

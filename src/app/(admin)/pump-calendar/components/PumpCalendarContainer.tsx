@@ -859,8 +859,13 @@ export default function PumpCalendarContainer() {
                 {/* Gantt Rows */}
                 <div className="divide-y divide-gray-400 dark:divide-white/[0.05]">
                   {filteredData.length === 0 ? (
-                    <div className="flex items-center justify-center py-8 text-gray-500 dark:text-gray-400">
-                      No pumps found for the selected criteria
+                    <div className="flex flex-col items-center justify-center py-12 gap-2">
+                      <p className="text-gray-800 dark:text-white/90 text-lg font-medium">
+                        No pumps found for the selected criteria
+                      </p>
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">
+                        No pumps in your company match the selected filters.
+                      </p>
                     </div>
                   ) : (
                     filteredData.map((pump, idx) => {

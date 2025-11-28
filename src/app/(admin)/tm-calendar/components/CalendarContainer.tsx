@@ -897,8 +897,13 @@ export default function CalendarContainer() {
             {/* Gantt Rows */}
             <div className="divide-y divide-gray-400 dark:divide-white/[0.05] custom-scrollbar pr-[6.5px] overflow-y-auto max-h-96">
               {filteredData.length === 0 ? (
-                <div className="flex items-center justify-center py-8 text-gray-500 dark:text-gray-400">
-                  No mixers found for the selected criteria
+                <div className="flex flex-col items-center justify-center py-12 gap-2">
+                  <p className="text-gray-800 dark:text-white/90 text-lg font-medium">
+                    No mixers or pumps found for the selected criteria
+                  </p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    No transit mixers or pumps in your company match the selected filters.
+                  </p>
                 </div>
               ) : (
                 // Sort data by free time in descending order, keeping TMs and pumps separate

@@ -23,8 +23,11 @@ interface TransitMixer {
   driver_name: string | null;
   driver_contact: string | null;
   status: "active" | "inactive";
-  remarks: string | null; // <-- Added
+  remarks: string | null;
   created_at: string;
+  created_by?: string;
+  created_by_name?: string;
+  company_id?: string;
 }
 
 // Update CreateTransitMixerData to include driver_name and driver_contact
@@ -604,6 +607,22 @@ export default function TransitMixersContainer() {
               ) : isLoadingTransitMixers ? (
                 <div className="flex justify-center py-4">
                   <Spinner text="Loading transit mixers..." />
+                </div>
+              ) : filteredData.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-4">
+                  <p className="text-gray-800 dark:text-white/90 text-lg font-medium">
+                    {session?.role === "company_admin" 
+                      ? "No transit mixers in your company yet. Create the first transit mixer!"
+                      : session?.sub_role === "viewer"
+                      ? "No transit mixers in your company yet. Contact your company admin."
+                      : "No transit mixers in your company yet. Create the first transit mixer!"}
+                  </p>
+                  {session?.sub_role !== "viewer" && (
+                    <Button size="sm" onClick={handleAddMixer}>
+                      <PlusIcon className="w-4 h-4 mr-2" />
+                      Add Transit Mixer
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <TransitMixersTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} plants={plants} isViewer={session?.sub_role === "viewer"} />

@@ -30,6 +30,9 @@ interface Project {
   remarks: string;
   created_at: string;
   last_updated: string;
+  created_by?: string;
+  created_by_name?: string;
+  company_id?: string;
 }
 
 interface Client {
@@ -625,6 +628,22 @@ export default function ProjectsContainer() {
               ) : isLoadingProjects ? (
                 <div className="flex justify-center py-4">
                   <Spinner text="Loading projects..." />
+                </div>
+              ) : filteredData.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-4">
+                  <p className="text-gray-800 dark:text-white/90 text-lg font-medium">
+                    {session?.role === "company_admin" 
+                      ? "No projects in your company yet. Create the first project!"
+                      : session?.sub_role === "viewer"
+                      ? "No projects in your company yet. Contact your company admin."
+                      : "No projects in your company yet. Create the first project!"}
+                  </p>
+                  {session?.sub_role !== "viewer" && (
+                    <Button size="sm" onClick={handleAddProject}>
+                      <PlusIcon className="w-4 h-4 mr-2" />
+                      Add Project
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <ProjectsTable

@@ -44,6 +44,9 @@ interface SupplySchedule {
   }>;
   tm_count: number;
   created_at: string;
+  created_by?: string;
+  created_by_name?: string;
+  company_id?: string;
 }
 
 export default function SupplySchedulesContainer() {
@@ -459,6 +462,22 @@ export default function SupplySchedulesContainer() {
             ) : isLoadingSchedules ? (
               <div className="flex justify-center py-4">
                 <Spinner text="Loading schedules..." />
+              </div>
+            ) : filteredSchedules.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-4">
+                <p className="text-gray-800 dark:text-white/90 text-lg font-medium">
+                  {session?.role === "company_admin" 
+                    ? "No supply schedules in your company yet. Create the first schedule!"
+                    : session?.sub_role === "viewer"
+                    ? "No supply schedules in your company yet. Contact your company admin."
+                    : "No supply schedules in your company yet. Create the first schedule!"}
+                </p>
+                {session?.sub_role !== "viewer" && (
+                  <Button size="sm" onClick={handleAddSchedule}>
+                    <PlusIcon className="w-4 h-4 mr-2" />
+                    Add Supply Schedule
+                  </Button>
+                )}
               </div>
             ) : (
               <SupplySchedulesTable data={filteredSchedules} onDelete={handleDelete} onCancel={handleCancel} isViewer={session?.sub_role === "viewer"} />

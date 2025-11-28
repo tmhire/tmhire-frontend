@@ -1,7 +1,10 @@
+"use client";
+
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import React from "react";
+import React, { useMemo } from "react";
 import Button from "@/components/ui/button/Button";
 import { Edit, Trash } from "lucide-react";
+import { useCreatorLookup } from "@/hooks/useCompany";
 
 interface Client {
   _id: string;
@@ -10,6 +13,9 @@ interface Client {
   legal_entity: string | null;
   created_at: string;
   last_updated: string;
+  created_by?: string;
+  created_by_name?: string;
+  company_id?: string;
 }
 
 interface ClientsTableProps {
@@ -20,6 +26,35 @@ interface ClientsTableProps {
 }
 
 export default function ClientsTable({ data, onEdit, onDelete, isViewer = false }: ClientsTableProps) {
+  const { creatorLookup } = useCreatorLookup();
+
+  const getCreator = useMemo(() => {
+    return (userId?: string) => {
+      if (!userId || !creatorLookup) return null;
+      return creatorLookup.get(userId) || null;
+    };
+  }, [creatorLookup]);
+
+  const renderCreatorCell = (userId?: string) => {
+    const creator = getCreator(userId);
+    if (!creator) {
+      return <span className="text-xs text-gray-400 dark:text-gray-500">-</span>;
+    }
+
+    const roleLabel = [creator.role, creator.sub_role].filter(Boolean).join(" • ");
+
+    return (
+      <div className="flex flex-col">
+        <span className="font-medium text-gray-800 dark:text-white/90">{creator.name || "Unknown"}</span>
+        {roleLabel && (
+          <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+            {roleLabel.replace(/_/g, " ")}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto">
@@ -39,6 +74,12 @@ export default function ClientsTable({ data, onEdit, onDelete, isViewer = false 
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Legal Entity
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Created By
                 </TableCell>
                 {!isViewer && (
                   <TableCell
@@ -66,6 +107,9 @@ export default function ClientsTable({ data, onEdit, onDelete, isViewer = false 
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {client.legal_entity || "N/A"}
+                  </TableCell>
+                  <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {renderCreatorCell(client.created_by)}
                   </TableCell>
                   {!isViewer && (
                     <TableCell className="px-5 py-4">

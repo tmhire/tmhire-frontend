@@ -23,6 +23,9 @@ interface Team {
   designation: Designation;
   contact: string;
   created_at: string;
+  created_by?: string;
+  created_by_name?: string;
+  company_id?: string;
 }
 
 interface CreateTeamData {
@@ -518,8 +521,14 @@ export default function TeamContainer() {
                   <Spinner text="Loading teams..." />
                 </div>
               ) : teamsData && teamsData.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 gap-4">
-                  <span className="text-gray-800 dark:text-white/90 text-lg">No team member exists.</span>
+                <div className="flex flex-col items-center justify-center py-12 gap-4">
+                  <p className="text-gray-800 dark:text-white/90 text-lg font-medium">
+                    {session?.role === "company_admin" 
+                      ? "No team members in your company yet. Create the first team member!"
+                      : session?.sub_role === "viewer"
+                      ? "No team members in your company yet. Contact your company admin."
+                      : "No team members in your company yet. Create the first team member!"}
+                  </p>
                   {session?.sub_role !== "viewer" && (
                     <Button size="sm" onClick={handleAddTeam}>
                       <PlusIcon className="w-4 h-4 mr-2" />

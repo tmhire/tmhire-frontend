@@ -8,6 +8,7 @@ import Button from "@/components/ui/button/Button";
 import { formatTimeByPreference } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
 import { useMemo } from "react";
+import { useCreatorLookup } from "@/hooks/useCompany";
 
 interface SupplySchedule {
   _id: string;
@@ -42,6 +43,9 @@ interface SupplySchedule {
   }>;
   tm_count: number;
   created_at: string;
+  created_by?: string;
+  created_by_name?: string;
+  company_id?: string;
 }
 
 interface SupplySchedulesTableProps {
@@ -54,6 +58,34 @@ interface SupplySchedulesTableProps {
 export default function SupplySchedulesTable({ data, onDelete, onCancel, isViewer = false }: SupplySchedulesTableProps) {
   const router = useRouter();
   const { profile } = useProfile();
+  const { creatorLookup } = useCreatorLookup();
+
+  const getCreator = useMemo(() => {
+    return (userId?: string) => {
+      if (!userId || !creatorLookup) return null;
+      return creatorLookup.get(userId) || null;
+    };
+  }, [creatorLookup]);
+
+  const renderCreatorCell = (userId?: string) => {
+    const creator = getCreator(userId);
+    if (!creator) {
+      return <span className="text-xs text-gray-400 dark:text-gray-500">-</span>;
+    }
+
+    const roleLabel = [creator.role, creator.sub_role].filter(Boolean).join(" • ");
+
+    return (
+      <div className="flex flex-col">
+        <span className="font-medium text-gray-800 dark:text-white/90">{creator.name || "Unknown"}</span>
+        {roleLabel && (
+          <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+            {roleLabel.replace(/_/g, " ")}
+          </span>
+        )}
+      </div>
+    );
+  };
 
   // Calculate summary totals similar to pumping schedules
   const summaryTotals = useMemo(() => {
@@ -169,6 +201,12 @@ export default function SupplySchedulesTable({ data, onDelete, onCancel, isViewe
                   isHeader
                   className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
+                  Created By
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
                   Status
                 </TableCell>
                 {!isViewer && (
@@ -223,6 +261,9 @@ export default function SupplySchedulesTable({ data, onDelete, onCancel, isViewe
                         )}`
                         : "-"}
                     </span>
+                  </TableCell>
+                  <TableCell className="px-2 py-3 text-sm text-start text-gray-500 dark:text-gray-400">
+                    {renderCreatorCell(schedule.created_by)}
                   </TableCell>
                   <TableCell className="px-2 py-3 text-sm text-start">
                     <Badge size="sm" color={getStatusColor(schedule.status)}>
@@ -284,6 +325,7 @@ export default function SupplySchedulesTable({ data, onDelete, onCancel, isViewe
                   <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">
                     {summaryTotals.totalTmCount}
                   </TableCell>
+                  <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
                   <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
                   <TableCell className="px-2 py-3 text-sm font-semibold text-gray-800 dark:text-white/90">-</TableCell>
                   {!isViewer && (

@@ -1,7 +1,10 @@
+"use client";
+
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import React from "react";
+import React, { useMemo } from "react";
 import Button from "@/components/ui/button/Button";
 import { Edit, Trash } from "lucide-react";
+import { useCreatorLookup } from "@/hooks/useCompany";
 
 interface Project {
   _id: string;
@@ -17,6 +20,7 @@ interface Project {
   remarks: string;
   created_at: string;
   last_updated: string;
+  created_by?: string;
 }
 
 interface Client {
@@ -59,6 +63,34 @@ interface ProjectsTableProps {
 }
 
 export default function ProjectsTable({ data, onEdit, onDelete, clients, plants, teamMembers, isViewer = false }: ProjectsTableProps) {
+  const { creatorLookup } = useCreatorLookup();
+
+  const getCreator = useMemo(() => {
+    return (userId?: string) => {
+      if (!userId || !creatorLookup) return null;
+      return creatorLookup.get(userId) || null;
+    };
+  }, [creatorLookup]);
+
+  const renderCreatorCell = (userId?: string) => {
+    const creator = getCreator(userId);
+    if (!creator) {
+      return <span className="text-xs text-gray-400 dark:text-gray-500">-</span>;
+    }
+
+    const roleLabel = [creator.role, creator.sub_role].filter(Boolean).join(" • ");
+
+    return (
+      <div className="flex flex-col">
+        <span className="font-medium text-gray-800 dark:text-white/90">{creator.name || "Unknown"}</span>
+        {roleLabel && (
+          <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+            {roleLabel.replace(/_/g, " ")}
+          </span>
+        )}
+      </div>
+    );
+  };
 
   const getClientName = (clientId: string) => {
     const client = clients.find((c) => c._id === clientId);
@@ -141,6 +173,12 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients, plants,
                   className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-20"
                 >
                   Remarks
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-2 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-24"
+                >
+                  Created By
                 </TableCell>
                 {!isViewer && (
                   <TableCell
@@ -225,6 +263,9 @@ export default function ProjectsTable({ data, onEdit, onDelete, clients, plants,
                     ) : (
                       <span className="text-gray-400 text-xs">No remarks</span>
                     )}
+                  </TableCell>
+                  <TableCell className="px-2 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-24">
+                    {renderCreatorCell(project.created_by)}
                   </TableCell>
                   {!isViewer && (
                     <TableCell className="px-2 py-4 w-20">

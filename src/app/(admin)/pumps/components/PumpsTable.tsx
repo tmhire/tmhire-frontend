@@ -1,7 +1,10 @@
+"use client";
+
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import React from "react";
+import React, { useMemo } from "react";
 import Button from "@/components/ui/button/Button";
 import { Edit, Trash } from "lucide-react";
+import { useCreatorLookup } from "@/hooks/useCompany";
 
 interface Pump {
   _id: string;
@@ -17,6 +20,7 @@ interface Pump {
   remarks: string | null;
   pump_operator_id?: string | null;
   pipeline_gang_id?: string | null;
+  created_by?: string;
 }
 
 interface TeamMember {
@@ -35,6 +39,35 @@ interface PumpsTableProps {
 }
 
 export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembers, isViewer = false }: PumpsTableProps) {
+  const { creatorLookup } = useCreatorLookup();
+
+  const getCreator = useMemo(() => {
+    return (userId?: string) => {
+      if (!userId || !creatorLookup) return null;
+      return creatorLookup.get(userId) || null;
+    };
+  }, [creatorLookup]);
+
+  const renderCreatorCell = (userId?: string) => {
+    const creator = getCreator(userId);
+    if (!creator) {
+      return <span className="text-xs text-gray-400 dark:text-gray-500">-</span>;
+    }
+
+    const roleLabel = [creator.role, creator.sub_role].filter(Boolean).join(" • ");
+
+    return (
+      <div className="flex flex-col">
+        <span className="font-medium text-gray-800 dark:text-white/90">{creator.name || "Unknown"}</span>
+        {roleLabel && (
+          <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+            {roleLabel.replace(/_/g, " ")}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   const getMemberName = (id?: string | null) => {
     if (!id) return "-";
     const m = teamMembers.find((tm) => tm._id === id);
@@ -114,6 +147,12 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembe
                 >
                   Remarks
                 </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-3 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Created By
+                </TableCell>
                 {!isViewer && (
                   <TableCell
                     isHeader
@@ -191,6 +230,9 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembe
                   </TableCell>
                   <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {pump.remarks || "-"}
+                  </TableCell>
+                  <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {renderCreatorCell(pump.created_by)}
                   </TableCell>
                   {!isViewer && (
                     <TableCell className="px-3 py-4">

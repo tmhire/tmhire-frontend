@@ -22,6 +22,9 @@ interface Client {
   legal_entity: string | null;
   created_at: string;
   last_updated: string;
+  created_by?: string;
+  created_by_name?: string;
+  company_id?: string;
 }
 
 interface CreateClientData {
@@ -412,6 +415,22 @@ export default function ClientsContainer() {
               ) : isLoadingClients ? (
                 <div className="flex justify-center py-4">
                   <Spinner text="Loading clients..." />
+                </div>
+              ) : filteredData.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-4">
+                  <p className="text-gray-800 dark:text-white/90 text-lg font-medium">
+                    {session?.role === "company_admin" 
+                      ? "No clients in your company yet. Create the first client!"
+                      : session?.sub_role === "viewer"
+                      ? "No clients in your company yet. Contact your company admin."
+                      : "No clients in your company yet. Create the first client!"}
+                  </p>
+                  {session?.sub_role !== "viewer" && (
+                    <Button size="sm" onClick={handleAddClient}>
+                      <PlusIcon className="w-4 h-4 mr-2" />
+                      Add Client
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <ClientsTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} isViewer={session?.sub_role === "viewer"} />
