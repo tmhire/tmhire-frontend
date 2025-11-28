@@ -19,6 +19,7 @@ export default function UserInfoCard() {
     company: "",
     city: "",
     email: "",
+    company_code: "",
   });
   const [prevFormData, setPrevFormData] = React.useState(formData);
   const [hasChanged, setHasChanged] = React.useState(false);
@@ -30,11 +31,13 @@ export default function UserInfoCard() {
         company: session.company_name || "",
         city: session.city || "",
         email: session.user?.email || "",
+        company_code: session.company_code || "",
       });
       setPrevFormData({
         company: session.company_name || "",
         city: session.city || "",
         email: session.user?.email || "",
+        company_code: session.company_code || "",
       });
     }
   }, [session]);
@@ -48,10 +51,18 @@ export default function UserInfoCard() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    if (name === "company_code") {
+      const cleanedValue = value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 5);
+      setFormData((prev) => ({
+        ...prev,
+        [name]: cleanedValue,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleSave = async () => {
@@ -68,6 +79,11 @@ export default function UserInfoCard() {
       return;
     }
 
+    if (!/^[A-Z0-9]{1,5}$/.test(formData.company_code)) {
+      console.error("Invalid company code format");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       const response = await fetchWithAuth("/auth/update", {
@@ -75,20 +91,22 @@ export default function UserInfoCard() {
         body: JSON.stringify({
           company: formData.company,
           city: formData.city,
+          company_code: formData.company_code,
         }),
       });
 
       const data = await response.json();
       if (data.success) {
         closeModal();
-        setPrevFormData(formData);
+        setPrevFormData({ ...formData });
         // setHasChanged(false);
         // window.location.reload();
         await update({
           ...(session as unknown as Record<string, unknown>),
           new_user: false,
-          company: formData.company,
+          company_name: formData.company,
           city: formData.city,
+          company_code: formData.company_code,
         });
       }
     } catch (error) {
@@ -122,7 +140,7 @@ export default function UserInfoCard() {
               <p className="mb-2 text-xs leading-normal text-gray-700 dark:text-gray-300">Company Code</p>
               <div className="flex items-center gap-2">
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300 font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                  {session?.company_code || "N/A"}
+                  {formData.company_code || "N/A"}
                 </p>
               </div>
             </div>
@@ -216,6 +234,19 @@ export default function UserInfoCard() {
                       disabled={isSubmitting}
                       maxLength={50}
                       placeholder="Enter company name (max 50 characters, alphanumeric only)"
+                    />
+                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label>Company Code</Label>
+                    <Input
+                      type="text"
+                      name="company_code"
+                      value={formData.company_code}
+                      onChange={handleInputChange}
+                      disabled={isSubmitting}
+                      maxLength={5}
+                      placeholder="Enter company code (max 5 characters, uppercase alphanumeric)"
                     />
                   </div>
 

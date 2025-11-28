@@ -15,7 +15,7 @@ export default function PendingApprovalOverlay() {
         return null;
     }
 
-    const { company_status, account_status } = session || {};
+    const { company_status, account_status, company_name, company_code, parent_admin } = session || {};
 
     const isCompanyPending = company_status === "pending";
     const isCompanyRevoked = company_status === "revoked";
@@ -38,13 +38,28 @@ export default function PendingApprovalOverlay() {
                 const newCompanyStatus = data.data.company_status;
                 const newAccountStatus = data.data.account_status;
                 const newSubRole = data.data.sub_role;
+                const newCompanyName = data.data.company_name;
+                const newCompanyCode = data.data.company_code;
+                const newParentAdmin = data.data.parent_admin;
 
-                if (newCompanyStatus !== company_status || newAccountStatus !== account_status || newSubRole !== session?.sub_role) {
+                const parentAdminChanged = JSON.stringify(newParentAdmin) !== JSON.stringify(parent_admin);
+                const shouldUpdate =
+                    newCompanyStatus !== company_status ||
+                    newAccountStatus !== account_status ||
+                    newSubRole !== session?.sub_role ||
+                    newCompanyName !== company_name ||
+                    newCompanyCode !== company_code ||
+                    parentAdminChanged;
+
+                if (shouldUpdate) {
                     await update({
-                        ...session,
+                        ...(session as unknown as Record<string, unknown>),
                         company_status: newCompanyStatus,
                         account_status: newAccountStatus,
                         sub_role: newSubRole,
+                        company_name: newCompanyName ?? company_name,
+                        company_code: newCompanyCode ?? company_code,
+                        parent_admin: newParentAdmin ?? parent_admin,
                     });
                     window.location.reload();
                 }
@@ -85,23 +100,39 @@ export default function PendingApprovalOverlay() {
                     <div className="w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 p-4 mb-6">
                         <div className="flex flex-col items-start gap-3 text-left">
                             <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                Contact Super Admin:
+                                Contact Parent Admin:
                             </p>
-                            <div className="space-y-1">
-                                <p className="text-sm font-medium text-gray-900 dark:text-white">Vairamuthu N</p>
-                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                    <Mail className="h-3.5 w-3.5" />
-                                    <a href="mailto:vairamuthun1@gmail.com" className="hover:text-brand-500 hover:underline">
-                                        vairamuthun1@gmail.com
-                                    </a>
+                            {parent_admin ? (
+                                <div className="space-y-2">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                        {parent_admin.name || "Parent Admin"}
+                                    </p>
+                                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                        <Mail className="h-3.5 w-3.5" />
+                                        {parent_admin.mail ? (
+                                            <a href={`mailto:${parent_admin.mail}`} className="hover:text-brand-500 hover:underline">
+                                                {parent_admin.mail}
+                                            </a>
+                                        ) : (
+                                            <span className="italic text-gray-400">Email not available</span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                        <Phone className="h-3.5 w-3.5" />
+                                        {parent_admin.phone ? (
+                                            <a href={`tel:${parent_admin.phone}`} className="hover:text-brand-500 hover:underline">
+                                                {parent_admin.phone}
+                                            </a>
+                                        ) : (
+                                            <span className="italic text-gray-400">Phone not available</span>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                    <Phone className="h-3.5 w-3.5" />
-                                    <a href="tel:+919819888102" className="hover:text-brand-500 hover:underline">
-                                        +91 98198 88102
-                                    </a>
-                                </div>
-                            </div>
+                            ) : (
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    Parent admin contact details are not available yet.
+                                </p>
+                            )}
                         </div>
                     </div>
                     <div className="flex flex-row w-full justify-between gap-3">

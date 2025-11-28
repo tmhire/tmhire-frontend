@@ -26,6 +26,11 @@ declare module "next-auth" {
     } & DefaultSession["user"];
     preferred_format: "12h" | "24h";
     custom_start_hour: number;
+    parent_admin?: {
+      mail?: string;
+      phone?: string;
+      name?: string | null;
+    };
   }
 
   interface User {
@@ -48,6 +53,11 @@ declare module "next-auth" {
     tokenType?: string;
     preferred_format: "12h" | "24h";
     custom_start_hour: number;
+    parent_admin?: {
+      mail?: string;
+      phone?: string;
+      name?: string | null;
+    };
   }
 }
 
@@ -68,5 +78,10 @@ declare module "next-auth/jwt" {
     company_id?: string;
     preferred_format?: "12h" | "24h";
     custom_start_hour?: number;
+    parent_admin?: {
+      mail?: string;
+      phone?: string;
+      name?: string | null;
+    };
   }
 }

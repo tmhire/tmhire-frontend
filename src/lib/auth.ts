@@ -31,6 +31,11 @@ interface AuthProps {
   tokenType: string;
   preferred_format: "12h" | "24h";
   custom_start_hour: number;
+  parent_admin?: {
+    mail?: string;
+    phone?: string;
+    name?: string | null;
+  };
 }
 
 async function handleEmailPassword(
@@ -94,6 +99,7 @@ async function handleEmailPassword(
       tokenType: json?.data?.token_type,
       preferred_format: json?.data?.preferred_format || "12h",
       custom_start_hour: json?.data?.custom_start_hour || 0,
+      parent_admin: json?.data?.parent_admin,
     };
     console.log(res);
     return res;
@@ -155,6 +161,7 @@ async function exchangeGoogleToken(idToken: string): Promise<AuthProps | null> {
       tokenType: data?.data?.token_type,
       preferred_format: data?.data?.refresh_token,
       custom_start_hour: data?.data?.token_type,
+      parent_admin: data?.data?.parent_admin,
     };
   } catch (error) {
     console.error("Failed to exchange token with backend:", error instanceof Error ? error.message : String(error));
@@ -269,6 +276,7 @@ export const authOptions: AuthOptions = {
         if (session?.preferred_format) token.preferred_format = session.preferred_format;
         if (session?.custom_start_hour !== undefined && session.custom_start_hour !== null)
           token.custom_start_hour = session.custom_start_hour;
+        if (session?.parent_admin) token.parent_admin = session.parent_admin;
         console.log("Updated JWT token:", token);
         return token;
       }
@@ -304,6 +312,7 @@ export const authOptions: AuthOptions = {
             token.account_status = backendAuth.account_status;
             token.preferred_format = backendAuth.preferred_format;
             token.custom_start_hour = backendAuth.custom_start_hour;
+            token.parent_admin = backendAuth.parent_admin;
 
             // Decode access token to store expiration
             const decoded = jwtDecode<{ exp: number }>(backendAuth.accessToken);
@@ -335,6 +344,7 @@ export const authOptions: AuthOptions = {
           token.account_status = user.account_status;
           token.preferred_format = user.preferred_format;
           token.custom_start_hour = user.custom_start_hour;
+          token.parent_admin = user.parent_admin;
 
           // Decode access token to store expiration
           const decoded = jwtDecode<{ exp: number }>(user.accessToken);
@@ -410,6 +420,13 @@ export const authOptions: AuthOptions = {
         session.account_status = token.account_status as "pending" | "approved" | "revoked";
         session.preferred_format = token.preferred_format as "12h" | "24h";
         session.custom_start_hour = token.custom_start_hour as number;
+        session.parent_admin = token.parent_admin as
+          | {
+              mail?: string;
+              phone?: string;
+              name?: string | null;
+            }
+          | undefined;
 
         // Log authentication status
         const hasToken = !!token.backendAccessToken;
