@@ -76,10 +76,17 @@ export default function TransitMixersContainer() {
 
   // Form validation for create modal
   const isCreateFormValid = useMemo(() => {
+    const hasPlant = Boolean(newMixer.plant_id && newMixer.plant_id.trim() !== "");
+    const hasDriverName = Boolean(newMixer.driver_name && newMixer.driver_name.trim() !== "");
+    const hasDriverContact = Boolean(newMixer.driver_contact && newMixer.driver_contact.trim() !== "");
+
     return (
       newMixer.identifier.trim() !== "" &&
       newMixer.capacity > 0 &&
       newMixer.capacity <= 99 &&
+      hasPlant &&
+      hasDriverName &&
+      hasDriverContact &&
       !error &&
       !capacityError &&
       (newMixer.driver_name === "" || (newMixer.driver_name && validateName(newMixer.driver_name.trim()))) &&
@@ -91,10 +98,17 @@ export default function TransitMixersContainer() {
 
   // Form validation for edit modal
   const isEditFormValid = useMemo(() => {
+    const hasPlant = Boolean(selectedMixer?.plant_id && selectedMixer.plant_id.trim() !== "");
+    const hasDriverName = Boolean(selectedMixer?.driver_name && selectedMixer.driver_name.trim() !== "");
+    const hasDriverContact = Boolean(selectedMixer?.driver_contact && selectedMixer.driver_contact.trim() !== "");
+
     return (
       selectedMixer?.identifier.trim() !== "" &&
       (selectedMixer?.capacity ?? 0) > 0 &&
       (selectedMixer?.capacity ?? 0) <= 99 &&
+      hasPlant &&
+      hasDriverName &&
+      hasDriverContact &&
       !editCapacityError &&
       (selectedMixer?.driver_name === "" ||
         (selectedMixer?.driver_name && validateName(selectedMixer.driver_name.trim()))) &&
