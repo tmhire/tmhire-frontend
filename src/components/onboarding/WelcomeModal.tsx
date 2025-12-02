@@ -68,7 +68,7 @@ export default function WelcomeModal() {
 
     if (name === "companyCode") {
       // Allow only alphanumeric and convert to uppercase, max 5 chars
-      const cleanedValue = value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 5);
+      const cleanedValue = value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 6);
       setFormData((prev) => ({
         ...prev,
         [name]: cleanedValue,
