@@ -119,7 +119,7 @@ export default function ProjectsContainer() {
       newProject.address.trim() !== "" &&
       newProject.client_id.trim() !== "" &&
       newProject.mother_plant_id.trim() !== "" &&
-      newProject.sales_engineer_id.trim() !== "" &&
+      // newProject.sales_engineer_id.trim() !== "" &&
       newProject.contact_name.trim() !== "" &&
       newProject.contact_number.trim() !== "" &&
       validateName(newProject.contact_name.trim()) &&
@@ -138,7 +138,7 @@ export default function ProjectsContainer() {
       editedProject.address.trim() !== "" &&
       editedProject.client_id.trim() !== "" &&
       editedProject.mother_plant_id.trim() !== "" &&
-      editedProject.sales_engineer_id.trim() !== "" &&
+      // editedProject.sales_engineer_id.trim() !== "" &&
       editedProject.contact_name.trim() !== "" &&
       editedProject.contact_number.trim() !== "" &&
       validateName(editedProject.contact_name.trim()) &&
