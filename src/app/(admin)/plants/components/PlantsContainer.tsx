@@ -1,7 +1,7 @@
 "use client";
 
 import PlantsTable from "./PlantsTable";
-import { PlusIcon, Search } from "lucide-react";
+import { PlusIcon, Search, Info } from "lucide-react";
 import Button from "@/components/ui/button/Button";
 import { useState, useMemo } from "react";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
@@ -37,6 +37,7 @@ interface Plant {
 interface CreatePlantData {
   name: string;
   capacity?: number;
+  unloading_time?: number;
   location: string;
   address: string;
   coordinates?: string;
@@ -49,6 +50,9 @@ interface CreatePlantData {
 }
 
 export default function PlantsContainer() {
+  // Standard TM capacity constant
+  const STANDARD_TM_CAPACITY = 7; // m³
+
   const { fetchWithAuth } = useApiClient();
   const { data: session, status } = useSession();
   const queryClient = useQueryClient();
@@ -96,6 +100,8 @@ export default function PlantsContainer() {
   const [editContactNumber2Error, setEditContactNumber2Error] = useState<string>("");
   const [capacityError, setCapacityError] = useState<string>("");
   const [editCapacityError, setEditCapacityError] = useState<string>("");
+  const [unloadingTimeError, setUnloadingTimeError] = useState<string>("");
+  const [editUnloadingTimeError, setEditUnloadingTimeError] = useState<string>("");
 
   // Create modal validation
   const isCreateFormValid = useMemo(() => {
@@ -107,6 +113,8 @@ export default function PlantsContainer() {
     const contactName2 = newPlant.contact_name2?.trim() ?? "";
     const contactNumber2 = newPlant.contact_number2?.trim() ?? "";
     const coordinates = newPlant.coordinates?.trim() ?? "";
+    // Either capacity or unloading_time must be provided (not both required, but at least one)
+    const hasCapacityOrUnloading = (newPlant.capacity && newPlant.capacity > 0) || (newPlant.unloading_time && newPlant.unloading_time > 0);
 
     return (
       name !== "" &&
@@ -114,7 +122,7 @@ export default function PlantsContainer() {
       address !== "" &&
       contactName1 !== "" &&
       contactNumber1 !== "" &&
-      newPlant.capacity && newPlant.capacity > 0 && newPlant.capacity <= 999 &&
+      hasCapacityOrUnloading &&
       validatePlantName(name) &&
       validateName(contactName1) &&
       validateMobile(contactNumber1) &&
@@ -126,6 +134,7 @@ export default function PlantsContainer() {
       !contactName1Error &&
       !contactNumber1Error &&
       !capacityError &&
+      !unloadingTimeError &&
       (contactName2 === "" || !contactName2Error) &&
       (contactNumber2 === "" || !contactNumber2Error)
     );
@@ -137,6 +146,7 @@ export default function PlantsContainer() {
     contactName2Error,
     contactNumber2Error,
     capacityError,
+    unloadingTimeError,
   ]);
 
 
@@ -150,6 +160,8 @@ export default function PlantsContainer() {
     const contactName2 = editedPlant.contact_name2?.trim() ?? "";
     const contactNumber2 = editedPlant.contact_number2?.trim() ?? "";
     const coordinates = editedPlant.coordinates?.trim() ?? "";
+    // Either capacity or unloading_time must be provided (not both required, but at least one)
+    const hasCapacityOrUnloading = (editedPlant.capacity && editedPlant.capacity > 0) || (editedPlant.unloading_time && editedPlant.unloading_time > 0);
 
     return (
       name !== "" &&
@@ -157,7 +169,7 @@ export default function PlantsContainer() {
       address !== "" &&
       contactName1 !== "" &&
       contactNumber1 !== "" &&
-      editedPlant.capacity && editedPlant.capacity > 0 && editedPlant.capacity <= 999 &&
+      hasCapacityOrUnloading &&
       validatePlantName(name) &&
       validateName(contactName1) &&
       validateMobile(contactNumber1) &&
@@ -169,6 +181,7 @@ export default function PlantsContainer() {
       !editContactName1Error &&
       !editContactNumber1Error &&
       !editCapacityError &&
+      !editUnloadingTimeError &&
       (contactName2 === "" || !editContactName2Error) &&
       (contactNumber2 === "" || !editContactNumber2Error)
     );
@@ -180,6 +193,7 @@ export default function PlantsContainer() {
     editContactName2Error,
     editContactNumber2Error,
     editCapacityError,
+    editUnloadingTimeError,
   ]);
 
   const { data: plantsData, isLoading: isLoadingPlants } = useQuery({
@@ -283,9 +297,12 @@ export default function PlantsContainer() {
 
   const handleEdit = (plant: Plant) => {
     setSelectedPlant(plant);
+    // Calculate unloading time if capacity exists
+    const unloadingTime = plant.capacity ? Math.ceil(plant.capacity / STANDARD_TM_CAPACITY) : undefined;
     setEditedPlant({
       name: plant.name,
       capacity: plant.capacity || undefined,
+      unloading_time: unloadingTime,
       location: plant.location,
       address: plant.address,
       coordinates: plant.coordinates || "",
@@ -325,31 +342,22 @@ export default function PlantsContainer() {
     }
   };
 
-  const { data: avgTMCapData } = useQuery<{ average_capacity: number }>({
-    queryKey: ["average-tm-capacity"],
-    queryFn: async () => {
-      const response = await fetchWithAuth("/tms/average-capacity");
-      const data = await response.json();
-      if (data.success && data.data && typeof data.data.average_capacity === "number") {
-        return { average_capacity: data.data.average_capacity };
-      }
-      throw new Error("Failed to fetch average TM capacity");
-    },
-  });
-  const avgTMCap = Math.ceil(avgTMCapData?.average_capacity || 0) ?? null;
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
-    // Handle capacity field with validation
+    // Handle capacity field with validation and auto-calculate unloading time
     if (name === "capacity") {
-      // Strictly prevent entering values greater than 99
       if (value !== "" && Number(value) > 999) {
-        return; // Don't update the state if value exceeds 99
+        return;
       }
 
       if (value === "") {
-        setCapacityError(""); // Allow empty capacity
+        setCapacityError("");
+        setNewPlant((prev) => ({
+          ...prev,
+          capacity: undefined,
+          unloading_time: undefined,
+        }));
       } else {
         const numValue = Number(value);
         if (numValue < 1 || numValue > 999) {
@@ -358,13 +366,54 @@ export default function PlantsContainer() {
           setCapacityError("Capacity can have maximum one decimal place");
         } else {
           setCapacityError("");
+          // Auto-calculate unloading time: ceil(capacity / 7)
+          const calculatedUnloadingTime = Math.ceil(numValue / STANDARD_TM_CAPACITY);
+          setNewPlant((prev) => ({
+            ...prev,
+            capacity: numValue,
+            unloading_time: calculatedUnloadingTime,
+          }));
         }
+        return;
+      }
+    }
+
+    // Handle unloading time field with validation and auto-calculate capacity
+    if (name === "unloading_time") {
+      if (value !== "" && Number(value) > 999) {
+        return;
+      }
+
+      if (value === "") {
+        setUnloadingTimeError("");
+        setNewPlant((prev) => ({
+          ...prev,
+          unloading_time: undefined,
+          capacity: undefined,
+        }));
+      } else {
+        const numValue = Number(value);
+        if (numValue < 1 || numValue > 999) {
+          setUnloadingTimeError("Unloading time must be between 1 and 999 minutes");
+        } else if (!Number.isInteger(numValue)) {
+          setUnloadingTimeError("Unloading time must be a whole number");
+        } else {
+          setUnloadingTimeError("");
+          // Auto-calculate capacity: (60 / unloading_time) * 7
+          const calculatedCapacity = (60 / numValue) * STANDARD_TM_CAPACITY;
+          setNewPlant((prev) => ({
+            ...prev,
+            unloading_time: numValue,
+            capacity: Math.round(calculatedCapacity * 10) / 10, // Round to 1 decimal place
+          }));
+        }
+        return;
       }
     }
 
     // Handle name fields with validation
     if (name === "name" || name === "contact_name1" || name === "contact_name2") {
-      if (value.length > 25) return; // Prevent typing more than 25 characters
+      if (value.length > 25) return;
       if (value && !(name === "name" ? validatePlantName(value) : validateName(value))) {
         if (name === "name") setNameError("Name must be 1-25 characters");
         else if (name === "contact_name1") setContactName1Error("Contact name must be 1-25 alphanumeric characters");
@@ -378,7 +427,7 @@ export default function PlantsContainer() {
 
     // Handle contact number fields with validation
     if (name === "contact_number1" || name === "contact_number2") {
-      if (value.length > 10) return; // Prevent typing more than 10 digits
+      if (value.length > 10) return;
       if (value && !validateMobile(value)) {
         if (name === "contact_number1") setContactNumber1Error("Please enter a valid 10-digit mobile number");
         else if (name === "contact_number2") setContactNumber2Error("Please enter a valid 10-digit mobile number");
@@ -390,37 +439,82 @@ export default function PlantsContainer() {
 
     setNewPlant((prev) => ({
       ...prev,
-      [name]: name === "capacity" ? (value === "" ? undefined : Number(value)) : value,
+      [name]: name === "capacity" || name === "unloading_time" ? (value === "" ? undefined : Number(value)) : value,
     }));
   };
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
-    // Handle capacity field with validation
+    // Handle capacity field with validation and auto-calculate unloading time
     if (name === "capacity") {
-      // Strictly prevent entering values greater than 99
       if (value !== "" && Number(value) > 999) {
-        return; // Don't update the state if value exceeds 99
+        return;
       }
 
       if (value === "") {
-        setEditCapacityError(""); // Allow empty capacity
+        setEditCapacityError("");
+        setEditedPlant((prev) => ({
+          ...prev,
+          capacity: undefined,
+          unloading_time: undefined,
+        }));
       } else {
         const numValue = Number(value);
         if (numValue < 1 || numValue > 999) {
-          setEditCapacityError("Capacity must be between 1 and 99 m³/hr");
+          setEditCapacityError("Capacity must be between 1 and 999 m³/hr");
         } else if (!Number.isInteger(numValue * 10)) {
           setEditCapacityError("Capacity can have maximum one decimal place");
         } else {
           setEditCapacityError("");
+          // Auto-calculate unloading time: ceil(capacity / 7)
+          const calculatedUnloadingTime = Math.ceil(numValue / STANDARD_TM_CAPACITY);
+          setEditedPlant((prev) => ({
+            ...prev,
+            capacity: numValue,
+            unloading_time: calculatedUnloadingTime,
+          }));
         }
+        return;
+      }
+    }
+
+    // Handle unloading time field with validation and auto-calculate capacity
+    if (name === "unloading_time") {
+      if (value !== "" && Number(value) > 999) {
+        return;
+      }
+
+      if (value === "") {
+        setEditUnloadingTimeError("");
+        setEditedPlant((prev) => ({
+          ...prev,
+          unloading_time: undefined,
+          capacity: undefined,
+        }));
+      } else {
+        const numValue = Number(value);
+        if (numValue < 1 || numValue > 999) {
+          setEditUnloadingTimeError("Unloading time must be between 1 and 999 minutes");
+        } else if (!Number.isInteger(numValue)) {
+          setEditUnloadingTimeError("Unloading time must be a whole number");
+        } else {
+          setEditUnloadingTimeError("");
+          // Auto-calculate capacity: (60 / unloading_time) * 7
+          const calculatedCapacity = (60 / numValue) * STANDARD_TM_CAPACITY;
+          setEditedPlant((prev) => ({
+            ...prev,
+            unloading_time: numValue,
+            capacity: Math.round(calculatedCapacity * 10) / 10, // Round to 1 decimal place
+          }));
+        }
+        return;
       }
     }
 
     // Handle name fields with validation
     if (name === "name" || name === "contact_name1" || name === "contact_name2") {
-      if (value.length > 25) return; // Prevent typing more than 25 characters
+      if (value.length > 25) return;
       if (value && !(name === "name" ? validatePlantName(value) : validateName(value))) {
         if (name === "name") setEditNameError("Name must be 1-25 characters");
         else if (name === "contact_name1")
@@ -436,7 +530,7 @@ export default function PlantsContainer() {
 
     // Handle contact number fields with validation
     if (name === "contact_number1" || name === "contact_number2") {
-      if (value.length > 10) return; // Prevent typing more than 10 digits
+      if (value.length > 10) return;
       if (value && !validateMobile(value)) {
         if (name === "contact_number1") setEditContactNumber1Error("Please enter a valid 10-digit mobile number");
         else if (name === "contact_number2") setEditContactNumber2Error("Please enter a valid 10-digit mobile number");
@@ -448,7 +542,7 @@ export default function PlantsContainer() {
 
     setEditedPlant((prev) => ({
       ...prev,
-      [name]: name === "capacity" ? (value === "" ? undefined : Number(value)) : value,
+      [name]: name === "capacity" || name === "unloading_time" ? (value === "" ? undefined : Number(value)) : value,
     }));
   };
 
@@ -726,11 +820,11 @@ export default function PlantsContainer() {
               ) : filteredData.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-4">
                   <p className="text-gray-800 dark:text-white/90 text-lg font-medium">
-                    {session?.role === "company_admin" 
+                    {session?.role === "company_admin"
                       ? "No plants in your company yet. Create the first plant!"
                       : session?.sub_role === "viewer"
-                      ? "No plants in your company yet. Contact your company admin."
-                      : "No plants in your company yet. Create the first plant!"}
+                        ? "No plants in your company yet. Contact your company admin."
+                        : "No plants in your company yet. Create the first plant!"}
                   </p>
                   {session?.sub_role !== "viewer" && (
                     <Button size="sm" onClick={handleAddPlant}>
@@ -754,6 +848,7 @@ export default function PlantsContainer() {
         className="max-w-[850px] p-5 lg:p-10"
       >
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Plant</h4>
+
         <div className="space-y-4">
           <div className="flex flex-row w-full gap-2">
             <div className="w-full">
@@ -770,53 +865,53 @@ export default function PlantsContainer() {
             </div>
             <div className="w-full">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Capacity m³/hr <span className="text-red-500">*</span>
+                Capacity (m³/hr)
               </label>
-              <div className="flex flex-row items-center gap-2 w-full">
-                <div className="relative w-full">
-                  <Input
-                    type="number"
-                    name="capacity"
-                    placeholder="Enter plant capacity (1-999)"
-                    value={newPlant.capacity || ""}
-                    onChange={handleInputChange}
-                    step={0.1}
-                    min="1"
-                    max="999"
-                    className="w-full"
-                  />
-                </div>
-                <span className="text-xs text-gray-500 font-medium whitespace-nowrap">or</span>
-              </div>
+              <Input
+                type="number"
+                name="capacity"
+                placeholder="Auto-calculated or enter manually"
+                value={newPlant.capacity || ""}
+                onChange={handleInputChange}
+                step={0.1}
+                min="1"
+                max="999"
+                className="w-full"
+              />
               {capacityError && <span className="text-xs text-red-600 mt-1 block">{capacityError}</span>}
+            </div>
+            <div className="w-12 h-full flex items-center justify-center text-gray-500 dark:text-gray-400 mt-8">
+              or
             </div>
 
             <div className="w-full">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex flex-row justify-between">
-                Loading Time /TM (min)
-                {newPlant?.capacity && (
-                  <span className="text-[10px] text-gray-500 block">Using Avg TM Cap: {avgTMCap}</span>
-                )}
-              </label>
-              <div className="flex flex-row items-center gap-2 w-full">
-                <div className="relative w-full">
-                  <Input
-                    type="number"
-                    name="capacity"
-                    placeholder="Enter capacity"
-                    value={newPlant?.capacity
-                      ? Math.ceil(avgTMCap / (newPlant.capacity / 60) / 5) * 5
-                      : ""}
-                    disabled
-                    className="pr-28" // add right padding so text doesn't overlap
-                  />
-                  {newPlant?.capacity && (
-                    <span className="absolute inset-y-0 right-2 flex items-center text-[10px] text-gray-500">
-                      (rounded off to nearest 5)
-                    </span>
-                  )}
+              <div className="flex items-center gap-1 mb-1.5">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block">
+                  Unloading Time (min) <span className="text-red-500">*</span>
+                </label>
+                <div className="group relative">
+                  <Info size={16} className="text-gray-500 dark:text-gray-400 cursor-help" />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
+                    <div className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-200 text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
+                      <p className="font-semibold mb-1">Standard TM Capacity = 7 m³</p>
+                      <p>Capacity = (60 ÷ Time) × 7</p>
+                      <p>Time = ⌈ Capacity ÷ 7 ⌉</p>
+                    </div>
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
+                  </div>
                 </div>
               </div>
+              <Input
+                type="number"
+                name="unloading_time"
+                placeholder="Enter unloading time"
+                value={newPlant.unloading_time || ""}
+                onChange={handleInputChange}
+                min="1"
+                max="999"
+                className="w-full"
+              />
+              {unloadingTimeError && <span className="text-xs text-red-600 mt-1 block">{unloadingTimeError}</span>}
             </div>
           </div>
           <div className="flex flex-row w-full gap-2">
@@ -831,17 +926,6 @@ export default function PlantsContainer() {
                 maxLength={30}
               />
             </div>
-            {/* <div className="w-full">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Coordinates</label>
-              <Input
-                type="text"
-                name="coordinates"
-                placeholder="Enter coordinates (optional, max 60 characters)"
-                value={newPlant.coordinates || ""}
-                onChange={handleInputChange}
-                maxLength={60}
-              />
-            </div> */}
             <div className="w-full">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status <span className="text-red-500">*</span></label>
               <select
@@ -960,6 +1044,7 @@ export default function PlantsContainer() {
       {/* Edit Modal */}
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-[850px] p-5 lg:p-10">
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Edit Plant</h4>
+
         {selectedPlant && (
           <div className="space-y-4">
             <div className="flex flex-row w-full gap-2">
@@ -977,46 +1062,50 @@ export default function PlantsContainer() {
               </div>
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Capacity m³/hr <span className="text-red-500">*</span>
+                  Capacity m³/hr
                 </label>
                 <Input
                   type="number"
                   name="capacity"
                   value={editedPlant.capacity || ""}
                   onChange={handleEditInputChange}
-                  placeholder="Enter plant capacity (1-999)"
+                  placeholder="Auto-calculated or enter manually"
                   step={0.1}
                   min="1"
                   max="999"
                 />
                 {editCapacityError && <span className="text-xs text-red-600 mt-1 block">{editCapacityError}</span>}
               </div>
+              <div className="w-12 h-full flex items-center justify-center text-gray-500 dark:text-gray-400 mt-8">
+                or
+              </div>
               <div className="w-full">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex flex-row justify-between">
-                  Loading Time /TM (min)
-                  {editedPlant?.capacity && (
-                    <span className="text-[10px] text-gray-500 block">Using Avg TM Cap: {avgTMCap}</span>
-                  )}
-                </label>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    name="capacity"
-                    placeholder="Enter plant capacity to calculate"
-                    value={editedPlant?.capacity
-                      ? Math.ceil(avgTMCap / (editedPlant.capacity / 60) / 5) * 5
-                      : ""}
-                    disabled
-                    className="pr-28" // add right padding so text doesn't overlap
-                  />
-                  {editedPlant?.capacity && (
-                    <span className="absolute inset-y-0 right-2 flex items-center text-[10px] text-gray-500">
-                      (rounded off to nearest 5)
-                    </span>
-                  )}
+                <div className="flex items-center gap-1 mb-1.5">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block">
+                    Unloading Time (min) <span className="text-red-500">*</span>
+                  </label>
+                  <div className="group relative">
+                    <Info size={16} className="text-gray-500 dark:text-gray-400 cursor-help" />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
+                      <div className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-200 text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
+                        <p className="font-semibold mb-1">Standard TM Capacity = 7 m³</p>
+                        <p>Capacity = (60 ÷ Time) × 7</p>
+                        <p>Time = ⌈ Capacity ÷ 7 ⌉</p>
+                      </div>
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
+                    </div>
+                  </div>
                 </div>
-
-                {editCapacityError && <span className="text-xs text-red-600 mt-1 block">{editCapacityError}</span>}
+                <Input
+                  type="number"
+                  name="unloading_time"
+                  placeholder="Enter unloading time"
+                  value={editedPlant.unloading_time || ""}
+                  onChange={handleEditInputChange}
+                  min="1"
+                  max="999"
+                />
+                {editUnloadingTimeError && <span className="text-xs text-red-600 mt-1 block">{editUnloadingTimeError}</span>}
               </div>
             </div>
             <div className="flex flex-row w-full gap-2">
@@ -1031,17 +1120,6 @@ export default function PlantsContainer() {
                   maxLength={30}
                 />
               </div>
-              {/* <div className="w-full">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Coordinates</label>
-                <Input
-                  type="text"
-                  name="coordinates"
-                  placeholder="Enter coordinates (optional, max 60 characters)"
-                  value={editedPlant.coordinates || ""}
-                  onChange={handleEditInputChange}
-                  maxLength={60}
-                />
-              </div> */}
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Status <span className="text-red-500">*</span></label>
                 <select
