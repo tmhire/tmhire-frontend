@@ -486,10 +486,10 @@ export default function ScheduleViewPage() {
         "Scheduled Date",
         schedule.input_params.schedule_date
           ? new Date(schedule.input_params.schedule_date).toLocaleDateString(["en-GB"], {
-              day: "2-digit",
-              month: "2-digit",
-              year: "2-digit",
-            })
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+          })
           : "-",
       ],
       [
@@ -797,9 +797,9 @@ export default function ScheduleViewPage() {
           const trip = trips?.[i];
           return trip
             ? `${formatTimeByPreference(trip.plant_start, preferred)} - ${formatTimeByPreference(
-                trip.return,
-                preferred
-              )}`
+              trip.return,
+              preferred
+            )}`
             : "-";
         });
         const overallRange = formatOverallRange(trips, preferred);
@@ -896,7 +896,7 @@ export default function ScheduleViewPage() {
         avgRoundedTotalHours ? formatHoursAndMinutes(avgRoundedTotalHours) : "-",
       ];
       footerRow0.forEach((data, colIndex) => {
-        const cell = summarySheet.getCell(currentDataRow, colIndex + 12);
+        const cell = summarySheet.getCell(currentDataRow, colIndex + 10);
         cell.value = data;
         cell.style = { ...dataStyle, font: { ...dataStyle.font, bold: true } };
       });
@@ -978,10 +978,10 @@ export default function ScheduleViewPage() {
       // Add title
       const scheduleDate = schedule.input_params.schedule_date
         ? new Date(schedule.input_params.schedule_date).toLocaleDateString(["en-GB"], {
-            day: "2-digit",
-            month: "2-digit",
-            year: "2-digit",
-          })
+          day: "2-digit",
+          month: "2-digit",
+          year: "2-digit",
+        })
         : "-";
       const customerName = schedule.client_name || "-";
       const projectName = schedule.project_name || "-";
@@ -998,36 +998,36 @@ export default function ScheduleViewPage() {
       // Schedule table headers
       const scheduleHeader = useBurstModel
         ? [
-            "Trip #",
-            "TM #",
-            "Plant - Name",
-            "Prepare",
-            "Load",
-            "Plant - Start",
-            "Site Reach",
-            "TM Wait (Min)",
-            "Pump - Start",
-            "Pump - End",
-            "Return Time",
-            "TM Q at Site",
-            "Cum. M3",
-            "Cycle Time (min)",
-            "Cushion (min)",
-          ]
+          "Trip #",
+          "TM #",
+          "Plant - Name",
+          "Prepare",
+          "Load",
+          "Plant - Start",
+          "Site Reach",
+          "TM Wait (Min)",
+          "Pump - Start",
+          "Pump - End",
+          "Return Time",
+          "TM Q at Site",
+          "Cum. M3",
+          "Cycle Time (min)",
+          "Cushion (min)",
+        ]
         : [
-            "Trip #",
-            "TM #",
-            "Plant - Name",
-            "Prepare",
-            "Load",
-            "Plant - Start",
-            "Pump - Start",
-            "Pump - End",
-            "Return Time",
-            "Cum. M3",
-            "Cycle Time (min)",
-            "Cushion (min)",
-          ];
+          "Trip #",
+          "TM #",
+          "Plant - Name",
+          "Prepare",
+          "Load",
+          "Plant - Start",
+          "Pump - Start",
+          "Pump - End",
+          "Return Time",
+          "Cum. M3",
+          "Cycle Time (min)",
+          "Cushion (min)",
+        ];
 
       // Add headers
       scheduleSheet.getRow(3).values = scheduleHeader;
@@ -1251,10 +1251,10 @@ export default function ScheduleViewPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
         {/* Summary Card */}
-        <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl p-6 flex flex-col justify-start h-full">
-          <div className="grid grid-cols-3 gap-x-8 gap-y-4">
+        <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl p-6 flex flex-col justify-start h-full col-span-2">
+          <div className="grid grid-cols-4 gap-x-8 gap-y-4">
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Scheduled Date</h4>
               <p className="text-base text-gray-800 dark:text-white/90">
@@ -1264,16 +1264,15 @@ export default function ScheduleViewPage() {
                     month: "2-digit",
                     year: "2-digit",
                   })}
-              </p>
-            </div>
+              </p>      </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Pump Start Time at Site</h4>
               <p className="text-base text-gray-800 dark:text-white/90">
                 {schedule.input_params.pump_start
                   ? new Date(schedule.input_params.pump_start).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
                   : "N/A"}
               </p>
             </div>
@@ -1306,7 +1305,7 @@ export default function ScheduleViewPage() {
             </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Mother Plant</h4>
-              <p className="text-base text-gray-800 dark:text-white/90">{schedule.mother_plant_name}</p>
+              <p className="text-base text-gray-800 dark:text-white/90 truncate">{schedule.mother_plant_name}</p>
             </div>
             <div>
               <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Site Supervisor</h4>
@@ -1337,7 +1336,7 @@ export default function ScheduleViewPage() {
               <p className="text-base text-gray-800 dark:text-white/90">{schedule.input_params.quantity} m³</p>
             </div>
             {schedule.created_by && (
-              <div>
+              <div className="col-span-2">
                 <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Created By</h4>
                 <p className="text-base text-gray-800 dark:text-white/90">
                   {creatorUser?.name || "Unknown"}
@@ -1394,7 +1393,7 @@ export default function ScheduleViewPage() {
             </div>
           )}
         </div>
-        <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl p-6 flex flex-col justify-start h-full">
+        <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 rounded-xl p-6 flex flex-col justify-start h-full col-span-1">
           {(() => {
             const buffer = schedule.input_params.buffer_time || 0;
             const load = schedule.input_params.load_time || 0;
@@ -1633,9 +1632,8 @@ export default function ScheduleViewPage() {
                                 <span className="text-xs text-white">{isLinePump ? "LINE" : "BOOM"}</span>
                               </label>
                               <label
-                                className={`p-1 px-1 font-mono text-sm font-medium items-center ${
-                                  isLinePump ? "text-white" : "text-black"
-                                } `}
+                                className={`p-1 px-1 font-mono text-sm font-medium items-center ${isLinePump ? "text-white" : "text-black"
+                                  } `}
                               >
                                 {pump.identifier}
                               </label>
@@ -1882,9 +1880,9 @@ export default function ScheduleViewPage() {
                             <td key={i} className="px-1 text-xs py-2 text-left text-gray-800 dark:text-white/90">
                               {trip
                                 ? `${formatTimeByPreference(
-                                    trip.plant_buffer,
-                                    profile?.preferred_format
-                                  )} - ${formatTimeByPreference(trip.return, profile?.preferred_format)}`
+                                  trip.plant_buffer,
+                                  profile?.preferred_format
+                                )} - ${formatTimeByPreference(trip.return, profile?.preferred_format)}`
                                 : "-"}
                             </td>
                           );
@@ -1973,14 +1971,12 @@ export default function ScheduleViewPage() {
                 <button
                   type="button"
                   onClick={() => setShowGapRows(!showGapRows)}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                    showGapRows ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
-                  }`}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${showGapRows ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
+                    }`}
                 >
                   <span
-                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                      showGapRows ? "translate-x-5" : "translate-x-1"
-                    }`}
+                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${showGapRows ? "translate-x-5" : "translate-x-1"
+                      }`}
                   />
                 </button>
               </div>
