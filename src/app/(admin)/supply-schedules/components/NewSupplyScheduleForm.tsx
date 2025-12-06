@@ -41,6 +41,7 @@ import { TimePicker } from "@mui/x-date-pickers/TimePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
+import { useSession } from "next-auth/react";
 
 interface Client {
   contact_phone: number;
@@ -136,6 +137,7 @@ const steps = [
 
 export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: string }) {
   const { profile } = useProfile();
+  const { data: session , status} = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const template = searchParams.get("template");
@@ -521,7 +523,10 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
   };
 
   useEffect(() => {
-    if (schedule_id && clientsData) {
+    if (schedule_id && clientsData
+      && status === "authenticated" &&
+      session
+    ) {
       fetchSchedule();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -842,6 +847,18 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
     [schedule_id]
   );
 
+  const profileStartHour = session?.custom_start_hour ?? 0; // default 7
+  const profileFormat = session?.preferred_format ?? "12h";
+  function formatHour(hour: number) {
+    if (profileFormat === "24h") {
+      return `${hour.toString().padStart(2, "0")}:00`;
+    }
+    const suffix = hour >= 12 ? "PM" : "AM";
+    const adjusted = hour % 12 === 0 ? 12 : hour % 12;
+    return `${adjusted.toString().padStart(2, "0")}:00 ${suffix}`;
+  }
+  const profileEndHour = (profileStartHour + 24) % 24;
+
   const isStep2FormValid = () => {
     if (step === 2) {
       // Manual Job Pour Details validation
@@ -1156,13 +1173,7 @@ export default function NewSupplyScheduleForm({ schedule_id }: { schedule_id?: s
                 </h3>
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900/40 py-1 px-3 rounded-full">
                   Company Timings -
-                  {profile?.preferred_format === "12h"
-                    ? ` ${(profile?.custom_start_hour ?? 0) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) < 12 ? "AM" : "PM"
-                    } CURRENT DAY TO ${((profile?.custom_start_hour ?? 0) + 12) % 12 || 12}:00 ${(profile?.custom_start_hour ?? 0) + 24 < 24 ? "PM" : "AM"
-                    } NEXT DAY`
-                    : ` ${String(profile?.custom_start_hour ?? 0).padStart(2, "0")}:00 TODAY TO ${String(
-                      ((profile?.custom_start_hour ?? 0) + 24) % 24
-                    ).padStart(2, "0")}:00 TOMORROW`}
+                  {formatHour(profileStartHour)} TO {formatHour(profileEndHour)} NEXT DAY
                 </span>
               </div>
 
