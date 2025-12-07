@@ -8,9 +8,11 @@ export default async function middleware(request: NextRequest) {
 
   const isAuthPage = path === "/signin" || path === "/signup";
 
+  const isCommonPage = path === "/forgot-password";
+
   if (!token?.email) {
     // Not authenticated
-    if (!isAuthPage) {
+    if (!isAuthPage && !isCommonPage) {
       // Trying to access a protected route → redirect to signin
       return NextResponse.redirect(new URL("/signin", request.url));
     }
