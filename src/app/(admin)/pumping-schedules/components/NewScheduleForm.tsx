@@ -147,6 +147,9 @@ interface PastSchedule {
   remarks?: string;
   mother_plant_km?: number;
   site_supervisor_id?: string;
+  cube_at_site?: boolean;
+  credit_terms?: string;
+  field_technician_id?: string;
 }
 
 const steps = [
@@ -187,7 +190,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const template = searchParams.get("template");
   const { data: session, status } = useSession();
   const { fetchWithAuth } = useApiClient();
-  const { } = useToast();
+  const {} = useToast();
   const { startAction, completeAction } = createApiActionToast();
   const [step, setStep] = useState(schedule_id ? 2 : 1);
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -238,6 +241,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     remarks: string;
     oneWayKm: string;
     siteSupervisorId: string;
+    cubeAtSite: boolean;
+    creditTerms: string;
+    fieldTechnicianId: string;
   }
 
   const [formData, setFormData] = useState<Step1FormData>({
@@ -263,6 +269,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     remarks: "",
     oneWayKm: "",
     siteSupervisorId: "",
+    cubeAtSite: false,
+    creditTerms: "",
+    fieldTechnicianId: "",
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [formDataRetrieved, setFormDataRetrieved] = useState(true);
@@ -346,6 +355,18 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       return [];
     },
   });
+
+  // Filter field technicians from schedule team members
+  const fieldTechnicians = useMemo(() => {
+    if (!scheduleTeamMembers) return [];
+    return scheduleTeamMembers.filter((member) => member.designation === "field-technician");
+  }, [scheduleTeamMembers]);
+
+  // Filter site supervisors from schedule team members
+  const siteSupervisors = useMemo(() => {
+    if (!scheduleTeamMembers) return [];
+    return scheduleTeamMembers.filter((member) => member.designation === "site-supervisor");
+  }, [scheduleTeamMembers]);
 
   const { data: avgTMCapData } = useQuery<{ average_capacity: number }>({
     queryKey: ["average-tm-capacity"],
@@ -472,6 +493,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           remarks: pastSchedule?.remarks || "",
           oneWayKm: pastSchedule?.mother_plant_km?.toString() || "",
           siteSupervisorId: pastSchedule?.site_supervisor_id || "",
+          cubeAtSite: pastSchedule?.cube_at_site || false,
+          creditTerms: pastSchedule?.credit_terms || "",
+          fieldTechnicianId: pastSchedule?.field_technician_id || "",
         }));
         if (pastSchedule.tm_overrule) {
           setOverruleTMCount(true);
@@ -511,8 +535,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             data.data.input_params.unloading_time && data.data.input_params.unloading_time !== 0
               ? data.data.input_params.unloading_time.toString()
               : pumping_speed && avgTMCap
-                ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
-                : "",
+              ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
+              : "",
           pumpOnwardTime: data.data.input_params.pump_onward_time.toString(),
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
@@ -534,11 +558,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           remarks: data.data.remarks?.toString?.() || "",
           oneWayKm: data.data.mother_plant_km?.toString?.() || "",
           siteSupervisorId: data.data.site_supervisor_id || "",
+          cubeAtSite: data.data.cube_at_site || false,
+          creditTerms: data.data.credit_terms || "",
+          fieldTechnicianId: data.data.field_technician_id || "",
         });
         setIsBurstModel(!!data?.data?.input_params?.is_burst_model);
         setComputedScheduleName(
           data?.data?.schedule_no ||
-          `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
+            `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
         );
         const tm_ids = new Set();
         const tmSequence: string[] = [];
@@ -620,6 +647,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           remarks: formData.remarks ? formData.remarks : undefined,
           mother_plant_km: formData.oneWayKm ? parseFloat(formData.oneWayKm) : undefined,
           site_supervisor_id: formData.siteSupervisorId || undefined,
+          cube_at_site: formData.cubeAtSite,
+          credit_terms: formData.creditTerms || undefined,
+          field_technician_id: formData.fieldTechnicianId || undefined,
           tm_count: tmReq,
         }),
       });
@@ -751,6 +781,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             remarks: formData.remarks ? formData.remarks : undefined,
             mother_plant_km: formData.oneWayKm ? parseFloat(formData.oneWayKm) : undefined,
             site_supervisor_id: formData.siteSupervisorId || undefined,
+            cube_at_site: formData.cubeAtSite,
+            credit_terms: formData.creditTerms || undefined,
+            field_technician_id: formData.fieldTechnicianId || undefined,
             tm_count: tmReq,
           }),
         });
@@ -911,6 +944,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             remarks: pastSchedule?.remarks || "",
             oneWayKm: pastSchedule?.mother_plant_km?.toString() || "",
             siteSupervisorId: pastSchedule?.site_supervisor_id || "",
+            cubeAtSite: pastSchedule?.cube_at_site || false,
+            creditTerms: pastSchedule?.credit_terms || "",
+            fieldTechnicianId: pastSchedule?.field_technician_id || "",
           }));
           if (pastSchedule?.tm_overrule) {
             setOverruleTMCount(true);
@@ -1420,10 +1456,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 >
                   {/* Step Circle */}
                   <motion.div
-                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${step >= s.id
-                      ? "border-brand-500 bg-brand-500 text-white shadow-lg"
-                      : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                      }`}
+                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${
+                      step >= s.id
+                        ? "border-brand-500 bg-brand-500 text-white shadow-lg"
+                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                    }`}
                     animate={{
                       scale: s.type === "subStep" ? (step === s.id ? 0.9 : 0.8) : step === s.id ? 1.3 : 1,
                       boxShadow: step === s.id ? "0 0 20px rgba(var(--brand-500-rgb, 59, 130, 246), 0.5)" : "none",
@@ -1452,8 +1489,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                   {/* Step Name */}
                   <motion.span
-                    className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
-                      }`}
+                    className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${
+                      step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
+                    }`}
                     animate={{
                       fontWeight: step >= s.id ? 500 : 400,
                     }}
@@ -1594,10 +1632,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     filteredSchedules?.map((schedule) => (
                       <div
                         key={schedule._id}
-                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${selectedPastSchedule === schedule._id
-                          ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
-                          : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
-                          }`}
+                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
+                          selectedPastSchedule === schedule._id
+                            ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
+                            : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
+                        }`}
                         onClick={() => setSelectedPastSchedule(schedule._id)}
                       >
                         <div className="flex items-start justify-between">
@@ -1605,8 +1644,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             <div className="flex items-center gap-2 mb-2">
                               <h4 className="font-semibold text-gray-900 dark:text-white ">{schedule.schedule_no}</h4>
                               <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${pumpColors[schedule.pump_type]
-                                  }`}
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  pumpColors[schedule.pump_type]
+                                }`}
                               >
                                 {schedule?.pump_type?.toUpperCase()}
                               </span>
@@ -1651,10 +1691,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           </div>
 
                           <div
-                            className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPastSchedule === schedule._id
-                              ? "border-brand-500 bg-brand-500"
-                              : "border-gray-300 dark:border-gray-600"
-                              }`}
+                            className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                              selectedPastSchedule === schedule._id
+                                ? "border-brand-500 bg-brand-500"
+                                : "border-gray-300 dark:border-gray-600"
+                            }`}
                           >
                             {selectedPastSchedule === schedule._id && (
                               <div className="w-2 h-2 rounded-full bg-white"></div>
@@ -1707,9 +1748,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   </div>
                 </div>
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900/40 py-1 px-3 rounded-full">
-                  Company Timings -
-                  {formatHour(profileStartHour)} TO {formatHour(profileEndHour)} NEXT DAY
-
+                  Company Timings -{formatHour(profileStartHour)} TO {formatHour(profileEndHour)} NEXT DAY
                 </span>
               </div>
 
@@ -2000,6 +2039,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           size: "small",
                           fullWidth: true,
                           placeholder: "Select time",
+                          InputProps: {
+                            className:
+                              "bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600",
+                          },
+                        },
+                        popper: {
+                          // Improve contrast of time picker popper in dark mode
+                          sx: {
+                            "& .MuiPaper-root": {
+                              backgroundColor: "rgb(31 41 55)", // Tailwind gray-800
+                              color: "#fff",
+                            },
+                          },
                         },
                       }}
                       format={profile?.preferred_format === "12h" ? "h:mm a" : "HH:mm"}
@@ -2098,25 +2150,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Pumping Details</h3>
               </div>
 
-              <div className="grid grid-cols-4 gap-6">
-                {/* One Way distance to site from Plant in KM */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    One Way distance to site from Plant (km)
-                  </label>
-                  <Input
-                    type="number"
-                    name="oneWayKm"
-                    value={formData.oneWayKm ? parseFloat(formData.oneWayKm) : ""}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setFormData((prev) => ({ ...prev, oneWayKm: v }));
-                      setHasChanged(true);
-                    }}
-                    placeholder="Enter kilometers"
-                  />
-                </div>
-
+              <div className="grid grid-cols-5 gap-6">
                 {/* Pump Onward Time to Site */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -2185,11 +2219,114 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     max="600"
                   />
                 </div>
+
+                {/* SITE SUPERVISOR */}
+                <div className="col-span-1">
+                  <SearchableDropdown
+                    options={siteSupervisors || []}
+                    value={formData.siteSupervisorId}
+                    onChange={(value: string | string[]) => {
+                      setFormData((prev) => ({ ...prev, siteSupervisorId: value as string }));
+                      setHasChanged(true);
+                    }}
+                    getOptionLabel={(member: TeamMember) => member.name}
+                    getOptionValue={(member: TeamMember) => member._id}
+                    placeholder="Select supervisor"
+                    label="Site Supervisor"
+                    multiple={false}
+                  />
+                </div>
+
+                {/* Field Technician */}
+                <div className="col-span-1">
+                  <SearchableDropdown
+                    options={fieldTechnicians || []}
+                    value={formData.fieldTechnicianId}
+                    onChange={(value: string | string[]) => {
+                      setFormData((prev) => ({ ...prev, fieldTechnicianId: value as string }));
+                      setHasChanged(true);
+                    }}
+                    getOptionLabel={(member: TeamMember) => member.name}
+                    getOptionValue={(member: TeamMember) => member._id}
+                    placeholder="Select field technician"
+                    label="Field Technician"
+                    multiple={false}
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-6 mt-6">
-                {/* SLUMP AT SITE */}
+              <div className="grid grid-cols-10 gap-6 mt-6">
+                {/* One Way distance to site from Plant in KM */}
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    One Way distance to site from Plant (km)
+                  </label>
+                  <Input
+                    type="number"
+                    name="oneWayKm"
+                    value={formData.oneWayKm ? parseFloat(formData.oneWayKm) : ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFormData((prev) => ({ ...prev, oneWayKm: v }));
+                      setHasChanged(true);
+                    }}
+                    placeholder="Enter kilometers"
+                  />
+                </div>
+
+                {/* Cube at Site */}
                 <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Cube at Site
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cubeAtSite"
+                        checked={formData.cubeAtSite === true}
+                        onChange={() => {
+                          setFormData((prev) => ({ ...prev, cubeAtSite: true }));
+                          setHasChanged(true);
+                        }}
+                        className="w-4 h-4 text-brand-600 focus:ring-brand-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Yes</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cubeAtSite"
+                        checked={formData.cubeAtSite === false}
+                        onChange={() => {
+                          setFormData((prev) => ({ ...prev, cubeAtSite: false }));
+                          setHasChanged(true);
+                        }}
+                        className="w-4 h-4 text-brand-600 focus:ring-brand-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">No</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* MIX CODE */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mix Code</label>
+                  <Input
+                    type="string"
+                    name="mixCode"
+                    value={formData.mixCode}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFormData((prev) => ({ ...prev, mixCode: v }));
+                      setHasChanged(true);
+                    }}
+                    placeholder="Enter mix code"
+                  />
+                </div>
+
+                {/* SLUMP AT SITE */}
+                <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Slump at Site (mm)
                   </label>
@@ -2212,37 +2349,30 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     max="300"
                   />
                 </div>
-                {/* SITE SUPERVISOR */}
-                <div className="col-span-1">
-                  <SearchableDropdown
-                    options={scheduleTeamMembers || []}
-                    value={formData.siteSupervisorId}
-                    onChange={(value: string | string[]) => {
-                      setFormData((prev) => ({ ...prev, siteSupervisorId: value as string }));
-                      setHasChanged(true);
-                    }}
-                    getOptionLabel={(member: TeamMember) => member.name}
-                    getOptionValue={(member: TeamMember) => member._id}
-                    placeholder="Select supervisor"
-                    label="Site Supervisor"
-                    multiple={false}
-                  />
-                </div>
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mix Code</label>
+
+                {/* Credit Terms */}
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Credit Terms
+                  </label>
                   <Input
-                    type="string"
-                    name="mixCode"
-                    value={formData.mixCode}
+                    type="text"
+                    name="creditTerms"
+                    value={formData.creditTerms}
                     onChange={(e) => {
                       const v = e.target.value;
-                      setFormData((prev) => ({ ...prev, mixCode: v }));
-                      setHasChanged(true);
+                      if (v.length <= 20) {
+                        setFormData((prev) => ({ ...prev, creditTerms: v }));
+                        setHasChanged(true);
+                      }
                     }}
-                    placeholder="Enter mix code"
+                    placeholder="Enter credit terms (max 20 chars)"
+                    maxLength={20}
                   />
                 </div>
-                <div className="col-span-1">
+
+                {/* REMARKS */}
+                <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Remarks</label>
                   <Input
                     type="string"
@@ -2792,10 +2922,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <div className="flex items-center gap-3 py-2 pl-4">
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select 1 Pump</h3>
                     <span
-                      className={`px-3 py-1 text-sm font-medium rounded-full ${pumpType === "line"
-                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                        : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                        }`}
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${
+                        pumpType === "line"
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                          : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                      }`}
                     >
                       {pumpType === "line" ? "Line Pump" : "Boom Pump"}
                     </span>
@@ -3053,10 +3184,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
                                 {/* Pump Type Chip */}
                                 <span
-                                  className={`px-2 py-1 text-xs font-medium rounded-full ${pumpType === "line"
-                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                    : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                    }`}
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    pumpType === "line"
+                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                  }`}
                                 >
                                   {pumpType === "line" ? "Line" : "Boom"}
                                 </span>

@@ -14,7 +14,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { validateMobile, validateName } from "@/lib/utils";
 import { useToast } from "@/hooks/useToast";
 
-type Designation = "sales-engineer" | "pump-operator" | "pipeline-gang" | "site-supervisor";
+type Designation = "sales-engineer" | "pump-operator" | "pipeline-gang" | "site-supervisor" | "field-technician";
 
 interface Team {
   _id: string;
@@ -73,10 +73,7 @@ export default function TeamContainer() {
     return (
       // name.trim() !== "" &&
       // contact.trim() !== "" &&
-      validateName(name.trim()) &&
-      validateMobile(contact.trim()) &&
-      !nameError &&
-      !contactError
+      validateName(name.trim()) && validateMobile(contact.trim()) && !nameError && !contactError
     );
   }, [newTeam, nameError, contactError]);
 
@@ -90,8 +87,7 @@ export default function TeamContainer() {
       // contact.trim() !== "" &&
       // validateName(name.trim()) &&
       // validateMobile(contact.trim()) &&
-      !editNameError &&
-      !editContactError
+      !editNameError && !editContactError
     );
   }, [editedTeam, editNameError, editContactError]);
 
@@ -523,7 +519,7 @@ export default function TeamContainer() {
               ) : teamsData && teamsData.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-4">
                   <p className="text-gray-800 dark:text-white/90 text-lg font-medium">
-                    {session?.role === "company_admin" 
+                    {session?.role === "company_admin"
                       ? "No team members in your company yet. Create the first team member!"
                       : session?.sub_role === "viewer"
                       ? "No team members in your company yet. Contact your company admin."
@@ -537,7 +533,12 @@ export default function TeamContainer() {
                   )}
                 </div>
               ) : (
-                <TeamTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} isViewer={session?.sub_role === "viewer"} />
+                <TeamTable
+                  data={filteredData}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  isViewer={session?.sub_role === "viewer"}
+                />
               )}
             </div>
           </div>
@@ -553,7 +554,9 @@ export default function TeamContainer() {
         <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Team</h4>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Name <span className="text-red-500">*</span>
+            </label>
             <Input
               type="text"
               name="name"
@@ -565,7 +568,9 @@ export default function TeamContainer() {
             {nameError && <span className="text-xs text-red-600 mt-1 block">{nameError}</span>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Designation <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Designation <span className="text-red-500">*</span>
+            </label>
             <select
               name="designation"
               value={newTeam.designation}
@@ -576,10 +581,13 @@ export default function TeamContainer() {
               <option value="pump-operator">Pump Operator</option>
               <option value="pipeline-gang">Pipeline Gang</option>
               <option value="site-supervisor">Site Supervisor</option>
+              <option value="field-technician">Field Technician</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Mobile Number <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Contact Mobile Number <span className="text-red-500">*</span>
+            </label>
             <Input
               type="text"
               name="contact"
@@ -595,11 +603,7 @@ export default function TeamContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
             Cancel
           </Button>
-          <Button
-            size="sm"
-            onClick={handleCreateTeam}
-            disabled={createTeamMutation.isPending || !isCreateFormValid}
-          >
+          <Button size="sm" onClick={handleCreateTeam} disabled={createTeamMutation.isPending || !isCreateFormValid}>
             {createTeamMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />
@@ -618,18 +622,16 @@ export default function TeamContainer() {
         {selectedTeam && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name <span className="text-red-500">*</span></label>
-              <Input
-                type="text"
-                name="name"
-                value={editedTeam.name}
-                onChange={handleEditInputChange}
-                maxLength={25}
-              />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Name <span className="text-red-500">*</span>
+              </label>
+              <Input type="text" name="name" value={editedTeam.name} onChange={handleEditInputChange} maxLength={25} />
               {editNameError && <span className="text-xs text-red-600 mt-1 block">{editNameError}</span>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Designation <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Designation <span className="text-red-500">*</span>
+              </label>
               <select
                 name="designation"
                 value={editedTeam.designation}
@@ -643,7 +645,9 @@ export default function TeamContainer() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contact Mobile Number <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Contact Mobile Number <span className="text-red-500">*</span>
+              </label>
               <Input
                 type="text"
                 name="contact"
@@ -660,11 +664,7 @@ export default function TeamContainer() {
           <Button size="sm" variant="outline" onClick={() => setIsEditModalOpen(false)}>
             Cancel
           </Button>
-          <Button
-            size="sm"
-            onClick={handleSaveEdit}
-            disabled={editTeamMutation.isPending || !isEditFormValid}
-          >
+          <Button size="sm" onClick={handleSaveEdit} disabled={editTeamMutation.isPending || !isEditFormValid}>
             {editTeamMutation.isPending ? (
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />

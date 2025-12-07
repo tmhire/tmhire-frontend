@@ -6,7 +6,7 @@ import Button from "@/components/ui/button/Button";
 import { Edit, Trash } from "lucide-react";
 import { useCreatorLookup } from "@/hooks/useCompany";
 
-type Designation = "sales-engineer" | "pump-operator" | "pipeline-gang" | "site-supervisor";
+type Designation = "sales-engineer" | "pump-operator" | "pipeline-gang" | "site-supervisor" | "field-technician";
 
 interface Team {
   _id: string;
@@ -30,6 +30,7 @@ const DesignationLabels: Record<Designation, string> = {
   "pump-operator": "Pump Operator",
   "pipeline-gang": "Pipeline Gang",
   "site-supervisor": "Site Supervisor",
+  "field-technician": "Field Technician",
 };
 
 export default function TeamTable({ data, onEdit, onDelete, isViewer = false }: TeamTableProps) {
@@ -54,9 +55,7 @@ export default function TeamTable({ data, onEdit, onDelete, isViewer = false }: 
       <div className="flex flex-col">
         <span className="font-medium text-gray-800 dark:text-white/90">{creator.name || "Unknown"}</span>
         {roleLabel && (
-          <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-            {roleLabel.replace(/_/g, " ")}
-          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">{roleLabel.replace(/_/g, " ")}</span>
         )}
       </div>
     );
