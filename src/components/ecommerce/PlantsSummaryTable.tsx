@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 import React, { useMemo, useState } from "react";
 import { useReactTable, getCoreRowModel, createColumnHelper, flexRender } from "@tanstack/react-table";

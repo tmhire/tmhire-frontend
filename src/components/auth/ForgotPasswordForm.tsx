@@ -12,7 +12,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 interface ApiResponse {
   success: boolean;
   message: string;
-  data: any;
+  data: unknown;
 }
 
 export default function ForgotPasswordForm() {
@@ -240,7 +240,7 @@ export default function ForgotPasswordForm() {
                     disabled={isLoading}
                   />
                   <div className="flex items-center justify-between mt-2">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Didn't receive OTP?</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Didn&apos;t receive OTP?</p>
                     <button
                       type="button"
                       onClick={handleResendOTP}

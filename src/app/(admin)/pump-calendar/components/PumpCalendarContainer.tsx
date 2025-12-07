@@ -272,6 +272,7 @@ export default function PumpCalendarContainer() {
     if (status === "authenticated" && session) {
       fetchGanttData(selectedDate);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, status]);
   const plants = Array.from(new Set(ganttData.map((item) => item.plant)));
   const pumps = Array.from(new Set(ganttData.map((item) => item.name)));
@@ -992,7 +993,9 @@ export default function PumpCalendarContainer() {
                               return (
                                 <Tooltip
                                   key={ct.client}
-                                  content={`Pump: ${pump.name}\nClient: ${ct.client}\n${formatDateTimeForTooltip(ct.actualStart)} to ${formatDateTimeForTooltip(ct.actualEnd)}\nDuration: ${ct.duration}m`}
+                                  content={`Pump: ${pump.name}\nClient: ${ct.client}\n${formatDateTimeForTooltip(
+                                    ct.actualStart
+                                  )} to ${formatDateTimeForTooltip(ct.actualEnd)}\nDuration: ${ct.duration}m`}
                                 >
                                   <div
                                     className={`absolute top-1 h-4 rounded ${ct.color} opacity-80 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center`}

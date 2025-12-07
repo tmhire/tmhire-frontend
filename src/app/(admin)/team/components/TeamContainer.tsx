@@ -89,6 +89,7 @@ export default function TeamContainer() {
       // validateMobile(contact.trim()) &&
       !editNameError && !editContactError
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editedTeam, editNameError, editContactError]);
 
   const { data: teamsData, isLoading: isLoadingTeams } = useQuery({

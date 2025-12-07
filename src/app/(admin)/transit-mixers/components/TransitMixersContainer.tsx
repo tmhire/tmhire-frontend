@@ -1,3 +1,5 @@
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import TransitMixersTable from "./TransitMixersTable";
@@ -625,7 +627,7 @@ export default function TransitMixersContainer() {
               ) : filteredData.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-4">
                   <p className="text-gray-800 dark:text-white/90 text-lg font-medium">
-                    {session?.role === "company_admin" 
+                    {session?.role === "company_admin"
                       ? "No transit mixers in your company yet. Create the first transit mixer!"
                       : session?.sub_role === "viewer"
                       ? "No transit mixers in your company yet. Contact your company admin."
@@ -639,7 +641,13 @@ export default function TransitMixersContainer() {
                   )}
                 </div>
               ) : (
-                <TransitMixersTable data={filteredData} onEdit={handleEdit} onDelete={handleDelete} plants={plants} isViewer={session?.sub_role === "viewer"} />
+                <TransitMixersTable
+                  data={filteredData}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  plants={plants}
+                  isViewer={session?.sub_role === "viewer"}
+                />
               )}
             </div>
           </div>

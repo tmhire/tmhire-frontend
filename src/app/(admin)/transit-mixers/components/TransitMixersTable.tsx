@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
@@ -28,7 +29,13 @@ interface TransitMixersTableProps {
   isViewer?: boolean;
 }
 
-export default function TransitMixersTable({ data, onEdit, onDelete, plants = [], isViewer = false }: TransitMixersTableProps) {
+export default function TransitMixersTable({
+  data,
+  onEdit,
+  onDelete,
+  plants = [],
+  isViewer = false,
+}: TransitMixersTableProps) {
   const { creatorLookup } = useCreatorLookup();
 
   const getCreator = useMemo(() => {
@@ -50,9 +57,7 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
       <div className="flex flex-col">
         <span className="font-medium text-gray-800 dark:text-white/90">{creator.name || "Unknown"}</span>
         {roleLabel && (
-          <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-            {roleLabel.replace(/_/g, " ")}
-          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">{roleLabel.replace(/_/g, " ")}</span>
         )}
       </div>
     );
@@ -143,9 +148,7 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                         <img className="h-3" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" />
                         IND
                       </label>
-                      <label className="p-1 px-2 font-mono text-sm font-medium items-center ">
-                        {mixer.identifier}
-                      </label>
+                      <label className="p-1 px-2 font-mono text-sm font-medium items-center ">{mixer.identifier}</label>
                     </div>
                   </TableCell>
                   <TableCell className="px-5 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
@@ -162,10 +165,11 @@ export default function TransitMixersTable({ data, onEdit, onDelete, plants = []
                   </TableCell>
                   <TableCell className="px-5 py-4 text-start">
                     <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${mixer.status === "active"
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        mixer.status === "active"
                           ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                           : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                        }`}
+                      }`}
                     >
                       {mixer.status.charAt(0).toUpperCase() + mixer.status.slice(1)}
                     </span>

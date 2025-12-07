@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import PumpsTable from "./PumpsTable";
@@ -539,10 +540,11 @@ export default function PumpsContainer() {
               >
                 <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                 <span
-                  className={`text-xs ${selectedPumpType === "Line"
-                    ? "text-blue-600 dark:text-blue-400 font-medium"
-                    : "text-gray-500 dark:text-gray-400"
-                    }`}
+                  className={`text-xs ${
+                    selectedPumpType === "Line"
+                      ? "text-blue-600 dark:text-blue-400 font-medium"
+                      : "text-gray-500 dark:text-gray-400"
+                  }`}
                 >
                   Line
                 </span>
@@ -553,10 +555,11 @@ export default function PumpsContainer() {
               >
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
                 <span
-                  className={`text-xs ${selectedPumpType === "Boom"
-                    ? "text-green-600 dark:text-green-400 font-medium"
-                    : "text-gray-500 dark:text-gray-400"
-                    }`}
+                  className={`text-xs ${
+                    selectedPumpType === "Boom"
+                      ? "text-green-600 dark:text-green-400 font-medium"
+                      : "text-gray-500 dark:text-gray-400"
+                  }`}
                 >
                   Boom
                 </span>
@@ -767,7 +770,7 @@ export default function PumpsContainer() {
               ) : filteredData.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-4">
                   <p className="text-gray-800 dark:text-white/90 text-lg font-medium">
-                    {session?.role === "company_admin" 
+                    {session?.role === "company_admin"
                       ? "No pumps in your company yet. Create the first pump!"
                       : session?.sub_role === "viewer"
                       ? "No pumps in your company yet. Contact your company admin."
@@ -801,12 +804,14 @@ export default function PumpsContainer() {
           <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Pump</h4>
 
           <div
-            className={`flex h-6 w-fit rounded border border-black ${newPump.type ? (newPump.type === "line" ? "bg-blue-500" : "bg-green-500") : "bg-yellow-500"
-              } shadow items-center gap-1`}
+            className={`flex h-6 w-fit rounded border border-black ${
+              newPump.type ? (newPump.type === "line" ? "bg-blue-500" : "bg-green-500") : "bg-yellow-500"
+            } shadow items-center gap-1`}
           >
             <label
-              className={`flex flex-col justify-between ${newPump.type === "line" ? "bg-blue-700" : "bg-green-700"
-                } rounded-l px-1 py-1 text-[7px] text-white h-full`}
+              className={`flex flex-col justify-between ${
+                newPump.type === "line" ? "bg-blue-700" : "bg-green-700"
+              } rounded-l px-1 py-1 text-[7px] text-white h-full`}
             >
               <img className="h-2 w-auto" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" />
               IND

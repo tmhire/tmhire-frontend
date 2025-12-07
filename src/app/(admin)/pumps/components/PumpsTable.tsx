@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
@@ -38,7 +39,14 @@ interface PumpsTableProps {
   isViewer?: boolean;
 }
 
-export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembers, isViewer = false }: PumpsTableProps) {
+export default function PumpsTable({
+  data,
+  onEdit,
+  onDelete,
+  plantMap,
+  teamMembers,
+  isViewer = false,
+}: PumpsTableProps) {
   const { creatorLookup } = useCreatorLookup();
 
   const getCreator = useMemo(() => {
@@ -60,9 +68,7 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembe
       <div className="flex flex-col">
         <span className="font-medium text-gray-800 dark:text-white/90">{creator.name || "Unknown"}</span>
         {roleLabel && (
-          <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-            {roleLabel.replace(/_/g, " ")}
-          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">{roleLabel.replace(/_/g, " ")}</span>
         )}
       </div>
     );
@@ -173,12 +179,14 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembe
                   </TableCell>
                   <TableCell className="px-3 py-2 text-start">
                     <div
-                      className={`flex w-full rounded-lg border-2 border-black shadow items-center ${pump.type === "line" ? "bg-blue-500" : "bg-green-500"
-                        }`}
+                      className={`flex w-full rounded-lg border-2 border-black shadow items-center ${
+                        pump.type === "line" ? "bg-blue-500" : "bg-green-500"
+                      }`}
                     >
                       <label
-                        className={`flex flex-col justify-between gap-1 text-center rounded-l p-2 text-[6px] font-bold text-white ${pump.type === "line" ? "bg-blue-700" : "bg-green-700"
-                          }`}
+                        className={`flex flex-col justify-between gap-1 text-center rounded-l p-2 text-[6px] font-bold text-white ${
+                          pump.type === "line" ? "bg-blue-700" : "bg-green-700"
+                        }`}
                       >
                         <img className="h-3" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" />
                         {pump.type === "line" ? "LINE" : "BOOM"}
@@ -220,10 +228,11 @@ export default function PumpsTable({ data, onEdit, onDelete, plantMap, teamMembe
                   </TableCell>
                   <TableCell className="px-3 py-4 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${pump.status === "active"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                        : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                        }`}
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        pump.status === "active"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                      }`}
                     >
                       {pump.status.charAt(0).toUpperCase() + pump.status.slice(1)}
                     </span>
