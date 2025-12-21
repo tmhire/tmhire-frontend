@@ -2096,17 +2096,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 truncate -mr-2">
                       Pump End Time <span className="text-gray-500 text-[10px] pl-1">(24h)</span>
                     </label>
-                    <Input
-                      type="number"
-                      name="oneWayKm"
-                      value={formData.oneWayKm ? parseFloat(formData.oneWayKm) : ""}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setFormData((prev) => ({ ...prev, oneWayKm: v }));
-                        setHasChanged(true);
-                      }}
-                      placeholder="Enter kilometers"
-                    />
+                    <div className="relative">
+                      <TimeInput
+                        type="time"
+                        name="endTime"
+                        format="hh:mm"
+                        value={pumpEndTime}
+                        disabled
+                        className="cursor-not-allowed bg-gray-100 dark:bg-gray-800"
+                      />
+                      <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
+                        <Clock className="size-5" />
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3647,11 +3649,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           </div>
         )}
 
-        {step === 1.3 && (
+        {step === 1.1 && (
           <div className="flex justify-between mt-2">
             <Button onClick={handleBack} variant="outline" className="flex items-center gap-2">
               <ArrowLeft size={16} />
-              Back to Pumping Details
+              Back to Pour Details
             </Button>
             <div>
               <span className="text-red-500">*</span> Compulsory, all other fields are optional

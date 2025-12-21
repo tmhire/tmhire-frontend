@@ -122,6 +122,14 @@ type TripRow = Schedule["output_table"][number] & {
   cushion_time?: number | null;
 };
 
+type TM = {
+  _id: string;
+  identifier: string;
+  plant_id?: string;
+  status?: string;
+  capacity: number;
+};
+
 // Utility function to calculate pump start time from plant
 const calculatePumpStartTimeFromPlant = (schedule: Schedule, preferredFormat?: string): string => {
   const pump_start = schedule.output_table?.length > 0 ? schedule.output_table[0].pump_start : null;
@@ -397,6 +405,24 @@ export default function ScheduleViewPage() {
       return data.data;
     },
   });
+
+  const { data: tms } = useQuery<TM[]>({
+    queryKey: ["tms"],
+    queryFn: async () => {
+      const response = await fetchWithAuth(`/tms`);
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message || "Failed to fetch schedule");
+      return data.data;
+    },
+  });
+
+  const tmCapacityMap: Record<string, number> = {};
+
+  if (tms) {
+    tms.forEach((t) => {
+      tmCapacityMap[t._id] = t.capacity;
+    });
+  }
 
   // Get creator user details
   const { user: creatorUser } = useUserById(schedule?.created_by);
@@ -1750,9 +1776,9 @@ export default function ScheduleViewPage() {
           // Get all TM IDs and max number of trips
           const tmIds = Object.keys(tmTrips);
           const maxTrips = Math.max(...Object.values(tmTrips).map((trips) => trips.length));
-          const totalVolumeArr = tmIds.map((tmId) =>
-            tmTrips[tmId].reduce((sum, trip) => sum + (trip.completed_capacity || 0), 0)
-          );
+          // const totalVolumeArr = tmIds.map((tmId) =>
+          //   tmTrips[tmId].reduce((sum, trip) => sum + (trip.completed_capacity || 0), 0)
+          // );
           // Helper to format overall time range
           function formatOverallRange(trips: Schedule["output_table"], preferredFormat?: string) {
             if (!trips.length) return "-";
@@ -1797,8 +1823,14 @@ export default function ScheduleViewPage() {
           const avgTotalHours = totalHoursArr.length
             ? totalHoursArr.reduce((a, b) => a + b, 0) / totalHoursArr.length
             : 0;
-          const avgTotalVolume = totalVolumeArr.length
-            ? totalVolumeArr.reduce((a, b) => a + b, 0) / totalVolumeArr.length
+          const carriedVolumeArr = tmIds.map((tmId) => {
+            const trips = tmTrips[tmId] || [];
+            const capacity = tmCapacityMap[tmId] || 0;
+            return trips.length * capacity;
+          });
+
+          const avgTotalVolume = carriedVolumeArr.length
+            ? carriedVolumeArr.reduce((a, b) => a + b, 0) / carriedVolumeArr.length
             : 0;
           // For TM label, use identifier if available
           const tmIdToIdentifier: Record<string, string> = {};
@@ -1837,9 +1869,11 @@ export default function ScheduleViewPage() {
                 <tbody>
                   {tmIds.map((tmId, index) => {
                     const trips = tmTrips[tmId];
+                    console.log("Fetched TMs data:", tms);
+                    const capacity = tmCapacityMap[tmId] || 0;
                     const overallRange = formatOverallRange(trips, profile?.preferred_format);
                     const totalHours = getTotalHours(trips);
-                    const totalVolume = trips.reduce((sum, trip) => sum + (trip.completed_capacity || 0), 0);
+                    const totalVolume = trips.length * capacity;
 
                     // Calculate rounded times
                     const starts = trips
