@@ -153,10 +153,8 @@ interface PastSchedule {
 }
 
 const steps = [
-  { id: 1, name: "Schedule Details" },
-  { id: 1.1, name: "Pour Details", type: "subStep" },
-  { id: 1.2, name: "Pumping Details", type: "subStep" },
-  { id: 1.3, name: "Transit Mixer Trip Log", type: "subStep" },
+  { id: 1, name: "Pour Details" },
+  { id: 1.1, name: "Transit Mixer Trip Log", type: "subStep" },
   { id: 2, name: "Pump Selection" },
   { id: 3, name: "TM Selection" },
 ];
@@ -190,9 +188,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const template = searchParams.get("template");
   const { data: session, status } = useSession();
   const { fetchWithAuth } = useApiClient();
-  const {} = useToast();
+  const { } = useToast();
   const { startAction, completeAction } = createApiActionToast();
-  const [step, setStep] = useState(schedule_id ? 2 : 1);
+  const [step, setStep] = useState(schedule_id ? 2 : 0);
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [pumpType, setPumpType] = useState<"line" | "boom">("line");
   const [selectedPump, setSelectedPump] = useState<string>("");
@@ -501,8 +499,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           setOverruleTMCount(true);
           setCustomTMCount(pastSchedule.tm_overrule);
         }
-        // Move to first sub-step
-        setStep(1.1);
+        // Move to first step
+        setStep(1);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -535,8 +533,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             data.data.input_params.unloading_time && data.data.input_params.unloading_time !== 0
               ? data.data.input_params.unloading_time.toString()
               : pumping_speed && avgTMCap
-              ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
-              : "",
+                ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
+                : "",
           pumpOnwardTime: data.data.input_params.pump_onward_time.toString(),
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
@@ -565,7 +563,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         setIsBurstModel(!!data?.data?.input_params?.is_burst_model);
         setComputedScheduleName(
           data?.data?.schedule_no ||
-            `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
+          `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
         );
         const tm_ids = new Set();
         const tmSequence: string[] = [];
@@ -913,7 +911,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   };
 
   const handleNext = async () => {
-    if (step === 1) {
+    if (step === 0) {
       const params = new URLSearchParams(searchParams.toString());
       if (!selectedPastSchedule) {
         setSelectedPastSchedule("");
@@ -946,7 +944,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             siteSupervisorId: pastSchedule?.site_supervisor_id || "",
             cubeAtSite: pastSchedule?.cube_at_site || false,
             creditTerms: pastSchedule?.credit_terms || "",
-            fieldTechnicianId: pastSchedule?.field_technician_id || "",
+            fieldTechnicianId: pastSchedule?.field_technician_id || ""
           }));
           if (pastSchedule?.tm_overrule) {
             setOverruleTMCount(true);
@@ -955,14 +953,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         }
       }
       router.replace(`?${params.toString()}`, { scroll: false });
+      setStep(1);
+    } else if (step === 1) {
+      // Move to Trip Log
       setStep(1.1);
     } else if (step === 1.1) {
-      // Move to second sub-step
-      setStep(1.2);
-    } else if (step === 1.2) {
-      // Move to third sub-step
-      setStep(1.3);
-    } else if (step === 1.3) {
       // Complete step 1 and move to step 2
       const success = await calculateRequiredTMs();
       if (success) {
@@ -980,14 +975,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   };
 
   const handleBack = () => {
-    if (step === 1.1) {
+    if (step === 1) {
+      setStep(0);
+    } else if (step === 1.1) {
       setStep(1);
-    } else if (step === 1.2) {
-      setStep(1.1);
-    } else if (step === 1.3) {
-      setStep(1.2);
     } else if (step === 2) {
-      setStep(1.3);
+      setStep(1.1);
     } else if (step === 3) {
       setStep(2);
     }
@@ -995,11 +988,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   const filteredPumps = pumpsData?.filter((p: Pump) => p.type === pumpType && p.status === "active") || [];
   const progressPercentage = (() => {
-    if (step === 1) return 0;
-    if (step === 1.1) return (100 / (steps.length - 1)) * 1;
-    if (step === 1.2) return (100 / (steps.length - 1)) * 2;
-    if (step === 1.3) return (100 / (steps.length - 1)) * 3;
-    if (step === 2) return (100 / (steps.length - 1)) * 4;
+    if (step === 0) return 0;
+    if (step === 1) return (100 / (steps.length - 1)) * 1;
+    if (step === 1.1) return (100 / (steps.length - 1)) * 2;
+    if (step === 2) return (100 / (steps.length - 1)) * 3;
     if (step === 3) return 100;
     return 0;
   })();
@@ -1023,20 +1015,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   // Helper to check if all required fields are filled for each sub-step
   const isStep1FormValid = () => {
-    if (step === 1.1) {
-      // Pour Details validation
+    if (step === 1) {
+      // Pour Details + Pumping Details validation
       return (
         !!selectedClient &&
         !!selectedProject &&
         !!formData.quantity &&
         !!formData.speed &&
         !!formData.scheduleDate &&
-        !!formData.startTime
+        !!formData.startTime &&
+        !!formData.pumpOnwardTime &&
+        (pumpType === "line" ? (!!formData.pumpFixingTime && !!formData.pumpRemovalTime) : true)
       );
-    } else if (step === 1.2) {
-      // Pumping Details validation
-      return !!formData.pumpOnwardTime && !!formData.pumpFixingTime && !!formData.pumpRemovalTime;
-    } else if (step === 1.3) {
+    } else if (step === 1.1) {
       // Transit Mixer Trip Log validation
       const requiredFields = ["bufferTime", "loadTime", "onwardTime", "unloadingTime", "returnTime"];
 
@@ -1429,101 +1420,85 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       <div className="flex flex-row w-full mb-4 items-center">
         <div className="w-1/3">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">New Pumping Schedule</h2>
-          <p className="text-gray-500 dark:text-gray-400">Step {step} of 4</p>
+          {step > 0 && <p className="text-gray-500 dark:text-gray-400">Step {step} of 4</p>}
         </div>
         <div className="w-full">
-          <div className="relative">
-            {/* Background Bar */}
-            <div className="absolute top-3 left-0 right-3 h-0.5 bg-gray-300 dark:bg-gray-600 rounded-full" />
+          {step > 0 && (
+            <div className="relative">
+              {/* Background Bar */}
+              <div className="absolute top-3 left-0 right-3 h-0.5 bg-gray-300 dark:bg-gray-600 rounded-full" />
 
-            {/* Animated Progress Bar */}
-            <motion.div
-              className="absolute top-3 left-0  h-0.5 bg-brand-500 rounded-full"
-              initial={{ width: "0%" }}
-              animate={{ width: `${progressPercentage}%` }}
-              transition={{ duration: 0.8, ease: "easeInOut" }}
-            />
+              {/* Animated Progress Bar */}
+              <motion.div
+                className="absolute top-3 left-0  h-0.5 bg-brand-500 rounded-full"
+                initial={{ width: "0%" }}
+                animate={{ width: `${progressPercentage}%` }}
+                transition={{ duration: 0.8, ease: "easeInOut" }}
+              />
 
-            {/* Steps */}
-            <div className="relative flex justify-between">
-              {steps.map((s, index) => (
-                <motion.div
-                  key={s.id}
-                  className={`flex flex-col ${index == 0 ? "items-start" : index == 5 ? "items-end" : "items-center"} `}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1, duration: 0.5 }}
-                >
-                  {/* Step Circle */}
+              {/* Steps */}
+              <div className="relative flex justify-between">
+                {steps.map((s, index) => (
                   <motion.div
-                    className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${
-                      step >= s.id
+                    key={s.id}
+                    className={`flex flex-col ${index == 0 ? "items-start" : index == 5 ? "items-end" : "items-center"} `}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1, duration: 0.5 }}
+                  >
+                    {/* Step Circle */}
+                    <motion.div
+                      className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${step >= s.id
                         ? "border-brand-500 bg-brand-500 text-white shadow-lg"
                         : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                    }`}
-                    animate={{
-                      scale: s.type === "subStep" ? (step === s.id ? 0.9 : 0.8) : step === s.id ? 1.3 : 1,
-                      boxShadow: step === s.id ? "0 0 20px rgba(var(--brand-500-rgb, 59, 130, 246), 0.5)" : "none",
-                    }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {Number(step) > Number(s.id) && !String(step).startsWith(`${s.id}.`) ? (
-                      <motion.div
-                        initial={{ scale: 0, rotate: -90 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        transition={{ delay: 0.2, duration: 0.4, type: "spring" }}
-                      >
-                        <CheckCircle2 className="w-3 h-3" />
-                      </motion.div>
-                    ) : (
-                      <motion.span
-                        className="text-xs font-medium"
-                        animate={{
-                          color: step >= s.id ? "#ffffff" : isDarkMode ? "#9ca3af" : "#6b7280",
-                        }}
-                      >
-                        {s.id}
-                      </motion.span>
-                    )}
-                  </motion.div>
-
-                  {/* Step Name */}
-                  <motion.span
-                    className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${
-                      step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
-                    }`}
-                    animate={{
-                      fontWeight: step >= s.id ? 500 : 400,
-                    }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {s.name}
-                  </motion.span>
-
-                  {/* Active Step Pulse */}
-                  {/* {step === s.id && (
-                    <motion.div
-                      className="absolute w-8 h-8 bg-brand-500 rounded-full opacity-20 -top-1 -left-1"
+                        }`}
                       animate={{
-                        scale: [1, 1.5, 1],
-                        opacity: [0.2, 0, 0.2],
+                        scale: s.type === "subStep" ? (step === s.id ? 0.9 : 0.8) : step === s.id ? 1.3 : 1,
+                        boxShadow: step === s.id ? "0 0 20px rgba(var(--brand-500-rgb, 59, 130, 246), 0.5)" : "none",
                       }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "easeInOut",
+                      transition={{ duration: 0.3 }}
+                    >
+                      {Number(step) > Number(s.id) && !String(step).startsWith(`${s.id}.`) ? (
+                        <motion.div
+                          initial={{ scale: 0, rotate: -90 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ delay: 0.2, duration: 0.4, type: "spring" }}
+                        >
+                          <CheckCircle2 className="w-3 h-3" />
+                        </motion.div>
+                      ) : (
+                        <motion.span
+                          className="text-xs font-medium"
+                          animate={{
+                            color: step >= s.id ? "#ffffff" : isDarkMode ? "#9ca3af" : "#6b7280",
+                          }}
+                        >
+                          {s.id}
+                        </motion.span>
+                      )}
+                    </motion.div>
+
+                    {/* Step Name */}
+                    <motion.span
+                      className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
+                        }`}
+                      animate={{
+                        fontWeight: step >= s.id ? 500 : 400,
                       }}
-                    />
-                  )} */}
-                </motion.div>
-              ))}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {s.name}
+                    </motion.span>
+                  </motion.div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
       <div>
-        {step === 1 ? (
+        {step === 0 ? (
           <div className="max-w-6xl mx-auto p-6 space-y-6">
             {!showPastList ? (
               <div className="flex flex-col items-center gap-4 mt-10">
@@ -1632,11 +1607,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     filteredSchedules?.map((schedule) => (
                       <div
                         key={schedule._id}
-                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
-                          selectedPastSchedule === schedule._id
-                            ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
-                            : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
-                        }`}
+                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${selectedPastSchedule === schedule._id
+                          ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
+                          : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
+                          }`}
                         onClick={() => setSelectedPastSchedule(schedule._id)}
                       >
                         <div className="flex items-start justify-between">
@@ -1644,9 +1618,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             <div className="flex items-center gap-2 mb-2">
                               <h4 className="font-semibold text-gray-900 dark:text-white ">{schedule.schedule_no}</h4>
                               <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  pumpColors[schedule.pump_type]
-                                }`}
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${pumpColors[schedule.pump_type]
+                                  }`}
                               >
                                 {schedule?.pump_type?.toUpperCase()}
                               </span>
@@ -1691,11 +1664,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           </div>
 
                           <div
-                            className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                              selectedPastSchedule === schedule._id
-                                ? "border-brand-500 bg-brand-500"
-                                : "border-gray-300 dark:border-gray-600"
-                            }`}
+                            className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPastSchedule === schedule._id
+                              ? "border-brand-500 bg-brand-500"
+                              : "border-gray-300 dark:border-gray-600"
+                              }`}
                           >
                             {selectedPastSchedule === schedule._id && (
                               <div className="w-2 h-2 rounded-full bg-white"></div>
@@ -1718,7 +1690,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               </div>
             )}
           </div>
-        ) : step === 1.1 ? (
+        ) : step === 1 ? (
           <div className="space-y-4">
             {/* Pour Details Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30 mb-24">
@@ -2124,33 +2096,139 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 truncate -mr-2">
                       Pump End Time <span className="text-gray-500 text-[10px] pl-1">(24h)</span>
                     </label>
-                    <div className="relative">
-                      <TimeInput
-                        type="time"
-                        name="endTime"
-                        format="hh:mm"
-                        value={pumpEndTime}
-                        disabled
-                        className="cursor-not-allowed bg-gray-100 dark:bg-gray-800"
-                      />
-                      <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
-                        <Clock className="size-5" />
-                      </span>
-                    </div>
+                    <Input
+                      type="number"
+                      name="oneWayKm"
+                      value={formData.oneWayKm ? parseFloat(formData.oneWayKm) : ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setFormData((prev) => ({ ...prev, oneWayKm: v }));
+                        setHasChanged(true);
+                      }}
+                      placeholder="Enter kilometers"
+                    />
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        ) : step === 1.2 ? (
-          <div className="space-y-4">
-            {/* Pumping Details Section */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
-              <div className="flex justify-between items-center mb-4 w-full">
+
+              <div className="flex justify-between items-center mb-4 w-full mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Pumping Details</h3>
               </div>
 
               <div className="grid grid-cols-5 gap-6">
+
+                {/* Cube at Site */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Cube at Site
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cubeAtSite"
+                        checked={formData.cubeAtSite === true}
+                        onChange={() => {
+                          setFormData((prev) => ({ ...prev, cubeAtSite: true }));
+                          setHasChanged(true);
+                        }}
+                        className="w-4 h-4 text-brand-600 focus:ring-brand-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Yes</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cubeAtSite"
+                        checked={formData.cubeAtSite === false}
+                        onChange={() => {
+                          setFormData((prev) => ({ ...prev, cubeAtSite: false }));
+                          setHasChanged(true);
+                        }}
+                        className="w-4 h-4 text-brand-600 focus:ring-brand-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">No</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* MIX CODE */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mix Code</label>
+                  <Input
+                    type="string"
+                    name="mixCode"
+                    value={formData.mixCode}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFormData((prev) => ({ ...prev, mixCode: v }));
+                      setHasChanged(true);
+                    }}
+                    placeholder="Enter mix code"
+                  />
+                </div>
+
+                {/* SLUMP AT SITE */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Slump at Site (mm)
+                  </label>
+                  <Input
+                    type="number"
+                    name="slumpAtSite"
+                    value={parseFloat(formData.slumpAtSite)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "") {
+                        setFormData((prev) => ({ ...prev, slumpAtSite: "" }));
+                        return;
+                      }
+                      const num = Math.max(0, Math.min(300, Number(v)));
+                      setFormData((prev) => ({ ...prev, slumpAtSite: num.toString() }));
+                      setHasChanged(true);
+                    }}
+                    placeholder="Enter value between 0-300"
+                    min="0"
+                    max="300"
+                  />
+                </div>
+
+                {/* Credit Terms */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Credit Terms
+                  </label>
+                  <Input
+                    type="text"
+                    name="creditTerms"
+                    value={formData.creditTerms}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v.length <= 20) {
+                        setFormData((prev) => ({ ...prev, creditTerms: v }));
+                        setHasChanged(true);
+                      }
+                    }}
+                    placeholder="Enter credit terms (max 20 chars)"
+                    maxLength={20}
+                  />
+                </div>
+
+                {/* REMARKS */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Remarks</label>
+                  <Input
+                    type="string"
+                    name="remarks"
+                    value={formData.remarks}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFormData((prev) => ({ ...prev, remarks: v }));
+                      setHasChanged(true);
+                    }}
+                    placeholder="Enter remarks"
+                  />
+                </div>
                 {/* Pump Onward Time to Site */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -2254,142 +2332,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   />
                 </div>
               </div>
-
-              <div className="grid grid-cols-10 gap-6 mt-6">
-                {/* One Way distance to site from Plant in KM */}
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    One Way distance to site from Plant (km)
-                  </label>
-                  <Input
-                    type="number"
-                    name="oneWayKm"
-                    value={formData.oneWayKm ? parseFloat(formData.oneWayKm) : ""}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setFormData((prev) => ({ ...prev, oneWayKm: v }));
-                      setHasChanged(true);
-                    }}
-                    placeholder="Enter kilometers"
-                  />
-                </div>
-
-                {/* Cube at Site */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Cube at Site
-                  </label>
-                  <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="cubeAtSite"
-                        checked={formData.cubeAtSite === true}
-                        onChange={() => {
-                          setFormData((prev) => ({ ...prev, cubeAtSite: true }));
-                          setHasChanged(true);
-                        }}
-                        className="w-4 h-4 text-brand-600 focus:ring-brand-500"
-                      />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Yes</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="cubeAtSite"
-                        checked={formData.cubeAtSite === false}
-                        onChange={() => {
-                          setFormData((prev) => ({ ...prev, cubeAtSite: false }));
-                          setHasChanged(true);
-                        }}
-                        className="w-4 h-4 text-brand-600 focus:ring-brand-500"
-                      />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">No</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* MIX CODE */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mix Code</label>
-                  <Input
-                    type="string"
-                    name="mixCode"
-                    value={formData.mixCode}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setFormData((prev) => ({ ...prev, mixCode: v }));
-                      setHasChanged(true);
-                    }}
-                    placeholder="Enter mix code"
-                  />
-                </div>
-
-                {/* SLUMP AT SITE */}
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Slump at Site (mm)
-                  </label>
-                  <Input
-                    type="number"
-                    name="slumpAtSite"
-                    value={parseFloat(formData.slumpAtSite)}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v === "") {
-                        setFormData((prev) => ({ ...prev, slumpAtSite: "" }));
-                        return;
-                      }
-                      const num = Math.max(0, Math.min(300, Number(v)));
-                      setFormData((prev) => ({ ...prev, slumpAtSite: num.toString() }));
-                      setHasChanged(true);
-                    }}
-                    placeholder="Enter value between 0-300"
-                    min="0"
-                    max="300"
-                  />
-                </div>
-
-                {/* Credit Terms */}
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Credit Terms
-                  </label>
-                  <Input
-                    type="text"
-                    name="creditTerms"
-                    value={formData.creditTerms}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v.length <= 20) {
-                        setFormData((prev) => ({ ...prev, creditTerms: v }));
-                        setHasChanged(true);
-                      }
-                    }}
-                    placeholder="Enter credit terms (max 20 chars)"
-                    maxLength={20}
-                  />
-                </div>
-
-                {/* REMARKS */}
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Remarks</label>
-                  <Input
-                    type="string"
-                    name="remarks"
-                    value={formData.remarks}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setFormData((prev) => ({ ...prev, remarks: v }));
-                      setHasChanged(true);
-                    }}
-                    placeholder="Enter remarks"
-                  />
-                </div>
-              </div>
             </div>
           </div>
-        ) : step === 1.3 ? (
+        ) : step === 1.1 ? (
           <div className="space-y-4 mb-20">
             {/* Transit Mixer Trip Details Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900/30">
@@ -2566,18 +2511,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   </div>
 
                   {/* Fleet Sizing Section moved to right column */}
-                </div>
-
-                {/* Center Section: Donut Chart */}
-                <div className="lg:col-span-4 flex items-center justify-center">
-                  <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-6 w-full">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-6 text-center">
-                      Cycle Time Breakdown
-                    </h3>
-                    <div className="flex justify-center">
-                      <DonutChart data={cycleTimeData} size={280} />
-                    </div>
-                  </div>
                 </div>
 
                 {/* Right Section: Fleet Sizing + TM Trip Distribution (stacked) */}
@@ -2820,6 +2753,17 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     )}
                   </div>
                 </div>
+                {/* Center Section: Donut Chart */}
+                <div className="lg:col-span-4 flex items-center justify-center">
+                  <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-6 w-full">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-6 text-center">
+                      Cycle Time Breakdown
+                    </h3>
+                    <div className="flex justify-center">
+                      <DonutChart data={cycleTimeData} size={280} />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -2922,11 +2866,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <div className="flex items-center gap-3 py-2 pl-4">
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select 1 Pump</h3>
                     <span
-                      className={`px-3 py-1 text-sm font-medium rounded-full ${
-                        pumpType === "line"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                          : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                      }`}
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${pumpType === "line"
+                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                        : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                        }`}
                     >
                       {pumpType === "line" ? "Line Pump" : "Boom Pump"}
                     </span>
@@ -3184,11 +3127,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
                                 {/* Pump Type Chip */}
                                 <span
-                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                    pumpType === "line"
-                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                  }`}
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${pumpType === "line"
+                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                    : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                    }`}
                                 >
                                   {pumpType === "line" ? "Line" : "Boom"}
                                 </span>
@@ -3670,7 +3612,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         ) : null}
       </div>
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-2 ml-24 dark:bg-gray-900 dark:border-gray-700">
-        {step === 1.1 && (
+        {step === 1 && (
           <div className="flex justify-between mt-2">
             {!schedule_id ? (
               <Button onClick={handleBack} variant="outline" className="flex items-center gap-2">
