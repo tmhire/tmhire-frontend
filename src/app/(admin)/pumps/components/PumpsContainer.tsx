@@ -432,6 +432,7 @@ export default function PumpsContainer() {
     setEditedPump((prev) => ({
       ...prev,
       [name]: newValue,
+      ...(name === "type" && value === "boom" ? { pipeline_gang_id: "" } : {}),
     }));
   };
 
@@ -478,6 +479,7 @@ export default function PumpsContainer() {
     setNewPump((prev) => ({
       ...prev,
       [name]: name === "capacity" ? Number(value) : value,
+      ...(name === "type" && value === "boom" ? { pipeline_gang_id: "" } : {}),
     }));
   };
 
@@ -540,11 +542,10 @@ export default function PumpsContainer() {
               >
                 <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                 <span
-                  className={`text-xs ${
-                    selectedPumpType === "Line"
+                  className={`text-xs ${selectedPumpType === "Line"
                       ? "text-blue-600 dark:text-blue-400 font-medium"
                       : "text-gray-500 dark:text-gray-400"
-                  }`}
+                    }`}
                 >
                   Line
                 </span>
@@ -555,11 +556,10 @@ export default function PumpsContainer() {
               >
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
                 <span
-                  className={`text-xs ${
-                    selectedPumpType === "Boom"
+                  className={`text-xs ${selectedPumpType === "Boom"
                       ? "text-green-600 dark:text-green-400 font-medium"
                       : "text-gray-500 dark:text-gray-400"
-                  }`}
+                    }`}
                 >
                   Boom
                 </span>
@@ -773,8 +773,8 @@ export default function PumpsContainer() {
                     {session?.role === "company_admin"
                       ? "No pumps in your company yet. Create the first pump!"
                       : session?.sub_role === "viewer"
-                      ? "No pumps in your company yet. Contact your company admin."
-                      : "No pumps in your company yet. Create the first pump!"}
+                        ? "No pumps in your company yet. Contact your company admin."
+                        : "No pumps in your company yet. Create the first pump!"}
                   </p>
                   {session?.sub_role !== "viewer" && (
                     <Button size="sm" onClick={handleAddPump}>
@@ -804,14 +804,12 @@ export default function PumpsContainer() {
           <h4 className="font-semibold text-gray-800 mb-7 text-title-sm dark:text-white/90">Add New Pump</h4>
 
           <div
-            className={`flex h-6 w-fit rounded border border-black ${
-              newPump.type ? (newPump.type === "line" ? "bg-blue-500" : "bg-green-500") : "bg-yellow-500"
-            } shadow items-center gap-1`}
+            className={`flex h-6 w-fit rounded border border-black ${newPump.type ? (newPump.type === "line" ? "bg-blue-500" : "bg-green-500") : "bg-yellow-500"
+              } shadow items-center gap-1`}
           >
             <label
-              className={`flex flex-col justify-between ${
-                newPump.type === "line" ? "bg-blue-700" : "bg-green-700"
-              } rounded-l px-1 py-1 text-[7px] text-white h-full`}
+              className={`flex flex-col justify-between ${newPump.type === "line" ? "bg-blue-700" : "bg-green-700"
+                } rounded-l px-1 py-1 text-[7px] text-white h-full`}
             >
               <img className="h-2 w-auto" src="https://cdn.cdnlogo.com/logos/e/51/eu.svg" alt="EU" />
               IND
@@ -961,24 +959,29 @@ export default function PumpsContainer() {
           </div>
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Pipeline Gang <span className="text-red-500">*</span>
+              Pipeline Gang {newPump.type !== "boom" && <span className="text-red-500">*</span>}
             </label>
             <div className="relative">
               <button
                 type="button"
+                disabled={newPump.type === "boom"}
                 onClick={() => setIsCreateGangDropdownOpen(!isCreateGangDropdownOpen)}
-                className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
+                className={`dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between ${newPump.type === "boom" ? "cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-800/50" : ""
+                  } ${newPump.pipeline_gang_id ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-white/30"
+                  }`}
               >
                 <span
                   className={
-                    newPump.pipeline_gang_id ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-white/30"
+                    newPump.type === "boom" ? "text-gray-500 dark:text-gray-400" : ""
                   }
                 >
-                  {newPump.pipeline_gang_id
-                    ? pipelineGangs.find((m) => m._id === newPump.pipeline_gang_id)?.name || "Select pipeline gang"
-                    : "Select pipeline gang"}
+                  {newPump.type === "boom"
+                    ? "No pipeline for boom pumps"
+                    : newPump.pipeline_gang_id
+                      ? pipelineGangs.find((m) => m._id === newPump.pipeline_gang_id)?.name || "Select pipeline gang"
+                      : "Select pipeline gang"}
                 </span>
-                <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+                {newPump.type !== "boom" && <ChevronDownIcon className="w-4 h-4 text-gray-400" />}
               </button>
 
               <Dropdown
@@ -1163,26 +1166,29 @@ export default function PumpsContainer() {
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Pipeline Gang <span className="text-red-500">*</span>
+                Pipeline Gang {editedPump.type !== "boom" && <span className="text-red-500">*</span>}
               </label>
               <div className="relative">
                 <button
                   type="button"
+                  disabled={editedPump.type === "boom"}
                   onClick={() => setIsEditGangDropdownOpen(!isEditGangDropdownOpen)}
-                  className="dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between"
+                  className={`dropdown-toggle w-full h-11 rounded-lg border border-gray-200 bg-transparent py-2.5 px-4 text-sm shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:placeholder:text-white/30 dark:focus:border-brand-800 flex items-center justify-between ${editedPump.type === "boom" ? "cursor-not-allowed opacity-50 bg-gray-50 dark:bg-gray-800/50" : ""
+                    } ${editedPump.pipeline_gang_id ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-white/30"
+                    }`}
                 >
                   <span
                     className={
-                      editedPump.pipeline_gang_id
-                        ? "text-gray-800 dark:text-white/90"
-                        : "text-gray-400 dark:text-white/30"
+                      editedPump.type === "boom" ? "text-gray-500 dark:text-gray-400" : ""
                     }
                   >
-                    {editedPump.pipeline_gang_id
-                      ? pipelineGangs.find((m) => m._id === editedPump.pipeline_gang_id)?.name || "Select pipeline gang"
-                      : "Select pipeline gang"}
+                    {editedPump.type === "boom"
+                      ? "No pipeline for boom pumps"
+                      : editedPump.pipeline_gang_id
+                        ? pipelineGangs.find((m) => m._id === editedPump.pipeline_gang_id)?.name || "Select pipeline gang"
+                        : "Select pipeline gang"}
                   </span>
-                  <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+                  {editedPump.type !== "boom" && <ChevronDownIcon className="w-4 h-4 text-gray-400" />}
                 </button>
 
                 <Dropdown

@@ -368,7 +368,15 @@ export default function TeamContainer() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Teams</h2>
+        <div>
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">
+            Teams
+          </h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Roles available under this Team: Sales Engineer · Pump Operator ·
+            Pipeline Gang · Site Supervisor · Field Technician
+          </p>
+        </div>
         {session?.sub_role !== "viewer" && (
           <nav>
             <Button className="flex items-center gap-2" size="sm" onClick={handleAddTeam}>
@@ -523,8 +531,8 @@ export default function TeamContainer() {
                     {session?.role === "company_admin"
                       ? "No team members in your company yet. Create the first team member!"
                       : session?.sub_role === "viewer"
-                      ? "No team members in your company yet. Contact your company admin."
-                      : "No team members in your company yet. Create the first team member!"}
+                        ? "No team members in your company yet. Contact your company admin."
+                        : "No team members in your company yet. Create the first team member!"}
                   </p>
                   {session?.sub_role !== "viewer" && (
                     <Button size="sm" onClick={handleAddTeam}>

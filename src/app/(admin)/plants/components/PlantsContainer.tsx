@@ -851,32 +851,33 @@ export default function PlantsContainer() {
 
         <div className="space-y-4">
           <div className="flex flex-row w-full gap-2">
-            <div className="w-full">
+            <div className="w-2/4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name <span className="text-red-500">*</span></label>
               <Input
                 type="text"
                 name="name"
-                placeholder="Enter plant name (add prefix as your brand name)"
+                placeholder="Enter plant name (add prefix as company code)"
                 value={newPlant.name}
                 onChange={handleInputChange}
                 maxLength={25}
+                className="placeholder:text-s"
               />
               {nameError && <span className="text-xs text-red-600 mt-1 block">{nameError}</span>}
             </div>
-            <div className="w-full">
+            <div className="w-1/4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Capacity (m³/hr)
               </label>
               <Input
                 type="number"
                 name="capacity"
-                placeholder="Auto-calculated or enter manually"
+                placeholder="Enter Capacity"
                 value={newPlant.capacity || ""}
                 onChange={handleInputChange}
                 step={0.1}
                 min="1"
                 max="999"
-                className="w-full"
+                className="w-full placeholder:text-s"
               />
               {capacityError && <span className="text-xs text-red-600 mt-1 block">{capacityError}</span>}
             </div>
@@ -884,14 +885,14 @@ export default function PlantsContainer() {
               or
             </div>
 
-            <div className="w-full">
+            <div className="w-1/4">
               <div className="flex items-center gap-1 mb-1.5">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block">
                   Unloading Time (min) <span className="text-red-500">*</span>
                 </label>
                 <div className="group relative">
                   <Info size={16} className="text-gray-500 dark:text-gray-400 cursor-help" />
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-1000">
                     <div className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-200 text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
                       <p className="font-semibold mb-1">Standard TM Capacity = 7 m³</p>
                       <p>Capacity = (60 ÷ Time) × 7</p>
@@ -909,7 +910,7 @@ export default function PlantsContainer() {
                 onChange={handleInputChange}
                 min="1"
                 max="999"
-                className="w-full"
+                className="w-full placeholder:text-xs"
               />
               {unloadingTimeError && <span className="text-xs text-red-600 mt-1 block">{unloadingTimeError}</span>}
             </div>
@@ -1048,19 +1049,20 @@ export default function PlantsContainer() {
         {selectedPlant && (
           <div className="space-y-4">
             <div className="flex flex-row w-full gap-2">
-              <div className="w-full">
+              <div className="w-2/4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name <span className="text-red-500">*</span></label>
                 <Input
                   type="text"
                   name="name"
                   value={editedPlant.name}
                   onChange={handleEditInputChange}
-                  placeholder="Enter plant name (add prefix as your brand name)"
+                  placeholder="Enter plant name (add prefix as company code)"
                   maxLength={25}
+                  className="placeholder:text-s"
                 />
                 {editNameError && <span className="text-xs text-red-600 mt-1 block">{editNameError}</span>}
               </div>
-              <div className="w-full">
+              <div className="w-1/4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Capacity m³/hr
                 </label>
@@ -1069,8 +1071,9 @@ export default function PlantsContainer() {
                   name="capacity"
                   value={editedPlant.capacity || ""}
                   onChange={handleEditInputChange}
-                  placeholder="Auto-calculated or enter manually"
+                  placeholder="Enter Capacity"
                   step={0.1}
+                  className="w-full placeholder:text-s"
                   min="1"
                   max="999"
                 />
@@ -1079,14 +1082,14 @@ export default function PlantsContainer() {
               <div className="w-12 h-full flex items-center justify-center text-gray-500 dark:text-gray-400 mt-8">
                 or
               </div>
-              <div className="w-full">
+              <div className="w-1/4">
                 <div className="flex items-center gap-1 mb-1.5">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block">
                     Unloading Time (min) <span className="text-red-500">*</span>
                   </label>
                   <div className="group relative">
                     <Info size={16} className="text-gray-500 dark:text-gray-400 cursor-help" />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-1000">
                       <div className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-200 text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
                         <p className="font-semibold mb-1">Standard TM Capacity = 7 m³</p>
                         <p>Capacity = (60 ÷ Time) × 7</p>
@@ -1102,6 +1105,7 @@ export default function PlantsContainer() {
                   placeholder="Enter unloading time"
                   value={editedPlant.unloading_time || ""}
                   onChange={handleEditInputChange}
+                  className="w-full placeholder:text-xs"
                   min="1"
                   max="999"
                 />

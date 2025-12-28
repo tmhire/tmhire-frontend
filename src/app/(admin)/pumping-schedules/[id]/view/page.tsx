@@ -228,6 +228,14 @@ const formatVolume = (value: number): string => {
   return Number.isInteger(value) ? value.toString() : value.toFixed(2);
 };
 
+const formatMinutesToHHMM = (minutes: number): string => {
+  if (isNaN(minutes)) return "00:00";
+  const totalMinutes = Math.round(minutes);
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
+};
+
 // Compact DonutChart for Summary Card
 const DonutChart = ({
   data,
@@ -1562,143 +1570,84 @@ export default function ScheduleViewPage() {
 
       <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
         <div className="">
-          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Pump Details</h4>
+          <div className="flex flex-row gap-4 items-center justify-start mb-4">
+            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 ">Pump Details</h4>
+            <span className="text-gray-800 dark:text-white/90">
+              {(() => {
+                const pump = schedule.available_pumps.find((pump) => pump.id === schedule.pump);
+                if (!pump) return "N/A";
+
+                // Color coding based on pump type
+                const isLinePump = schedule.pump_type === "line";
+                const bgColor = isLinePump ? "bg-blue-500" : "bg-green-500";
+
+                return (
+                  <div
+                    className={`flex w-fit rounded-md border-2 border-black shadow items-center gap-2 pr-2  ${bgColor}`}
+                  >
+                    <label
+                      className={`flex flex-col justify-between bg-blue-700 rounded-l-sm p-2 text-[8px]`}
+                    >
+                      <span className="text-xs text-white">{isLinePump ? "LINE" : "BOOM"}</span>
+                    </label>
+                    <label
+                      className={`p-1 px-1 font-mono text-sm font-medium items-center ${isLinePump ? "text-white" : "text-black"
+                        } `}
+                    >
+                      {pump.identifier}
+                    </label>
+                  </div>
+                );
+              })()}
+            </span>
+          </div>
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-100/20 dark:border-white/[0.05] dark:bg-white/[0.03]">
             <div className="max-w-full overflow-x-auto">
               <Table>
                 <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                   <TableRow>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      No.
-                    </TableCell>
-                    {/* <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Type
-                    </TableCell> */}
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Start Time from Plant
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Site Reach Time
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Fixing Time (min)
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Pump Start Time
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Pumping Hours
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Pump End Time
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Removal Time (min)
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Site Leave Time
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      Total Hours Engaged
-                    </TableCell>
+                    <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Start Time from Plant</TableCell>
+                    <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400">Onward Duration (HH:MM)</TableCell>
+                    <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Site Reach Time</TableCell>
+                    <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400">Pipeline Fixing Duration</TableCell>
+                    <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Pump Start Time</TableCell>
+                    <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400">Pumping Duration</TableCell>
+                    <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400">Pipeline Removal</TableCell>
+                    <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Pump End Time</TableCell>
+                    <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Site Leave Time</TableCell>
+                    <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400">Total Hrs Engaged (HH:MM)</TableCell>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                   <TableRow>
-                    <TableCell className="px-2 py-4 text-start">
-                      <span className="text-gray-800 dark:text-white/90">
-                        {(() => {
-                          const pump = schedule.available_pumps.find((pump) => pump.id === schedule.pump);
-                          if (!pump) return "N/A";
-
-                          // Color coding based on pump type
-                          const isLinePump = schedule.pump_type === "line";
-                          const bgColor = isLinePump ? "bg-blue-500" : "bg-green-500";
-
-                          return (
-                            <div
-                              className={`flex w-fit rounded-md border-2 border-black shadow items-center gap-2 pr-2  ${bgColor}`}
-                            >
-                              <label
-                                className={`flex flex-col justify-between bg-blue-700 rounded-l-sm p-2 text-[8px]`}
-                              >
-                                <span className="text-xs text-white">{isLinePump ? "LINE" : "BOOM"}</span>
-                              </label>
-                              <label
-                                className={`p-1 px-1 font-mono text-sm font-medium items-center ${isLinePump ? "text-white" : "text-black"
-                                  } `}
-                              >
-                                {pump.identifier}
-                              </label>
-                            </div>
-                          );
-                        })()}
-                      </span>
-                    </TableCell>
-                    {/* <TableCell className="px-2 py-4 text-start">
-                      <span className="text-gray-800 dark:text-white/90">{schedule.pump_type || "N/A"}</span>
-                    </TableCell> */}
-                    <TableCell className="px-2 py-4 text-start">
+                    <TableCell className="px-2 py-1 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {calculatePumpStartTimeFromPlant(schedule, profile?.preferred_format)}
                       </span>
                     </TableCell>
-                    <TableCell className="px-2 py-4 text-start">
+                    <TableCell className="px-2 py-1 text-center" >{null}</TableCell>
+                    <TableCell className="px-2 py-1 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {calculatePumpSiteReachTime(schedule, profile?.preferred_format)}
                       </span>
                     </TableCell>
-                    <TableCell className="px-2 py-4 text-start">
-                      <span className="text-gray-800 dark:text-white/90">
-                        {schedule?.input_params.pump_fixing_time ? schedule?.input_params.pump_fixing_time : "N/A"}
-                      </span>
+                    <TableCell className="px-2 py-1 text-center" >
+                      {null}
                     </TableCell>
-                    <TableCell className="px-2 py-4 text-start">
+                    <TableCell className="px-2 py-1 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {schedule?.output_table?.length > 0
                           ? formatTimeByPreference(schedule.output_table[0].pump_start, profile?.preferred_format)
                           : "N/A"}
                       </span>
                     </TableCell>
-                    <TableCell className="px-2 py-4 text-start">
-                      <span className="text-gray-800 dark:text-white/90">
-                        {formatHoursAndMinutes(calculatePumpingHoursFromSchedule(schedule))}
-                      </span>
+                    <TableCell className="px-2 py-1 text-center" >
+                      {null}
                     </TableCell>
-                    <TableCell className="px-2 py-4 text-start">
+                    <TableCell className="px-2 py-1 text-center" >
+                      {null}
+                    </TableCell>
+                    <TableCell className="px-2 py-1 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {(() => {
                           if (!(schedule?.output_table?.length > 0)) return "N/A";
@@ -1709,12 +1658,7 @@ export default function ScheduleViewPage() {
                         })()}
                       </span>
                     </TableCell>
-                    <TableCell className="px-2 py-4 text-start">
-                      <span className="text-gray-800 dark:text-white/90">
-                        {schedule.input_params.pump_removal_time || "N/A"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="px-2 py-4 text-start">
+                    <TableCell className="px-2 py-1 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {(() => {
                           if (!(schedule?.output_table?.length > 0)) return "N/A";
@@ -1728,8 +1672,38 @@ export default function ScheduleViewPage() {
                         })()}
                       </span>
                     </TableCell>
-                    <TableCell className="px-2 py-4 text-start">
-                      <span className="text-gray-800 dark:text-white/90">
+                    <TableCell className="px-2 py-1 text-center" >
+                      {null}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="px-2 py-1">{null}</TableCell>
+                    <TableCell className="px-2 py-1 text-center">
+                      <span className="text-red-500 font-medium font-bold">
+                        {formatMinutesToHHMM(schedule.input_params.pump_onward_time || 0)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-2 py-1">{null}</TableCell>
+                    <TableCell className="px-2 py-1 text-center">
+                      <span className="text-red-500 font-medium font-bold">
+                        {formatMinutesToHHMM(schedule.input_params.pump_fixing_time || 0)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-2 py-1">{null}</TableCell>
+                    <TableCell className="px-2 py-1 text-center">
+                      <span className="text-red-500 font-medium font-bold">
+                        {formatMinutesToHHMM(calculatePumpingHoursFromSchedule(schedule) * 60)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-2 py-1 text-center">
+                      <span className="text-red-500 font-medium font-bold">
+                        {formatMinutesToHHMM(schedule.input_params.pump_removal_time || 0)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-2 py-1">{null}</TableCell>
+                    <TableCell className="px-2 py-1">{null}</TableCell>
+                    <TableCell className="px-2 py-1 text-center">
+                      <span className="text-red-500 font-medium font-bold">
                         {(() => {
                           if (!(schedule?.output_table?.length > 0)) return "N/A";
                           const pumpStart = new Date(schedule.output_table[0].pump_start);
@@ -1747,7 +1721,7 @@ export default function ScheduleViewPage() {
 
                           const totalHours =
                             (pumpSiteLeave.getTime() - pumpStartFromPlant.getTime()) / (1000 * 60 * 60);
-                          return formatHoursAndMinutes(totalHours);
+                          return formatMinutesToHHMM(totalHours * 60);
                         })()}
                       </span>
                     </TableCell>
@@ -1829,9 +1803,8 @@ export default function ScheduleViewPage() {
             return trips.length * capacity;
           });
 
-          const avgTotalVolume = carriedVolumeArr.length
-            ? carriedVolumeArr.reduce((a, b) => a + b, 0) / carriedVolumeArr.length
-            : 0;
+          const totalVolume = carriedVolumeArr.reduce((a, b) => a + b, 0);
+
           // For TM label, use identifier if available
           const tmIdToIdentifier: Record<string, string> = {};
           schedule.output_table.forEach((trip) => {
@@ -1855,15 +1828,15 @@ export default function ScheduleViewPage() {
                     <th className="px-1 py-2 font-medium text-xs text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
                       Start-End Time
                     </th>
-                    <th className="px-1 py-2 font-medium text-xs text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
+                    {/* <th className="px-1 py-2 font-medium text-xs text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
                       Rounded off (Start - End)
-                    </th>
+                    </th> */}
                     <th className="px-1 py-2 font-medium text-xs text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
                       Total Hours
                     </th>
-                    <th className="px-1 py-2 font-medium text-xs text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
+                    {/* <th className="px-1 py-2 font-medium text-xs text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 text-left">
                       Rounded Total
-                    </th>
+                    </th> */}
                   </tr>
                 </thead>
                 <tbody>
@@ -1927,15 +1900,15 @@ export default function ScheduleViewPage() {
                         <td className="px-2 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
                           {overallRange}
                         </td>
-                        <td className="px-2 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
+                        {/* <td className="px-2 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
                           {roundedRange}
-                        </td>
+                        </td> */}
                         <td className="px-2 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
                           {totalHours ? formatHoursAndMinutes(totalHours) : "-"}
                         </td>
-                        <td className="px-2 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
+                        {/* <td className="px-2 text-gray-800 dark:text-white/90 bg-gray-100 dark:bg-gray-800 py-2 text-left">
                           {roundedTotalHours ? formatHoursAndMinutes(roundedTotalHours) : "-"}
-                        </td>
+                        </td> */}
                       </tr>
                     );
                   })}
@@ -1967,22 +1940,22 @@ export default function ScheduleViewPage() {
 
                     return (
                       <tr className="font-semibold bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white/90">
-                        <td className="px-1 text-xs py-2 text-left">Avg</td>
+                        <td className="px-1 text-xs py-2 text-left">Avg / Total</td>
                         <td className="px-1 text-xs py-2 text-center "></td>
                         {Array.from({ length: maxTrips }).map((_, i) => (
                           <td key={i} className="px-1 text-xs py-2"></td>
                         ))}
                         <td className="px-1 text-xs py-2 text-left bg-gray-100 dark:bg-gray-800">
-                          {tmIds.length ? formatVolume(avgTotalVolume) : "-"}
+                          {tmIds.length ? formatVolume(totalVolume) : "-"}
                         </td>
                         <td className="px-1 text-xs py-2 text-center bg-gray-100 dark:bg-gray-800"></td>
-                        <td className="px-1 text-xs py-2 text-center bg-gray-100 dark:bg-gray-800"></td>
+                        {/* <td className="px-1 text-xs py-2 text-center bg-gray-100 dark:bg-gray-800"></td> */}
                         <td className="px-1 text-xs py-2 text-left bg-gray-100 dark:bg-gray-800">
                           {avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-"}
                         </td>
-                        <td className="px-1 text-xs py-2 text-left bg-gray-100 dark:bg-gray-800">
+                        {/* <td className="px-1 text-xs py-2 text-left bg-gray-100 dark:bg-gray-800">
                           {avgRoundedTotalHours ? formatHoursAndMinutes(avgRoundedTotalHours) : "-"}
-                        </td>
+                        </td> */}
                       </tr>
                     );
                   })()}

@@ -5,6 +5,8 @@ import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
+import Tooltip from "@/components/ui/tooltip/Tooltip";
+import { Info } from "lucide-react";
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 // import Image from "next/image";
@@ -29,6 +31,10 @@ export default function SignInForm() {
     if (password === "") {
       setIsLoading(false);
       return setError("Password should not be empty");
+    }
+    if (password.length < 8) {
+      setIsLoading(false);
+      return setError("Password must be at least 8 characters");
     }
 
     try {
@@ -137,8 +143,11 @@ export default function SignInForm() {
                   />
                 </div>
                 <div>
-                  <Label>
+                  <Label className="flex items-center gap-2">
                     Password <span className="text-error-500">*</span>{" "}
+                    <Tooltip content="Min 8 chars">
+                      <Info className="w-4 h-4 text-gray-400" />
+                    </Tooltip>
                   </Label>
                   <div className="relative">
                     <Input

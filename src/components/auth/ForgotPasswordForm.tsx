@@ -4,6 +4,8 @@ import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
+import Tooltip from "@/components/ui/tooltip/Tooltip";
+import { Info } from "lucide-react";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -252,8 +254,11 @@ export default function ForgotPasswordForm() {
                   </div>
                 </div>
                 <div>
-                  <Label>
+                  <Label className="flex items-center gap-2">
                     New Password <span className="text-error-500">*</span>
+                    <Tooltip content="Min 8 chars">
+                      <Info className="w-4 h-4 text-gray-400" />
+                    </Tooltip>
                   </Label>
                   <div className="relative">
                     <Input

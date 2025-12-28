@@ -5,6 +5,8 @@ import Label from "@/components/form/Label";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import Tooltip from "@/components/ui/tooltip/Tooltip";
+import { Info } from "lucide-react";
 import React, { useState } from "react";
 
 export default function SignUpForm() {
@@ -21,7 +23,7 @@ export default function SignUpForm() {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-    
+
     if (firstName === "") {
       setIsLoading(false);
       return setError("First name should not be empty");
@@ -34,7 +36,11 @@ export default function SignUpForm() {
       setIsLoading(false);
       return setError("Password should not be empty");
     }
-    
+    if (password.length < 8) {
+      setIsLoading(false);
+      return setError("Password must be at least 8 characters");
+    }
+
     try {
       const res = await signIn("signup", {
         email: email,
@@ -42,7 +48,7 @@ export default function SignUpForm() {
         name: firstName + " " + lastName,
         redirect: true,
       });
-      
+
       if (!res?.ok) {
         setError("Invalid credentials");
       }
@@ -56,7 +62,7 @@ export default function SignUpForm() {
   const handleGoogleSignUp = async () => {
     setIsLoading(true);
     setError("");
-    
+
     try {
       const res = await signIn("google");
       if (!res?.ok) {
@@ -167,8 +173,11 @@ export default function SignUpForm() {
                 </div>
                 {/* <!-- Password --> */}
                 <div>
-                  <Label>
+                  <Label className="flex items-center gap-2">
                     Password<span className="text-error-500">*</span>
+                    <Tooltip content="Min 8 chars">
+                      <Info className="w-4 h-4 text-gray-400" />
+                    </Tooltip>
                   </Label>
                   <div className="relative">
                     <Input
@@ -200,7 +209,7 @@ export default function SignUpForm() {
                 </div>
                 {/* <!-- Button --> */}
                 <div>
-                  <button 
+                  <button
                     disabled={isLoading}
                     className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
