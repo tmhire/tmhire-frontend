@@ -138,6 +138,7 @@ interface PastSchedule {
     pump_fixing_time: number;
     pump_removal_time: number;
     pump_start: number;
+    wait_time?: number;
   };
   floor_height: number;
   pump_site_reach_time: string;
@@ -188,7 +189,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const template = searchParams.get("template");
   const { data: session, status } = useSession();
   const { fetchWithAuth } = useApiClient();
-  const { } = useToast();
+  const {} = useToast();
   const { startAction, completeAction } = createApiActionToast();
   const [step, setStep] = useState(schedule_id ? 2 : 0);
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -231,6 +232,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     pumpFixingTime: string;
     pumpRemovalTime: string;
     unloadingTime: string;
+    waitTime: string;
     pumpingJob: string;
     floorHeight: string;
     pumpSiteReachTime: string;
@@ -259,6 +261,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     pumpFixingTime: "",
     pumpRemovalTime: "",
     unloadingTime: "",
+    waitTime: "",
     pumpingJob: "",
     floorHeight: "",
     pumpSiteReachTime: "",
@@ -297,6 +300,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [openPlantGroups, setOpenPlantGroups] = useState<Record<string, boolean>>({});
   const [overruleTMCount, setOverruleTMCount] = useState(false);
   const [customTMCount, setCustomTMCount] = useState(1);
+  const [autoCalculatedAdditionalTMValue, setAutoCalculatedAdditionalTMValue] = useState(0);
+  const [tmReq, setTmReq] = useState(0);
+  const [totalTMRequired, setTotalTMRequired] = useState(0);
   const [isBurstModel, setIsBurstModel] = useState(false);
   // 1. Add state for selectedProject and projects
   const [selectedProject, setSelectedProject] = useState<string>("");
@@ -484,6 +490,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           loadTime: pastSchedule?.input_params?.load_time?.toString(),
           pumpFixingTime: pastSchedule?.input_params?.pump_fixing_time?.toString(),
           pumpRemovalTime: pastSchedule?.input_params?.pump_removal_time?.toString(),
+          waitTime: (pastSchedule?.input_params as any)?.wait_time?.toString() || "",
           floorHeight: pastSchedule?.floor_height?.toString(),
           pumpSiteReachTime: pastSchedule?.pump_site_reach_time,
           slumpAtSite: pastSchedule?.slump_at_site?.toString() || "",
@@ -513,6 +520,66 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       );
   }, [motherPlantName, formData.scheduleDate, schedulesForDayCount, selectedClient, selectedProject]);
 
+  // Auto-calculate customTMCount when isBurstModel is true and all time inputs are filled
+  useEffect(() => {
+    if (overruleTMCount) return;
+
+    const cycleTimeMin = [
+      formData.bufferTime,
+      formData.loadTime,
+      formData.onwardTime,
+      formData.unloadingTime,
+      formData.returnTime,
+    ]
+      .map((v) => parseFloat(v) || 0)
+      .reduce((a, b) => a + b, 0);
+
+    const waitTime = parseFloat(formData.waitTime) || 0;
+
+    // Check if all required fields are filled
+    const allFieldsFilled =
+      !!formData.bufferTime &&
+      !!formData.loadTime &&
+      !!formData.onwardTime &&
+      !!formData.unloadingTime &&
+      !!formData.returnTime &&
+      // (parseFloat(formData.unloadingTime) || 0) > 0 &&
+      cycleTimeMin > 0;
+
+    console.log("ALLFIELDSFILLED: ", allFieldsFilled);
+    if (allFieldsFilled) {
+      const extraCount = Math.ceil(cycleTimeMin / waitTime);
+      const requiredTM = Math.ceil(cycleTimeMin / parseFloat(formData.unloadingTime));
+      console.log("TM required: ", requiredTM);
+      setTmReq(requiredTM);
+      if (!isBurstModel) {
+        setTotalTMRequired(requiredTM);
+        return;
+      }
+      if (extraCount > 0 && requiredTM > 0 && !!formData.waitTime && waitTime > 0) {
+        if (requiredTM > extraCount) {
+          console.log("HI");
+          setAutoCalculatedAdditionalTMValue(extraCount);
+          setTotalTMRequired(requiredTM + extraCount);
+          // setOverruleTMCount(true);
+        } else {
+          console.log("BYE");
+          setAutoCalculatedAdditionalTMValue(0);
+          setTotalTMRequired(requiredTM);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isBurstModel,
+    formData.bufferTime,
+    formData.loadTime,
+    formData.onwardTime,
+    formData.unloadingTime,
+    formData.returnTime,
+    formData.waitTime,
+  ]);
+
   const fetchSchedule = useCallback(async () => {
     try {
       const response = await fetchWithAuth(`/schedules/${schedule_id}`);
@@ -533,8 +600,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             data.data.input_params.unloading_time && data.data.input_params.unloading_time !== 0
               ? data.data.input_params.unloading_time.toString()
               : pumping_speed && avgTMCap
-                ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
-                : "",
+              ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
+              : "",
           pumpOnwardTime: data.data.input_params.pump_onward_time.toString(),
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
@@ -548,6 +615,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           pumpRemovalTime: data.data.input_params.pump_removal_time
             ? data.data.input_params.pump_removal_time.toString()
             : "",
+          waitTime: data.data.input_params.wait_time?.toString() || "",
           pumpingJob: data.data.pumping_job,
           floorHeight: data.data.floor_height ? data.data.floor_height.toString() : "",
           pumpSiteReachTime: data.data.pump_site_reach_time ? data.data.pump_site_reach_time.toString() : "",
@@ -563,7 +631,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         setIsBurstModel(!!data?.data?.input_params?.is_burst_model);
         setComputedScheduleName(
           data?.data?.schedule_no ||
-          `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
+            `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
         );
         const tm_ids = new Set();
         const tmSequence: string[] = [];
@@ -633,6 +701,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             // pump_start: formData.pump_start,
             pump_fixing_time: parseFloat(formData.pumpFixingTime),
             pump_removal_time: parseFloat(formData.pumpRemovalTime),
+            wait_time: formData.waitTime ? parseFloat(formData.waitTime) : undefined,
             is_burst_model: !!isBurstModel,
           },
           site_address: selectedProject ? projects.find((p) => p._id === selectedProject)?.address || "" : "",
@@ -767,6 +836,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               pump_fixing_time: parseFloat(formData.pumpFixingTime),
               pump_removal_time: parseFloat(formData.pumpRemovalTime),
               unloading_time: parseFloat(formData.unloadingTime),
+              wait_time: formData.waitTime ? parseFloat(formData.waitTime) : undefined,
               is_burst_model: !!isBurstModel,
             },
             site_address: selectedProject ? projects.find((p) => p._id === selectedProject)?.address || "" : "",
@@ -935,6 +1005,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             loadTime: pastSchedule?.input_params?.load_time?.toString(),
             pumpFixingTime: pastSchedule?.input_params?.pump_fixing_time?.toString(),
             pumpRemovalTime: pastSchedule?.input_params?.pump_removal_time?.toString(),
+            waitTime: (pastSchedule?.input_params as any)?.wait_time?.toString() || "",
             floorHeight: pastSchedule?.floor_height?.toString(),
             pumpSiteReachTime: pastSchedule?.pump_site_reach_time,
             slumpAtSite: pastSchedule?.slump_at_site?.toString() || "",
@@ -944,7 +1015,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             siteSupervisorId: pastSchedule?.site_supervisor_id || "",
             cubeAtSite: pastSchedule?.cube_at_site || false,
             creditTerms: pastSchedule?.credit_terms || "",
-            fieldTechnicianId: pastSchedule?.field_technician_id || ""
+            fieldTechnicianId: pastSchedule?.field_technician_id || "",
           }));
           if (pastSchedule?.tm_overrule) {
             setOverruleTMCount(true);
@@ -1025,7 +1096,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         !!formData.scheduleDate &&
         !!formData.startTime &&
         !!formData.pumpOnwardTime &&
-        (pumpType === "line" ? (!!formData.pumpFixingTime && !!formData.pumpRemovalTime) : true)
+        (pumpType === "line" ? !!formData.pumpFixingTime && !!formData.pumpRemovalTime : true)
       );
     } else if (step === 1.1) {
       // Transit Mixer Trip Log validation
@@ -1350,9 +1421,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     numberOfTmRequired > 0 && unloadingTimeHours > 0 ? numberOfTmRequired * unloadingTimeHours : 0;
   const loads = Math.ceil((parseFloat(formData.quantity) || 0) / (avgTMCap && avgTMCap > 0 ? avgTMCap : 1));
   // const m3PerTM = tripsPerTM * (avgTMCap && avgTMCap > 0 ? avgTMCap : 1);
-  const tmReq = cycleTimeMin > 0 ? Math.ceil(cycleTimeMin / parseFloat(formData.unloadingTime)) : 0;
+  // const tmReq = cycleTimeMin > 0 ? Math.ceil(cycleTimeMin / parseFloat(formData.unloadingTime)) : 0;
   const additionalTMValue = overruleTMCount ? Math.max(0, (customTMCount || 0) - tmReq) : 0;
-  const totalTMRequired = overruleTMCount ? customTMCount : tmReq;
+  // setTotalTMRequired(overruleTMCount ? customTMCount : tmReq);
   const tripsPerTM = tmReq > 0 ? loads / totalTMRequired : 0;
   // const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
   const [startHour, startMin] = (formData.startTime || "00:00").split(":").map((n) => parseInt(n, 10));
@@ -1441,17 +1512,20 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 {steps.map((s, index) => (
                   <motion.div
                     key={s.id}
-                    className={`flex flex-col ${index == 0 ? "items-start" : index == 5 ? "items-end" : "items-center"} `}
+                    className={`flex flex-col ${
+                      index == 0 ? "items-start" : index == 5 ? "items-end" : "items-center"
+                    } `}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1, duration: 0.5 }}
                   >
                     {/* Step Circle */}
                     <motion.div
-                      className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${step >= s.id
-                        ? "border-brand-500 bg-brand-500 text-white shadow-lg"
-                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                        }`}
+                      className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${
+                        step >= s.id
+                          ? "border-brand-500 bg-brand-500 text-white shadow-lg"
+                          : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                      }`}
                       animate={{
                         scale: s.type === "subStep" ? (step === s.id ? 0.9 : 0.8) : step === s.id ? 1.3 : 1,
                         boxShadow: step === s.id ? "0 0 20px rgba(var(--brand-500-rgb, 59, 130, 246), 0.5)" : "none",
@@ -1480,8 +1554,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                     {/* Step Name */}
                     <motion.span
-                      className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
-                        }`}
+                      className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${
+                        step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
+                      }`}
                       animate={{
                         fontWeight: step >= s.id ? 500 : 400,
                       }}
@@ -1607,10 +1682,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     filteredSchedules?.map((schedule) => (
                       <div
                         key={schedule._id}
-                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${selectedPastSchedule === schedule._id
-                          ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
-                          : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
-                          }`}
+                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
+                          selectedPastSchedule === schedule._id
+                            ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
+                            : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
+                        }`}
                         onClick={() => setSelectedPastSchedule(schedule._id)}
                       >
                         <div className="flex items-start justify-between">
@@ -1618,8 +1694,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             <div className="flex items-center gap-2 mb-2">
                               <h4 className="font-semibold text-gray-900 dark:text-white ">{schedule.schedule_no}</h4>
                               <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${pumpColors[schedule.pump_type]
-                                  }`}
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  pumpColors[schedule.pump_type]
+                                }`}
                               >
                                 {schedule?.pump_type?.toUpperCase()}
                               </span>
@@ -1664,10 +1741,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           </div>
 
                           <div
-                            className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPastSchedule === schedule._id
-                              ? "border-brand-500 bg-brand-500"
-                              : "border-gray-300 dark:border-gray-600"
-                              }`}
+                            className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                              selectedPastSchedule === schedule._id
+                                ? "border-brand-500 bg-brand-500"
+                                : "border-gray-300 dark:border-gray-600"
+                            }`}
                           >
                             {selectedPastSchedule === schedule._id && (
                               <div className="w-2 h-2 rounded-full bg-white"></div>
@@ -2118,7 +2196,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               </div>
 
               <div className="grid grid-cols-5 gap-6">
-
                 {/* Cube at Site */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -2481,6 +2558,30 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         </div>
                       </div>
 
+                      {/* Wait Time */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center min-w-0 flex-1">
+                          <span
+                            className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
+                            style={{ backgroundColor: "#6b7280" }}
+                          ></span>
+                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                            Wait Time
+                          </label>
+                        </div>
+                        <div className="w-20 flex-shrink-0">
+                          <Input
+                            type="number"
+                            name="waitTime"
+                            value={parseFloat(formData.waitTime)}
+                            min="0"
+                            onChange={handleInputChange}
+                            placeholder="0"
+                            className="w-full text-right text-xs h-7"
+                          />
+                        </div>
+                      </div>
+
                       {/* Total Cycle Time */}
                       <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                         <div className="flex items-center gap-2">
@@ -2555,7 +2656,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 const nextTotal = Math.max(1, tmReq + nextAdditional);
                                 setOverruleTMCount(nextAdditional > 0);
                                 setCustomTMCount(nextTotal);
-                                setIsBurstModel(nextAdditional > 0);
                                 setHasChanged(true);
                               }}
                             >
@@ -2566,7 +2666,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               type="number"
                               min={0}
                               className="no-spinner h-6 w-8 text-center px-1 rounded border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
-                              value={tmReq > 0 ? additionalTMValue : 0}
+                              value={
+                                tmReq > 0 ? (overruleTMCount ? additionalTMValue : autoCalculatedAdditionalTMValue) : 0
+                              }
                               onChange={(e) => {
                                 const raw = parseInt(e.target.value || "0", 10);
                                 const add = isNaN(raw) ? 0 : Math.max(0, raw);
@@ -2574,7 +2676,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 const nextTotal = Math.max(1, tmReq + add);
                                 setOverruleTMCount(add > 0);
                                 setCustomTMCount(nextTotal);
-                                setIsBurstModel(add > 0);
                                 setHasChanged(true);
                               }}
                             />
@@ -2588,7 +2689,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 const nextTotal = Math.max(1, tmReq + nextAdditional);
                                 setOverruleTMCount(true);
                                 setCustomTMCount(nextTotal);
-                                setIsBurstModel(nextAdditional > 0);
                                 setHasChanged(true);
                               }}
                             >
@@ -2607,20 +2707,41 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         <div className="mt-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-900/40">
                           <div className="px-3 py-2 border-b border-blue-200 dark:border-blue-800 flex items-center justify-between">
                             <span className="text-xs font-semibold text-gray-900 dark:text-white">Pour Model</span>
-                            <div className="flex gap-1">
-                              {isBurstModel ? (
-                                <div
-                                  className={`px-2.5 py-1 text-xs rounded border ${"bg-blue-600 text-white border-blue-600"}`}
-                                >
-                                  Burst
-                                </div>
-                              ) : (
-                                <div
-                                  className={`px-2.5 py-1 text-xs rounded border ${"bg-blue-600 text-white border-blue-600"}`}
-                                >
-                                  0 Wait
-                                </div>
-                              )}
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`text-xs font-medium ${
+                                  !isBurstModel
+                                    ? "text-blue-600 dark:text-blue-400"
+                                    : "text-gray-500 dark:text-gray-400"
+                                }`}
+                              >
+                                0 Wait
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsBurstModel(!isBurstModel);
+                                  setHasChanged(true);
+                                }}
+                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                                  isBurstModel ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
+                                }`}
+                                role="switch"
+                                aria-checked={isBurstModel}
+                              >
+                                <span
+                                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                    isBurstModel ? "translate-x-5" : "translate-x-1"
+                                  }`}
+                                />
+                              </button>
+                              <span
+                                className={`text-xs font-medium ${
+                                  isBurstModel ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"
+                                }`}
+                              >
+                                Burst
+                              </span>
                             </div>
                           </div>
                           <div className="p-3 space-y-2">
@@ -2868,10 +2989,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <div className="flex items-center gap-3 py-2 pl-4">
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select 1 Pump</h3>
                     <span
-                      className={`px-3 py-1 text-sm font-medium rounded-full ${pumpType === "line"
-                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                        : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                        }`}
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${
+                        pumpType === "line"
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                          : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                      }`}
                     >
                       {pumpType === "line" ? "Line Pump" : "Boom Pump"}
                     </span>
@@ -3129,10 +3251,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
                                 {/* Pump Type Chip */}
                                 <span
-                                  className={`px-2 py-1 text-xs font-medium rounded-full ${pumpType === "line"
-                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                    : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                    }`}
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    pumpType === "line"
+                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                  }`}
                                 >
                                   {pumpType === "line" ? "Line" : "Boom"}
                                 </span>
@@ -3190,7 +3313,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-600 dark:text-gray-400">Required:</span>
                             <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded-lg font-semibold">
-                              {calculatedTMs.tm_count} TMs
+                              {totalTMRequired} TMs
                             </span>
                           </div>
 
@@ -3200,7 +3323,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               <div className="flex items-center gap-2">
                                 <span className="text-sm text-gray-600 dark:text-gray-400">Overrule:</span>
                                 <span className="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400 rounded-lg font-semibold">
-                                  {customTMCount - calculatedTMs.tm_count} Added
+                                  {customTMCount - tmReq} Added
                                 </span>
                               </div>
                             </>
@@ -3209,7 +3332,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-600 dark:text-gray-400">=</span>
                             <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 rounded-lg font-bold">
-                              {overruleTMCount ? customTMCount : calculatedTMs.tm_count} Total TMs
+                              {overruleTMCount ? customTMCount : tmReq} Total TMs
                             </span>
                           </div>
                         </div>
@@ -3277,7 +3400,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
               {calculatedTMs && calculatedTMs.available_tms && (
                 <>
-                  {calculatedTMs.available_tms.length < calculatedTMs.tm_count ? (
+                  {calculatedTMs.available_tms.length < totalTMRequired ? (
                     <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center justify-between">
                       <span>Not enough available TMs to fulfill the requirement. Please add more TMs.</span>
                       <a
@@ -3298,14 +3421,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   {/* Left header */}
                   <div className="flex items-center gap-3 py-2 pl-4">
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
-                      Select {overruleTMCount ? customTMCount : calculatedTMs.tm_count || "N/A"} TMs
+                      Select {overruleTMCount ? customTMCount : totalTMRequired || "N/A"} TMs
                     </h3>
                   </div>
 
                   {/* Right header */}
                   <div className="flex items-center gap-3 py-2">
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">
-                      {tmSequence.length}/{overruleTMCount ? customTMCount : calculatedTMs.tm_count || "N/A"} selected -
+                      {tmSequence.length}/{overruleTMCount ? customTMCount : totalTMRequired || "N/A"} selected -
                       Arrange
                     </h3>
                   </div>
@@ -3691,10 +3814,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               Back to Pump Selection
             </Button>
             <div className="flex items-center gap-4 justify-end flex-1">
-              {tmSequence.length !== (overruleTMCount ? customTMCount : calculatedTMs?.tm_count) && (
+              {tmSequence.length !== (overruleTMCount ? customTMCount : totalTMRequired) && (
                 <div className="p-2 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg text-xs">
-                  Select{" "}
-                  <span className="font-semibold">{overruleTMCount ? customTMCount : calculatedTMs?.tm_count}</span> TMs
+                  Select <span className="font-semibold">{overruleTMCount ? customTMCount : totalTMRequired}</span> TMs
                   {!overruleTMCount && " to get optimum schedule."}
                   {overruleTMCount && "."}
                 </div>
@@ -3705,7 +3827,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 disabled={
                   isGenerating ||
                   (!overruleTMCount
-                    ? tmSequence.length !== calculatedTMs?.tm_count
+                    ? tmSequence.length !== totalTMRequired
                     : tmSequence.length !== customTMCount || customTMCount < 1)
                 }
               >
