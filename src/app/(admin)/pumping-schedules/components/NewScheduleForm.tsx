@@ -193,7 +193,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const template = searchParams.get("template");
   const { data: session, status } = useSession();
   const { fetchWithAuth } = useApiClient();
-  const {} = useToast();
+  const { } = useToast();
   const { startAction, completeAction } = createApiActionToast();
   const [step, setStep] = useState(schedule_id ? 2 : 0);
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -605,8 +605,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             data.data.input_params.unloading_time && data.data.input_params.unloading_time !== 0
               ? data.data.input_params.unloading_time.toString()
               : pumping_speed && avgTMCap
-              ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
-              : "",
+                ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
+                : "",
           pumpOnwardTime: data.data.input_params.pump_onward_time.toString(),
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
@@ -636,7 +636,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         setIsBurstModel(!!data?.data?.input_params?.is_burst_model);
         setComputedScheduleName(
           data?.data?.schedule_no ||
-            `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
+          `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
         );
         const tm_ids = new Set();
         const tmSequence: string[] = [];
@@ -1509,20 +1509,18 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 {steps.map((s, index) => (
                   <motion.div
                     key={s.id}
-                    className={`flex flex-col ${
-                      index == 0 ? "items-start" : index == 5 ? "items-end" : "items-center"
-                    } `}
+                    className={`flex flex-col ${index == 0 ? "items-start" : index == 5 ? "items-end" : "items-center"
+                      } `}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1, duration: 0.5 }}
                   >
                     {/* Step Circle */}
                     <motion.div
-                      className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${
-                        step >= s.id
-                          ? "border-brand-500 bg-brand-500 text-white shadow-lg"
-                          : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                      }`}
+                      className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${step >= s.id
+                        ? "border-brand-500 bg-brand-500 text-white shadow-lg"
+                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                        }`}
                       animate={{
                         scale: s.type === "subStep" ? (step === s.id ? 0.9 : 0.8) : step === s.id ? 1.3 : 1,
                         boxShadow: step === s.id ? "0 0 20px rgba(var(--brand-500-rgb, 59, 130, 246), 0.5)" : "none",
@@ -1551,9 +1549,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                     {/* Step Name */}
                     <motion.span
-                      className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${
-                        step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
-                      }`}
+                      className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
+                        }`}
                       animate={{
                         fontWeight: step >= s.id ? 500 : 400,
                       }}
@@ -1679,11 +1676,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     filteredSchedules?.map((schedule) => (
                       <div
                         key={schedule._id}
-                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
-                          selectedPastSchedule === schedule._id
-                            ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
-                            : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
-                        }`}
+                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${selectedPastSchedule === schedule._id
+                          ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
+                          : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
+                          }`}
                         onClick={() => setSelectedPastSchedule(schedule._id)}
                       >
                         <div className="flex items-start justify-between">
@@ -1691,9 +1687,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             <div className="flex items-center gap-2 mb-2">
                               <h4 className="font-semibold text-gray-900 dark:text-white ">{schedule.schedule_no}</h4>
                               <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  pumpColors[schedule.pump_type]
-                                }`}
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${pumpColors[schedule.pump_type]
+                                  }`}
                               >
                                 {schedule?.pump_type?.toUpperCase()}
                               </span>
@@ -1738,11 +1733,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           </div>
 
                           <div
-                            className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                              selectedPastSchedule === schedule._id
-                                ? "border-brand-500 bg-brand-500"
-                                : "border-gray-300 dark:border-gray-600"
-                            }`}
+                            className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPastSchedule === schedule._id
+                              ? "border-brand-500 bg-brand-500"
+                              : "border-gray-300 dark:border-gray-600"
+                              }`}
                           >
                             {selectedPastSchedule === schedule._id && (
                               <div className="w-2 h-2 rounded-full bg-white"></div>
@@ -2502,15 +2496,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       </div>
 
                       {/* TM Unloading Time with Manual Toggle */}
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center min-w-0 flex-1">
                           <span
                             className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
                             style={{ backgroundColor: "#10b981" }}
                           ></span>
-                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
-                            TM Unloading Time
-                          </label>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                              TM Unloading Time
+                            </label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Auto-filled from Pumping Speed.
+                            </p></div>
                           <label className="flex items-center gap-1 ml-2 cursor-pointer text-xs">
                             <input
                               type="checkbox"
@@ -2528,73 +2526,73 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             />
                             <span>Manual Entry</span>
                           </label>
-                        </div>
-                        {!manualUnloading ? (
-                          <>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 ml-4.5 mt-0.5">
-                              Auto-filled from Pumping Speed.
-                            </p>
-                            <div className="w-20 flex-shrink-0">
-                              <Input
-                                type="number"
-                                min="0"
-                                name="unloadingTime"
-                                value={parseFloat(formData.unloadingTime)}
-                                onChange={handleInputChange}
-                                placeholder="0"
-                                disabled
-                                className="w-full text-right bg-gray-50 dark:bg-gray-800 text-xs h-7"
-                              />
-                            </div>
-                          </>
-                        ) : (
-                          <div className="flex flex-col gap-1 w-full">
-                            <div className="flex items-center gap-2">
-                              <label className="text-xs min-w-0 text-gray-700 dark:text-gray-300">
-                                TM Interval Time
-                              </label>
-                              <Input
-                                type="number"
-                                min="0"
-                                value={tmIntervalTime}
-                                onChange={(e) => {
-                                  setTmIntervalTime(e.target.value);
-                                  setFormData((prev) => ({ ...prev, unloadingTime: e.target.value }));
-                                  setHasChanged(true);
-                                }}
-                                placeholder="Interval (min)"
-                                className="w-20 text-right text-xs h-7"
-                              />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <label className="text-xs min-w-0 text-gray-700 dark:text-gray-300">
-                                TM Waiting Time at Site
-                              </label>
-                              <Input
-                                type="number"
-                                min="0"
-                                value={tmWaitingTime}
-                                onChange={(e) => {
-                                  setTmWaitingTime(e.target.value);
-                                  setFormData((prev) => ({ ...prev, waitTime: e.target.value }));
-                                  setHasChanged(true);
-                                }}
-                                placeholder="Waiting (min)"
-                                className="w-20 text-right text-xs h-7"
-                              />
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
-                                TM Unloading Time:
-                              </span>
-                              <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                                {Number(tmIntervalTime || 0) + Number(tmWaitingTime || 0)} min
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
 
+                        </div>
+                        <div className="w-20 flex-shrink-0">
+                          <Input
+                            type="number"
+                            min="0"
+                            name="unloadingTime"
+                            value={!manualUnloading ? parseFloat(formData.unloadingTime) : (Number(tmIntervalTime || 0) + Number(tmWaitingTime || 0))}
+                            onChange={handleInputChange}
+                            placeholder="0"
+                            disabled
+                            className="w-full text-right bg-gray-50 dark:bg-gray-800 text-xs h-7"
+                          />
+                        </div>
+                      </div>
+                      {manualUnloading && (<>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center min-w-0 flex-1 pl-3">
+                            <span
+                              className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0 opacity-50"
+                              style={{ backgroundColor: "#10b981" }}
+                            ></span>
+                            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                              TM Placement Interval
+                            </label>
+                          </div>
+                          <div className="w-20 flex-shrink-0">
+                            <Input
+                              type="number"
+                              min="0"
+                              value={tmIntervalTime}
+                              onChange={(e) => {
+                                setTmIntervalTime(e.target.value);
+                                setFormData((prev) => ({ ...prev, unloadingTime: e.target.value }));
+                                setHasChanged(true);
+                              }}
+                              placeholder="0"
+                              className="w-20 text-right text-xs h-7"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center min-w-0 flex-1  pl-3">
+                            <span
+                              className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0 opacity-50"
+                              style={{ backgroundColor: "#10b981" }}
+                            ></span>
+                            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                              TM Site buffer Time
+                            </label>
+                          </div>
+                          <div className="w-20 flex-shrink-0">
+                            <Input
+                              type="number"
+                              min="0"
+                              value={tmWaitingTime}
+                              onChange={(e) => {
+                                setTmWaitingTime(e.target.value);
+                                setFormData((prev) => ({ ...prev, waitTime: e.target.value }));
+                                setHasChanged(true);
+                              }}
+                              placeholder="0"
+                              className="w-20 text-right text-xs h-7"
+                            />
+                          </div>
+                        </div>
+                      </>)}
                       {/* Return Time */}
                       <div className="flex items-center gap-2">
                         <div className="flex items-center min-w-0 flex-1">
@@ -2642,7 +2640,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 .reduce((a, b) => a + b, 0)}
                               disabled
                               className="bg-blue-50 dark:bg-blue-900/30 font-semibold w-full text-right border-blue-200 dark:border-blue-700 text-xs h-7"
-                              placeholder="Auto-calculated"
+                              placeholder="0"
                             />
                           </div>
                         </div>
@@ -2746,38 +2744,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             <span className="text-xs font-semibold text-gray-900 dark:text-white">Pour Model</span>
                             <div className="flex items-center gap-2">
                               <span
-                                className={`text-xs font-medium ${
-                                  !isBurstModel
-                                    ? "text-blue-600 dark:text-blue-400"
-                                    : "text-gray-500 dark:text-gray-400"
-                                }`}
+                                className={`text-xs font-medium ${ "text-blue-600 dark:text-blue-400"}`}
                               >
-                                0 Wait
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsBurstModel(!isBurstModel);
-                                  setHasChanged(true);
-                                }}
-                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                                  isBurstModel ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"
-                                }`}
-                                role="switch"
-                                aria-checked={isBurstModel}
-                              >
-                                <span
-                                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                    isBurstModel ? "translate-x-5" : "translate-x-1"
-                                  }`}
-                                />
-                              </button>
-                              <span
-                                className={`text-xs font-medium ${
-                                  isBurstModel ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"
-                                }`}
-                              >
-                                Burst
+                                {!isBurstModel ? "0 Wait" : "Burst Model"}
                               </span>
                             </div>
                           </div>
@@ -3026,11 +2995,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <div className="flex items-center gap-3 py-2 pl-4">
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select 1 Pump</h3>
                     <span
-                      className={`px-3 py-1 text-sm font-medium rounded-full ${
-                        pumpType === "line"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                          : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                      }`}
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${pumpType === "line"
+                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                        : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                        }`}
                     >
                       {pumpType === "line" ? "Line Pump" : "Boom Pump"}
                     </span>
@@ -3288,11 +3256,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
                                 {/* Pump Type Chip */}
                                 <span
-                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                    pumpType === "line"
-                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                  }`}
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${pumpType === "line"
+                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                    : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                    }`}
                                 >
                                   {pumpType === "line" ? "Line" : "Boom"}
                                 </span>
