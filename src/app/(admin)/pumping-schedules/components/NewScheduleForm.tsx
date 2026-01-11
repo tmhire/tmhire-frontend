@@ -184,10 +184,10 @@ const formatDateTimeForTooltip = (dateTimeString: string): string => {
 };
 
 export default function NewScheduleForm({ schedule_id }: { schedule_id?: string }) {
-    // --- TM Unloading Manual Toggle State ---
-    const [manualUnloading, setManualUnloading] = useState(false);
-    const [tmIntervalTime, setTmIntervalTime] = useState("");
-    const [tmWaitingTime, setTmWaitingTime] = useState("");
+  // --- TM Unloading Manual Toggle State ---
+  const [manualUnloading, setManualUnloading] = useState(false);
+  const [tmIntervalTime, setTmIntervalTime] = useState("");
+  const [tmWaitingTime, setTmWaitingTime] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
   const template = searchParams.get("template");
@@ -539,6 +539,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       .reduce((a, b) => a + b, 0);
 
     const waitTime = parseFloat(formData.waitTime) || 0;
+    const unloadingTime = parseFloat(formData.unloadingTime) || 0;
 
     // Check if all required fields are filled
     const allFieldsFilled =
@@ -552,11 +553,11 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
     console.log("ALLFIELDSFILLED: ", allFieldsFilled);
     if (allFieldsFilled) {
-      const extraCount = Math.ceil(cycleTimeMin / waitTime);
-      const requiredTM = Math.ceil(cycleTimeMin / parseFloat(formData.unloadingTime));
+      const extraCount = unloadingTime > 0 ? Math.ceil(waitTime / unloadingTime) : 0;
+      const requiredTM = unloadingTime > 0 ? Math.ceil(cycleTimeMin / unloadingTime) : 0;
       console.log("TM required: ", requiredTM);
       setTmReq(requiredTM);
-      if (!isBurstModel) {
+      if (!manualUnloading) {
         setTotalTMRequired(requiredTM);
         return;
       }
@@ -575,7 +576,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    isBurstModel,
+    manualUnloading,
     formData.bufferTime,
     formData.loadTime,
     formData.onwardTime,
@@ -2514,7 +2515,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             <input
                               type="checkbox"
                               checked={manualUnloading}
-                              onChange={e => {
+                              onChange={(e) => {
                                 setManualUnloading(e.target.checked);
                                 if (!e.target.checked) {
                                   setTmIntervalTime("");
@@ -2549,14 +2550,16 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         ) : (
                           <div className="flex flex-col gap-1 w-full">
                             <div className="flex items-center gap-2">
-                              <label className="text-xs min-w-0 text-gray-700 dark:text-gray-300">TM Interval Time</label>
+                              <label className="text-xs min-w-0 text-gray-700 dark:text-gray-300">
+                                TM Interval Time
+                              </label>
                               <Input
                                 type="number"
                                 min="0"
                                 value={tmIntervalTime}
-                                onChange={e => {
+                                onChange={(e) => {
                                   setTmIntervalTime(e.target.value);
-                                  setFormData(prev => ({ ...prev, unloadingTime: e.target.value }));
+                                  setFormData((prev) => ({ ...prev, unloadingTime: e.target.value }));
                                   setHasChanged(true);
                                 }}
                                 placeholder="Interval (min)"
@@ -2564,14 +2567,16 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               />
                             </div>
                             <div className="flex items-center gap-2">
-                              <label className="text-xs min-w-0 text-gray-700 dark:text-gray-300">TM Waiting Time at Site</label>
+                              <label className="text-xs min-w-0 text-gray-700 dark:text-gray-300">
+                                TM Waiting Time at Site
+                              </label>
                               <Input
                                 type="number"
                                 min="0"
                                 value={tmWaitingTime}
-                                onChange={e => {
+                                onChange={(e) => {
                                   setTmWaitingTime(e.target.value);
-                                  setFormData(prev => ({ ...prev, waitTime: e.target.value }));
+                                  setFormData((prev) => ({ ...prev, waitTime: e.target.value }));
                                   setHasChanged(true);
                                 }}
                                 placeholder="Waiting (min)"
@@ -2579,7 +2584,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               />
                             </div>
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">TM Unloading Time:</span>
+                              <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                                TM Unloading Time:
+                              </span>
                               <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
                                 {Number(tmIntervalTime || 0) + Number(tmWaitingTime || 0)} min
                               </span>
