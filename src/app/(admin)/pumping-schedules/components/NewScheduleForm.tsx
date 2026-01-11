@@ -186,8 +186,6 @@ const formatDateTimeForTooltip = (dateTimeString: string): string => {
 export default function NewScheduleForm({ schedule_id }: { schedule_id?: string }) {
   // --- TM Unloading Manual Toggle State ---
   const [manualUnloading, setManualUnloading] = useState(false);
-  const [tmIntervalTime, setTmIntervalTime] = useState("");
-  const [tmWaitingTime, setTmWaitingTime] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
   const template = searchParams.get("template");
@@ -304,7 +302,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [openPlantGroups, setOpenPlantGroups] = useState<Record<string, boolean>>({});
   const [overruleTMCount, setOverruleTMCount] = useState(false);
   const [customTMCount, setCustomTMCount] = useState(1);
-  const [autoCalculatedAdditionalTMValue, setAutoCalculatedAdditionalTMValue] = useState(0);
+  const [additionalTMValue, setAdditionalTMValue] = useState(0);
   const [tmReq, setTmReq] = useState(0);
   const [totalTMRequired, setTotalTMRequired] = useState(0);
   const [isBurstModel, setIsBurstModel] = useState(false);
@@ -526,8 +524,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   // Auto-calculate customTMCount when isBurstModel is true and all time inputs are filled
   useEffect(() => {
-    if (overruleTMCount) return;
-
     const cycleTimeMin = [
       formData.bufferTime,
       formData.loadTime,
@@ -551,23 +547,33 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
       // (parseFloat(formData.unloadingTime) || 0) > 0 &&
       cycleTimeMin > 0;
 
+    setIsBurstModel(waitTime === 0 && additionalTMValue === 0);
     if (allFieldsFilled) {
       const extraCount = unloadingTime > 0 ? Math.ceil(waitTime / unloadingTime) : 0;
       const requiredTM = unloadingTime > 0 ? Math.ceil(cycleTimeMin / unloadingTime) : 0;
       setTmReq(requiredTM);
+      if (overruleTMCount) {
+        setAdditionalTMValue(customTMCount - (tmReq || requiredTM));
+        if (manualUnloading && customTMCount !== requiredTM) {
+          setOverruleTMCount(true);
+        } else {
+          setOverruleTMCount(false);
+          setTotalTMRequired(requiredTM);
+        }
+        return;
+      }
       if (!manualUnloading) {
+        setAdditionalTMValue(0);
         setTotalTMRequired(requiredTM);
         return;
       }
-      if (extraCount > 0 && requiredTM > 0 && !!formData.waitTime && waitTime > 0) {
-        if (requiredTM > extraCount) {
-          setAutoCalculatedAdditionalTMValue(extraCount);
-          setTotalTMRequired(requiredTM + extraCount);
-          // setOverruleTMCount(true);
-        } else {
-          setAutoCalculatedAdditionalTMValue(0);
-          setTotalTMRequired(requiredTM);
-        }
+      if (requiredTM > extraCount) {
+        setAdditionalTMValue(extraCount);
+        setTotalTMRequired(requiredTM + extraCount);
+        // setOverruleTMCount(true);
+      } else {
+        setAdditionalTMValue(0);
+        setTotalTMRequired(requiredTM);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -579,6 +585,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     formData.unloadingTime,
     formData.returnTime,
     formData.waitTime,
+    customTMCount,
   ]);
 
   const fetchSchedule = useCallback(async () => {
@@ -629,7 +636,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           creditTerms: data.data.credit_terms || "",
           fieldTechnicianId: data.data.field_technician_id || "",
         });
-        setIsBurstModel(!!data?.data?.input_params?.is_burst_model);
         setComputedScheduleName(
           data?.data?.schedule_no ||
             `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
@@ -661,6 +667,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           data?.data?.tm_overrule && data?.data?.tm_count ? data?.data?.tm_overrule !== data?.data?.tm_count : false
         );
         setHasChanged(false);
+        if (!!data?.data?.input_params?.wait_time) {
+          setManualUnloading(true);
+        }
 
         return true;
       }
@@ -709,7 +718,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           pumping_job: formData.pumpingJob,
           floor_height: parseFloat(formData.floorHeight),
           pump_site_reach_time: formData.pumpSiteReachTime,
-          tm_overrule: customTMCount > 0 && overruleTMCount ? customTMCount : undefined,
+          tm_overrule: customTMCount > 0 && overruleTMCount ? customTMCount : 0,
           slump_at_site: formData.slumpAtSite ? parseFloat(formData.slumpAtSite) : undefined,
           mix_code: formData.mixCode ? formData.mixCode : undefined,
           remarks: formData.remarks ? formData.remarks : undefined,
@@ -1415,9 +1424,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const loads = Math.ceil((parseFloat(formData.quantity) || 0) / (avgTMCap && avgTMCap > 0 ? avgTMCap : 1));
   // const m3PerTM = tripsPerTM * (avgTMCap && avgTMCap > 0 ? avgTMCap : 1);
   // const tmReq = cycleTimeMin > 0 ? Math.ceil(cycleTimeMin / parseFloat(formData.unloadingTime)) : 0;
-  const additionalTMValue = overruleTMCount ? Math.max(0, (customTMCount || 0) - tmReq) : 0;
+  // const additionalTMValue = overruleTMCount ? Math.max(0, (customTMCount || 0) - tmReq) : 0;
   // setTotalTMRequired(overruleTMCount ? customTMCount : tmReq);
-  const tripsPerTM = tmReq > 0 ? loads / totalTMRequired : 0;
+  const tripsPerTM = tmReq > 0 ? loads / (overruleTMCount ? customTMCount : totalTMRequired) : 0;
   // const totalTrips = tmReq > 0 ? Math.ceil(tripsPerTM * tmReq) + 1 : 0;
   const [startHour, startMin] = (formData.startTime || "00:00").split(":").map((n) => parseInt(n, 10));
 
@@ -1441,7 +1450,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const ceilTripsPerTM = Math.ceil(tripsPerTMExact);
   // const totalTripsApprox = totalTMRequired > 0 ? Math.max(0, Math.round(tripsPerTMExact * totalTMRequired)) : 0;
   const numCeilTms = loads - floorTripsPerTM * totalTMRequired;
-  const numFloorTms = totalTMRequired > 0 ? Math.max(0, totalTMRequired - numCeilTms) : 0;
+  const numFloorTms =
+    totalTMRequired > 0 ? Math.max(0, (overruleTMCount ? customTMCount : totalTMRequired) - numCeilTms) : 0;
 
   const createUnavailableInfo = (unavailableTimes: UnavailableTimes): ReactNode => {
     const schedules: string[] = unavailableTimes ? Object.keys(unavailableTimes) : [];
@@ -2517,11 +2527,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               onChange={(e) => {
                                 setManualUnloading(e.target.checked);
                                 if (!e.target.checked) {
-                                  setTmIntervalTime("");
-                                  setTmWaitingTime("");
-                                } else {
-                                  setTmIntervalTime(formData.unloadingTime || "");
-                                  setTmWaitingTime(formData.waitTime || "");
+                                  setFormData((prev) => ({ ...prev, waitTime: "0" }));
                                 }
                               }}
                             />
@@ -2532,11 +2538,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           <Input
                             type="number"
                             min="0"
-                            name="unloadingTime"
                             value={
                               !manualUnloading
                                 ? parseFloat(formData.unloadingTime)
-                                : Number(tmIntervalTime || 0) + Number(tmWaitingTime || 0)
+                                : Number(formData.unloadingTime || 0) + Number(formData.waitTime || 0)
                             }
                             onChange={handleInputChange}
                             placeholder="0"
@@ -2561,10 +2566,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               <Input
                                 type="number"
                                 min="0"
-                                value={tmIntervalTime}
+                                name="unloadingTime"
+                                value={parseFloat(formData.unloadingTime)}
                                 onChange={(e) => {
-                                  setTmIntervalTime(e.target.value);
-                                  setFormData((prev) => ({ ...prev, unloadingTime: e.target.value }));
+                                  setPumpingSpeedAndUnloadingTime(e);
                                   setHasChanged(true);
                                 }}
                                 placeholder="0"
@@ -2586,9 +2591,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               <Input
                                 type="number"
                                 min="0"
-                                value={tmWaitingTime}
+                                value={parseFloat(formData.waitTime)}
                                 onChange={(e) => {
-                                  setTmWaitingTime(e.target.value);
                                   setFormData((prev) => ({ ...prev, waitTime: e.target.value }));
                                   setHasChanged(true);
                                 }}
@@ -2695,7 +2699,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 if (tmReq <= 0) return;
                                 const nextAdditional = Math.max(0, additionalTMValue - 1);
                                 const nextTotal = Math.max(1, tmReq + nextAdditional);
-                                setOverruleTMCount(nextAdditional > 0);
+                                setAdditionalTMValue(nextAdditional);
+                                setOverruleTMCount(manualUnloading || nextAdditional > 0);
                                 setCustomTMCount(nextTotal);
                                 setHasChanged(true);
                               }}
@@ -2707,14 +2712,13 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               type="number"
                               min={0}
                               className="no-spinner h-6 w-8 text-center px-1 rounded border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
-                              value={
-                                tmReq > 0 ? (overruleTMCount ? additionalTMValue : autoCalculatedAdditionalTMValue) : 0
-                              }
+                              value={tmReq > 0 ? additionalTMValue : 0}
                               onChange={(e) => {
                                 const raw = parseInt(e.target.value || "0", 10);
                                 const add = isNaN(raw) ? 0 : Math.max(0, raw);
                                 if (tmReq <= 0) return;
                                 const nextTotal = Math.max(1, tmReq + add);
+                                setAdditionalTMValue(add);
                                 setOverruleTMCount(add > 0);
                                 setCustomTMCount(nextTotal);
                                 setHasChanged(true);
@@ -2728,6 +2732,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 if (tmReq <= 0) return;
                                 const nextAdditional = additionalTMValue + 1;
                                 const nextTotal = Math.max(1, tmReq + nextAdditional);
+                                setAdditionalTMValue(nextAdditional);
                                 setOverruleTMCount(true);
                                 setCustomTMCount(nextTotal);
                                 setHasChanged(true);
@@ -2741,7 +2746,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         <div className="flex items-center justify-between py-2">
                           <span className="text-xs font-semibold text-gray-900 dark:text-white">Total TM Required</span>
                           <span className="text-base font-bold text-blue-600 dark:text-blue-400 min-w-[2rem] text-right">
-                            {totalTMRequired > 0 ? totalTMRequired : "-"}
+                            {overruleTMCount ? customTMCount : totalTMRequired > 0 ? totalTMRequired : "-"}
                           </span>
                         </div>
 
@@ -2750,7 +2755,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             <span className="text-xs font-semibold text-gray-900 dark:text-white">Pour Model</span>
                             <div className="flex items-center gap-2">
                               <span className={`text-xs font-medium ${"text-blue-600 dark:text-blue-400"}`}>
-                                {!isBurstModel ? "0 Wait" : "Burst Model"}
+                                {(parseFloat(formData.waitTime) || 0) === 0 && additionalTMValue === 0
+                                  ? "0 Wait"
+                                  : "Burst Model"}
                               </span>
                             </div>
                           </div>
@@ -2795,7 +2802,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       </div>
                     ) : (
                       (() => {
-                        if (totalTMRequired <= 0 || tripsPerTMExact <= 0) {
+                        if ((overruleTMCount ? customTMCount : totalTMRequired) <= 0 || tripsPerTMExact <= 0) {
                           return (
                             <div className="flex items-center justify-center h-32 text-gray-500 dark:text-gray-400 text-sm">
                               Enter inputs to see estimated distribution.
@@ -2804,7 +2811,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         }
                         const rows = [];
                         if (floorTripsPerTM === ceilTripsPerTM) {
-                          const tmCount = totalTMRequired;
+                          const tmCount = overruleTMCount ? customTMCount : totalTMRequired;
                           const trips = floorTripsPerTM;
                           rows.push({ tmCount, trips, totalTrips: tmCount * trips });
                         } else {
@@ -3323,7 +3330,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-600 dark:text-gray-400">Required:</span>
                             <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded-lg font-semibold">
-                              {totalTMRequired} TMs
+                              {overruleTMCount ? customTMCount : totalTMRequired} TMs
                             </span>
                           </div>
 
@@ -3333,7 +3340,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                               <div className="flex items-center gap-2">
                                 <span className="text-sm text-gray-600 dark:text-gray-400">Overrule:</span>
                                 <span className="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400 rounded-lg font-semibold">
-                                  {customTMCount - tmReq} Added
+                                  {additionalTMValue} Added
                                 </span>
                               </div>
                             </>
@@ -3342,7 +3349,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-600 dark:text-gray-400">=</span>
                             <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 rounded-lg font-bold">
-                              {overruleTMCount ? customTMCount : tmReq} Total TMs
+                              {overruleTMCount ? customTMCount : totalTMRequired} Total TMs
                             </span>
                           </div>
                         </div>
@@ -3410,7 +3417,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
               {calculatedTMs && calculatedTMs.available_tms && (
                 <>
-                  {calculatedTMs.available_tms.length < totalTMRequired ? (
+                  {calculatedTMs.available_tms.length < (overruleTMCount ? customTMCount : totalTMRequired) ? (
                     <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center justify-between">
                       <span>Not enough available TMs to fulfill the requirement. Please add more TMs.</span>
                       <a
