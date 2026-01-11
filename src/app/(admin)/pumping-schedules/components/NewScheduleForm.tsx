@@ -184,6 +184,10 @@ const formatDateTimeForTooltip = (dateTimeString: string): string => {
 };
 
 export default function NewScheduleForm({ schedule_id }: { schedule_id?: string }) {
+    // --- TM Unloading Manual Toggle State ---
+    const [manualUnloading, setManualUnloading] = useState(false);
+    const [tmIntervalTime, setTmIntervalTime] = useState("");
+    const [tmWaitingTime, setTmWaitingTime] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
   const template = searchParams.get("template");
@@ -490,7 +494,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           loadTime: pastSchedule?.input_params?.load_time?.toString(),
           pumpFixingTime: pastSchedule?.input_params?.pump_fixing_time?.toString(),
           pumpRemovalTime: pastSchedule?.input_params?.pump_removal_time?.toString(),
-          waitTime: (pastSchedule?.input_params as any)?.wait_time?.toString() || "",
+          waitTime: (pastSchedule?.input_params as { wait_time?: string })?.wait_time?.toString() || "",
           floorHeight: pastSchedule?.floor_height?.toString(),
           pumpSiteReachTime: pastSchedule?.pump_site_reach_time,
           slumpAtSite: pastSchedule?.slump_at_site?.toString() || "",
@@ -1005,7 +1009,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             loadTime: pastSchedule?.input_params?.load_time?.toString(),
             pumpFixingTime: pastSchedule?.input_params?.pump_fixing_time?.toString(),
             pumpRemovalTime: pastSchedule?.input_params?.pump_removal_time?.toString(),
-            waitTime: (pastSchedule?.input_params as any)?.wait_time?.toString() || "",
+            waitTime: (pastSchedule?.input_params as { wait_time?: string })?.wait_time?.toString() || "",
             floorHeight: pastSchedule?.floor_height?.toString(),
             pumpSiteReachTime: pastSchedule?.pump_site_reach_time,
             slumpAtSite: pastSchedule?.slump_at_site?.toString() || "",
@@ -1399,15 +1403,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   const quantity = parseFloat(formData.quantity) || 0;
 
-  const cycleTimeMin = [
-    formData.bufferTime,
-    formData.loadTime,
-    formData.onwardTime,
-    formData.unloadingTime,
-    formData.returnTime,
-  ]
-    .map((v) => parseFloat(v) || 0)
-    .reduce((a, b) => a + b, 0);
+  // Removed unused variable cycleTimeMin
 
   // const cycleTimeHr = cycleTimeMin / 60;
   // New formula:
@@ -2504,34 +2500,92 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         </div>
                       </div>
 
-                      {/* TM Unloading Time */}
-                      <div className="flex items-start gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center">
-                            <span
-                              className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
-                              style={{ backgroundColor: "#10b981" }}
-                            ></span>
-                            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
-                              TM Unloading Time
-                            </label>
+                      {/* TM Unloading Time with Manual Toggle */}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
+                            style={{ backgroundColor: "#10b981" }}
+                          ></span>
+                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                            TM Unloading Time
+                          </label>
+                          <label className="flex items-center gap-1 ml-2 cursor-pointer text-xs">
+                            <input
+                              type="checkbox"
+                              checked={manualUnloading}
+                              onChange={e => {
+                                setManualUnloading(e.target.checked);
+                                if (!e.target.checked) {
+                                  setTmIntervalTime("");
+                                  setTmWaitingTime("");
+                                } else {
+                                  setTmIntervalTime(formData.unloadingTime || "");
+                                  setTmWaitingTime(formData.waitTime || "");
+                                }
+                              }}
+                            />
+                            <span>Manual Entry</span>
+                          </label>
+                        </div>
+                        {!manualUnloading ? (
+                          <>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 ml-4.5 mt-0.5">
+                              Auto-filled from Pumping Speed.
+                            </p>
+                            <div className="w-20 flex-shrink-0">
+                              <Input
+                                type="number"
+                                min="0"
+                                name="unloadingTime"
+                                value={parseFloat(formData.unloadingTime)}
+                                onChange={handleInputChange}
+                                placeholder="0"
+                                disabled
+                                className="w-full text-right bg-gray-50 dark:bg-gray-800 text-xs h-7"
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex flex-col gap-1 w-full">
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs min-w-0 text-gray-700 dark:text-gray-300">TM Interval Time</label>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={tmIntervalTime}
+                                onChange={e => {
+                                  setTmIntervalTime(e.target.value);
+                                  setFormData(prev => ({ ...prev, unloadingTime: e.target.value }));
+                                  setHasChanged(true);
+                                }}
+                                placeholder="Interval (min)"
+                                className="w-20 text-right text-xs h-7"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs min-w-0 text-gray-700 dark:text-gray-300">TM Waiting Time at Site</label>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={tmWaitingTime}
+                                onChange={e => {
+                                  setTmWaitingTime(e.target.value);
+                                  setFormData(prev => ({ ...prev, waitTime: e.target.value }));
+                                  setHasChanged(true);
+                                }}
+                                placeholder="Waiting (min)"
+                                className="w-20 text-right text-xs h-7"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">TM Unloading Time:</span>
+                              <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                                {Number(tmIntervalTime || 0) + Number(tmWaitingTime || 0)} min
+                              </span>
+                            </div>
                           </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 ml-4.5 mt-0.5">
-                            Auto-filled from Pumping Speed.
-                          </p>
-                        </div>
-                        <div className="w-20 flex-shrink-0">
-                          <Input
-                            type="number"
-                            min="0"
-                            name="unloadingTime"
-                            value={parseFloat(formData.unloadingTime)}
-                            onChange={handleInputChange}
-                            placeholder="0"
-                            disabled
-                            className="w-full text-right bg-gray-50 dark:bg-gray-800 text-xs h-7"
-                          />
-                        </div>
+                        )}
                       </div>
 
                       {/* Return Time */}
@@ -2550,30 +2604,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             type="number"
                             name="returnTime"
                             value={parseFloat(formData.returnTime)}
-                            min="0"
-                            onChange={handleInputChange}
-                            placeholder="0"
-                            className="w-full text-right text-xs h-7"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Wait Time */}
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center min-w-0 flex-1">
-                          <span
-                            className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
-                            style={{ backgroundColor: "#6b7280" }}
-                          ></span>
-                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
-                            Wait Time
-                          </label>
-                        </div>
-                        <div className="w-20 flex-shrink-0">
-                          <Input
-                            type="number"
-                            name="waitTime"
-                            value={parseFloat(formData.waitTime)}
                             min="0"
                             onChange={handleInputChange}
                             placeholder="0"
