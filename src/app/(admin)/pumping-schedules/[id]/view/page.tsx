@@ -1679,31 +1679,31 @@ export default function ScheduleViewPage() {
                   <TableRow>
                     <TableCell className="px-2 py-1">{null}</TableCell>
                     <TableCell className="px-2 py-1 text-center">
-                      <span className="text-red-500 font-medium font-bold">
+                      <span className="text-red-500 font-bold">
                         {formatMinutesToHHMM(schedule.input_params.pump_onward_time || 0)}
                       </span>
                     </TableCell>
                     <TableCell className="px-2 py-1">{null}</TableCell>
                     <TableCell className="px-2 py-1 text-center">
-                      <span className="text-red-500 font-medium font-bold">
+                      <span className="text-red-500 font-bold">
                         {formatMinutesToHHMM(schedule.input_params.pump_fixing_time || 0)}
                       </span>
                     </TableCell>
                     <TableCell className="px-2 py-1">{null}</TableCell>
                     <TableCell className="px-2 py-1 text-center">
-                      <span className="text-red-500 font-medium font-bold">
+                      <span className="text-red-500 font-bold">
                         {formatMinutesToHHMM(calculatePumpingHoursFromSchedule(schedule) * 60)}
                       </span>
                     </TableCell>
                     <TableCell className="px-2 py-1 text-center">
-                      <span className="text-red-500 font-medium font-bold">
+                      <span className="text-red-500 font-bold">
                         {formatMinutesToHHMM(schedule.input_params.pump_removal_time || 0)}
                       </span>
                     </TableCell>
                     <TableCell className="px-2 py-1">{null}</TableCell>
                     <TableCell className="px-2 py-1">{null}</TableCell>
                     <TableCell className="px-2 py-1 text-center">
-                      <span className="text-red-500 font-medium font-bold">
+                      <span className="text-red-500 font-bold">
                         {(() => {
                           if (!(schedule?.output_table?.length > 0)) return "N/A";
                           const pumpStart = new Date(schedule.output_table[0].pump_start);
@@ -1849,31 +1849,11 @@ export default function ScheduleViewPage() {
                     const totalVolume = trips.length * capacity;
 
                     // Calculate rounded times
-                    const starts = trips
-                      .map((t) => t.plant_buffer)
-                      .filter(Boolean)
-                      .map((t) => new Date(t));
-                    const ends = trips
-                      .map((t) => t.return)
-                      .filter(Boolean)
-                      .map((t) => new Date(t));
 
-                    let roundedRange = "-";
-                    let roundedTotalHours = 0;
 
-                    if (starts.length > 0 && ends.length > 0) {
-                      const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
-                      const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
 
-                      const roundedStart = calculateRoundedStartTime(minStart);
-                      const roundedEnd = calculateRoundedEndTime(maxEnd);
 
-                      const sTime = formatTimeByPreference(roundedStart, profile?.preferred_format);
-                      const eTime = formatTimeByPreference(roundedEnd, profile?.preferred_format);
-                      // roundedRange = `${sTime} - ${eTime}`;
-
-                      // roundedTotalHours = (roundedEnd.getTime() - roundedStart.getTime()) / (1000 * 60 * 60);
-                    }
+                    // Rounded range and total hours calculation is not used, so removed to fix lint errors
 
                     return (
                       <tr key={tmId} className="border-b border-gray-100 dark:border-gray-700">
@@ -1915,28 +1895,8 @@ export default function ScheduleViewPage() {
                   {/* Last row: average total hours */}
                   {(() => {
                     // Calculate average rounded total hours
-                    const roundedTotalHoursArr = tmIds.map((tmId) => {
-                      const trips = tmTrips[tmId];
-                      const starts = trips
-                        .map((t) => t.plant_buffer)
-                        .filter(Boolean)
-                        .map((t) => new Date(t));
-                      const ends = trips
-                        .map((t) => t.return)
-                        .filter(Boolean)
-                        .map((t) => new Date(t));
-                      if (starts.length > 0 && ends.length > 0) {
-                        const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
-                        const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
-                        const roundedStart = calculateRoundedStartTime(minStart);
-                        const roundedEnd = calculateRoundedEndTime(maxEnd);
-                        return (roundedEnd.getTime() - roundedStart.getTime()) / (1000 * 60 * 60);
-                      }
-                      return 0;
-                    });
-                    // const avgRoundedTotalHours = roundedTotalHoursArr.length
-                    //   ? roundedTotalHoursArr.reduce((a, b) => a + b, 0) / roundedTotalHoursArr.length
-                    //   : 0;
+
+                    // Rounded total hours average calculation is not used, so removed to fix lint errors
 
                     return (
                       <tr className="font-semibold bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white/90">
