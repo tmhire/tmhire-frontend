@@ -1870,9 +1870,9 @@ export default function ScheduleViewPage() {
 
                       const sTime = formatTimeByPreference(roundedStart, profile?.preferred_format);
                       const eTime = formatTimeByPreference(roundedEnd, profile?.preferred_format);
-                      roundedRange = `${sTime} - ${eTime}`;
+                      // roundedRange = `${sTime} - ${eTime}`;
 
-                      roundedTotalHours = (roundedEnd.getTime() - roundedStart.getTime()) / (1000 * 60 * 60);
+                      // roundedTotalHours = (roundedEnd.getTime() - roundedStart.getTime()) / (1000 * 60 * 60);
                     }
 
                     return (
@@ -1934,9 +1934,9 @@ export default function ScheduleViewPage() {
                       }
                       return 0;
                     });
-                    const avgRoundedTotalHours = roundedTotalHoursArr.length
-                      ? roundedTotalHoursArr.reduce((a, b) => a + b, 0) / roundedTotalHoursArr.length
-                      : 0;
+                    // const avgRoundedTotalHours = roundedTotalHoursArr.length
+                    //   ? roundedTotalHoursArr.reduce((a, b) => a + b, 0) / roundedTotalHoursArr.length
+                    //   : 0;
 
                     return (
                       <tr className="font-semibold bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white/90">
