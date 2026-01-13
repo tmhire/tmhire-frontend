@@ -191,7 +191,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const template = searchParams.get("template");
   const { data: session, status } = useSession();
   const { fetchWithAuth } = useApiClient();
-  const {} = useToast();
+  const { } = useToast();
   const { startAction, completeAction } = createApiActionToast();
   const [step, setStep] = useState(schedule_id ? 2 : 0);
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -515,6 +515,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template, pastSchedules]);
 
+  const formatHoursToHHMM = (hours: number) => {
+    if (hours <= 0) return "-";
+    const totalMinutes = Math.round(hours * 60);
+    const hh = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
+    const mm = String(totalMinutes % 60).padStart(2, "0");
+    return `${hh}:${mm}`;
+  };
+
   useEffect(() => {
     if (selectedClient && selectedProject && formData.scheduleDate && motherPlantName)
       setComputedScheduleName(
@@ -608,8 +616,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
             data.data.input_params.unloading_time && data.data.input_params.unloading_time !== 0
               ? data.data.input_params.unloading_time.toString()
               : pumping_speed && avgTMCap
-              ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
-              : "",
+                ? ((avgTMCap / pumping_speed) * 60).toFixed(0)
+                : "",
           pumpOnwardTime: data.data.input_params.pump_onward_time.toString(),
           onwardTime: data.data.input_params.onward_time.toString(),
           returnTime: data.data.input_params.return_time.toString(),
@@ -638,7 +646,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
         });
         setComputedScheduleName(
           data?.data?.schedule_no ||
-            `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
+          `${motherPlantName}-${formatDateAsDDMMYY(formData.scheduleDate)}-${(schedulesForDayCount ?? 0) + 1}`
         );
         const tm_ids = new Set();
         const tmSequence: string[] = [];
@@ -788,9 +796,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    const processedValue = name === "concreteGrade" ? value.toUpperCase() : value;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: processedValue ? processedValue : value,
     }));
     setHasChanged(true);
   };
@@ -1515,20 +1524,18 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 {steps.map((s, index) => (
                   <motion.div
                     key={s.id}
-                    className={`flex flex-col ${
-                      index == 0 ? "items-start" : index == 5 ? "items-end" : "items-center"
-                    } `}
+                    className={`flex flex-col ${index == 0 ? "items-start" : index == 5 ? "items-end" : "items-center"
+                      } `}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1, duration: 0.5 }}
                   >
                     {/* Step Circle */}
                     <motion.div
-                      className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${
-                        step >= s.id
-                          ? "border-brand-500 bg-brand-500 text-white shadow-lg"
-                          : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                      }`}
+                      className={`flex items-center justify-center w-6 h-6 rounded-full border-2 relative z-5 ${step >= s.id
+                        ? "border-brand-500 bg-brand-500 text-white shadow-lg"
+                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                        }`}
                       animate={{
                         scale: s.type === "subStep" ? (step === s.id ? 0.9 : 0.8) : step === s.id ? 1.3 : 1,
                         boxShadow: step === s.id ? "0 0 20px rgba(var(--brand-500-rgb, 59, 130, 246), 0.5)" : "none",
@@ -1557,9 +1564,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
                     {/* Step Name */}
                     <motion.span
-                      className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${
-                        step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
-                      }`}
+                      className={`mt-2 ${s.type === "subStep" ? "text-[10px]" : "text-xs"} text-center ${step >= s.id ? "text-brand-500 font-medium" : "text-gray-500 dark:text-gray-400"
+                        }`}
                       animate={{
                         fontWeight: step >= s.id ? 500 : 400,
                       }}
@@ -1685,11 +1691,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     filteredSchedules?.map((schedule) => (
                       <div
                         key={schedule._id}
-                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
-                          selectedPastSchedule === schedule._id
-                            ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
-                            : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
-                        }`}
+                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${selectedPastSchedule === schedule._id
+                          ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
+                          : "border-gray-200 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-600 dark:hover:bg-gray-800/50"
+                          }`}
                         onClick={() => setSelectedPastSchedule(schedule._id)}
                       >
                         <div className="flex items-start justify-between">
@@ -1697,9 +1702,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                             <div className="flex items-center gap-2 mb-2">
                               <h4 className="font-semibold text-gray-900 dark:text-white ">{schedule.schedule_no}</h4>
                               <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  pumpColors[schedule.pump_type]
-                                }`}
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${pumpColors[schedule.pump_type]
+                                  }`}
                               >
                                 {schedule?.pump_type?.toUpperCase()}
                               </span>
@@ -1744,11 +1748,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           </div>
 
                           <div
-                            className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                              selectedPastSchedule === schedule._id
-                                ? "border-brand-500 bg-brand-500"
-                                : "border-gray-300 dark:border-gray-600"
-                            }`}
+                            className={`ml-4 w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPastSchedule === schedule._id
+                              ? "border-brand-500 bg-brand-500"
+                              : "border-gray-300 dark:border-gray-600"
+                              }`}
                           >
                             {selectedPastSchedule === schedule._id && (
                               <div className="w-2 h-2 rounded-full bg-white"></div>
@@ -2134,7 +2137,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 {/* Unloading Time */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Unloading Time (min) <span className="text-red-500">*</span>
+                    TM Placement Interval <span className="text-xs">(Unloading Time)</span> <span className="text-red-500">*</span>
                   </label>
                   <div className="flex flex-col gap-1">
                     <Input
@@ -2168,7 +2171,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     <Input
                       type="text"
                       name="pumpingHours"
-                      value={totalPumpingHours > 0 ? `${totalPumpingHours.toFixed(2)} hr` : "-"}
+                      value={totalPumpingHours > 0 ? formatHoursToHHMM(totalPumpingHours) : "-"}
                       disabled
                       className="cursor-not-allowed bg-gray-100 dark:bg-gray-800"
                     />
@@ -2253,7 +2256,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 {/* SLUMP AT SITE */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Slump at Site (mm)
+                    Slump at Plant-Site mm <span className="text-xs">(Eg: 160-130 mm)</span>
                   </label>
                   <Input
                     type="number"
@@ -2423,9 +2426,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
               <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Transit Mixer Trip Log</h3>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                {/* Left Section: Input Controls */}
-                <div className="lg:col-span-4 space-y-6">
-                  {/* Input Form Section */}
+                {/* Left Section: Cycle Time Parameters */}
+                <div className="lg:col-span-3 space-y-6">
                   <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
                     <div className="flex flex-row justify-between mr-2">
                       <h3 className="text-base font-semibold text-gray-800 dark:text-white/90 mb-4">
@@ -2507,102 +2509,27 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         </div>
                       </div>
 
-                      {/* TM Unloading Time with Manual Toggle */}
+                      {/* TM Placement Interval (Auto Calc - DISABLED) */}
                       <div className="flex items-center gap-2">
                         <div className="flex items-center min-w-0 flex-1">
                           <span
                             className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0"
                             style={{ backgroundColor: "#10b981" }}
                           ></span>
-                          <div className="flex flex-col gap-1">
-                            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
-                              TM Unloading Time
-                            </label>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Auto-filled from Pumping Speed.</p>
-                          </div>
-                          <label className="flex items-center gap-1 ml-2 cursor-pointer text-xs">
-                            <input
-                              type="checkbox"
-                              checked={manualUnloading}
-                              onChange={(e) => {
-                                setManualUnloading(e.target.checked);
-                                if (!e.target.checked) {
-                                  setFormData((prev) => ({ ...prev, waitTime: "0" }));
-                                }
-                              }}
-                            />
-                            <span>Manual Entry</span>
+                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
+                            TM Placement Interval (Unloading)
                           </label>
                         </div>
                         <div className="w-20 flex-shrink-0">
                           <Input
-                            type="number"
-                            min="0"
-                            value={
-                              !manualUnloading
-                                ? parseFloat(formData.unloadingTime)
-                                : Number(formData.unloadingTime || 0) + Number(formData.waitTime || 0)
-                            }
-                            onChange={handleInputChange}
-                            placeholder="0"
+                            type="text"
+                            value="Auto Calc"
                             disabled
-                            className="w-full text-right bg-gray-50 dark:bg-gray-800 text-xs h-7"
+                            className="w-full text-center bg-gray-100 dark:bg-gray-800 text-xs h-7 text-gray-500"
                           />
                         </div>
                       </div>
-                      {manualUnloading && (
-                        <>
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center min-w-0 flex-1 pl-3">
-                              <span
-                                className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0 opacity-50"
-                                style={{ backgroundColor: "#10b981" }}
-                              ></span>
-                              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
-                                TM Placement Interval
-                              </label>
-                            </div>
-                            <div className="w-20 flex-shrink-0">
-                              <Input
-                                type="number"
-                                min="0"
-                                name="unloadingTime"
-                                value={parseFloat(formData.unloadingTime)}
-                                onChange={(e) => {
-                                  setPumpingSpeedAndUnloadingTime(e);
-                                  setHasChanged(true);
-                                }}
-                                placeholder="0"
-                                className="w-20 text-right text-xs h-7"
-                              />
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center min-w-0 flex-1  pl-3">
-                              <span
-                                className="w-2.5 h-2.5 rounded-sm mr-2 flex-shrink-0 opacity-50"
-                                style={{ backgroundColor: "#10b981" }}
-                              ></span>
-                              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-0">
-                                TM Site buffer Time
-                              </label>
-                            </div>
-                            <div className="w-20 flex-shrink-0">
-                              <Input
-                                type="number"
-                                min="0"
-                                value={parseFloat(formData.waitTime)}
-                                onChange={(e) => {
-                                  setFormData((prev) => ({ ...prev, waitTime: e.target.value }));
-                                  setHasChanged(true);
-                                }}
-                                placeholder="0"
-                                className="w-20 text-right text-xs h-7"
-                              />
-                            </div>
-                          </div>
-                        </>
-                      )}
+
                       {/* Return Time */}
                       <div className="flex items-center gap-2">
                         <div className="flex items-center min-w-0 flex-1">
@@ -2657,28 +2584,26 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       </div>
                     </div>
                   </div>
-
-                  {/* Fleet Sizing Section moved to right column */}
                 </div>
 
-                {/* Right Section: Fleet Sizing + TM Trip Distribution (stacked) */}
-                <div className="lg:col-span-4 space-y-6">
-                  {/* Fleet Sizing Section (moved here) */}
+                {/* Middle Section: Fleet Sizing */}
+                <div className="lg:col-span-3 space-y-6">
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
                     <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Fleet Sizing</h3>
 
                     {!areTransitMixerFieldsFilled() ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Tooltip content="Fill all transit mixer fields (Buffer, Loading, Onward, Unloading, Return times) to see fleet sizing calculations">
+                      <div className="flex items-center justify-center py-8">
+                        <Tooltip content="Fill all transit mixer fields (Buffer, Loading, Onward, Return times) to see fleet sizing calculations">
                           <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                             <Info className="w-4 h-4" />
-                            <span className="text-sm">Fill all transit mixer fields to calculate</span>
+                            <span className="text-xs">Fill all fields</span>
                           </div>
                         </Tooltip>
                       </div>
                     ) : (
-                      <div className="space-y-2.5">
-                        <div className="flex items-center justify-between py-2 border-b border-blue-200/60 dark:border-blue-800/60">
+                      <div className="space-y-3.5">
+                        {/* Optimum Fleet */}
+                        <div className="flex items-center justify-between py-2.5 border-b border-blue-200/60 dark:border-blue-800/60">
                           <span className="text-xs font-medium text-gray-900 dark:text-white">
                             Optimum Fleet: Zero Wait, Non-Stop Pour
                           </span>
@@ -2687,79 +2612,169 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           </span>
                         </div>
 
-                        <div className="flex items-center justify-between py-2 border-b border-blue-200/60 dark:border-blue-800/60">
-                          <span className="text-xs font-medium text-gray-900 dark:text-white">
-                            TMs Additional (Max TMs to wait at site)
+                        {/* Manual / Buffer Toggle */}
+                        <div className="py-3 border-b border-blue-200/60 dark:border-blue-800/60">
+                          <span className="text-xs font-medium text-gray-900 dark:text-white block mb-2.5">
+                            Add Additional TMs
                           </span>
-                          <div className="flex items-center gap-1">
+                          <div className="flex gap-2">
                             <button
                               type="button"
-                              className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
                               onClick={() => {
-                                if (tmReq <= 0) return;
-                                const nextAdditional = Math.max(0, additionalTMValue - 1);
-                                const nextTotal = Math.max(1, tmReq + nextAdditional);
-                                setAdditionalTMValue(nextAdditional);
-                                setOverruleTMCount(manualUnloading || nextAdditional > 0);
-                                setCustomTMCount(nextTotal);
-                                setHasChanged(true);
+                                setManualUnloading(false);
+                                setFormData((prev) => ({ ...prev, waitTime: "0" }));
                               }}
+                              className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${!manualUnloading
+                                  ? "bg-blue-600 text-white dark:bg-blue-500"
+                                  : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-blue-200 dark:border-blue-800"
+                                }`}
                             >
-                              -
+                              Manual
                             </button>
-
-                            <input
-                              type="number"
-                              min={0}
-                              className="no-spinner h-6 w-8 text-center px-1 rounded border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
-                              value={tmReq > 0 ? additionalTMValue : 0}
-                              onChange={(e) => {
-                                const raw = parseInt(e.target.value || "0", 10);
-                                const add = isNaN(raw) ? 0 : Math.max(0, raw);
-                                if (tmReq <= 0) return;
-                                const nextTotal = Math.max(1, tmReq + add);
-                                setAdditionalTMValue(add);
-                                setOverruleTMCount(add > 0);
-                                setCustomTMCount(nextTotal);
-                                setHasChanged(true);
-                              }}
-                            />
-
                             <button
                               type="button"
-                              className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
-                              onClick={() => {
-                                if (tmReq <= 0) return;
-                                const nextAdditional = additionalTMValue + 1;
-                                const nextTotal = Math.max(1, tmReq + nextAdditional);
-                                setAdditionalTMValue(nextAdditional);
-                                setOverruleTMCount(true);
-                                setCustomTMCount(nextTotal);
-                                setHasChanged(true);
-                              }}
+                              onClick={() => setManualUnloading(true)}
+                              className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${manualUnloading
+                                  ? "bg-blue-600 text-white dark:bg-blue-500"
+                                  : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-blue-200 dark:border-blue-800"
+                                }`}
                             >
-                              +
+                              Buffer
                             </button>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between py-2">
-                          <span className="text-xs font-semibold text-gray-900 dark:text-white">Total TM Required</span>
-                          <span className="text-base font-bold text-blue-600 dark:text-blue-400 min-w-[2rem] text-right">
-                            {overruleTMCount ? customTMCount : totalTMRequired > 0 ? totalTMRequired : "-"}
-                          </span>
-                        </div>
+                        {/* Manual Mode */}
+                        {!manualUnloading ? (
+                          <div className="space-y-2.5">
+                            <div className="flex items-center justify-between py-2">
+                              <span className="text-xs font-medium text-gray-900 dark:text-white">
+                                Add or Reduce TM Count
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                                  onClick={() => {
+                                    if (tmReq <= 0) return;
+                                    const nextAdditional = Math.max(0, additionalTMValue - 1);
+                                    const nextTotal = Math.max(1, tmReq + nextAdditional);
+                                    setAdditionalTMValue(nextAdditional);
+                                    setOverruleTMCount(nextAdditional > 0);
+                                    setCustomTMCount(nextTotal);
+                                    setHasChanged(true);
+                                  }}
+                                >
+                                  −
+                                </button>
 
+                                <input
+                                  type="number"
+                                  min={0}
+                                  className="no-spinner h-6 w-8 text-center px-1 rounded border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
+                                  value={tmReq > 0 ? additionalTMValue : 0}
+                                  onChange={(e) => {
+                                    const raw = parseInt(e.target.value || "0", 10);
+                                    const add = isNaN(raw) ? 0 : Math.max(0, raw);
+                                    if (tmReq <= 0) return;
+                                    const nextTotal = Math.max(1, tmReq + add);
+                                    setAdditionalTMValue(add);
+                                    setOverruleTMCount(add > 0);
+                                    setCustomTMCount(nextTotal);
+                                    setHasChanged(true);
+                                  }}
+                                />
+
+                                <button
+                                  type="button"
+                                  className="w-6 h-6 bg-white/90 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                                  onClick={() => {
+                                    if (tmReq <= 0) return;
+                                    const nextAdditional = additionalTMValue + 1;
+                                    const nextTotal = Math.max(1, tmReq + nextAdditional);
+                                    setAdditionalTMValue(nextAdditional);
+                                    setOverruleTMCount(true);
+                                    setCustomTMCount(nextTotal);
+                                    setHasChanged(true);
+                                  }}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between py-2.5">
+                              <span className="text-xs font-semibold text-gray-900 dark:text-white">
+                                Total TM Required
+                              </span>
+                              <span className="text-base font-bold text-blue-600 dark:text-blue-400 min-w-[2rem] text-right">
+                                {overruleTMCount ? customTMCount : totalTMRequired > 0 ? totalTMRequired : "-"}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          // Buffer Mode
+                          <div className="space-y-2.5">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 min-w-0">
+                                <label className="text-xs font-medium text-gray-900 dark:text-white block mb-1">
+                                  TM Site Buffer Time
+                                </label>
+                                <div className="w-20 flex-shrink-0">
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    name="onwardTime"
+                                    value={parseFloat(formData.waitTime)}
+                                    onChange={(e) => {
+                                      const bufferValue = parseFloat(e.target.value) || 0;
+                                      const unloadingTime = parseFloat(formData.unloadingTime) || 0;
+
+                                      // Auto-calculate additional TMs from buffer time
+                                      const calculatedAdditional = unloadingTime > 0 ? Math.ceil(bufferValue / unloadingTime) : 0;
+
+                                      setFormData((prev) => ({ ...prev, waitTime: e.target.value }));
+                                      setAdditionalTMValue(calculatedAdditional);
+                                      setOverruleTMCount(calculatedAdditional > 0);
+                                      setCustomTMCount(Math.max(1, tmReq + calculatedAdditional));
+                                      setHasChanged(true);
+                                    }}
+                                    placeholder="0"
+                                    className="w-full text-right text-xs h-7"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between py-2 border-t border-blue-200/60 dark:border-blue-800/60 pt-2">
+                              <span className="text-xs font-medium text-gray-900 dark:text-white">
+                                TMs Additional (Max TMs to wait at Site)
+                              </span>
+                              <span className="text-sm font-bold text-gray-900 dark:text-white min-w-[2rem] text-right">
+                                {additionalTMValue > 0 ? additionalTMValue : "0"}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between py-2.5 border-t border-blue-200/60 dark:border-blue-800/60 pt-2">
+                              <span className="text-xs font-semibold text-gray-900 dark:text-white">
+                                Total TM Required
+                              </span>
+                              <span className="text-base font-bold text-blue-600 dark:text-blue-400 min-w-[2rem] text-right">
+                                {overruleTMCount ? customTMCount : totalTMRequired}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Pour Model Info */}
                         <div className="mt-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-900/40">
                           <div className="px-3 py-2 border-b border-blue-200 dark:border-blue-800 flex items-center justify-between">
                             <span className="text-xs font-semibold text-gray-900 dark:text-white">Pour Model</span>
-                            <div className="flex items-center gap-2">
-                              <span className={`text-xs font-medium ${"text-blue-600 dark:text-blue-400"}`}>
-                                {(parseFloat(formData.waitTime) || 0) === 0 && additionalTMValue === 0
-                                  ? "0 Wait"
-                                  : "Burst Model"}
-                              </span>
-                            </div>
+                            <span className={`text-xs font-medium ${"text-blue-600 dark:text-blue-400"}`}>
+                              {(parseFloat(formData.waitTime) || 0) === 0 && additionalTMValue === 0
+                                ? "0 Wait"
+                                : "Burst Model"}
+                            </span>
                           </div>
                           <div className="p-3 space-y-2">
                             {!isBurstModel ? (
@@ -2785,6 +2800,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Right Section: Donut Chart + Trip Distribution */}
+                <div className="lg:col-span-6 space-y-6">
+                  {/* Donut Chart */}
+                  <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-6 text-center">
+                      Cycle Time Breakdown
+                    </h3>
+                    <div className="flex justify-center">
+                      <DonutChart data={cycleTimeData} size={280} />
+                    </div>
+                  </div>
 
                   {/* TM Trip Distribution */}
                   <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
@@ -2793,7 +2821,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                     </h3>
                     {!areTransitMixerFieldsFilled() ? (
                       <div className="flex items-center justify-center h-32">
-                        <Tooltip content="Fill all transit mixer fields (Buffer, Loading, Onward, Unloading, Return times) to see trip distribution">
+                        <Tooltip content="Fill all transit mixer fields (Buffer, Loading, Onward, Return times) to see trip distribution">
                           <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
                             <Info className="w-4 h-4" />
                             <span>Fill all transit mixer fields to calculate</span>
@@ -2891,17 +2919,6 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                         );
                       })()
                     )}
-                  </div>
-                </div>
-                {/* Center Section: Donut Chart */}
-                <div className="lg:col-span-4 flex items-center justify-center">
-                  <div className="bg-white dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-xl p-6 w-full">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-6 text-center">
-                      Cycle Time Breakdown
-                    </h3>
-                    <div className="flex justify-center">
-                      <DonutChart data={cycleTimeData} size={280} />
-                    </div>
                   </div>
                 </div>
               </div>
@@ -3006,11 +3023,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   <div className="flex items-center gap-3 py-2 pl-4">
                     <h3 className="text-lg font-medium text-gray-800 dark:text-white/90">Select 1 Pump</h3>
                     <span
-                      className={`px-3 py-1 text-sm font-medium rounded-full ${
-                        pumpType === "line"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                          : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                      }`}
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${pumpType === "line"
+                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                        : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                        }`}
                     >
                       {pumpType === "line" ? "Line Pump" : "Boom Pump"}
                     </span>
@@ -3268,11 +3284,10 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                 <span className="font-semibold text-gray-700 dark:text-white">{pump.identifier}</span>
                                 {/* Pump Type Chip */}
                                 <span
-                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                    pumpType === "line"
-                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                  }`}
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${pumpType === "line"
+                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                    : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                                    }`}
                                 >
                                   {pumpType === "line" ? "Line" : "Boom"}
                                 </span>
