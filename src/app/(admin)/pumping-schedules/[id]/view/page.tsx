@@ -1612,8 +1612,8 @@ export default function ScheduleViewPage() {
                     <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400">Pipeline Fixing Duration</TableCell>
                     <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Pump Start Time</TableCell>
                     <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400">Pumping Duration</TableCell>
-                    <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400">Pipeline Removal</TableCell>
                     <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Pump End Time</TableCell>
+                    <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400">Pipeline Removal</TableCell>
                     <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">Site Leave Time</TableCell>
                     <TableCell isHeader className="px-2 py-2 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400">Total Hrs Engaged (HH:MM)</TableCell>
                   </TableRow>
@@ -1644,9 +1644,6 @@ export default function ScheduleViewPage() {
                     <TableCell className="px-2 py-1 text-center" >
                       {null}
                     </TableCell>
-                    <TableCell className="px-2 py-1 text-center" >
-                      {null}
-                    </TableCell>
                     <TableCell className="px-2 py-1 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
                         {(() => {
@@ -1657,6 +1654,9 @@ export default function ScheduleViewPage() {
                           return formatTimeByPreference(pumpEnd, profile?.preferred_format);
                         })()}
                       </span>
+                    </TableCell>
+                    <TableCell className="px-2 py-1 text-center" >
+                      {null}
                     </TableCell>
                     <TableCell className="px-2 py-1 text-start">
                       <span className="text-gray-500 dark:text-gray-400">
@@ -1695,12 +1695,12 @@ export default function ScheduleViewPage() {
                         {formatMinutesToHHMM(calculatePumpingHoursFromSchedule(schedule) * 60)}
                       </span>
                     </TableCell>
+                    <TableCell className="px-2 py-1">{null}</TableCell>
                     <TableCell className="px-2 py-1 text-center">
                       <span className="text-red-500 font-bold">
                         {formatMinutesToHHMM(schedule.input_params.pump_removal_time || 0)}
                       </span>
                     </TableCell>
-                    <TableCell className="px-2 py-1">{null}</TableCell>
                     <TableCell className="px-2 py-1">{null}</TableCell>
                     <TableCell className="px-2 py-1 text-center">
                       <span className="text-red-500 font-bold">

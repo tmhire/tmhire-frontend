@@ -865,9 +865,20 @@ export default function PlantsContainer() {
               {nameError && <span className="text-xs text-red-600 mt-1 block">{nameError}</span>}
             </div>
             <div className="w-1/4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Capacity (m³/hr)
-              </label>
+              <div className="flex items-center gap-1 -mt-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Capacity (m³/hr)
+                </label>
+                <div className="group relative">
+                  <Info size={16} className="text-gray-500 dark:text-gray-400 cursor-help" />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-1000">
+                    <div className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-200 text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
+                      <p className="font-semibold mb-1">Auto-calculated or enter manually</p>
+                    </div>
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
+                  </div>
+                </div>
+              </div>
               <Input
                 type="number"
                 name="capacity"
@@ -888,7 +899,7 @@ export default function PlantsContainer() {
             <div className="w-1/4">
               <div className="flex items-center gap-1 mb-1.5">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block">
-                  Unloading Time (min) <span className="text-red-500">*</span>
+                  Loading Time (min) <span className="text-red-500">*</span>
                 </label>
                 <div className="group relative">
                   <Info size={16} className="text-gray-500 dark:text-gray-400 cursor-help" />
@@ -905,7 +916,7 @@ export default function PlantsContainer() {
               <Input
                 type="number"
                 name="unloading_time"
-                placeholder="Enter unloading time"
+                placeholder="Enter Loading time"
                 value={newPlant.unloading_time || ""}
                 onChange={handleInputChange}
                 min="1"
@@ -1063,9 +1074,20 @@ export default function PlantsContainer() {
                 {editNameError && <span className="text-xs text-red-600 mt-1 block">{editNameError}</span>}
               </div>
               <div className="w-1/4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Capacity m³/hr
-                </label>
+                <div className="flex items-center gap-1 -mt-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Capacity (m³/hr)
+                  </label>
+                  <div className="group relative">
+                    <Info size={16} className="text-gray-500 dark:text-gray-400 cursor-help" />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-1000">
+                      <div className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-200 text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
+                        <p className="font-semibold mb-1">Auto-calculated or enter manually</p>
+                      </div>
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
+                    </div>
+                  </div>
+                </div>
                 <Input
                   type="number"
                   name="capacity"
@@ -1085,7 +1107,7 @@ export default function PlantsContainer() {
               <div className="w-1/4">
                 <div className="flex items-center gap-1 mb-1.5">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block">
-                    Unloading Time (min) <span className="text-red-500">*</span>
+                    Loading Time (min) <span className="text-red-500">*</span>
                   </label>
                   <div className="group relative">
                     <Info size={16} className="text-gray-500 dark:text-gray-400 cursor-help" />
@@ -1102,7 +1124,7 @@ export default function PlantsContainer() {
                 <Input
                   type="number"
                   name="unloading_time"
-                  placeholder="Enter unloading time"
+                  placeholder="Enter Loading time"
                   value={editedPlant.unloading_time || ""}
                   onChange={handleEditInputChange}
                   className="w-full placeholder:text-xs"

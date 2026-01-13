@@ -543,8 +543,8 @@ export default function PumpsContainer() {
                 <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                 <span
                   className={`text-xs ${selectedPumpType === "Line"
-                      ? "text-blue-600 dark:text-blue-400 font-medium"
-                      : "text-gray-500 dark:text-gray-400"
+                    ? "text-blue-600 dark:text-blue-400 font-medium"
+                    : "text-gray-500 dark:text-gray-400"
                     }`}
                 >
                   Line
@@ -557,8 +557,8 @@ export default function PumpsContainer() {
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
                 <span
                   className={`text-xs ${selectedPumpType === "Boom"
-                      ? "text-green-600 dark:text-green-400 font-medium"
-                      : "text-gray-500 dark:text-gray-400"
+                    ? "text-green-600 dark:text-green-400 font-medium"
+                    : "text-gray-500 dark:text-gray-400"
                     }`}
                 >
                   Boom
@@ -835,11 +835,12 @@ export default function PumpsContainer() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Capacity <span className="text-red-500">*</span>
+              Capacity (m3/Hour) <span className="text-red-500">*</span>
             </label>
             <Input
               type="number"
               name="capacity"
+              className="w-full placeholder:text-xs"
               placeholder="Enter capacity (1-999)"
               value={newPump.capacity}
               onChange={handleInputChange}
@@ -886,9 +887,9 @@ export default function PumpsContainer() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Make <span className="text-red-500">*</span>
+              Make & Model No <span className="text-red-500">*</span>
             </label>
-            <Input type="text" name="make" placeholder="Enter make" value={newPump.make} onChange={handleInputChange} />
+            <Input type="text" name="make" placeholder="Enter Make & Model" value={newPump.make} onChange={handleInputChange} />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -1043,12 +1044,13 @@ export default function PumpsContainer() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Capacity <span className="text-red-500">*</span>
+                Capacity (m3/Hour) <span className="text-red-500">*</span>
               </label>
               <Input
                 type="number"
                 name="capacity"
                 value={editedPump.capacity}
+                className="w-full placeholder:text-xs"
                 onChange={handleEditInputChange}
                 step={0.1}
                 min="1"
@@ -1093,7 +1095,7 @@ export default function PumpsContainer() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Make <span className="text-red-500">*</span>
+                Make & Model No <span className="text-red-500">*</span>
               </label>
               <Input type="text" name="make" value={editedPump.make} onChange={handleEditInputChange} />
             </div>
