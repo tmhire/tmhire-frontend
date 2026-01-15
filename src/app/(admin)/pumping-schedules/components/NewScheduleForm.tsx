@@ -143,6 +143,7 @@ interface PastSchedule {
   floor_height: number;
   pump_site_reach_time: string;
   tm_overrule?: number;
+  tm_count?: number;
   slump_at_site?: number;
   mix_code?: string;
   remarks?: string;
@@ -504,9 +505,19 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
           creditTerms: pastSchedule?.credit_terms || "",
           fieldTechnicianId: pastSchedule?.field_technician_id || "",
         }));
-        if (pastSchedule.tm_overrule) {
-          setOverruleTMCount(true);
-          setCustomTMCount(pastSchedule.tm_overrule);
+        // if (pastSchedule.tm_overrule) {
+        //   setOverruleTMCount(true);
+        //   setCustomTMCount(pastSchedule.tm_overrule);
+        // }
+        setCustomTMCount(pastSchedule?.tm_overrule || pastSchedule?.tm_count || 1);
+        setOverruleTMCount(
+          pastSchedule?.tm_overrule && pastSchedule?.tm_count
+            ? pastSchedule?.tm_overrule !== pastSchedule?.tm_count
+            : false
+        );
+        setHasChanged(false);
+        if (!!pastSchedule?.input_params?.wait_time) {
+          setManualUnloading(true);
         }
         // Move to first step
         setStep(1);
