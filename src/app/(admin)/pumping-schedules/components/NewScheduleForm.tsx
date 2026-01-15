@@ -2746,12 +2746,12 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                                     name="onwardTime"
                                     value={parseFloat(formData.waitTime)}
                                     onChange={(e) => {
-                                      const bufferValue = parseFloat(e.target.value) || 0;
-                                      const unloadingTime = parseFloat(formData.unloadingTime) || 0;
+                                      // const bufferValue = parseFloat(e.target.value) || 0;
+                                      // const unloadingTime = parseFloat(formData.unloadingTime) || 0;
 
                                       // Auto-calculate additional TMs from buffer time
-                                      const calculatedAdditional =
-                                        unloadingTime > 0 ? Math.ceil(bufferValue / unloadingTime) : 0;
+                                      // const calculatedAdditional =
+                                      //   unloadingTime > 0 ? Math.ceil(bufferValue / unloadingTime) : 0;
 
                                       setFormData((prev) => ({ ...prev, waitTime: e.target.value }));
                                       // setAdditionalTMValue(calculatedAdditional);
