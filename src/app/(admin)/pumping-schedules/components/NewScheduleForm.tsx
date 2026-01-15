@@ -1460,7 +1460,9 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   // const totalTripsApprox = totalTMRequired > 0 ? Math.max(0, Math.round(tripsPerTMExact * totalTMRequired)) : 0;
   const numCeilTms = loads - floorTripsPerTM * totalTMRequired;
   const numFloorTms =
-    totalTMRequired > 0 ? Math.max(0, (overruleTMCount ? customTMCount : totalTMRequired) - numCeilTms) : 0;
+    (overruleTMCount ? customTMCount : totalTMRequired) > 0
+      ? Math.max(0, (overruleTMCount ? customTMCount : totalTMRequired) - numCeilTms)
+      : 0;
 
   const createUnavailableInfo = (unavailableTimes: UnavailableTimes): ReactNode => {
     const schedules: string[] = unavailableTimes ? Object.keys(unavailableTimes) : [];
