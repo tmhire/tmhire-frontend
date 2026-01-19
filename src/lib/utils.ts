@@ -44,6 +44,15 @@ export function formatHoursAndMinutes(decimalHours: number): string {
   }
 }
 
+export function formatMinutesToHHMM(minutes: number | undefined): string {
+  if (typeof minutes === "undefined" || isNaN(minutes)) return "-";
+  
+  const hours = Math.floor(minutes / 60);
+  const mins = Math.round(minutes % 60);
+  
+  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
+
 
 export const validateMobile = (value: string) => {
   return /^\d{10}$/.test(value);

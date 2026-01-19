@@ -53,6 +53,7 @@ interface Schedule {
     onward_time: number;
     return_time: number;
     buffer_time: number;
+    wait_time: number;
     load_time: number;
     pump_start: string;
     schedule_date: string;
@@ -192,36 +193,36 @@ const calculatePumpingHoursFromSchedule = (schedule: Schedule): number => {
 };
 
 // Helper function to calculate rounded start time
-const calculateRoundedStartTime = (date: Date): Date => {
-  const floor = new Date(date);
-  floor.setMinutes(0, 0, 0);
+// const calculateRoundedStartTime = (date: Date): Date => {
+//   const floor = new Date(date);
+//   floor.setMinutes(0, 0, 0);
 
-  const diffInMinutes = Math.abs((date.getTime() - floor.getTime()) / (1000 * 60));
+//   const diffInMinutes = Math.abs((date.getTime() - floor.getTime()) / (1000 * 60));
 
-  if (diffInMinutes > 30) {
-    return floor;
-  } else {
-    return new Date(floor.getTime() - 60 * 60 * 1000);
-  }
-};
+//   if (diffInMinutes > 30) {
+//     return floor;
+//   } else {
+//     return new Date(floor.getTime() - 60 * 60 * 1000);
+//   }
+// };
 
 // Helper function to calculate rounded end time
-const calculateRoundedEndTime = (date: Date): Date => {
-  const ceil = new Date(date);
-  if (ceil.getMinutes() > 0 || ceil.getSeconds() > 0 || ceil.getMilliseconds() > 0) {
-    ceil.setHours(ceil.getHours() + 1, 0, 0, 0);
-  } else {
-    ceil.setMinutes(0, 0, 0);
-  }
+// const calculateRoundedEndTime = (date: Date): Date => {
+//   const ceil = new Date(date);
+//   if (ceil.getMinutes() > 0 || ceil.getSeconds() > 0 || ceil.getMilliseconds() > 0) {
+//     ceil.setHours(ceil.getHours() + 1, 0, 0, 0);
+//   } else {
+//     ceil.setMinutes(0, 0, 0);
+//   }
 
-  const diffInMinutes = Math.abs((date.getTime() - ceil.getTime()) / (1000 * 60));
+//   const diffInMinutes = Math.abs((date.getTime() - ceil.getTime()) / (1000 * 60));
 
-  if (diffInMinutes > 30) {
-    return ceil;
-  } else {
-    return new Date(ceil.getTime() + 60 * 60 * 1000);
-  }
-};
+//   if (diffInMinutes > 30) {
+//     return ceil;
+//   } else {
+//     return new Date(ceil.getTime() + 60 * 60 * 1000);
+//   }
+// };
 
 const formatVolume = (value: number): string => {
   if (!value) return "0";
@@ -438,7 +439,7 @@ export default function ScheduleViewPage() {
   // Update useBurstModel when schedule data is loaded
   React.useEffect(() => {
     if (schedule?.input_params?.is_burst_model !== undefined) {
-      setUseBurstModel(schedule.input_params.is_burst_model);
+      setUseBurstModel(schedule.input_params.is_burst_model || schedule.tm_overrule > schedule.tm_count);
     }
   }, [schedule]);
 
@@ -540,7 +541,7 @@ export default function ScheduleViewPage() {
         "Pumping Speed m³/hr (Unloading time)",
         `${schedule.input_params.pumping_speed} (${schedule.input_params.unloading_time} Minutes)`,
       ],
-      ["RMC Grade", schedule.concreteGrade ? `M ${schedule.concreteGrade}` : "-"],
+      ["RMC Grade", schedule.concreteGrade ? `${schedule.concreteGrade}` : "-"],
       ["Placement Zone", schedule.pumping_job || "-"],
       ["Slump at Site", `${schedule.slump_at_site ?? "-"}`],
       ["One way Km from Mother Plant", `${schedule.mother_plant_km ?? "-"}`],
@@ -630,7 +631,7 @@ export default function ScheduleViewPage() {
     ) {
       if (!trips || !trips.length) return "-";
       const starts = trips
-        .map((t) => t.plant_start)
+        .map((t) => t.plant_buffer)
         .filter(Boolean)
         .map((t) => new Date(t));
       const ends = trips
@@ -648,7 +649,7 @@ export default function ScheduleViewPage() {
     function getTotalHours(trips: (Schedule["output_table"] | Schedule["burst_table"]) | undefined) {
       if (!trips || !trips.length) return 0;
       const starts = trips
-        .map((t) => t.plant_start)
+        .map((t) => t.plant_buffer)
         .filter(Boolean)
         .map((t) => new Date(t));
       const ends = trips
@@ -661,22 +662,26 @@ export default function ScheduleViewPage() {
       return (maxEnd.getTime() - minStart.getTime()) / (1000 * 60 * 60);
     }
 
-    // Add Pump Details section (D9:M11)
+      // Add Pump Details section (D9:M11)
     if (schedule.output_table && schedule.output_table.length > 0) {
       const preferred = profile?.preferred_format;
       const pump = schedule.available_pumps.find((p) => p.id === schedule.pump);
       const pumpIdentifier = pump ? pump.identifier : "N/A";
+      
+      // Calculate values using the same logic as UI
       const pumpStartFromPlant = calculatePumpStartTimeFromPlant(schedule, preferred);
       const siteReachTime = calculatePumpSiteReachTime(schedule, preferred);
       const pumpStart = schedule.output_table[0]?.pump_start;
       const pumpStartTime = pumpStart ? formatTimeByPreference(pumpStart, preferred) : "N/A";
       const pumpingHours = calculatePumpingHoursFromSchedule(schedule);
+      
       const pumpEndTime = (() => {
         if (!pumpStart) return "N/A";
         const ps = new Date(pumpStart);
         const pe = new Date(ps.getTime() + pumpingHours * 60 * 60 * 1000);
         return formatTimeByPreference(pe, preferred);
       })();
+      
       const siteLeaveTime = (() => {
         if (!pumpStart) return "N/A";
         const ps = new Date(pumpStart);
@@ -684,6 +689,7 @@ export default function ScheduleViewPage() {
         const sl = new Date(pe.getTime() + (schedule.input_params.pump_removal_time || 0) * 60 * 1000);
         return formatTimeByPreference(sl, preferred);
       })();
+      
       const totalHoursEngaged = (() => {
         if (!pumpStart) return "N/A";
         const ps = new Date(pumpStart);
@@ -693,28 +699,33 @@ export default function ScheduleViewPage() {
         const pe = new Date(ps.getTime() + pumpingHours * 60 * 60 * 1000);
         const sl = new Date(pe.getTime() + (schedule.input_params.pump_removal_time || 0) * 60 * 1000);
         const hours = (sl.getTime() - startFromPlant.getTime()) / (1000 * 60 * 60);
-        return formatHoursAndMinutes(hours);
+        return formatMinutesToHHMM(hours * 60);
       })();
 
       // Merge cells for Pump Details header
       const pumpDetailsStartRow = 9;
+      const pumpDetailRow = 8;
+      const pumpDetailCell = summarySheet.getCell(`D${pumpDetailRow}`);
+      pumpDetailCell.value = `Pump REG NO`;
+      const pumpDetailNo = summarySheet.getCell(`E${pumpDetailRow}`);
+      pumpDetailNo.value = pumpIdentifier;
       summarySheet.mergeCells(`D${pumpDetailsStartRow}:M${pumpDetailsStartRow}`);
       const pumpDetailsHeaderCell = summarySheet.getCell(`D${pumpDetailsStartRow}`);
       pumpDetailsHeaderCell.value = `Pump Details (${preferred === "24h" ? "24H" : "12H"} format for Time)`;
       pumpDetailsHeaderCell.style = { ...headerStyle, font: { ...headerStyle.font, size: 11 } };
 
-      // Add pump details headers
+      // Add pump details headers matching UI
       const pumpDetailsHeaders = [
-        "Pump",
-        "Plant Start",
-        "Site Reach",
-        "Line Fixing (min)",
-        "Pump Start",
-        "Pumping Hrs.",
-        "Pump End",
-        "Removal Time (min)",
+        "Start Time from Plant",
+        "Onward Duration (HH:MM)",
+        "Site Reach Time",
+        "Pipeline Fixing Duration",
+        "Pump Start Time",
+        "Pumping Duration",
+        "Pump End Time",
+        "Pipeline Removal",
         "Site Leave Time",
-        "Total Hrs Used",
+        "Total Hrs Engaged (HH:MM)",
       ];
 
       pumpDetailsHeaders.forEach((header, colIndex) => {
@@ -723,28 +734,48 @@ export default function ScheduleViewPage() {
         cell.style = subHeaderStyle;
       });
 
-      // Add pump details data
-      const pumpDetailsData = [
-        pumpIdentifier,
+      // Add pump details data row 1 (times)
+      const pumpDetailsDataRow1 = [
         pumpStartFromPlant,
+        "-", // Onward duration in values row
         siteReachTime,
-        schedule.input_params.pump_fixing_time || 0,
+        "-", // Pipeline fixing in values row
         pumpStartTime,
-        formatHoursAndMinutes(pumpingHours),
+        "-", // Pumping duration in values row
         pumpEndTime,
-        schedule.input_params.pump_removal_time || 0,
+        "-", // Pipeline removal in values row
         siteLeaveTime,
-        totalHoursEngaged,
+        "-", // Total hrs in values row
       ];
 
-      pumpDetailsData.forEach((data, colIndex) => {
+      pumpDetailsDataRow1.forEach((data, colIndex) => {
         const cell = summarySheet.getCell(pumpDetailsStartRow + 2, colIndex + 4); // Start from column D (4)
         cell.value = String(data);
         cell.style = dataStyle;
       });
 
+      // Add pump details data row 2 (durations in HH:MM)
+      const pumpDetailsDataRow2 = [
+        "-",
+        formatMinutesToHHMM(schedule.input_params.pump_onward_time || 0),
+        "-",
+        formatMinutesToHHMM(schedule.input_params.pump_fixing_time || 0),
+        "-",
+        formatMinutesToHHMM(pumpingHours * 60),
+        "-",
+        formatMinutesToHHMM(schedule.input_params.pump_removal_time || 0),
+        "-",
+        totalHoursEngaged,
+      ];
+
+      pumpDetailsDataRow2.forEach((data, colIndex) => {
+        const cell = summarySheet.getCell(pumpDetailsStartRow + 3, colIndex + 4); // Start from column D (4)
+        cell.value = String(data);
+        cell.style = { ...dataStyle, font: { ...dataStyle.font, color: { argb: "FFDC2626" }, bold: true } };
+      });
+
       // Add borders to pump details section
-      addBorders(pumpDetailsStartRow + 1, pumpDetailsStartRow + 2, 4, 13);
+      addBorders(pumpDetailsStartRow + 1, pumpDetailsStartRow + 3, 4, 13);
     }
 
     // Add TM Wise Trip Details section (D13:L)
@@ -768,26 +799,22 @@ export default function ScheduleViewPage() {
       // Add spacing and header for TM Wise Trip Details
       const tmWiseStartRow = 13;
 
-      // Calculate total columns: S.No, TM REGN, Capacity, Trips..., Total Trips, Total Vol, Start-End, Total Hours, Rounded Range, Rounded Total
-      const totalCols = 9 + maxTrips;
+      // Calculate total columns: S.No, TM REGN, Trips..., Total Vol, Start-End, Total Hours
+      const totalCols = 2 + maxTrips + 3;
 
       summarySheet.mergeCells(tmWiseStartRow, 4, tmWiseStartRow, 4 + totalCols - 1);
       const tmWiseHeaderCell = summarySheet.getCell(tmWiseStartRow, 4);
       tmWiseHeaderCell.value = `TM Wise Trip Details (${preferred === "24h" ? "24H" : "12H"} format for Time)`;
       tmWiseHeaderCell.style = { ...headerStyle, font: { ...headerStyle.font, size: 11 } };
 
-      // Add TM Wise Trip Details headers
+      // Add TM Wise Trip Details headers matching UI
       const header = [
         "S.No.",
         "TM REGN",
-        "Capacity m3",
         ...Array.from({ length: maxTrips }, (_, i) => `Trip ${i + 1}`),
-        "Total Trips",
         "Total Vol carried m3",
         "Start-End Time",
         "Total Hours",
-        "Rounded off (Start - End)",
-        "Rounded Total",
       ];
       header.forEach((headerText, colIndex) => {
         const cell = summarySheet.getCell(tmWiseStartRow + 1, colIndex + 4); // Start from column D (4)
@@ -797,8 +824,8 @@ export default function ScheduleViewPage() {
 
       // Add TM Wise Trip Details data
       let currentDataRow = tmWiseStartRow + 2;
-      let totalTripsSum = 0;
-      let totalVolSum = 0;
+      // let totalTripsSum = 0;
+      // let totalVolSum = 0;
 
       // Fetch TM data to get capacities
       let tmCapacityMap: Record<string, number> = {};
@@ -823,6 +850,24 @@ export default function ScheduleViewPage() {
         console.error("Failed to fetch TMs for capacity:", error);
       }
 
+      // Calculate actual volume carried, with last TM carrying only remaining quantity
+      const requiredQuantity = schedule.input_params.quantity || 0;
+      let excelCumulativeVolume = 0;
+      const excelCarriedVolumeArr = tmIds.map((tmId, idx) => {
+        const trips = tmTrips[tmId] || [];
+        const capacity = tmCapacityMap[tmId] || 0;
+        let volumeForThisTm = trips.length * capacity;
+
+        // For the last TM, adjust to carry only the remaining quantity
+        if (idx === tmIds.length - 1) {
+          const remainingQuantity = Math.max(0, requiredQuantity - excelCumulativeVolume);
+          volumeForThisTm = remainingQuantity;
+        }
+
+        excelCumulativeVolume += volumeForThisTm;
+        return volumeForThisTm;
+      });
+
       tmIds.forEach((tmId, index) => {
         const trips = tmTrips[tmId];
         if (!trips) return;
@@ -830,7 +875,7 @@ export default function ScheduleViewPage() {
         const tripTimes = Array.from({ length: maxTrips }).map((_, i) => {
           const trip = trips?.[i];
           return trip
-            ? `${formatTimeByPreference(trip.plant_start, preferred)} - ${formatTimeByPreference(
+            ? `${formatTimeByPreference(trip.plant_buffer, preferred)} - ${formatTimeByPreference(
               trip.return,
               preferred
             )}`
@@ -839,51 +884,18 @@ export default function ScheduleViewPage() {
         const overallRange = formatOverallRange(trips, preferred);
         const totalHours = getTotalHours(trips);
 
-        // Calculate rounded times
-        const starts = trips
-          .map((t) => t.plant_buffer)
-          .filter(Boolean)
-          .map((t) => new Date(t));
-        const ends = trips
-          .map((t) => t.return)
-          .filter(Boolean)
-          .map((t) => new Date(t));
+        const tmTotalVol = excelCarriedVolumeArr[index]; // Use the adjusted volume from excelCarriedVolumeArr
 
-        let roundedRange = "-";
-        let roundedTotalHours = 0;
-
-        if (starts.length > 0 && ends.length > 0) {
-          const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
-          const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
-
-          const roundedStart = calculateRoundedStartTime(minStart);
-          const roundedEnd = calculateRoundedEndTime(maxEnd);
-
-          const sTime = formatTimeByPreference(roundedStart, preferred);
-          const eTime = formatTimeByPreference(roundedEnd, preferred);
-          roundedRange = `${sTime} - ${eTime}`;
-
-          roundedTotalHours = (roundedEnd.getTime() - roundedStart.getTime()) / (1000 * 60 * 60);
-        }
-
-        const capacity = tmCapacityMap[tmId] || trips[0]?.completed_capacity || 7;
-        const tmTotalTrips = trips.length;
-        const tmTotalVol = capacity * tmTotalTrips;
-
-        totalTripsSum += tmTotalTrips;
-        totalVolSum += tmTotalVol;
+        // totalTripsSum += tmTotalTrips;
+        // totalVolSum += tmTotalVol;
 
         const rowData = [
           String(index + 1),
           tmIdToIdentifier[tmId] || tmId,
-          String(capacity),
           ...tripTimes,
-          String(tmTotalTrips),
-          String(tmTotalVol),
+          formatVolume(tmTotalVol),
           overallRange,
           totalHours ? formatHoursAndMinutes(totalHours) : "-",
-          roundedRange,
-          roundedTotalHours ? formatHoursAndMinutes(roundedTotalHours) : "-",
         ];
 
         rowData.forEach((data, colIndex) => {
@@ -898,45 +910,20 @@ export default function ScheduleViewPage() {
       const totalHoursArr = tmIds.map((tmId) => getTotalHours(tmTrips[tmId]));
       const avgTotalHours = totalHoursArr.length ? totalHoursArr.reduce((a, b) => a + b, 0) / totalHoursArr.length : 0;
 
-      const roundedTotalHoursArr = tmIds.map((tmId) => {
-        const trips = tmTrips[tmId];
-        const starts = trips
-          .map((t) => t.plant_buffer)
-          .filter(Boolean)
-          .map((t) => new Date(t));
-        const ends = trips
-          .map((t) => t.return)
-          .filter(Boolean)
-          .map((t) => new Date(t));
-        if (starts.length > 0 && ends.length > 0) {
-          const minStart = new Date(Math.min(...starts.map((d) => d.getTime())));
-          const maxEnd = new Date(Math.max(...ends.map((d) => d.getTime())));
-          const roundedStart = calculateRoundedStartTime(minStart);
-          const roundedEnd = calculateRoundedEndTime(maxEnd);
-          return (roundedEnd.getTime() - roundedStart.getTime()) / (1000 * 60 * 60);
-        }
-        return 0;
-      });
-      const avgRoundedTotalHours = roundedTotalHoursArr.length
-        ? roundedTotalHoursArr.reduce((a, b) => a + b, 0) / roundedTotalHoursArr.length
-        : 0;
-
       const footerRow0 = [
-        String(totalTripsSum),
-        String(totalVolSum),
+        "Avg / Total",
+        "",
+        ...Array.from({ length: maxTrips }).map(() => ""),
+        formatVolume(requiredQuantity),
         "",
         avgTotalHours ? formatHoursAndMinutes(avgTotalHours) : "-",
-        "",
-        avgRoundedTotalHours ? formatHoursAndMinutes(avgRoundedTotalHours) : "-",
       ];
       footerRow0.forEach((data, colIndex) => {
-        const cell = summarySheet.getCell(currentDataRow, colIndex + 10);
+        const cell = summarySheet.getCell(currentDataRow, colIndex + 4);
         cell.value = data;
         cell.style = { ...dataStyle, font: { ...dataStyle.font, bold: true } };
       });
       currentDataRow++;
-
-      addBorders(tmWiseStartRow + 1, currentDataRow, 4, 4 + totalCols - 1);
 
       // Footer Row 2: Optimum Fleet
       const optimumFleet = schedule.tm_count ?? "-";
@@ -990,15 +977,15 @@ export default function ScheduleViewPage() {
     summarySheet.getColumn(2).width = 25; // B - Values
     summarySheet.getColumn(3).width = 5; // C
     summarySheet.getColumn(4).width = 28; // D
-    summarySheet.getColumn(5).width = 16; // E
+    summarySheet.getColumn(5).width = 23; // E
     summarySheet.getColumn(6).width = 16; // F
-    summarySheet.getColumn(7).width = 16; // G
+    summarySheet.getColumn(7).width = 23; // G
     summarySheet.getColumn(8).width = 17; // H
     summarySheet.getColumn(9).width = 20; // I
     summarySheet.getColumn(10).width = 20; // J
     summarySheet.getColumn(11).width = 19; // K
     summarySheet.getColumn(12).width = 17; // L
-    summarySheet.getColumn(13).width = 19; // M
+    summarySheet.getColumn(13).width = 23; // M
     summarySheet.getColumn(14).width = 19; // M
     summarySheet.getColumn(15).width = 19; // M
     summarySheet.getColumn(16).width = 19; // M
@@ -1482,7 +1469,7 @@ export default function ScheduleViewPage() {
                   </div>
 
                   <div className="flex items-center justify-between py-1 border-b border-blue-200/60 dark:border-blue-800/60">
-                    <span className="text-xs font-medium text-gray-900 dark:text-white">TMs Additional</span>
+                    <span className="text-xs font-medium text-gray-900 dark:text-white">TMs Additional {schedule.input_params?.wait_time ? "- Buffer Calculated" : "- Manual entry"}</span>
                     <span className="text-xs font-bold text-gray-900 dark:text-white">{additional}</span>
                   </div>
 
@@ -1736,25 +1723,42 @@ export default function ScheduleViewPage() {
       <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mt-3">
         <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">TM Wise Trip Details</h4>
         {(() => {
-          if (!schedule.output_table || schedule.output_table.length === 0) {
+          // Use burst_table if available and burst model is enabled, otherwise use output_table
+          const currentTable = useBurstModel && schedule.burst_table ? schedule.burst_table : schedule.output_table;
+          
+          if (!currentTable || currentTable.length === 0) {
             return <div className="text-gray-500 dark:text-gray-400">No trip data available.</div>;
           }
           // Group trips by TM
-          const tmTrips: Record<string, typeof schedule.output_table> = {};
-          schedule.output_table.forEach((trip) => {
+          const tmTrips: Record<string, (typeof currentTable)[]> = {};
+          currentTable.forEach((trip) => {
             if (!tmTrips[trip.tm_id]) tmTrips[trip.tm_id] = [];
-            tmTrips[trip.tm_id].push(trip);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            tmTrips[trip.tm_id].push(trip as any);
           });
           // Sort trips for each TM by trip_no
-          Object.values(tmTrips).forEach((trips) => trips.sort((a, b) => a.trip_no - b.trip_no));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          Object.values(tmTrips).forEach((trips) => trips.sort((a: any, b: any) => a.trip_no - b.trip_no));
           // Get all TM IDs and max number of trips
-          const tmIds = Object.keys(tmTrips);
+          let tmIds = Object.keys(tmTrips);
+          // Sort TM IDs by their first trip's plant_buffer time for consistent ordering
+          tmIds = tmIds.sort((a, b) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const aFirstTrip = tmTrips[a]?.[0] as any;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const bFirstTrip = tmTrips[b]?.[0] as any;
+            if (!aFirstTrip || !bFirstTrip) return 0;
+            const aTime = new Date(aFirstTrip.plant_buffer).getTime();
+            const bTime = new Date(bFirstTrip.plant_buffer).getTime();
+            return aTime - bTime;
+          });
           const maxTrips = Math.max(...Object.values(tmTrips).map((trips) => trips.length));
           // const totalVolumeArr = tmIds.map((tmId) =>
           //   tmTrips[tmId].reduce((sum, trip) => sum + (trip.completed_capacity || 0), 0)
           // );
           // Helper to format overall time range
-          function formatOverallRange(trips: Schedule["output_table"], preferredFormat?: string) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          function formatOverallRange(trips: any[], preferredFormat?: string) {
             if (!trips.length) return "-";
             const starts = trips
               .map((t) => t.plant_buffer)
@@ -1777,7 +1781,8 @@ export default function ScheduleViewPage() {
           }
 
           // Helper to get total hours for a TM
-          function getTotalHours(trips: Schedule["output_table"]) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          function getTotalHours(trips: any[]) {
             if (!trips.length) return 0;
             const starts = trips
               .map((t) => t.plant_buffer)
@@ -1797,13 +1802,25 @@ export default function ScheduleViewPage() {
           const avgTotalHours = totalHoursArr.length
             ? totalHoursArr.reduce((a, b) => a + b, 0) / totalHoursArr.length
             : 0;
-          const carriedVolumeArr = tmIds.map((tmId) => {
+          // Calculate actual volume carried, with last TM carrying only remaining quantity
+          const requiredQuantity = schedule.input_params.quantity || 0;
+          let cumulativeVolume = 0;
+          const carriedVolumeArr = tmIds.map((tmId, idx) => {
             const trips = tmTrips[tmId] || [];
             const capacity = tmCapacityMap[tmId] || 0;
-            return trips.length * capacity;
+            let volumeForThisTm = trips.length * capacity;
+
+            // For the last TM, adjust to carry only the remaining quantity
+            if (idx === tmIds.length - 1) {
+              const remainingQuantity = Math.max(0, requiredQuantity - cumulativeVolume);
+              volumeForThisTm = remainingQuantity;
+            }
+
+            cumulativeVolume += volumeForThisTm;
+            return volumeForThisTm;
           });
 
-          const totalVolume = carriedVolumeArr.reduce((a, b) => a + b, 0);
+          const totalVolume = requiredQuantity; // Should equal the total required quantity
 
           // For TM label, use identifier if available
           const tmIdToIdentifier: Record<string, string> = {};
@@ -1843,10 +1860,10 @@ export default function ScheduleViewPage() {
                   {tmIds.map((tmId, index) => {
                     const trips = tmTrips[tmId];
                     console.log("Fetched TMs data:", tms);
-                    const capacity = tmCapacityMap[tmId] || 0;
+                    // const capacity = tmCapacityMap[tmId] || 0;
                     const overallRange = formatOverallRange(trips, profile?.preferred_format);
                     const totalHours = getTotalHours(trips);
-                    const totalVolume = trips.length * capacity;
+                    const totalVolume = carriedVolumeArr[index]; // Use the adjusted volume from carriedVolumeArr
 
                     // Calculate rounded times
 
@@ -1862,7 +1879,8 @@ export default function ScheduleViewPage() {
                           {tmIdToIdentifier[tmId] || tmId}
                         </td>
                         {Array.from({ length: maxTrips }).map((_, i) => {
-                          const trip = trips[i];
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          const trip = trips[i] as any;
                           return (
                             <td key={i} className="px-1 text-xs py-2 text-left text-gray-800 dark:text-white/90">
                               {trip
@@ -2259,7 +2277,7 @@ export default function ScheduleViewPage() {
                           </TableCell>
                           <TableCell className="px-2 py-4 text-start">
                             <span className="text-gray-800 dark:text-white/90">
-                              {typeof trip.cycle_time !== "undefined" ? (trip.cycle_time / 60).toFixed(2) : "-"}
+                              {typeof trip.cycle_time !== "undefined" ?  formatMinutesToHHMM(trip.cycle_time / 60 ) : "-"}
                             </span>
                           </TableCell>
                           <TableCell className="px-2 py-4 text-start">
