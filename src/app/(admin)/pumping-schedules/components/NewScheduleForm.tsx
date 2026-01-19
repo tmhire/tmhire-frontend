@@ -33,7 +33,7 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RadioGroup } from "@/components/ui/radio";
-import { useProfile } from "@/hooks/useProfile";
+// import { useProfile } from "@/hooks/useProfile";
 import TimeInput from "@/components/form/input/TimeInput";
 // Removed Chart.js pie in favor of custom SVG DonutChart
 import { Spinner } from "@/components/ui/spinner";
@@ -219,7 +219,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const [isCalculating, setIsCalculating] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasChanged, setHasChanged] = useState(false);
-  const { profile } = useProfile();
+  // const { profile } = useProfile();
   interface Step1FormData {
     scheduleDate: string;
     startTime: string;
@@ -807,7 +807,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    const processedValue = name === "concreteGrade" ? value.toUpperCase() : value;
+    const processedValue = (name === "concreteGrade") || (name === "mixCode") ? value.toUpperCase() : value;
     setFormData((prev) => ({
       ...prev,
       [name]: processedValue ? processedValue : value,
@@ -1280,6 +1280,14 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
     const adjusted = hour % 12 === 0 ? 12 : hour % 12;
     return `${adjusted.toString().padStart(2, "0")}:00 ${suffix}`;
   }
+  function formatTime(hour: number, minute: number) {
+    if (profileFormat === "24h") {
+      return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+    }
+    const suffix = hour >= 12 ? "PM" : "AM";
+    const adjusted = hour % 12 === 0 ? 12 : hour % 12;
+    return `${adjusted.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")} ${suffix}`;
+  }
   const profileEndHour = (profileStartHour + 24) % 24;
 
   if (formDataRetrieved === false) {
@@ -1458,9 +1466,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
   const endHour = Math.floor(endTotalMin / 60) % 24;
   const endMin = endTotalMin % 60;
 
-  // format back to HH:mm
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  const pumpEndTime = pumpMinutes ? `${pad(endHour)}:${pad(endMin)}` : `${0}:${0}`;
+  // format back to HH:mm with profile format preference
+  const pumpEndTime = pumpMinutes ? formatTime(endHour, endMin) : "00:00";
 
   // REMOVED: duplicate schedule window and classifier (moved earlier to avoid conditional hooks)
 
@@ -2099,7 +2106,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 {/* Pump Start Time */}
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Pump Start Time (24h) <span className="text-red-500">*</span>
+                    Pump Start Time ({profileFormat === "12h" ? "12h" : "24h"}) <span className="text-red-500">*</span>
                   </label>
                   <LocalizationProvider dateAdapter={AdapterDayjs}>
                     <TimePicker
@@ -2129,7 +2136,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                           },
                         },
                       }}
-                      format={profile?.preferred_format === "12h" ? "h:mm a" : "HH:mm"}
+                      format={profileFormat === "12h" ? "h:mm a" : "HH:mm"}
                       views={["hours", "minutes"]}
                     />
                   </LocalizationProvider>
@@ -2198,7 +2205,7 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                   </div>
                   <div className="w-1/2">
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 truncate -mr-2">
-                      Pump End Time <span className="text-gray-500 text-[10px] pl-1">(24h)</span>
+                      Pump End Time <span className="text-gray-500 text-[10px] pl-1">({profileFormat === "12h" ? "12h" : "24h"})</span>
                     </label>
                     <div className="relative">
                       <TimeInput
@@ -2217,8 +2224,8 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 </div>
               </div>
 
-              <div className="flex justify-between items-center mb-4 w-full mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Pumping Details</h3>
+              <div className="flex justify-between items-center w-full pt-6">
+                {/* <h3 className="text-base font-semibold text-gray-700 dark:text-gray-200 mb-4">Pumping Details</h3> */}
               </div>
 
               <div className="grid grid-cols-5 gap-6">
@@ -2261,15 +2268,17 @@ export default function NewScheduleForm({ schedule_id }: { schedule_id?: string 
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mix Code</label>
                   <Input
-                    type="string"
+                    type="text"
                     name="mixCode"
-                    value={formData.mixCode}
+                    value={formData.mixCode || ""}
                     onChange={(e) => {
-                      const v = e.target.value;
-                      setFormData((prev) => ({ ...prev, mixCode: v }));
-                      setHasChanged(true);
+                      const value = e.target.value;
+                      if (value.length <= 10 && /^[a-zA-Z0-9+\-/.]*$/.test(value)) {
+                        handleInputChange(e);
+                      }
                     }}
-                    placeholder="Enter mix code"
+                    placeholder="Enter mix code (max 10 chars)"
+                    maxLength={10}
                   />
                 </div>
 

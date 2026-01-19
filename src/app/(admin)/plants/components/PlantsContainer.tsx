@@ -208,6 +208,20 @@ export default function PlantsContainer() {
     enabled: status === "authenticated",
   });
 
+  const { data: avgTMCapData } = useQuery<{ average_capacity: number }>({
+    queryKey: ["average-tm-capacity"],
+    queryFn: async () => {
+      const response = await fetchWithAuth("/tms/average-capacity");
+      const data = await response.json();
+      if (data.success && data.data && typeof data.data.average_capacity === "number") {
+        return { average_capacity: data.data.average_capacity };
+      }
+      throw new Error("Failed to fetch average TM capacity");
+    },
+  });
+  const avgTMCapGet = Math.ceil(avgTMCapData?.average_capacity || 0) ?? null;
+  const avgTMCap = avgTMCapGet > 0 ? avgTMCapGet : null;
+
   // Create plant mutation
   const createPlantMutation = useMutation({
     mutationFn: async (plantData: CreatePlantData) => {
@@ -298,7 +312,7 @@ export default function PlantsContainer() {
   const handleEdit = (plant: Plant) => {
     setSelectedPlant(plant);
     // Calculate unloading time if capacity exists
-    const unloadingTime = plant.capacity ? Math.ceil(plant.capacity / STANDARD_TM_CAPACITY) : undefined;
+    const unloadingTime = plant.capacity ? Math.ceil(plant.capacity / (avgTMCap ? avgTMCap : STANDARD_TM_CAPACITY)) : undefined;
     setEditedPlant({
       name: plant.name,
       capacity: plant.capacity || undefined,
@@ -367,7 +381,7 @@ export default function PlantsContainer() {
         } else {
           setCapacityError("");
           // Auto-calculate unloading time: ceil(capacity / 7)
-          const calculatedUnloadingTime = Math.ceil(numValue / STANDARD_TM_CAPACITY);
+          const calculatedUnloadingTime = Math.ceil(numValue / (avgTMCap ? avgTMCap : STANDARD_TM_CAPACITY));
           setNewPlant((prev) => ({
             ...prev,
             capacity: numValue,
@@ -400,7 +414,7 @@ export default function PlantsContainer() {
         } else {
           setUnloadingTimeError("");
           // Auto-calculate capacity: (60 / unloading_time) * 7
-          const calculatedCapacity = (60 / numValue) * STANDARD_TM_CAPACITY;
+          const calculatedCapacity = (60 / numValue) * (avgTMCap ? avgTMCap : STANDARD_TM_CAPACITY);
           setNewPlant((prev) => ({
             ...prev,
             unloading_time: numValue,
@@ -468,7 +482,7 @@ export default function PlantsContainer() {
         } else {
           setEditCapacityError("");
           // Auto-calculate unloading time: ceil(capacity / 7)
-          const calculatedUnloadingTime = Math.ceil(numValue / STANDARD_TM_CAPACITY);
+          const calculatedUnloadingTime = Math.ceil(numValue / (avgTMCap ? avgTMCap : STANDARD_TM_CAPACITY));
           setEditedPlant((prev) => ({
             ...prev,
             capacity: numValue,
@@ -501,7 +515,7 @@ export default function PlantsContainer() {
         } else {
           setEditUnloadingTimeError("");
           // Auto-calculate capacity: (60 / unloading_time) * 7
-          const calculatedCapacity = (60 / numValue) * STANDARD_TM_CAPACITY;
+          const calculatedCapacity = (60 / numValue) * (avgTMCap ? avgTMCap : STANDARD_TM_CAPACITY);
           setEditedPlant((prev) => ({
             ...prev,
             unloading_time: numValue,
@@ -625,7 +639,13 @@ export default function PlantsContainer() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">RMC Plants</h2>
+        <div className="flex flex-row gap-8">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">RMC Plants</h2>
+          <div className="flex flex-row gap-2 justify-center items-start bg-gray-200/80 dark:bg-gray-800/50 px-3 py-2 rounded-md">
+            <Info size={"16px"} className="text-gray-500 dark:text-white/70" />
+            <h2 className="text-xs font-medium max-w-fit text-gray-800/80 dark:text-white/90">Plant loading time starts with a default TM average capacity of 7.<br></br>After TM details are entered, the actual average capacity is automatically calculated and updated in the plant.</h2>
+          </div>
+        </div>
         {session?.sub_role !== "viewer" && (
           <nav>
             <Button className="flex items-center gap-2" size="sm" onClick={handleAddPlant}>
@@ -899,13 +919,13 @@ export default function PlantsContainer() {
             <div className="w-1/4">
               <div className="flex items-center gap-1 mb-1.5">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block">
-                  Loading Time (min) <span className="text-red-500">*</span>
+                  Loading Time <span className="text-[10px]">Per TM (min)</span><span className="text-red-500">*</span>
                 </label>
                 <div className="group relative">
                   <Info size={16} className="text-gray-500 dark:text-gray-400 cursor-help" />
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-1000">
                     <div className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-200 text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
-                      <p className="font-semibold mb-1">Standard TM Capacity = 7 m³</p>
+                      <p className="font-semibold mb-1">{(avgTMCap ? `Average TM Capacity = ${avgTMCap} m³` : "Standard TM Capacity = 7 m³")}</p>
                       <p>Capacity = (60 ÷ Time) × 7</p>
                       <p>Time = ⌈ Capacity ÷ 7 ⌉</p>
                     </div>
@@ -1107,15 +1127,15 @@ export default function PlantsContainer() {
               <div className="w-1/4">
                 <div className="flex items-center gap-1 mb-1.5">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block">
-                    Loading Time (min) <span className="text-red-500">*</span>
+                    Loading Time <span className="text-[10px]">Per TM (min)</span><span className="text-red-500">*</span>
                   </label>
                   <div className="group relative">
                     <Info size={16} className="text-gray-500 dark:text-gray-400 cursor-help" />
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-1000">
                       <div className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-200 text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
-                        <p className="font-semibold mb-1">Standard TM Capacity = 7 m³</p>
+                        <p className="font-semibold mb-1">{(avgTMCap ? `Average TM Capacity = ${avgTMCap} m³` : "Standard TM Capacity = 7 m³")}</p>
                         <p>Capacity = (60 ÷ Time) × 7</p>
-                        <p>Time = ⌈ Capacity ÷ 7 ⌉</p>
+                        <p>Time = [ Capacity ÷ 7 ]</p>
                       </div>
                       <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
                     </div>
