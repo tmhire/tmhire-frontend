@@ -381,7 +381,7 @@ export default function PlantsContainer() {
         } else {
           setCapacityError("");
           // Auto-calculate unloading time: ceil(capacity / 7)
-          const calculatedUnloadingTime = Math.ceil(numValue / (avgTMCap ? avgTMCap : STANDARD_TM_CAPACITY));
+          const calculatedUnloadingTime = Math.ceil(((avgTMCap ? avgTMCap : STANDARD_TM_CAPACITY)*60) / numValue);
           setNewPlant((prev) => ({
             ...prev,
             capacity: numValue,
@@ -414,7 +414,7 @@ export default function PlantsContainer() {
         } else {
           setUnloadingTimeError("");
           // Auto-calculate capacity: (60 / unloading_time) * 7
-          const calculatedCapacity = (60 / numValue) * (avgTMCap ? avgTMCap : STANDARD_TM_CAPACITY);
+          const calculatedCapacity = ((avgTMCap ? avgTMCap : STANDARD_TM_CAPACITY)*60) / numValue;
           setNewPlant((prev) => ({
             ...prev,
             unloading_time: numValue,
